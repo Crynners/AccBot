@@ -23,7 +23,7 @@ namespace CryptoBotCore
             // Unix timestamp is seconds past epoch
             DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
             if(unixTimeStamp > 1000000000000)
-            dtDateTime = dtDateTime.AddMilliseconds(unixTimeStamp).ToLocalTime();
+                dtDateTime = dtDateTime.AddMilliseconds(unixTimeStamp).ToLocalTime();
             else
                 dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToLocalTime();
             return dtDateTime;
