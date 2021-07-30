@@ -3,7 +3,7 @@ Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který 
 
 # Jednoduchý popis fungování bota
 * Nakupuje uživatelem definovanou částku v českých korunách _(typicky desítky Kč)_ každých uživatelsky definovaných hodin _(ideálně dělitelných 24, aby nakupoval vždy ve stejný čas, tedy např. -> každou hodinu, 1x za 2h, 1x za 4h, 1x za 8h, etc.)_.
-* Běží autonomně nutnosti jej nějak v čase spravovat, je zapotřebí si pouze hlídat stav svého Kč účtu a pravidelně jej na Coinmate doplňovat _(např. jednou za měsíc)_.
+* Běží autonomně bez nutnosti jej nějak v čase spravovat, je zapotřebí si pouze hlídat stav svého Kč účtu a pravidelně jej na Coinmate doplňovat _(např. jednou za měsíc)_.
 * **Náklady na provoz jsou prakticky nulové** (vychází to cca na 0.04 $ / měsíčně); bot je implementován zatím jako [Azure function](https://azure.microsoft.com/cs-cz/services/functions/), která se spouští v pravidelných intervalech a celé řešení je tedy hostované na [Azure](https://azure.microsoft.com/cs-cz/). 
 * (Volitelná funkcionalita) Po každém nákupu Vás informuje na Telegramovém kanále o tom, za jakou částku nakoupil. Tuto informaci doplní o statistiky, jaká je aktuální průměrná akumulovaná cena, etc. Viz příklad:
   * ![image](https://user-images.githubusercontent.com/87997650/127355720-fe73c0b5-5fd4-4d31-98dc-b569975f8a9e.png)
@@ -18,10 +18,17 @@ Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který 
 
 # Postup instalace
 1. Na Coinmate si [vygenerujte API klíče](https://coinmate.io/blog/using-the-coinmate-io-api/) (aby měl BOT přístup k prostředkům na burze a mohl provádět svoji akumulační činnost). Do poznámkového bloku si zapište vygenerovaný ClientId, PublicKey a PrivateKey -> budete je potřebovat v bodu 5.
-2. Stáhněte si [ZIP v aktuálním RELEASE](https://github.com/Crynners/AccBot/releases/tag/v1.0), který obsahuje instalační PowerShell skript a zbuilděného bota.
-3. ZIP z předchozího bodu rozbalte kamkoliv do Vašeho souborového systému
-4. V poznámkovém bloku (nebo jiném textovém editoru) otevřte soubor **install_script.ps1**
-5. Upravte proměnné v sekci **### USER-DEFINED VARIABLES ###**
+   - POZOR: Je nutné API klíčům přidat oprávnění na Trading, viz: 
+
+   ![image](https://user-images.githubusercontent.com/87997650/127633515-b5828914-6183-4c60-8208-4e78d262f62e.png). 
+   - Pokud byste chtěli využít i funkci automatického výběru, zaškrtněte i volbu "Enable for Withdrawal". V takovém případě doporučujeme si zaškrtnout i "Enable for withdrawals to template addresses only", což znanená, že bot bude moci poslat naakumulované BTC pouze na Vámi definované adresy, viz: 
+
+   ![image](https://user-images.githubusercontent.com/87997650/127633656-a6698455-03b6-4b23-902d-e5642dbe4988.png)
+
+3. Stáhněte si [ZIP v aktuálním RELEASE](https://github.com/Crynners/AccBot/releases/tag/v1.0), který obsahuje instalační PowerShell skript a zbuilděného bota.
+4. ZIP z předchozího bodu rozbalte kamkoliv do Vašeho souborového systému
+5. V poznámkovém bloku (nebo jiném textovém editoru) otevřte soubor **install_script.ps1**
+6. Upravte proměnné v sekci **### USER-DEFINED VARIABLES ###**
 ```
 ### USER-DEFINED VARIABLES ###
 ##############################
@@ -32,7 +39,7 @@ $Name='anonymous'
 # Měnový pár, který na Coinmate chcete nakupovat
 $Currency='BTC'
 
-# Velikost chunku, který chcete pravidelně nakupovat (MINIMUM: 26)
+# Velikost chunku v Kč, který chcete pravidelně nakupovat (MINIMUM: 26)
 $ChunkSize='26'
 
 # Jednou za kolik hodin chcete pravidelně nakupovat BTC
