@@ -77,6 +77,37 @@ $CoinMateCredentials_PrivateKey='XXX'
 
 ![image](https://user-images.githubusercontent.com/87997650/127630772-334fb454-d1f9-4847-ae5a-0ce3757800cc.png)
 
+# (Nepovinné) Nastavení Telegram notifikací
+Tato část není povinná pro provoz bota, nicméně jde o velkou přidanou hodnotu, neboť Vás bot bude pravidelně informovat po každém nákupu jaké je Vaše průměrná cena naakumulovaného BTC a kolik BTC jste již naakumulovali. Zároveň si budete moci v reálném čase ověřovat, že bot funguje.
+
+1. Založení účtu na [Telegramu](https://telegram.org/)
+2. Vytvoření bota přes BotFather dle [návodu](https://sendpulse.com/knowledge-base/chatbot/create-telegram-chatbot).
+   - Token z návodu se poté vloží do proměnné **$TelegramBot** z PowerShell skriptu
+3. Vytvoření nového kanálu
+   - V levém horním rohu klikněte na nastavení
+   
+   ![image](https://user-images.githubusercontent.com/87997650/127706308-0ca1aead-f5a8-42eb-b740-6463d820636f.png)
+   - Klikněte na tlačítko "New Channel"
+   
+   ![image](https://user-images.githubusercontent.com/87997650/127706363-c10948dd-2d97-4dc1-9028-718d1f802153.png)
+   - Pojmenujte si svůj kanál a potvrďte založení tlačítkem
+   
+   ![image](https://user-images.githubusercontent.com/87997650/127706441-52c861f9-3f76-49a0-8d42-9c5d48c657cc.png)
+   - Kanál označte jako **Public** a vymyslete pro něj unikátní název, tento název se poté vyplní ve formátu "@MyAccBotChannel" (v případě příkladu níže) do proměnné **$TelegramChannel** z powershell skriptu
+   
+   ![image](https://user-images.githubusercontent.com/87997650/127706976-591cb415-4bc2-444b-95fc-56aaa9d58e73.png)
+4. Do kanálu pozvěte svého bota (vyhledejte ho dle jména), kterého jste vytvořili v bodu 2 přes BotFather.
+   ![image](https://user-images.githubusercontent.com/87997650/127707214-174f6dd0-a990-49d8-8cb0-6c9c9e290102.png)
+   - Potvrďte bota jako administrátora kanálu
+   
+   ![image](https://user-images.githubusercontent.com/87997650/127707275-af26e4f8-3c8b-46ff-b437-1e0d29a9ce77.png)
+   - Ponechte defaultní volbu oprávnění bota
+   
+   ![image](https://user-images.githubusercontent.com/87997650/127707327-faa3fa84-56ab-4fce-be0f-7a3f81cadf38.png)
+5. Hotovo, do vytvořeného kanálu by Vám odteď měl bot zapisovat informace o nákupech se statistikami.
+
+   
+
 # Donate
 ![heart_donate](https://user-images.githubusercontent.com/87997650/127650190-188e401a-9942-4511-847e-d1010628777a.png)
 
