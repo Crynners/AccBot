@@ -2,7 +2,7 @@
 Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který v pravidelných intervalech po malých částkách v Kč nakupuje [BTC](https://cs.wikipedia.org/wiki/Bitcoin) na burze [Coinmate](https://coinmate.io/) dle strategie [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html).
 
 # Jednoduchý popis fungování bota
-* Nakupuje uživatelem definovanou částku v českých korunách _(typicky desítky Kč)_ jednou za několik hodin _(typicky jednou za x hodin -> 1x za 2h / 1x za 4h / 1x za 8h)_.
+* Nakupuje uživatelem definovanou částku v českých korunách _(typicky desítky Kč)_ každých uživatelsky definovaných hodin _(ideálně dělitelných 24, aby nakupoval vždy ve stejný čas, tedy např. -> každou hodinu, 1x za 2h, 1x za 4h, 1x za 8h, etc.)_.
 * Běží autonomně nutnosti jej nějak v čase spravovat, je zapotřebí si pouze hlídat stav svého Kč účtu a pravidelně jej na Coinmate doplňovat _(např. jednou za měsíc)_.
 * **Náklady na provoz jsou prakticky nulové** (vychází to cca na 0.04 $ / měsíčně); bot je implementován zatím jako [Azure function](https://azure.microsoft.com/cs-cz/services/functions/), která se spouští v pravidelných intervalech a celé řešení je tedy hostované na [Azure](https://azure.microsoft.com/cs-cz/). 
 * (Volitelná funkcionalita) Po každém nákupu Vás informuje na Telegramovém kanále o tom, za jakou částku nakoupil. Tuto informaci doplní o statistiky, jaká je aktuální průměrná akumulovaná cena, etc. Viz příklad:
