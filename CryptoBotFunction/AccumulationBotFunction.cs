@@ -15,7 +15,7 @@ namespace CryptoBotFunction
     public static class AccumulationBotFunction
     {
         [FunctionName("AccumulationBotFunction")]
-        public static void Run([TimerTrigger("0 0 */4 * * *")] TimerInfo myTimer, ILogger log)
+        public static void Run([TimerTrigger("%DayDividerSchedule%")] TimerInfo myTimer, ILogger log)
         {
             LoadAppSettings();
 
