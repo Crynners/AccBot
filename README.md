@@ -19,7 +19,7 @@ Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který 
 # Postup instalace
 1. Na Coinmate si [vygenerujte API klíče](https://coinmate.io/blog/using-the-coinmate-io-api/) (aby měl BOT přístup k prostředkům na burze a mohl provádět svoji akumulační činnost). Do poznámkového bloku si zapište vygenerovaný ClientId, PublicKey a PrivateKey -> budete je potřebovat v bodu 5.
 2. Stáhněte si [ZIP v aktuálním RELEASE](https://github.com/Crynners/AccBot/releases/tag/v1.0), který obsahuje instalační PowerShell skript a zbuilděného bota.
-3. ZIP z bodu 4 rozbalte kamkoliv do Vašeho souborového systému
+3. ZIP z předchozího bodu rozbalte kamkoliv do Vašeho souborového systému
 4. V poznámkovém bloku (nebo jiném textovém editoru) otevřte soubor **install_script.ps1**
 5. Upravte proměnné v sekci **### USER-DEFINED VARIABLES ###**
 ```
