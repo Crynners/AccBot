@@ -73,7 +73,7 @@ $CoinMateCredentials_PrivateKey='XXX'
 
 ##############################
 ```
-6. Uložte soubor a spusťte zmiňovaný skript, který Vám automaticky připraví všechny potřebné resources na Azure. Na začátku by mělo vyskočit i okno s přihlášením do Azure portal. **POZOR: Instalace trvá několik minut, vyčkejte prosím na její dokončení.** Na konci by se měla objevit následující hláška:
+7. Uložte soubor a otevřte Powershellové okno. Spusťte **install_script.ps1** skript pomocí příkazu `./install_script.ps1`. Skript Vám automaticky připraví všechny potřebné resources na Azure. Na začátku by mělo vyskočit i okno s přihlášením do Azure portal. **POZOR: Instalace trvá několik minut, vyčkejte prosím na její dokončení.** Na konci by se měla objevit následující hláška:
 
 ![image](https://user-images.githubusercontent.com/87997650/127630772-334fb454-d1f9-4847-ae5a-0ce3757800cc.png)
 
