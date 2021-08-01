@@ -21,13 +21,3 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Zip files
-      uses: papeloto/action-zip@v1
-      with:
-        files: .
-        dest: AccBot.zip
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v1
-      with:
-        name: my-artifact
-        path: ${{ github.workspace }}/Accbook.zip
