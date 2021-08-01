@@ -1,6 +1,7 @@
-﻿
+
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
+##############################
 ### USER-DEFINED VARIABLES ###
 ##############################
 
@@ -39,7 +40,7 @@ $CoinMateCredentials_PrivateKey='XXX'
 
 ##############################
 
-
+########################
 ### SYSTEM VARIABLES ###
 ########################
 
@@ -63,10 +64,34 @@ $cosmosContainerName='AccBotContainer'
 
 $zipDeploymentFileName = $scriptPath + '\AccBot.zip'
 
+##################################
+###### Kontrola prerekvizit ######
+##################################
+
+# Kontrola dostupnosi deployment ZIP souboru
+if(![System.IO.File]::Exists($zipDeploymentFileName)){
+    throw "Deployment ZIP file '" + $zipDeploymentFileName+ "' is missing in the same directory as the PowerShell script! Please copy the ZIP file 'AccBot.zip to the same directory as the ps1 script.'"
+    exit
+}
+
+
 ########################
+
 
 #Přihlášení do Azure portal
 az login
+
+#Kontrola, zdali již náhodou Resource group "AccBot" neexistuje
+$query = "[?name == '" + $resourceGroupName + "']"
+$existingResourceGroups = az group list --query $query | ConvertFrom-Json
+
+if ( $existingResourceGroups.Count -gt 0 )
+{
+ $alreadyExistPrint = "Resource group '" + $resourceGroupName + "' is already exists. This resource group will be removed first and then installation will be started automatically. Please wait..."
+ $alreadyExistPrint
+ az group delete -n $resourceGroupName
+}
+
 
 #Vytvoření Resource group
 az group create -l $location -n $resourceGroupName
