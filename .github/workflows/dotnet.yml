@@ -21,9 +21,13 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
     - name: Zip Folder
       run: zip -r AccBot.zip . -x ".git/*" ".github/*" "*.ps1"
-    - name: Release to Github
-      run: echo "Release"
+    - uses: papeloto/action-zip@v1
+      with:
+        files: dist/ manifest.json
+        dest: AccBot.zip
+    - uses: actions/upload-artifact@v1
+      with:
+        name: my-artifact
+        path: ${{ github.workspace }}/result.zip
