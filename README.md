@@ -30,7 +30,7 @@ Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který 
 
    ![image](https://user-images.githubusercontent.com/87997650/127633656-a6698455-03b6-4b23-902d-e5642dbe4988.png)
 
-3. Stáhněte si [ZIP v aktuálním RELEASE](https://github.com/Crynners/AccBot/releases/tag/v1.0), který obsahuje instalační PowerShell skript a zbuilděného bota.
+3. Stáhněte si [ZIP z aktuálního RELEASE](https://github.com/Crynners/AccBot/releases/download/v1.0/AccBot_installation.zip), který obsahuje instalační PowerShell skript a zbuilděného bota.
 4. ZIP z předchozího bodu rozbalte kamkoliv do Vašeho souborového systému
 5. V poznámkovém bloku (nebo jiném textovém editoru) otevřte soubor **install_script.ps1**
 6. Upravte proměnné v sekci **### USER-DEFINED VARIABLES ###**
