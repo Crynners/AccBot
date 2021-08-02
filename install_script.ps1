@@ -27,7 +27,7 @@ $WithdrawalAddress=''
 $TelegramChannel='@channel_name'
 
 # Privátní klíč telegram bota (POZOR, bot musí být členem kanálu výše)
-$TelegramBot='<telegram_bot_hash>'
+$TelegramBot='telegram_bot_hash'
 
 # ClientId z Coinmate API
 $CoinMateCredentials_ClientId='111'
@@ -45,6 +45,7 @@ $CoinMateCredentials_PrivateKey='XXX'
 ########################
 
 $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
+$zipFile = 'AccBot.zip'
 
 $resourceGroupName='AccBot'
 
@@ -62,7 +63,8 @@ $location = 'germanywestcentral'
 $cosmosDBName='AccBotDatabase'
 $cosmosContainerName='AccBotContainer'
 
-$zipDeploymentFileName = $scriptPath + '\AccBot.zip'
+$zipDeploymentFileName = join-path -path $scriptPath -childpath $zipFile
+$zipDeploymentFileName
 
 ##################################
 ###### Kontrola prerekvizit ######
@@ -87,14 +89,13 @@ $existingResourceGroups = az group list --query $query | ConvertFrom-Json
 
 if ( $existingResourceGroups.Count -gt 0 )
 {
- $alreadyExistPrint = "Resource group '" + $resourceGroupName + "' is already exists. This resource group will be removed first and then installation will be started automatically. Please wait..."
- $alreadyExistPrint
- az group delete -n $resourceGroupName
+    $alreadyExistPrint = "Resource group '" + $resourceGroupName + "' is already exists. This step will be skipped."
+    $alreadyExistPrint
+}else{
+    #Vytvoření Resource group
+    az group create -l $location -n $resourceGroupName
 }
 
-
-#Vytvoření Resource group
-az group create -l $location -n $resourceGroupName
 
 $CosmosDBAccountResult = az cosmosdb create -n $cosmosDBAccountName -g $resourceGroupName --default-consistency-level Session | ConvertFrom-Json
 
