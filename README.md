@@ -87,13 +87,13 @@ Tato část není povinná pro provoz bota, nicméně jde o velkou přidanou hod
    - V levém horním rohu klikněte na nastavení
    
    ![image](https://user-images.githubusercontent.com/87997650/127706308-0ca1aead-f5a8-42eb-b740-6463d820636f.png)
-   - Klikněte na tlačítko "New Channel"
+   - Klikněte na tlačítko `New Channel`
    
    ![image](https://user-images.githubusercontent.com/87997650/127706363-c10948dd-2d97-4dc1-9028-718d1f802153.png)
    - Pojmenujte si svůj kanál a potvrďte založení tlačítkem
    
    ![image](https://user-images.githubusercontent.com/87997650/127706441-52c861f9-3f76-49a0-8d42-9c5d48c657cc.png)
-   - Kanál označte jako **Public** a vymyslete pro něj unikátní název, tento název se poté vyplní ve formátu "@MyAccBotChannel" (v případě příkladu níže) do proměnné **$TelegramChannel** z powershell skriptu
+   - Kanál označte jako **Public** a vymyslete pro něj unikátní název, tento název se poté vyplní ve formátu `@MyAccBotChannel` (v případě příkladu níže) do proměnné **$TelegramChannel** z powershell skriptu
    
    ![image](https://user-images.githubusercontent.com/87997650/127706976-591cb415-4bc2-444b-95fc-56aaa9d58e73.png)
 4. Do kanálu pozvěte svého bota (vyhledejte ho dle jména), kterého jste vytvořili v bodu 2 přes BotFather.
