@@ -75,7 +75,7 @@ $CoinMateCredentials_PrivateKey='XXX'
 ```
 7. Uložte soubor a otevřte Powershellové okno. Spusťte **install_script.ps1** skript pomocí příkazu `./install_script.ps1`. Skript Vám automaticky připraví všechny potřebné resources na Azure. Na začátku by mělo vyskočit i okno s přihlášením do Azure portal. **POZOR: Instalace trvá několik minut, vyčkejte prosím na její dokončení.** Na konci by se měla objevit následující hláška:
 
-![image](https://user-images.githubusercontent.com/87997650/127630772-334fb454-d1f9-4847-ae5a-0ce3757800cc.png)
+![image](https://user-images.githubusercontent.com/87997650/127874519-d4e8ddab-9477-4c6a-bdc1-a7ad301ba17d.png)
 
 # (Nepovinné) Nastavení Telegram notifikací
 Tato část není povinná pro provoz bota, nicméně jde o velkou přidanou hodnotu, neboť Vás bot bude pravidelně informovat po každém nákupu jaké je Vaše průměrná cena naakumulovaného BTC a kolik BTC jste již naakumulovali. Zároveň si budete moci v reálném čase ověřovat, že bot funguje.
