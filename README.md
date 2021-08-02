@@ -4,10 +4,10 @@ Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který 
 # Jednoduchý popis fungování bota
 * Nakupuje uživatelem definovanou částku v českých korunách _(typicky desítky Kč)_ každých uživatelsky definovaných hodin _(ideálně dělitelných 24, aby nakupoval vždy ve stejný čas, tedy např. -> každou hodinu, 1x za 2h, 1x za 4h, 1x za 8h, etc.)_.
 * Běží autonomně bez nutnosti jej nějak v čase spravovat, je zapotřebí si pouze hlídat stav svého Kč účtu a pravidelně jej na Coinmate doplňovat _(např. jednou za měsíc)_.
-* **Náklady na provoz jsou prakticky nulové** (vychází to cca na 0.04 $ / měsíčně); bot je implementován zatím jako [Azure function](https://azure.microsoft.com/cs-cz/services/functions/), která se spouští v pravidelných intervalech a celé řešení je tedy hostované na [Azure](https://azure.microsoft.com/cs-cz/). 
+* **Náklady na provoz jsou prakticky nulové** (vychází to cca na 0.04 $ / měsíčně za Azure hosting); bot je implementován zatím jako [Azure function](https://azure.microsoft.com/cs-cz/services/functions/), která se spouští v pravidelných intervalech a celé řešení je tedy hostované na [Azure](https://azure.microsoft.com/cs-cz/). 
 * (Volitelná funkcionalita) Po každém nákupu Vás informuje na Telegramovém kanále o tom, za jakou částku nakoupil. Tuto informaci doplní o statistiky, jaká je aktuální průměrná akumulovaná cena, etc. Viz příklad:
   * ![image](https://user-images.githubusercontent.com/87997650/127355720-fe73c0b5-5fd4-4d31-98dc-b569975f8a9e.png)
-* (Volitelná funkcionalita) Pokud je naakumulované dostatečné množství BTC, pak pokud je widthrawal poplatek z celkové částky menší, než uživatelsky stanovený limit (např. 0.1 %), bot pošle naakumulované množství BTC z burzy do definované BTC peněženky (poznámka: pokud chcete využívat tuto funkcionalitu, doporučujeme povolit API odeslání pouze na Vaši konkrétní BTC peněženku, viz nastavení při vytváření API klíče na Coinmate)
+* (Volitelná funkcionalita) Pokud je naakumulované dostatečné množství BTC, pak pokud je poplatek za výběr z celkové částky menší, než uživatelsky stanovený limit (např. 0.1 %), bot pošle naakumulované množství BTC z burzy do definované BTC peněženky (poznámka: pokud chcete využívat tuto funkcionalitu, doporučujeme povolit API odeslání pouze na Vaši konkrétní BTC peněženku, viz nastavení při vytváření API klíče na Coinmate)
   * ![image](https://user-images.githubusercontent.com/87997650/127356371-6a9d1493-55f0-41cc-ab03-4a67cf610f42.png)
 
 # Prerekvizity
@@ -50,10 +50,10 @@ $ChunkSize='26'
 # Jednou za kolik hodin chcete pravidelně nakupovat BTC
 $HourDivider='1'
 
-# Příznak, zdali chcete povolit Withdrawal v případě, že je fee menší než 0.1% (POVOLENÉ HODNOTY: true / false)
+# Příznak, zdali chcete povolit výběr do vlastní peněženky v případě, že je fee menší než 0.1% (POVOLENÉ HODNOTY: true / false)
 $WithdrawalEnabled='false'
 
-# Adresa peněženky pro withdraw (aplikuje se pouze pokud WithdrawalEnabled = TRUE)
+# Adresa peněženky pro výběr btc (aplikuje se pouze pokud WithdrawalEnabled = TRUE)
 $WithdrawalAddress=''
 
 # Adresa telegram kanálu, do kterého chcete dostávat notifikace (ve formátu @NázevKanálu)
