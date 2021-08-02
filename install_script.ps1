@@ -47,7 +47,7 @@ $CoinMateCredentials_PrivateKey='XXX'
 $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
 $zipFile = 'AccBot.zip'
 
-$resourceGroupName='AccBot_NEW'
+$resourceGroupName='AccBot'
 
 $cosmosDBAccountName='accbotcosmosdbaccount-'+$([System.Guid]::NewGuid().ToString())
 $cosmosDBAccountName = $cosmosDBAccountName.Substring(0,44)
