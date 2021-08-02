@@ -104,7 +104,7 @@ namespace CryptoBotCore.BotStrategies
                 sbInformationMessage.Append("<b>Accumulation:</b> " + (available - init).ToString("N8") + " " + BotConfiguration.Currency + " for " + BotConfiguration.ChunkSize.ToString("N2") + " CZK @ " + (BotConfiguration.ChunkSize / (available - init)).ToString("N2") + " CZK").Append("\r\n");
 
                 //Send them home
-                if (fee_cost <= BotConfiguration.MaxWithdrawalPercentageFee && BotConfiguration.WithdrawalEnabled && BotConfiguration.WithdrawalAddress != null)
+                if (fee_cost <= BotConfiguration.MaxWithdrawalPercentageFee && BotConfiguration.WithdrawalEnabled && !String.IsNullOrEmpty(BotConfiguration.WithdrawalAddress))
                 {
                     coinmateAPIs[BotConfiguration.Currency].withdraw(available, BotConfiguration.WithdrawalAddress);
 
