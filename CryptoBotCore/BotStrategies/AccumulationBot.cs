@@ -116,7 +116,7 @@ namespace CryptoBotCore.BotStrategies
                     List<string> reason = new List<string>();
                     if (fee_cost > BotConfiguration.MaxWithdrawalPercentageFee)
                         reason.Add("Limit exceeded");
-                    if (BotConfiguration.WithdrawalAddress == null)
+                    if (String.IsNullOrEmpty(BotConfiguration.WithdrawalAddress))
                         reason.Add("No address");
                     if (!BotConfiguration.WithdrawalEnabled)
                         reason.Add("Turned off");
