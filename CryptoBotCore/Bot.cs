@@ -54,25 +54,13 @@ namespace CryptoBotCore
             }
         }
 
-        //public CoinMateCredentials OnGet()
-        //{
-        //    var credentials = new CoinMateCredentials()
-        //    {
-        //        ClientId = Int32.Parse(_configuration["CoinMate:API_ClientId"]),
-        //        PrivateKey = _configuration["CoinMate:API_PrivateKey"],
-        //        PublicKey = _configuration["CoinMate:API_PublicKey"]
-        //    };
-
-        //    return credentials;
-        //}
-
         public async Task Tick()
         {
             try
             {
                 if (cryptoExchangeAPI == null)
                 {
-                    cryptoExchangeAPI = new CoinmateAPI("BTC_CZK", BotConfiguration.CoinMateCredentials, _Log);
+                    cryptoExchangeAPI = new CoinmateAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.CoinMateCredentials, _Log);
                 }
 
                 Tuple<Double, Double> newBuySell = cryptoExchangeAPI.getActualExchangeRate();
