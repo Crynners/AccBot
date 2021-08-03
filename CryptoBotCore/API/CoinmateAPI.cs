@@ -297,7 +297,7 @@ namespace CryptoBotCore.API
             } while (true);
         }
 
-        internal void withdraw(double amount, string destinationAddress)
+        internal void Withdraw(double amount, string destinationAddress)
         {
             int wait = 0;
             do
@@ -307,13 +307,13 @@ namespace CryptoBotCore.API
                     WebClient client = new WebClient();
                     client.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded");
 
-                    string keypair = pair == "BTC_CZK" ? "bitcoinWithdrawal" :
-                                     pair == "LTC_CZK" ? "litecoinWithdrawal" :
-                                     pair == "ETH_CZK" ? "ethereumWithdrawal" :
-                                     pair == "DASH_CZK" ? "dashWithdrawal" :
+                    string keypair = pair.StartsWith("BTC") ? "bitcoinWithdrawal" :
+                                     pair.StartsWith("LTC") ? "litecoinWithdrawal" :
+                                     pair.StartsWith("ETH") ? "ethereumWithdrawal" :
+                                     pair.StartsWith("DASH") ? "dashWithdrawal" :
                                      null;
 
-                    string fee_priority = pair == "BTC_CZK" ? "&feePriority=LOW" : "";
+                    string fee_priority = pair.StartsWith("BTC") ? "&feePriority=LOW" : "";
 
                     string body = "amount=" + amount + "&address=" + destinationAddress + fee_priority + "&" + getSecuredHeaderPart();
                     string response = client.UploadString("https://coinmate.io/api/" + keypair, body);

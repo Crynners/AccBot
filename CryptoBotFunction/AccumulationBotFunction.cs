@@ -34,6 +34,7 @@ namespace CryptoBotFunction
             var config = builder.Build();
 
             BotConfiguration.Currency = config["Currency"];
+            BotConfiguration.Fiat = config["Fiat"];
             BotConfiguration.UserName = config["Name"];
             BotConfiguration.ChunkSize = Int32.Parse(config["ChunkSize"]);
             BotConfiguration.WithdrawalEnabled = bool.Parse(config["WithdrawalEnabled"]);

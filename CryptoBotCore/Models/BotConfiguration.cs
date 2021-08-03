@@ -9,6 +9,7 @@ namespace CryptoBotCore.Models
         public static string TelegramChannel { get; set; }
         public static string TelegramBot { get; set; }
         public static string Currency { get; set; }
+        public static string Fiat { get; set; }
         public static CoinMateCredentials CoinMateCredentials { get; set; }
         public static int ChunkSize { get; set; }
         public static double MaxWithdrawalPercentageFee { get; set; } = 0.001;
