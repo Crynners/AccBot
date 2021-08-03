@@ -85,7 +85,8 @@ Tato část není povinná pro provoz bota, nicméně jde o velkou přidanou hod
 1. Založení účtu na [Telegramu](https://telegram.org/)
 2. Vytvoření bota přes BotFather dle [návodu](https://sendpulse.com/knowledge-base/chatbot/create-telegram-chatbot).
    - Token z návodu se poté vloží do proměnné **$TelegramBot** z PowerShell skriptu
-3. Vytvoření nového kanálu
+3. Vytvoření nového kanálu ([videonávod](https://youtu.be/q6-k_LGbw_k) pro vytvoření z mobilní aplikace -> [Android](https://play.google.com/store/apps/details?id=org.telegram.messenger&hl=cs&gl=US) nebo [iOS](https://apps.apple.com/us/app/telegram-messenger/id686449807) verze). 
+Eventuálně postupujte dle následujících printscreenů -> vytvoření přes [Telegram desktop](https://desktop.telegram.org/).
    - V levém horním rohu klikněte na nastavení
    
    ![image](https://user-images.githubusercontent.com/87997650/127706308-0ca1aead-f5a8-42eb-b740-6463d820636f.png)
@@ -95,7 +96,7 @@ Tato část není povinná pro provoz bota, nicméně jde o velkou přidanou hod
    - Pojmenujte si svůj kanál a potvrďte založení tlačítkem
    
    ![image](https://user-images.githubusercontent.com/87997650/127706441-52c861f9-3f76-49a0-8d42-9c5d48c657cc.png)
-   - Kanál označte jako **Public** a vymyslete pro něj unikátní název, tento název se poté vyplní ve formátu `@MyAccBotChannel` (v případě příkladu níže) do proměnné **$TelegramChannel** z powershell skriptu
+   - Kanál označte jako **Public** a vymyslete pro něj unikátní název. Tento název se poté vyplňte ve formátu `@MyAccBotChannel` (v případě příkladu níže) do proměnné **$TelegramChannel** v powershell skriptu
    
    ![image](https://user-images.githubusercontent.com/87997650/127706976-591cb415-4bc2-444b-95fc-56aaa9d58e73.png)
 4. Do kanálu pozvěte svého bota (vyhledejte ho dle jména), kterého jste vytvořili v bodu 2 přes BotFather.
