@@ -8,8 +8,11 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 # Jméno, které se zobrazuje v Telegram notifikacích
 $Name='anonymous'
 
-# Měnový pár, který na Coinmate chcete nakupovat
+# Crypto, které na Coinmate chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
 $Currency='BTC'
+
+# Fiat měna, za kterou chcete na Coinmate nakupovat crypto (MOŽNÉ HODNOTY: CZK, EUR)
+$Fiat='CZK'
 
 # Velikost chunku, který chcete pravidelně nakupovat (MINIMUM: 26)
 $ChunkSize='26'
@@ -185,6 +188,7 @@ if ( $existingEntity.Count -gt 0 )
 az functionapp config appsettings set --name $azFunctionName --resource-group $resourceGroupName `
         --settings "Name=$Name" `
                     "Currency=$Currency" `
+                    "Fiat=$Fiat" `
                     "ChunkSize=$ChunkSize" `
                     "DayDividerSchedule=$DayDividerSchedule" `
                     "WithdrawalEnabled=$WithdrawalEnabled" `
