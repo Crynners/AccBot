@@ -33,7 +33,8 @@ Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který 
 3. Stáhněte si [ZIP z aktuálního RELEASE](https://github.com/Crynners/AccBot/releases/download/v1.0/AccBot_installation.zip), který obsahuje instalační PowerShell skript a zbuilděného bota.
 4. ZIP z předchozího bodu rozbalte kamkoliv do Vašeho souborového systému
 5. V poznámkovém bloku (nebo jiném textovém editoru) otevřte soubor **install_script.ps1**
-6. Upravte proměnné v sekci **### USER-DEFINED VARIABLES ###**
+6. (Nepovinné) Nastavte si [Telegram notifikace](#telegramnotifications). _(Pokud i přes doporučení nechcete Telegram notifikace využívat, v dalším kroku proměnné týkající se Telegramu nevyplňujte)_
+7. Upravte proměnné v sekci **### USER-DEFINED VARIABLES ###**
 ```
 ### USER-DEFINED VARIABLES ###
 ##############################
@@ -60,7 +61,7 @@ $WithdrawalAddress=''
 $TelegramChannel='@channel_name'
 
 # Privátní klíč telegram bota (POZOR, bot musí být členem kanálu výše)
-$TelegramBot='<telegram_bot_hash>'
+$TelegramBot='telegram_bot_hash'
 
 # ClientId z Coinmate API
 $CoinMateCredentials_ClientId='111'
@@ -77,6 +78,7 @@ $CoinMateCredentials_PrivateKey='XXX'
 
 ![image](https://user-images.githubusercontent.com/87997650/127874519-d4e8ddab-9477-4c6a-bdc1-a7ad301ba17d.png)
 
+<a name="telegramnotifications"></a>
 # (Nepovinné) Nastavení Telegram notifikací
 Tato část není povinná pro provoz bota, nicméně jde o velkou přidanou hodnotu, neboť Vás bot bude pravidelně informovat po každém nákupu jaké je Vaše průměrná cena naakumulovaného BTC a kolik BTC jste již naakumulovali. Zároveň si budete moci v reálném čase ověřovat, že bot funguje.
 
