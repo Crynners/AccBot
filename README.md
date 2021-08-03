@@ -51,7 +51,8 @@ $Fiat='CZK'
 # Velikost chunku v CZK, resp. EUR, který chcete pravidelně nakupovat (MINIMUM pro CZK: 26; MINIMUM pro EUR: 1)
 $ChunkSize='26'
 
-# Jednou za kolik hodin chcete pravidelně nakupovat BTC (Ideálně volte takové hodnoty, které při dělení čísla 24 mají zbytek 0 -> např. 1, 2, 3, 4, 6, 8, ...)
+# Jednou za kolik hodin chcete pravidelně nakupovat BTC 
+# (Ideálně volte takové hodnoty, které při dělení čísla 24 mají zbytek 0 -> např. 1, 2, 3, 4, 6, 8, ...)
 $HourDivider='1'
 
 # Příznak, zdali chcete povolit výběr do vlastní peněženky v případě, že je fee menší než 0.1 % (POVOLENÉ HODNOTY: true / false)
