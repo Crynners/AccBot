@@ -37,8 +37,18 @@ namespace CryptoBotFunction
             BotConfiguration.Fiat = config["Fiat"];
             BotConfiguration.UserName = config["Name"];
             BotConfiguration.ChunkSize = Int32.Parse(config["ChunkSize"]);
-            BotConfiguration.WithdrawalEnabled = bool.Parse(config["WithdrawalEnabled"]);
-            BotConfiguration.WithdrawalAddress = config["WithdrawalAddress"]; 
+
+            var WithdrawalEnabledValid = bool.TryParse(config["WithdrawalEnabled"], out bool WithdrawalEnabled);
+            BotConfiguration.WithdrawalEnabled = WithdrawalEnabledValid ? WithdrawalEnabled : false;
+
+            BotConfiguration.WithdrawalAddress = config["WithdrawalAddress"];
+
+            var isPercentageFeeValid = Double.TryParse(config["MaxWithdrawalPercentageFee"], out double MaxWithdrawalPercentageFee);
+            BotConfiguration.MaxWithdrawalPercentageFee = isPercentageFeeValid ? MaxWithdrawalPercentageFee : 0.001;
+
+            var isMaxWithdrawalAbsoluteFeeValid = Int32.TryParse(config["MaxWithdrawalAbsoluteFee"], out int MaxWithdrawalAbsoluteFee);
+            BotConfiguration.MaxWithdrawalAbsoluteFee = isMaxWithdrawalAbsoluteFeeValid ? MaxWithdrawalAbsoluteFee : -1;
+
             BotConfiguration.TelegramChannel = config["TelegramChannel"];
             BotConfiguration.TelegramBot = config["TelegramBot"];
             BotConfiguration.CosmosDbEndpointUri = config["CosmosDbEndpointUri"];
