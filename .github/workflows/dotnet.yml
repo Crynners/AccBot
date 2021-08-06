@@ -48,7 +48,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create-new-release.outputs.upload_url }}
-        asset_path: ./AccBot_Installation.zip
+        asset_path: ./ZIPFile/AccBot_Installation.zip
         asset_name: AccBot_Installation.zip
         asset_content_type: application/zip
     
