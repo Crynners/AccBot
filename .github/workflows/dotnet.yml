@@ -40,8 +40,12 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ github.run_number }}
-        release_name: Release V${{ github.run_number }}
+        tag_name: v1.0
+        release_name: Release v1.0.${{ github.run_number }}
+        body: |
+            Aktuální verze Coinmate akumulačního bota běžícího na Azure. 
+
+            Postup instalace naleznete v [README](https://github.com/Crynners/AccBot).
     - name: Upload asset to GitHub Release
       uses: actions/upload-release-asset@v1
       env:
