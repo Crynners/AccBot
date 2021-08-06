@@ -87,12 +87,19 @@ $CoinMateCredentials_PrivateKey='XXX'
 
 ##############################
 ```
-7. Uložte soubor a spusťte poklikáním **run.bat** file (Pro WinOS). Pro MacOS / Unix spusťte PowerShell a v něm spusťte příkaz `powershell.exe -executionpolicy bypass -file .\install_script.ps1`. Skript Vám automaticky připraví všechny potřebné resources na Azure. Na začátku by mělo vyskočit i okno s přihlášením do Azure portal. **POZOR: Instalace trvá několik minut, vyčkejte prosím na její dokončení.** Na konci by se měla objevit následující hláška:
+7. Uložte soubor **install_script.ps1** s vyplněnými hodnotami z předchozího kroku.
+  - <img src="https://user-images.githubusercontent.com/87997650/128522417-9bd02e68-a4d6-48bd-8661-81ec43ee3a47.png" width="25" height="25" />: Poklepáním spusťte **run.bat** file _(Pro Windows OS)._ 
+  - <img src="https://user-images.githubusercontent.com/87997650/128523326-a7456256-4f01-41ef-9c21-1fe5968923cf.png" width="25" height="25" /> / <img src="https://user-images.githubusercontent.com/87997650/128523557-566d738d-67f5-43ac-a65e-080105f92abb.png" width="25" height="25" />: Spusťte PowerShell a v něm proveďte příkaz `powershell.exe -executionpolicy bypass -file .\install_script.ps1`. 
 
-![image](https://user-images.githubusercontent.com/87997650/127874519-d4e8ddab-9477-4c6a-bdc1-a7ad301ba17d.png)
+Skript Vám automaticky připraví všechny potřebné resources na Azure. Na začátku by mělo vyskočit i okno s přihlášením do Azure portal. 
+
+**POZOR: Instalace trvá několik minut, vyčkejte prosím na její dokončení.** Na závěr by se měla objevit následující hláška:
+
+![image](https://user-images.githubusercontent.com/87997650/128522145-3acfef81-ede6-4e40-95f0-627a532ca5d2.png)
 
 <a name="telegramnotifications"></a>
 # (Nepovinné) Nastavení Telegram notifikací
+
 Tato část není povinná pro provoz bota, nicméně jde o velkou přidanou hodnotu, neboť Vás bot bude pravidelně informovat po každém nákupu jaké je Vaše průměrná cena naakumulovaného BTC a kolik BTC jste již naakumulovali. Zároveň si budete moci v reálném čase ověřovat, že bot funguje.
 
 1. Založení účtu na [Telegramu](https://telegram.org/)
