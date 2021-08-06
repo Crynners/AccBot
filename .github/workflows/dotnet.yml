@@ -21,6 +21,19 @@ jobs:
       with:
         type: 'zip'
         filename: 'AccBot.zip'
+        exclusions: '*.bat *.ps1'
+    - name: Create ZIP directory
+      run: |
+        mkdir ZIPFile
+        mv AccBot.zip ZIPFile
+        mv *.ps1 ZIPFile
+        mv *.bat ZIPFile
+    - name: Create ZIP Installation pack
+      uses: thedoctor0/zip-release@master
+      with:
+        type: 'zip'
+        directory: ZIPFile
+        filename: 'AccBot_Installation.zip'
     - name: Create GitHub Release
       id: create-new-release
       uses: actions/create-release@v1
@@ -35,8 +48,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create-new-release.outputs.upload_url }}
-        asset_path: ./AccBot.zip
-        asset_name: AccBot.zip
+        asset_path: ./AccBot_Installation.zip
+        asset_name: AccBot_Installation.zip
         asset_content_type: application/zip
     
       
