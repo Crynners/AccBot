@@ -1,4 +1,3 @@
-
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 ##############################
@@ -8,8 +7,11 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 # Jméno, které se zobrazuje v Telegram notifikacích
 $Name='anonymous'
 
-# Měnový pár, který na Coinmate chcete nakupovat
+# Crypto, které na Coinmate chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
 $Currency='BTC'
+
+# Fiat měna, za kterou chcete na Coinmate nakupovat crypto (MOŽNÉ HODNOTY: CZK, EUR)
+$Fiat='CZK'
 
 # Velikost chunku, který chcete pravidelně nakupovat (MINIMUM: 26)
 $ChunkSize='26'
@@ -71,8 +73,8 @@ $zipDeploymentFileName = join-path -path $scriptPath -childpath $zipFile
 
 # Kontrola dostupnosi deployment ZIP souboru
 if(![System.IO.File]::Exists($zipDeploymentFileName)){
-    $error = "Deployment ZIP file '" + $zipDeploymentFileName+ "' is missing in the same directory as the PowerShell script! Please copy the ZIP file 'AccBot.zip to the same directory as the ps1 script.'"
-    throw $error
+    $err = "Deployment ZIP file '" + $zipDeploymentFileName+ "' is missing in the same directory as the PowerShell script! Please copy the ZIP file 'AccBot.zip to the same directory as the ps1 script.'"
+    throw $err
     exit
 }
 
@@ -185,6 +187,7 @@ if ( $existingEntity.Count -gt 0 )
 az functionapp config appsettings set --name $azFunctionName --resource-group $resourceGroupName `
         --settings "Name=$Name" `
                     "Currency=$Currency" `
+                    "Fiat=$Fiat" `
                     "ChunkSize=$ChunkSize" `
                     "DayDividerSchedule=$DayDividerSchedule" `
                     "WithdrawalEnabled=$WithdrawalEnabled" `
@@ -209,8 +212,8 @@ $existingEntity = az group list --query $query | ConvertFrom-Json
 
 if ( $existingEntity.Count -eq 0 )
 {
-    $error = "ERROR: Resource group check failed."
-    throw $error
+    $err = "ERROR: Resource group check failed."
+    throw $err
     exit
 }
 
@@ -220,8 +223,8 @@ $existingEntity = az cosmosdb list --query $query | ConvertFrom-Json
 
 if ( $existingEntity.Count -eq 0 )
 {
-    $error = "ERROR: CosmosDB account check failed."
-    throw $error
+    $err = "ERROR: CosmosDB account check failed."
+    throw $err
     exit
 }
 
@@ -231,8 +234,8 @@ $existingEntity = az storage account list --query $query | ConvertFrom-Json
 
 if ( $existingEntity.Count -eq 0 )
 {
-    $error = "ERROR: Azure storage account check failed."
-    throw $error
+    $err = "ERROR: Azure storage account check failed."
+    throw $err
     exit
 }
 
@@ -242,8 +245,8 @@ $existingEntity = az functionapp list --query $query | ConvertFrom-Json
 
 if ( $existingEntity.Count -eq 0 )
 {
-    $error = "ERROR: Azure functionapp check failed."
-    throw $error
+    $err = "ERROR: Azure functionapp check failed."
+    throw $err
     exit
 }
 
@@ -253,14 +256,14 @@ $existingEntity = az functionapp config appsettings list --query $query -g $reso
 
 if ( $existingEntity.Count -eq 0 )
 {
-    $error = "ERROR: Azure functionapp settings check failed."
-    throw $error
+    $err = "ERROR: Azure functionapp settings check failed."
+    throw $err
     exit
 }
 
-if($DeployAzureFunctionResult -eq $null){
-    $error = "ERROR: Azure function deployment failed."
-    throw $error
+if( $null -eq $DeployAzureFunctionResult ){
+    $err = "ERROR: Azure function deployment failed."
+    throw $err
     exit
 }
 
