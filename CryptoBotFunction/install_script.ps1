@@ -241,7 +241,7 @@ if ( $existingEntity.Count -gt 0 )
     Write-Warning $alreadyExistPrint
 }else{
     #Tvorba Azure function
-    az functionapp create -g $resourceGroupName  -n $azFunctionName -s $storageAccountName --only-show-errors --functions-version 3 --consumption-plan-location $location
+    az functionapp create -g $resourceGroupName  -n $azFunctionName -s $storageAccountName --only-show-errors --disable-app-insights --functions-version 3 --consumption-plan-location $location
 }
 
 # Azure functionapp check
