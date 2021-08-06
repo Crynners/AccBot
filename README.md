@@ -62,11 +62,11 @@ $WithdrawalEnabled='false'
 $WithdrawalAddress=''
 
 # (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
-# Maximální limit v procentech, kdy dovolujete botovi zaslat naakumulované krypto do své peněženky
+# Maximální limit na withdrawal fee v procentech. (DEFAULT: 0.001 = 0.1 %) 
 $MaxWithdrawalPercentageFee = '0.001'
 
 # (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
-# Maximální limit v absolutní hodnotě (Kč), kdy dovolujete botovi zaslat naakumulované krypto do své peněženky
+# Maximální limit na withdrawal fee v absolutní hodnotě (Kč)
 # Pokud je nastaveno -1, uplatní se pouze podmínka procentuální => $MaxWithdrawalPercentageFee
 $MaxWithdrawalAbsoluteFee = -1
 

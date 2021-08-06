@@ -24,7 +24,7 @@ namespace CryptoBotCore.BotStrategies
         [NonSerialized]
         private Dictionary<string, CoinmateAPI> coinmateAPIs;
 
-        TelegramBotClient bot = new TelegramBotClient(BotConfiguration.TelegramBot);
+        TelegramBotClient TelegramBot { get; set; }
 
         private CosmosDbContext _cosmosDbContext;
 
@@ -207,7 +207,8 @@ namespace CryptoBotCore.BotStrategies
 
             try
             {
-                await bot.SendTextMessageAsync(BotConfiguration.TelegramChannel, message, Telegram.Bot.Types.Enums.ParseMode.Html);
+                TelegramBot = new TelegramBotClient(BotConfiguration.TelegramBot);
+                await TelegramBot.SendTextMessageAsync(BotConfiguration.TelegramChannel, message, Telegram.Bot.Types.Enums.ParseMode.Html);
             }
             catch (Exception e)
             {

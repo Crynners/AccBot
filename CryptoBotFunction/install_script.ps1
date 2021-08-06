@@ -27,11 +27,11 @@ $WithdrawalEnabled='false'
 $WithdrawalAddress=''
 
 # (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
-# Maximální limit v procentech, kdy dovolujete botovi zaslat naakumulované krypto do své peněženky
+# Maximální limit na withdrawal fee v procentech. (DEFAULT: 0.001 = 0.1 %) 
 $MaxWithdrawalPercentageFee = '0.001'
 
 # (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
-# Maximální limit v absolutní hodnotě (Kč), kdy dovolujete botovi zaslat naakumulované krypto do své peněženky
+# Maximální limit na withdrawal fee v absolutní hodnotě (Kč)
 # Pokud je nastaveno -1, uplatní se pouze podmínka procentuální => $MaxWithdrawalPercentageFee
 $MaxWithdrawalAbsoluteFee = -1
 
@@ -49,8 +49,6 @@ $CoinMateCredentials_PublicKey='XXX'
 
 # Private key z Coinmate API
 $CoinMateCredentials_PrivateKey='XXX'
-
-##############################
 
 ########################
 ### SYSTEM VARIABLES ###
@@ -101,6 +99,7 @@ if (0 -eq $LoginResult.Count){
     exit
 }
 
+Write-Host "Login to Azure was successful. Please wait, installation will take several minutes..." -ForegroundColor cyan
 
 ################ RESOURCE GROUP #####################
 
@@ -117,6 +116,19 @@ if ( $existingResourceGroups.Count -gt 0 )
     az group create -l $location -n $resourceGroupName
 }
 
+# Resource group check
+$query = "[?name == '" + $resourceGroupName + "']"
+$existingEntity = az group list --query $query | ConvertFrom-Json
+
+if ( $existingEntity.Count -eq 0 )
+{
+    $err = "ERROR: Resource group check failed."
+    throw $err
+    exit
+}
+
+Write-Host "[Step 1 / 8] Resource group -> DONE" -ForegroundColor cyan
+
 ################ COSMOSDB ACCOUNT #####################
 
 #Kontrola, zdali již náhodou CosmosDB v rámci Resource group "AccBot" neexistuje 
@@ -131,11 +143,31 @@ if ( $existingEntity.Count -gt 0 )
 
     $alreadyExistPrint = "CosmosDB account '" + $cosmosDBAccountName + "' already exists. This step will be skipped."
     Write-Warning $alreadyExistPrint
+
+    Write-Host "[Step 2 / 8] CosmosDB account -> DONE" -ForegroundColor cyan
+    Write-Host "[Step 3 / 8] CosmosDB DB -> DONE" -ForegroundColor cyan
+    Write-Host "[Step 4 / 8] CosmosDB DB Container -> DONE" -ForegroundColor cyan
 }else{
     #Vytvoření CosmosDB
     $CosmosDBAccountResult = az cosmosdb create -n $cosmosDBAccountName -g $resourceGroupName --only-show-errors --default-consistency-level Session | ConvertFrom-Json
+
+    # CosmosDB account check
+    $query = "[?contains(name, 'accbotcosmosdbaccount') && resourceGroup == '" + $resourceGroupName + "']"
+    $existingEntity = az cosmosdb list --query $query | ConvertFrom-Json
+
+    if ( $existingEntity.Count -eq 0 )
+    {
+        $err = "ERROR: CosmosDB account check failed."
+        throw $err
+        exit
+    }
+    Write-Host "[Step 2 / 8] CosmosDB account -> DONE" -ForegroundColor cyan
+
+
     $cosmosDbResult = az cosmosdb sql database create --account-name $cosmosDBAccountName --resource-group $resourceGroupName --only-show-errors --name $cosmosDBName | ConvertFrom-Json
+    Write-Host "[Step 3 / 8] CosmosDB DB -> DONE" -ForegroundColor cyan
     $containerResult = az cosmosdb sql container create -g $resourceGroupName -a $cosmosDBAccountName -d $cosmosDBName -n $cosmosContainerName --only-show-errors --partition-key-path "/CryptoName" --throughput "400" | ConvertFrom-Json
+    Write-Host "[Step 4 / 8] CosmosDB DB Container -> DONE" -ForegroundColor cyan
 }
 
 
@@ -180,6 +212,19 @@ if ( $existingEntity.Count -gt 0 )
     az storage account create -n $storageAccountName -g $resourceGroupName --only-show-errors --sku Standard_LRS
 }
 
+# Azure storage account check
+$query = "[?contains(name, 'accbotsa') && resourceGroup == '" + $resourceGroupName + "']"
+$existingEntity = az storage account list --query $query | ConvertFrom-Json
+
+if ( $existingEntity.Count -eq 0 )
+{
+    $err = "ERROR: Azure storage account check failed."
+    throw $err
+    exit
+}
+
+Write-Host "[Step 5 / 8] Storage account -> DONE" -ForegroundColor cyan
+
 ########################################################### AZURE FUNCTIONAPP ############################################################
 
 #Kontrola, zdali již náhodou Azure functionapp v rámci resource group AccBot neexistuje
@@ -199,8 +244,21 @@ if ( $existingEntity.Count -gt 0 )
     az functionapp create -g $resourceGroupName  -n $azFunctionName -s $storageAccountName --only-show-errors --functions-version 3 --consumption-plan-location $location
 }
 
+# Azure functionapp check
+$query = "[?contains(name, 'accbotfunction') && resourceGroup == '" + $resourceGroupName + "']"
+$existingEntity = az functionapp list --query $query | ConvertFrom-Json
+
+if ( $existingEntity.Count -eq 0 )
+{
+    $err = "ERROR: Azure functionapp check failed."
+    throw $err
+    exit
+}
+
+Write-Host "[Step 6 / 8] Function app -> DONE" -ForegroundColor cyan
+
 #Nastavení proměnných
-az functionapp config appsettings set --name $azFunctionName --resource-group $resourceGroupName `
+$appsettingsResult = az functionapp config appsettings set --name $azFunctionName --resource-group $resourceGroupName `
         --settings "Name=$Name" `
                     "Currency=$Currency" `
                     "Fiat=$Fiat" `
@@ -218,56 +276,6 @@ az functionapp config appsettings set --name $azFunctionName --resource-group $r
                     "CoinMateCredentials_PublicKey=$CoinMateCredentials_PublicKey" `
                     "CoinMateCredentials_PrivateKey=$CoinMateCredentials_PrivateKey"
 
-
-#Deploy AccBota do Azure function
-$env:SCM_DO_BUILD_DURING_DEPLOYMENT='true'
-$DeployAzureFunctionResult = az functionapp deployment source config-zip -g $resourceGroupName -n $azFunctionName --src $zipDeploymentFileName --only-show-errors
-
-################################################### Závěrečná kontrola skriptu ############################################################
-# Resource group check
-$query = "[?name == '" + $resourceGroupName + "']"
-$existingEntity = az group list --query $query | ConvertFrom-Json
-
-if ( $existingEntity.Count -eq 0 )
-{
-    $err = "ERROR: Resource group check failed."
-    throw $err
-    exit
-}
-
-# CosmosDB account check
-$query = "[?contains(name, 'accbotcosmosdbaccount') && resourceGroup == '" + $resourceGroupName + "']"
-$existingEntity = az cosmosdb list --query $query | ConvertFrom-Json
-
-if ( $existingEntity.Count -eq 0 )
-{
-    $err = "ERROR: CosmosDB account check failed."
-    throw $err
-    exit
-}
-
-# Azure storage account check
-$query = "[?contains(name, 'accbotsa') && resourceGroup == '" + $resourceGroupName + "']"
-$existingEntity = az storage account list --query $query | ConvertFrom-Json
-
-if ( $existingEntity.Count -eq 0 )
-{
-    $err = "ERROR: Azure storage account check failed."
-    throw $err
-    exit
-}
-
-# Azure functionapp check
-$query = "[?contains(name, 'accbotfunction') && resourceGroup == '" + $resourceGroupName + "']"
-$existingEntity = az functionapp list --query $query | ConvertFrom-Json
-
-if ( $existingEntity.Count -eq 0 )
-{
-    $err = "ERROR: Azure functionapp check failed."
-    throw $err
-    exit
-}
-
 # Azure functionapp settings check
 $query = "[?contains(name, 'CosmosDbPrimaryKey')]"
 $existingEntity = az functionapp config appsettings list --query $query -g $resourceGroupName -n $azFunctionName  | ConvertFrom-Json
@@ -279,20 +287,29 @@ if ( $existingEntity.Count -eq 0 )
     exit
 }
 
+Write-Host "[Step 7 / 8] Function app settings uploading -> DONE" -ForegroundColor cyan
+
+
+#Deploy AccBota do Azure function
+$env:SCM_DO_BUILD_DURING_DEPLOYMENT='true'
+$DeployAzureFunctionResult = az functionapp deployment source config-zip -g $resourceGroupName -n $azFunctionName --src $zipDeploymentFileName --only-show-errors
+
+# Azure functionapp deployment check
 if( $null -eq $DeployAzureFunctionResult ){
     $err = "ERROR: Azure function deployment failed."
     throw $err
     exit
 }
 
+Write-Host "[Step 8 / 8] Function app deployment -> DONE" -ForegroundColor cyan
+
 
 #Zobrazit výstup co se stalo
-$output = "Úspěšně se vytvořily následující entity v Azure: `n`t ResourceGroup: " + $resourceGroupName + "`n"`
+$output = "The following entities were successfully created in Azure: `n`t ResourceGroup: " + $resourceGroupName + "`n"`
                 + "`t CosmosDBAccount: " + $cosmosDBAccountName + "`n"`
                 + "`t Azure storage: " + $storageAccountName + "`n"`
                 + "`t Azure function: " + $azFunctionName + "`n"`
-                + " => Bot je již nasazen a nyní by měl začít nakupovat " + $Currency + " v " + $randomMinutes + ". minutu každou " + $NextHour + "hodinu."
+                + " => The AccBot bot is already deployed and should now start buying " + $Currency + " at " + $randomMinutes + ". minute every " + $NextHour + "hour."
 
 Write-Host $output -ForegroundColor green
-
 pause
