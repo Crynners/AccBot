@@ -1,3 +1,5 @@
+_Read the README in [English](https://github.com/Crynners/AccBot/blob/main/README.en.md)._
+
 # Úvod
 Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který v pravidelných intervalech po malých částkách v Kč nebo Eurech nakupuje [BTC](https://cs.wikipedia.org/wiki/Bitcoin) _(eventuálně LTC, ETH, XMR nebo DASH)_ na burze [Coinmate](https://coinmate.io/) dle strategie [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html).
 
