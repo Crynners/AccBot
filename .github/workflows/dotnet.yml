@@ -56,4 +56,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: accbot-content
-        path: out/
+        path: CryptoBotFunction/bin/Release/netcoreapp3.1
