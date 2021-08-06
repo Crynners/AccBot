@@ -30,12 +30,13 @@ Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který 
 
    ![image](https://user-images.githubusercontent.com/87997650/127633656-a6698455-03b6-4b23-902d-e5642dbe4988.png)
 
-3. Stáhněte si [ZIP z aktuálního RELEASE](https://github.com/Crynners/AccBot/releases/download/v1.0/AccBot_installation.zip), který obsahuje instalační PowerShell skript a zbuilděného bota.
+3. Stáhněte si [ZIP z aktuálního RELEASE](https://github.com/Crynners/AccBot/releases/latest/download/AccBot_installation.zip), který obsahuje instalační PowerShell skript a zbuilděného bota.
 4. ZIP z předchozího bodu rozbalte kamkoliv do Vašeho souborového systému
 5. V poznámkovém bloku (nebo jiném textovém editoru) otevřte soubor **install_script.ps1**
 6. (Nepovinné) Nastavte si [Telegram notifikace](#telegramnotifications). _(Pokud i přes doporučení nechcete Telegram notifikace využívat, v dalším kroku proměnné týkající se Telegramu nevyplňujte)_
 7. Upravte proměnné v sekci **### USER-DEFINED VARIABLES ###**
 ```
+##############################
 ### USER-DEFINED VARIABLES ###
 ##############################
 
@@ -51,15 +52,23 @@ $Fiat='CZK'
 # Velikost chunku v CZK, resp. EUR, který chcete pravidelně nakupovat (MINIMUM pro CZK: 26; MINIMUM pro EUR: 1)
 $ChunkSize='26'
 
-# Jednou za kolik hodin chcete pravidelně nakupovat BTC 
-# (Ideálně volte takové hodnoty, které při dělení čísla 24 mají zbytek 0 -> např. 1, 2, 3, 4, 6, 8, ...)
+# Jednou za kolik hodin chcete pravidelně nakupovat BTC
 $HourDivider='1'
 
-# Příznak, zdali chcete povolit výběr do vlastní peněženky v případě, že je fee menší než 0.1 % (POVOLENÉ HODNOTY: true / false)
+# Příznak, zdali chcete povolit Withdrawal v případě, že je fee menší než 0.1% (POVOLENÉ HODNOTY: true / false)
 $WithdrawalEnabled='false'
 
-# Adresa peněženky pro výběr btc (aplikuje se pouze pokud WithdrawalEnabled = TRUE)
+# Adresa peněženky pro withdraw (aplikuje se pouze pokud WithdrawalEnabled = TRUE)
 $WithdrawalAddress=''
+
+# (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
+# Maximální limit v procentech, kdy dovolujete botovi zaslat naakumulované krypto do své peněženky
+$MaxWithdrawalPercentageFee = '0.001'
+
+# (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
+# Maximální limit v absolutní hodnotě (Kč), kdy dovolujete botovi zaslat naakumulované krypto do své peněženky
+# Pokud je nastaveno -1, uplatní se pouze podmínka procentuální => $MaxWithdrawalPercentageFee
+$MaxWithdrawalAbsoluteFee = -1
 
 # Adresa telegram kanálu, do kterého chcete dostávat notifikace (ve formátu @NázevKanálu)
 $TelegramChannel='@channel_name'
@@ -78,7 +87,7 @@ $CoinMateCredentials_PrivateKey='XXX'
 
 ##############################
 ```
-7. Uložte soubor a otevřte Powershellové okno. Spusťte **install_script.ps1** skript pomocí příkazu `./install_script.ps1`. Skript Vám automaticky připraví všechny potřebné resources na Azure. Na začátku by mělo vyskočit i okno s přihlášením do Azure portal. **POZOR: Instalace trvá několik minut, vyčkejte prosím na její dokončení.** Na konci by se měla objevit následující hláška:
+7. Uložte soubor a spusťte poklikáním **run.bat** file (Pro WinOS). Pro MacOS / Unix spusťte PowerShell a v něm spusťte příkaz `powershell.exe -executionpolicy bypass -file .\install_script.ps1`. Skript Vám automaticky připraví všechny potřebné resources na Azure. Na začátku by mělo vyskočit i okno s přihlášením do Azure portal. **POZOR: Instalace trvá několik minut, vyčkejte prosím na její dokončení.** Na konci by se měla objevit následující hláška:
 
 ![image](https://user-images.githubusercontent.com/87997650/127874519-d4e8ddab-9477-4c6a-bdc1-a7ad301ba17d.png)
 
