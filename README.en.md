@@ -11,7 +11,7 @@ Welcome to AccBot. AccBot is an open-source accumulation bot that buys [BTC](htt
   * ![image](https://user-images.githubusercontent.com/87997650/127356371-6a9d1493-55f0-41cc-ab03-4a67cf610f42.png)
 
 # Pre-requisites
-1. **Uninstalled [PowerShell](https://docs.microsoft.com/cs-cz/powershell/scripting/install/installing-powershell?view=powershell-7.1)**
+1. **Installed [PowerShell](https://docs.microsoft.com/cs-cz/powershell/scripting/install/installing-powershell?view=powershell-7.1)**
 2. **Installed [Azure CLI](https://docs.microsoft.com/cs-cz/cli/azure/install-azure-cli)**
 3. **Established account on the exchange [Coinmate](https://coinmate.io/)** (account is free; [KYC](https://en.wikipedia.org/wiki/Know_your_customer) verification is required to send fiat to the exchange)
     - If you would like to support us and sign up through our referral link, you can click on the banner below
