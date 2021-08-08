@@ -89,6 +89,7 @@ $CoinMateCredentials_PrivateKey='XXX'
 
 ##############################
 ```
+<a name="installscript"></a>
 7. Uložte soubor **install_script.ps1** s vyplněnými hodnotami z předchozího kroku.
   - <img src="https://user-images.githubusercontent.com/87997650/128522417-9bd02e68-a4d6-48bd-8661-81ec43ee3a47.png" width="25" height="25" />: Poklepáním spusťte **run.bat** file _(Pro Windows OS)._ 
   - <img src="https://user-images.githubusercontent.com/87997650/128523326-a7456256-4f01-41ef-9c21-1fe5968923cf.png" width="25" height="25" /> / <img src="https://user-images.githubusercontent.com/87997650/128523557-566d738d-67f5-43ac-a65e-080105f92abb.png" width="25" height="25" />: Spusťte PowerShell a v něm proveďte příkaz `powershell.exe -executionpolicy bypass -file .\install_script.ps1`. 
@@ -131,7 +132,9 @@ Eventuálně postupujte dle následujících printscreenů -> vytvoření přes 
    ![image](https://user-images.githubusercontent.com/87997650/127707327-faa3fa84-56ab-4fce-be0f-7a3f81cadf38.png)
 5. Hotovo, do vytvořeného kanálu by Vám odteď měl bot zapisovat informace o nákupech se statistikami.
 
-   
+# Jak upravit nastavení již běžícího AccBot
+
+Pokud Vám AccBot již úspěšně běží a chcete si časem změnit nějaké nastavení _(četnost nebo výše jednotlivých nákupů, povolení withdrawal, etc.)_, nejjednodušším způsobem je upravit **USER-DEFINED VARIABLES** v instalačním skriptu **install_script.ps1** a skript znovu spustit dle kroku 7 [instalačního návodu](#installscript).
 
 # Donate
 ![heart_donate](https://user-images.githubusercontent.com/87997650/127650190-188e401a-9942-4511-847e-d1010628777a.png)

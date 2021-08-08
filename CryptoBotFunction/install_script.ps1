@@ -54,6 +54,23 @@ $CoinMateCredentials_PrivateKey='XXX'
 ### SYSTEM VARIABLES ###
 ########################
 
+# Pokud proměnné neexistují, nastaví se default
+if($null -eq $MaxWithdrawalPercentageFee){
+    $MaxWithdrawalPercentageFee = '0.001'
+}
+
+if($null -eq $MaxWithdrawalAbsoluteFee){
+    $MaxWithdrawalAbsoluteFee = 15
+}
+
+if($null -eq $WithdrawalEnabled){
+    $WithdrawalEnabled = 'false'
+}
+
+if($null -eq $WithdrawalAddress){
+    $WithdrawalAddress = ''
+}
+
 $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
 $zipFile = 'AccBot.zip'
 
