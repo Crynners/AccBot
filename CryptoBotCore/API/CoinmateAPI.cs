@@ -182,7 +182,7 @@ namespace CryptoBotCore.API
             } while (true);
         }
 
-        public double getBTCWidthrawalFee()
+        public double getBTCWithdrawalFee()
         {
             int wait = 0;
             do
@@ -193,7 +193,7 @@ namespace CryptoBotCore.API
                     client.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded");
                     string body = getSecuredHeaderPart();
                     string response = client.UploadString("https://coinmate.io/api/bitcoinWithdrawalFees", body);
-                    BTCWidthrawalFee_RootObject result = JsonConvert.DeserializeObject<BTCWidthrawalFee_RootObject>(response);
+                    BTCWithdrawalFee_RootObject result = JsonConvert.DeserializeObject<BTCWithdrawalFee_RootObject>(response);
 
                     if (result.error)
                     {
@@ -212,18 +212,18 @@ namespace CryptoBotCore.API
             } while (true);
         }
 
-        public class BTCWidthrawalFee_Data
+        public class BTCWithdrawalFee_Data
         {
             public double low { get; set; }
             public double high { get; set; }
             public long timestamp { get; set; }
         }
 
-        public class BTCWidthrawalFee_RootObject
+        public class BTCWithdrawalFee_RootObject
         {
             public bool error { get; set; }
             public object errorMessage { get; set; }
-            public BTCWidthrawalFee_Data data { get; set; }
+            public BTCWithdrawalFee_Data data { get; set; }
         }
 
         public string sell(double amount, double exchangeRate, bool isReal, OrderType orderType = OrderType.ExchangeLimit)

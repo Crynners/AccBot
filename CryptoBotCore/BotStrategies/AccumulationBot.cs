@@ -83,7 +83,7 @@ namespace CryptoBotCore.BotStrategies
 
                 if(BotConfiguration.Currency == "BTC")
                 {
-                    fees["BTC"] = coinmateAPIs["BTC"].getBTCWidthrawalFee();
+                    fees["BTC"] = coinmateAPIs["BTC"].getBTCWithdrawalFee();
                 }
 
                 fees["LTC"] = 0.0004;
@@ -99,7 +99,10 @@ namespace CryptoBotCore.BotStrategies
 
                 double fee_cost = (fees[BotConfiguration.Currency] / available);
 
-                sbInformationMessage.Append("<b>Accumulation:</b> " + (available - init).ToString("N8") + " " + BotConfiguration.Currency + " for " + BotConfiguration.ChunkSize.ToString("N2") + $" {BotConfiguration.Fiat} @ " + (BotConfiguration.ChunkSize / (available - init)).ToString("N2") + $" {BotConfiguration.Fiat}").Append("\r\n");
+                double TAKER_FEE = 1.0035;
+                double buyPrice = ((FiatBalance - FiatAfterBuy) / TAKER_FEE) / (available - init);
+
+                sbInformationMessage.Append("<b>Accumulation:</b> " + (available - init).ToString("N8") + " " + BotConfiguration.Currency + " for " + BotConfiguration.ChunkSize.ToString("N2") + $" {BotConfiguration.Fiat} @ " + (buyPrice).ToString("N2") + $" {BotConfiguration.Fiat}").Append("\r\n");
 
                 //Send them home
                 if (BotConfiguration.WithdrawalEnabled && 
@@ -111,7 +114,7 @@ namespace CryptoBotCore.BotStrategies
                     coinmateAPIs[BotConfiguration.Currency].Withdraw(available, BotConfiguration.WithdrawalAddress);
 
                     sbInformationMessage.Append("<b>Withdrawal:</b> " + available.ToString("N8") + " " + BotConfiguration.Currency + " to " + BotConfiguration.WithdrawalAddress + " with " + (fee_cost * 100).ToString("N2") + " % fee").Append("\r\n");
-                    //Serializer.SendEmail("Accumulation Bot - Widthraw", "Widthraw of " + + " " + increase_string + " to " + schedule.WidthrawalAddress + ".", configuration.userId, forceEmail);
+                    //Serializer.SendEmail("Accumulation Bot - Withdraw", "Withdraw of " + + " " + increase_string + " to " + schedule.WithdrawalAddress + ".", configuration.userId, forceEmail);
                 }
                 else
                 {
