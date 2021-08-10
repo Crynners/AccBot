@@ -15,11 +15,6 @@ namespace CryptoBotCore.BotStrategies
 {
     public class AccumulationBot
     {
-        Double packageSize { get; set; }
-
-        private static readonly string CONST_ASTERIX = "*";
-
-        private static readonly int ROUND_NUMBER = 7;
 
         [NonSerialized]
         private Dictionary<string, CoinmateAPI> coinmateAPIs;

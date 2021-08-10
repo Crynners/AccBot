@@ -87,6 +87,10 @@ $CoinMateCredentials_PublicKey='XXX'
 # Private key z Coinmate API
 $CoinMateCredentials_PrivateKey='XXX'
 
+# Příznak pro vytvoření logu na Azure. (POVOLENÉ HODNOTY: true / false). DOPORUČENÍ: Standardně mít vypnuté, tedy "false". 
+# Log zvyšuje měsíční náklady z cca 0.04 € / měsíc na cca 0.2 € / měsíc. Doporučujeme tedy zapnout pouze pokud Vám bot například nenakupuje jak by měl. 
+$CreateAzureLog = 'false'
+
 ##############################
 ```
 <a name="installscript"></a>
