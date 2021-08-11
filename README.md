@@ -37,7 +37,7 @@ Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který 
 5. V poznámkovém bloku (nebo jiném textovém editoru) otevřte soubor **install_script.ps1**
 6. (Nepovinné) Nastavte si [Telegram notifikace](#telegramnotifications). _(Pokud i přes doporučení nechcete Telegram notifikace využívat, v dalším kroku proměnné týkající se Telegramu nevyplňujte)_
 7. Upravte proměnné v sekci **### USER-DEFINED VARIABLES ###**
-```
+```powershell
 ##############################
 ### USER-DEFINED VARIABLES ###
 ##############################
@@ -96,8 +96,10 @@ $CreateAzureLog = 'false'
 <a name="installscript"></a>
 7. Uložte soubor **install_script.ps1** s vyplněnými hodnotami z předchozího kroku.
   - <img src="https://user-images.githubusercontent.com/87997650/128522417-9bd02e68-a4d6-48bd-8661-81ec43ee3a47.png" width="25" height="25" />: Poklepáním spusťte **run.bat** file _(Pro Windows OS)._ 
-  - <img src="https://user-images.githubusercontent.com/87997650/128523326-a7456256-4f01-41ef-9c21-1fe5968923cf.png" width="25" height="25" /> / <img src="https://user-images.githubusercontent.com/87997650/128523557-566d738d-67f5-43ac-a65e-080105f92abb.png" width="25" height="25" />: Spusťte PowerShell a v něm proveďte příkaz `powershell.exe -executionpolicy bypass -file .\install_script.ps1`. 
-
+  - <img src="https://user-images.githubusercontent.com/87997650/128523326-a7456256-4f01-41ef-9c21-1fe5968923cf.png" width="25" height="25" /> / <img src="https://user-images.githubusercontent.com/87997650/128523557-566d738d-67f5-43ac-a65e-080105f92abb.png" width="25" height="25" />: Spusťte PowerShell a v něm proveďte příkaz 
+    ```powershell 
+    powershell.exe -executionpolicy bypass -file .\install_script.ps1
+    ``` 
 Skript Vám automaticky připraví všechny potřebné resources na Azure. Na začátku by mělo vyskočit i okno s přihlášením do Azure portal. 
 
 **POZOR: Instalace trvá několik minut, vyčkejte prosím na její dokončení.** Na závěr by se měla objevit následující hláška:
