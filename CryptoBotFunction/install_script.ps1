@@ -110,7 +110,7 @@ $zipDeploymentFileName = join-path -path $scriptPath -childpath $zipFile
 # Kontrola dostupnosi deployment ZIP souboru
 if(![System.IO.File]::Exists($zipDeploymentFileName)){
     $err = "Deployment ZIP file '" + $zipDeploymentFileName+ "' is missing in the same directory as the PowerShell script! Please copy the ZIP file 'AccBot.zip to the same directory as the ps1 script.'"
-    throw $err
+    Write-Error $err
     pause
     exit
 }
@@ -124,7 +124,7 @@ $LoginResult = az login --allow-no-subscriptions --only-show-errors  | ConvertFr
 
 if (0 -eq $LoginResult.Count){
     $err = "ERROR: Azure subscription does not exists. Please create the new subscription in the Azure portal. (https://https://portal.azure.com/)"
-    throw $err
+    Write-Error $err
     pause
     exit
 }
@@ -136,7 +136,15 @@ Write-Host "[Step 1 / 9] Resource group -> Starting ..." -ForegroundColor cyan
 
 #Kontrola, zdali již náhodou Resource group "AccBot" neexistuje
 $query = "[?name == '" + $resourceGroupName + "']"
-$existingEntity = az group list --query $query | ConvertFrom-Json
+
+try{
+    $existingEntity = az group list --query $query | ConvertFrom-Json
+}catch{
+    Write-Error $_
+    pause
+    exit
+}
+
 
 if ( $existingEntity.Count -gt 0 )
 {
@@ -153,7 +161,7 @@ if ( $existingEntity.Count -gt 0 )
     if ( $existingEntity.Count -eq 0 )
     {
         $err = "ERROR: Resource group check failed."
-        throw $err
+        Write-Error $err
         pause
         exit
     }
@@ -196,7 +204,7 @@ if ( $existingEntity.Count -gt 0 )
     if ( $existingEntity.Count -eq 0 )
     {
         $err = "ERROR: CosmosDB account check failed."
-        throw $err
+        Write-Error $err
         pause
         exit
     }
@@ -261,7 +269,7 @@ if ( $existingEntity.Count -gt 0 )
     if ( $existingEntity.Count -eq 0 )
     {
         $err = "ERROR: Azure storage account check failed."
-        throw $err
+        Write-Error $err
         pause
         exit
     }
@@ -349,7 +357,7 @@ if ( $existingEntity.Count -gt 0 )
     if ( $existingEntity.Count -eq 0 )
     {
         $err = "ERROR: Azure functionapp check failed."
-        throw $err
+        Write-Error $err
         pause
         exit
     }
@@ -386,7 +394,7 @@ $existingEntity = az functionapp config appsettings list --query $query -g $reso
 if ( $existingEntity.Count -eq 0 )
 {
     $err = "ERROR: Azure functionapp settings check failed."
-    throw $err
+    Write-Error $err
     pause
     exit
 }
@@ -402,8 +410,8 @@ $env:SCM_DO_BUILD_DURING_DEPLOYMENT='true'
 try{
     $DeployAzureFunctionResult = az functionapp deployment source config-zip -g $resourceGroupName -n $azFunctionName --src $zipDeploymentFileName --only-show-errors
 }catch{
-  Write-Host "ERROR: Azure function deployment failed."
-  Write-Host $_
+  Write-Error "ERROR: Azure function deployment failed."
+  Write-Error $_
   Write-Host "The script will try to deploy once again..." -ForegroundColor yellow
   $DeployAzureFunctionResult = az functionapp deployment source config-zip -g $resourceGroupName -n $azFunctionName --src $zipDeploymentFileName --only-show-errors
 }
@@ -412,7 +420,7 @@ try{
 # Azure functionapp deployment check
 if( $null -eq $DeployAzureFunctionResult ){
     $err = "ERROR: Azure function deployment failed."
-    throw $err
+    Write-Error $err
     pause
     exit
 }
