@@ -126,8 +126,12 @@ Eventuálně postupujte dle následujících printscreenů -> vytvoření přes 
    
    ![image](https://user-images.githubusercontent.com/87997650/127706441-52c861f9-3f76-49a0-8d42-9c5d48c657cc.png)
    - Kanál označte jako **Public** a vymyslete pro něj unikátní název. Tento název se poté vyplňte ve formátu `@MyAccBotChannel` (v případě příkladu níže) do proměnné **$TelegramChannel** v powershell skriptu
-   
    ![image](https://user-images.githubusercontent.com/87997650/127706976-591cb415-4bc2-444b-95fc-56aaa9d58e73.png)
+   - Pokud chcete vytvořený kanál nastavit jako **Private** postupujte takto:
+   - Zjistěte Id vašeho privátního kanálu, např. tak, že kanál otevřete ve [webovém rozhraní Telegram](https://web.telegram.org)
+   - URL adresa bude mít formát https://web.telegram.org/z/#{IdKanálu}
+   - Pozor! pro odesílání zpráv přes vytvořeného bota musíte před Id přidat ještě -100. Pokud tedy vaše adresa byla např. https://web.telegram.org/z/#-123456789, výsledné Id bude -100123456789.
+   - Toto získané Id vložte do proměnné **$TelegramChannel** namísto názvu kanálu.
 4. Do kanálu pozvěte svého bota (vyhledejte ho dle jména), kterého jste vytvořili v bodu 2 přes BotFather.
    ![image](https://user-images.githubusercontent.com/87997650/127707214-174f6dd0-a990-49d8-8cb0-6c9c9e290102.png)
    - Potvrďte bota jako administrátora kanálu
