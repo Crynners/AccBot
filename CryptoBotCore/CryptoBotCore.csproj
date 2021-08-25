@@ -8,12 +8,13 @@
 
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.17.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.13" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.13" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="3.1.13" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="Telegram.Bot" Version="15.7.1" />
+    <PackageReference Include="Huobi.Net" Version="3.0.2" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.20.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.18" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.18" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="3.1.18" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Telegram.Bot" Version="16.0.2" />
   </ItemGroup>
 
   <ItemGroup>

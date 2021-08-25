@@ -13,11 +13,13 @@ using Telegram.Bot;
 
 namespace CryptoBotCore.BotStrategies
 {
+
+
     public class AccumulationBot
     {
 
         [NonSerialized]
-        private Dictionary<string, CoinmateAPI> coinmateAPIs;
+        private CryptoExchangeAPI cryptoExchangeAPI;
 
         TelegramBotClient TelegramBot { get; set; }
 
@@ -30,6 +32,22 @@ namespace CryptoBotCore.BotStrategies
             Log = log;
         }
 
+        private void inicializeAPI()
+        {
+            switch (BotConfiguration.CryptoExchangeAPIEnum)
+            {
+                case CryptoExchangeAPIEnum.Coinmate:
+                    this.cryptoExchangeAPI = new CoinmateAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
+                    break;
+                case CryptoExchangeAPIEnum.Huobi:
+                    this.cryptoExchangeAPI = new HuobiAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+            
+        }
+
 
         public async Task Tick()
         {
@@ -40,17 +58,16 @@ namespace CryptoBotCore.BotStrategies
                 StringBuilder sbInformationMessage = new StringBuilder();
                 Log.LogInformation("Start Tick: " + DateTime.Now);
 
-                if (coinmateAPIs == null)
+                if (cryptoExchangeAPI == null)
                 {
-                    inicializeAPI(BotConfiguration.Currency);
+                    inicializeAPI();
                 }
 
                 var pair = $"{BotConfiguration.Currency}_{BotConfiguration.Fiat}";
 
-                var initBalance = coinmateAPIs[BotConfiguration.Currency].getBalances();
+                var initBalance = await cryptoExchangeAPI.getBalancesAsync();
 
                 double FiatBalance = initBalance.Where(x => x.currency == BotConfiguration.Fiat).Sum(x => x.available);
-
 
 
                 Dictionary<string, StringBuilder> sb_actions = new Dictionary<string, StringBuilder>();
@@ -58,11 +75,9 @@ namespace CryptoBotCore.BotStrategies
 
                 if (FiatBalance > BotConfiguration.ChunkSize)
                 {
-                    var response = coinmateAPIs[BotConfiguration.Currency].buy(BotConfiguration.ChunkSize, 0, true, OrderType.ExchangeMarket);
+                    var response = await cryptoExchangeAPI.buyOrderAsync(BotConfiguration.ChunkSize);
 
                     Log.LogInformation($"Market buy {BotConfiguration.Currency} for {BotConfiguration.ChunkSize} {BotConfiguration.Fiat}");
-
-                    //Serializer.SendEmail("Accumulation Bot - Buy", "You just spent " + schedule.FiatChunk + " CZK on " + schedule.Currency + ".", configuration.userId, forceEmail);
                 }
                 else
                 {
@@ -71,30 +86,19 @@ namespace CryptoBotCore.BotStrategies
                 }
       
 
-                var afterBalance = coinmateAPIs[BotConfiguration.Currency].getBalances();
+                var afterBalance = await cryptoExchangeAPI.getBalancesAsync();
                 double FiatAfterBuy = afterBalance.Where(x => x.currency == BotConfiguration.Fiat).Sum(x => x.available);
 
-                Dictionary<string, double> fees = new Dictionary<string, double>();
-
-                if(BotConfiguration.Currency == "BTC")
-                {
-                    fees["BTC"] = coinmateAPIs["BTC"].getBTCWithdrawalFee();
-                }
-
-                fees["LTC"] = 0.0004;
-                fees["ETH"] = 0.01;
-                fees["DSH"] = 0.00001;
-
-                
-                var price = coinmateAPIs[BotConfiguration.Currency].getActualExchangeRate().Item1;
+                double withdrawFee = await cryptoExchangeAPI.getWithdrawalFeeAsync();
 
 
                 double available = afterBalance.Where(x => x.currency == BotConfiguration.Currency).Sum(x => x.available);
                 double init = initBalance.Where(x => x.currency == BotConfiguration.Currency).Sum(x => x.available);
 
-                double fee_cost = (fees[BotConfiguration.Currency] / available);
+                double fee_cost = (withdrawFee / available);
 
-                double TAKER_FEE = 1.0035;
+                double TAKER_FEE = cryptoExchangeAPI.getTakerFee();
+
                 double buyPrice = ((FiatBalance - FiatAfterBuy) / TAKER_FEE) / (available - init);
 
                 sbInformationMessage.Append("<b>Accumulation:</b> " + (available - init).ToString("N8") + " " + BotConfiguration.Currency + " for " + BotConfiguration.ChunkSize.ToString("N2") + $" {BotConfiguration.Fiat} @ " + (buyPrice).ToString("N2") + $" {BotConfiguration.Fiat}").Append("\r\n");
@@ -103,13 +107,13 @@ namespace CryptoBotCore.BotStrategies
                 if (BotConfiguration.WithdrawalEnabled && 
                     !String.IsNullOrEmpty(BotConfiguration.WithdrawalAddress) &&
                     fee_cost <= BotConfiguration.MaxWithdrawalPercentageFee &&
-                    (BotConfiguration.MaxWithdrawalAbsoluteFee == -1 || (fees[BotConfiguration.Currency] * price) <= BotConfiguration.MaxWithdrawalAbsoluteFee)
+                    (BotConfiguration.MaxWithdrawalAbsoluteFee == -1 || (withdrawFee * buyPrice) <= BotConfiguration.MaxWithdrawalAbsoluteFee)
                     )
                 {
-                    coinmateAPIs[BotConfiguration.Currency].Withdraw(available, BotConfiguration.WithdrawalAddress);
+                    await cryptoExchangeAPI.withdrawAsync(available, BotConfiguration.WithdrawalAddress);
 
                     sbInformationMessage.Append("<b>Withdrawal:</b> " + available.ToString("N8") + " " + BotConfiguration.Currency + " to " + BotConfiguration.WithdrawalAddress + " with " + (fee_cost * 100).ToString("N2") + " % fee").Append("\r\n");
-                    //Serializer.SendEmail("Accumulation Bot - Withdraw", "Withdraw of " + + " " + increase_string + " to " + schedule.WithdrawalAddress + ".", configuration.userId, forceEmail);
+
                 }
                 else
                 {
@@ -121,7 +125,19 @@ namespace CryptoBotCore.BotStrategies
                     if (!BotConfiguration.WithdrawalEnabled)
                         reason.Add("Turned off");
 
-                    sbInformationMessage.Append("<b>Withdrawal:</b> Denied - [" + String.Join(", ", reason) + "] - fee cost " + (fee_cost * 100).ToString("N2") + " %, limit " + (BotConfiguration.MaxWithdrawalPercentageFee * 100).ToString("N2") + " %").Append("\r\n");
+                    List<string> limits = new List<string>
+                    {
+                        (BotConfiguration.MaxWithdrawalPercentageFee * 100).ToString("N2") + " %"
+                    };
+
+                    if (BotConfiguration.MaxWithdrawalAbsoluteFee != -1)
+                    {
+                        limits.Add($"{BotConfiguration.MaxWithdrawalAbsoluteFee.ToString()} {BotConfiguration.Currency}");
+                    }
+                    
+
+                    sbInformationMessage.Append("<b>Withdrawal:</b> Denied - [" + String.Join(", ", reason) + "] - fee cost " + (fee_cost * 100).ToString("N2") + " %, limit " + 
+                        String.Join(" AND ", limits)).Append("\r\n");
                 }
 
                 _cosmosDbContext = new CosmosDbContext();
@@ -140,7 +156,6 @@ namespace CryptoBotCore.BotStrategies
                 }
 
                 
-
                 accumulationSummary.Buys += 1;
                 accumulationSummary.InvestedFiatAmount += (FiatBalance - FiatAfterBuy);
                 accumulationSummary.AccumulatedCryptoAmount += (available - init);
@@ -154,7 +169,7 @@ namespace CryptoBotCore.BotStrategies
                 }
 
 
-                var profit = ((accumulationSummary.AccumulatedCryptoAmount * price) / accumulationSummary.InvestedFiatAmount) - 1;
+                var profit = ((accumulationSummary.AccumulatedCryptoAmount * buyPrice) / accumulationSummary.InvestedFiatAmount) - 1;
 
                 StringBuilder sb = new StringBuilder();
                 sb.Append("🛒 <b>[ACTIONS]</b>").Append("\r\n");
@@ -163,7 +178,7 @@ namespace CryptoBotCore.BotStrategies
                 sb.Append("ℹ️ <b>[SUMMARY]</b>").Append("\r\n");
                 sb.Append("<b>Total accumulation</b>: " + accumulationSummary.AccumulatedCryptoAmount.ToString("N8") + " " + BotConfiguration.Currency + " (" + accumulationSummary.InvestedFiatAmount.ToString("N2") + $" {BotConfiguration.Fiat})").Append("\r\n");
                 sb.Append("<b>Avg Accumulated Price</b>: " + (accumulationSummary.InvestedFiatAmount/accumulationSummary.AccumulatedCryptoAmount).ToString("N2") + $" {BotConfiguration.Fiat}/" + BotConfiguration.Currency).Append("\r\n");
-                sb.Append("<b>Current Price</b>: " + price.ToString("N2") + $" {BotConfiguration.Fiat}/" + BotConfiguration.Currency).Append("\r\n");
+                sb.Append("<b>Current Price</b>: " + buyPrice.ToString("N2") + $" {BotConfiguration.Fiat}/" + BotConfiguration.Currency).Append("\r\n");
                 sb.Append("<b>Current Profit</b>: " + (profit * 100).ToString("N2") + " % (" + (profit * accumulationSummary.InvestedFiatAmount).ToString("N2") + $" {BotConfiguration.Fiat})").Append("\r\n");
 
                 sb.Append("<b>Fiat balance</b>: " + FiatAfterBuy.ToString("N2") + $" {BotConfiguration.Fiat}").Append("\r\n");
@@ -177,12 +192,6 @@ namespace CryptoBotCore.BotStrategies
                 return;
             }
 
-        }
-
-        private void inicializeAPI(string crypto)
-        {
-            this.coinmateAPIs = new Dictionary<string, CoinmateAPI>();
-            this.coinmateAPIs[crypto] = new CoinmateAPI($"{crypto}_{BotConfiguration.Fiat}", BotConfiguration.CoinMateCredentials, Log);
         }
 
         public async Task<string> SendMessageAsync(string message, MessageTypeEnum messageType = MessageTypeEnum.Information, int attempt = 0)

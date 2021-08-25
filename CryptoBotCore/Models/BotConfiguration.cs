@@ -6,11 +6,12 @@ namespace CryptoBotCore.Models
 {
     public static class BotConfiguration
     {
+        public static CryptoExchangeAPIEnum CryptoExchangeAPIEnum { get; set; }
         public static string TelegramChannel { get; set; }
         public static string TelegramBot { get; set; }
         public static string Currency { get; set; }
         public static string Fiat { get; set; }
-        public static CoinMateCredentials CoinMateCredentials { get; set; }
+        public static Dictionary<ExchangeCredentialType, string> ExchangeCredentials { get; set; }
         public static int ChunkSize { get; set; }
         
         public static string WithdrawalAddress { get; set; }
