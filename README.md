@@ -1,11 +1,11 @@
 _Read the README in [English](https://github.com/Crynners/AccBot/blob/main/README.en.md)._
 
 # Úvod
-Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který v pravidelných intervalech po malých částkách v Kč nebo Eurech nakupuje [BTC](https://cs.wikipedia.org/wiki/Bitcoin) _(eventuálně LTC, ETH, XMR nebo DASH)_ na burze [Coinmate](https://coinmate.io/) dle strategie [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html).
+Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který v pravidelných intervalech po malých částkách v Kč nebo Eurech nakupuje [BTC](https://cs.wikipedia.org/wiki/Bitcoin) _(eventuálně LTC, ETH, XMR nebo DASH)_ na burze [Coinmate](https://coinmate.io/) nebo [Huobi](https://www.huobi.com/en-us/) dle strategie [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html).
 
 # Jednoduchý popis fungování bota
 * Nakupuje uživatelem definovanou částku v českých korunách _(typicky desítky Kč)_ / eurech _(typicky jednotky Eur)_ každých uživatelsky definovaných hodin _(ideálně dělitelných 24, aby nakupoval vždy ve stejný čas, tedy např. -> každou hodinu, 1x za 2h, 1x za 4h, 1x za 8h, etc.)_.
-* Běží autonomně bez nutnosti jej nějak v čase spravovat, je zapotřebí si pouze hlídat stav svého Kč účtu a pravidelně jej na Coinmate doplňovat _(např. jednou za měsíc)_.
+* Běží autonomně bez nutnosti jej nějak v čase spravovat, je zapotřebí si pouze hlídat stav svého Kč účtu a pravidelně jej na burze doplňovat _(např. jednou za měsíc)_.
 * **Náklady na provoz jsou prakticky nulové** (vychází to cca na 0.04 € / měsíčně za Azure hosting); bot je implementován zatím jako [Azure function](https://azure.microsoft.com/cs-cz/services/functions/), která se spouští v pravidelných intervalech a celé řešení je tedy hostované na [Azure](https://azure.microsoft.com/cs-cz/). 
 * (Volitelná funkcionalita) Po každém nákupu Vás informuje na Telegramovém kanále o tom, za jakou částku nakoupil. Tuto informaci doplní o statistiky, jaká je aktuální průměrná akumulovaná cena, etc. Viz příklad:
   * ![image](https://user-images.githubusercontent.com/87997650/127355720-fe73c0b5-5fd4-4d31-98dc-b569975f8a9e.png)
@@ -15,7 +15,7 @@ Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který 
 # Prerekvizity
 1. **Nainstalovaný [PowerShell](https://docs.microsoft.com/cs-cz/powershell/scripting/install/installing-powershell?view=powershell-7.1)**
 2. **Nainstalovaný [Azure CLI](https://docs.microsoft.com/cs-cz/cli/azure/install-azure-cli)**
-3. **Založený účet na burze [Coinmate](https://coinmate.io/)** (účet je zdarma; k tomu, abyste mohli na burzu zasílat fiat, je zapotřebí provést ověření [KYC](https://en.wikipedia.org/wiki/Know_your_customer))
+3. **Založený účet na burze [Coinmate](https://coinmate.io/)** (účet je zdarma; k tomu, abyste mohli na burzu zasílat fiat, je zapotřebí provést ověření [KYC](https://en.wikipedia.org/wiki/Know_your_customer)), nebo případně založený **účet na burze [Huobi](https://www.huobi.com/en-us/)**
     - Pokud byste nás chtěli podpořit a zaregistrovat se přes náš referral link, můžete kliknutím na banner níže
 
     <a href="https://coinmate.io?referral=ZWw4NVlXbDRVbTFVT0dKS1ZHczBZMXB1VEhKTlVRPT0"><img src="https://coinmate.io/static/img/banner/CoinMate_Banner_02.png" alt="Registrační odkaz přes referral" border="0"></a>
@@ -34,27 +34,22 @@ Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který 
 
 3. Stáhněte si [ZIP z aktuálního RELEASE](https://github.com/Crynners/AccBot/releases/latest/download/AccBot_installation.zip), který obsahuje instalační PowerShell skript a zbuilděného bota.
 4. ZIP z předchozího bodu rozbalte kamkoliv do Vašeho souborového systému
-5. V poznámkovém bloku (nebo jiném textovém editoru) otevřte soubor **install_script.ps1**
-6. (Nepovinné) Nastavte si [Telegram notifikace](#telegramnotifications). _(Pokud i přes doporučení nechcete Telegram notifikace využívat, v dalším kroku proměnné týkající se Telegramu nevyplňujte)_
+5. (Nepovinné) Nastavte si [Telegram notifikace](#telegramnotifications). _(Pokud i přes doporučení nechcete Telegram notifikace využívat, v dalším kroku proměnné týkající se Telegramu nevyplňujte)_
+6. V poznámkovém bloku (nebo jiném textovém editoru) otevřte nejprve soubor **init_variables.ps1**, který obsahuje obecné nastavení bota
 7. Upravte proměnné v sekci **### USER-DEFINED VARIABLES ###**
 ```powershell
-##############################
-### USER-DEFINED VARIABLES ###
-##############################
+######################################
+### GENERAL USER-DEFINED VARIABLES ###
+######################################
+# Burza, na kterou chcete napojit bota
+# (MOŽNÉ HODNOTY: coinmate, huobi)
+$ExchangeName='coinmate'
 
 # Jméno, které se zobrazuje v Telegram notifikacích
 $Name='anonymous'
 
-# Crypto, které na Coinmate chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
-$Currency='BTC'
-
-# Fiat měna, za kterou chcete na Coinmate nakupovat crypto (MOŽNÉ HODNOTY: CZK, EUR)
-$Fiat='CZK'
-
-# Velikost chunku v CZK, resp. EUR, který chcete pravidelně nakupovat (MINIMUM pro CZK: 26; MINIMUM pro EUR: 1)
-$ChunkSize='26'
-
 # Jednou za kolik hodin chcete pravidelně nakupovat BTC
+# (MOŽNÉ HODNOTY: 1, 2, 3, 4, 6, 8, 12)
 $HourDivider='1'
 
 # Příznak, zdali chcete povolit Withdrawal v případě, že je fee menší než 0.1% (POVOLENÉ HODNOTY: true / false)
@@ -63,38 +58,86 @@ $WithdrawalEnabled='false'
 # Adresa peněženky pro withdraw (aplikuje se pouze pokud WithdrawalEnabled = TRUE)
 $WithdrawalAddress=''
 
-# (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
-# Maximální limit na withdrawal fee v procentech. (DEFAULT: 0.001 = 0.1 %) 
-$MaxWithdrawalPercentageFee = '0.001'
-
-# (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
-# Maximální limit na withdrawal fee v absolutní hodnotě (Kč)
-# Pokud je nastaveno -1, uplatní se pouze podmínka procentuální => $MaxWithdrawalPercentageFee
-$MaxWithdrawalAbsoluteFee = -1
-
 # Adresa telegram kanálu, do kterého chcete dostávat notifikace (ve formátu @NázevKanálu)
 $TelegramChannel='@channel_name'
 
 # Privátní klíč telegram bota (POZOR, bot musí být členem kanálu výše)
 $TelegramBot='telegram_bot_hash'
 
-# ClientId z Coinmate API
-$CoinMateCredentials_ClientId='111'
-
-# Public key z Coinmate API
-$CoinMateCredentials_PublicKey='XXX'
-
-# Private key z Coinmate API
-$CoinMateCredentials_PrivateKey='XXX'
-
 # Příznak pro vytvoření logu na Azure. (POVOLENÉ HODNOTY: true / false). DOPORUČENÍ: Standardně mít vypnuté, tedy "false". 
 # Log zvyšuje měsíční náklady z cca 0.04 € / měsíc na cca 0.2 € / měsíc. Doporučujeme tedy zapnout pouze pokud Vám bot například nenakupuje jak by měl. 
 $CreateAzureLog = 'false'
 
-##############################
+##################################
+### END USER-DEFINED VARIABLES ###
+##################################
 ```
+8. Po uložení obecné konfigurace otevřte konfigurační soubor **coinmate_variables.ps1** nebo **huobi_variables.ps1** v závislosti na tom, na jaké burze chcete akumulovat.
+  - V případě Coinmate vyplňte následující hodnoty:
+  ```powershell
+  ######################################
+  ### COINMATE USER-DEFINED VARIABLES #####
+  ######################################
+
+  # Crypto, které na Coinmate chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
+  $Currency='BTC'
+
+  # Fiat měna, za kterou chcete na Coinmate nakupovat crypto (MOŽNÉ HODNOTY: CZK, EUR)
+  $Fiat='CZK'
+
+  # Velikost chunku v CZK, resp. EUR, který chcete pravidelně nakupovat (MINIMUM pro CZK: 26; MINIMUM pro EUR: 1)
+  $ChunkSize='26'
+
+  # ClientId z Coinmate API
+  $CoinMateCredentials_ClientId='111'
+
+  # Public key z Coinmate API
+  $CoinMateCredentials_PublicKey='XXX'
+
+  # Private key z Coinmate API
+  $CoinMateCredentials_PrivateKey='XXX'
+
+  # (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
+  # Maximální limit na withdrawal fee v procentech. (DEFAULT: 0.001 = 0.1 %) 
+  $MaxWithdrawalPercentageFee = '0.001'
+
+  # (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
+  # Maximální limit na withdrawal fee v absolutní hodnotě (Kč)
+  # Pokud je nastaveno -1, uplatní se pouze podmínka procentuální => $MaxWithdrawalPercentageFee
+  $MaxWithdrawalAbsoluteFee = -1
+
+
+  ######################################
+  ### END USER-DEFINED VARIABLES #######
+  ######################################
+  ```
+  - V případě Huobi vyplňte následující hodnoty:
+  ```powershell
+  ######################################
+  ### HUOBI USER-DEFINED VARIABLES #####
+  ######################################
+
+  # Crypto, které na Huobi chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
+  $Currency='BTC'
+
+  # Fiat měna, za kterou chcete na Huobi nakupovat crypto (MOŽNÉ HODNOTY: USDT, HUSD)
+  $Fiat='USDT'
+
+  # Velikost chunku v USDT, resp. HUSD, který chcete pravidelně nakupovat (MINIMUM: 5)
+  $ChunkSize='5'
+
+  # ClientId z Coinmate API
+  $HuobiCredentials_Key='XXX'
+
+  # Public key z Coinmate API
+  $HuobiCredentials_Secret='XXX'
+
+  ######################################
+  ### END USER-DEFINED VARIABLES #######
+  ######################################
+  ```
 <a name="installscript"></a>
-7. Uložte soubor **install_script.ps1** s vyplněnými hodnotami z předchozího kroku.
+9. 
   - <img src="https://user-images.githubusercontent.com/87997650/128522417-9bd02e68-a4d6-48bd-8661-81ec43ee3a47.png" width="25" height="25" />: Poklepáním spusťte **run.bat** file _(Pro Windows OS)._ 
   - <img src="https://user-images.githubusercontent.com/87997650/128523326-a7456256-4f01-41ef-9c21-1fe5968923cf.png" width="25" height="25" /> / <img src="https://user-images.githubusercontent.com/87997650/128523557-566d738d-67f5-43ac-a65e-080105f92abb.png" width="25" height="25" />: Spusťte PowerShell a v něm proveďte příkaz 
     ```powershell 
@@ -144,8 +187,8 @@ Eventuálně postupujte dle následujících printscreenů -> vytvoření přes 
 
 # Úprava nastavení / Aktualizace již běžícího AccBota
 
-- Pokud Vám AccBot již úspěšně běží a chcete si časem změnit nějaké nastavení _(četnost nebo výše jednotlivých nákupů, povolení withdrawal, etc.)_, nejjednodušším způsobem je upravit **USER-DEFINED VARIABLES** v instalačním skriptu **install_script.ps1** a skript znovu spustit dle kroku 7 [instalačního návodu](#installscript).
-- Pokud chcete nasadit novou verzi AccBota, stáhněte si [ZIP z aktuálního RELEASE](https://github.com/Crynners/AccBot/releases/latest/download/AccBot_installation.zip), nastavte si sekci **USER-DEFINED VARIABLES** v instalačním skriptu **install_script.ps1** a skript znovu spustit dle kroku 7 [instalačního návodu](#installscript).
+- Pokud Vám AccBot již úspěšně běží a chcete si časem změnit nějaké nastavení _(četnost nebo výše jednotlivých nákupů, povolení withdrawal, etc.)_, nejjednodušším způsobem je upravit **USER-DEFINED VARIABLES** v instalačním skriptu **install_script.ps1** a skript znovu spustit dle kroku 9 [instalačního návodu](#installscript).
+- Pokud chcete nasadit novou verzi AccBota, stáhněte si [ZIP z aktuálního RELEASE](https://github.com/Crynners/AccBot/releases/latest/download/AccBot_installation.zip), nastavte si konfigurační soubory **init_variables.ps1** a _{burzu, na které chcete akumulovat}_ **variables.ps1** a skript znovu spustit dle kroku 7 [instalačního návodu](#installscript).
 
 # Donate
 ![heart_donate](https://user-images.githubusercontent.com/87997650/127650190-188e401a-9942-4511-847e-d1010628777a.png)
