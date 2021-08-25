@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using CryptoBotCore.BotStrategies;
 using CryptoBotCore.Models;
@@ -53,10 +54,62 @@ namespace CryptoBotFunction
             BotConfiguration.TelegramBot = config["TelegramBot"];
             BotConfiguration.CosmosDbEndpointUri = config["CosmosDbEndpointUri"];
             BotConfiguration.CosmosDbPrimaryKey = config["CosmosDbPrimaryKey"];
-            BotConfiguration.CoinMateCredentials = new CoinMateCredentials();
-            BotConfiguration.CoinMateCredentials.ClientId = Int32.Parse(config["CoinMateCredentials_ClientId"]);
-            BotConfiguration.CoinMateCredentials.PublicKey = config["CoinMateCredentials_PublicKey"];
-            BotConfiguration.CoinMateCredentials.PrivateKey = config["CoinMateCredentials_PrivateKey"];
+
+            BotConfiguration.CryptoExchangeAPIEnum = SetCryptoExchangeAPIEnum(config["ExchangeName"]?.ToLower());
+
+            BotConfiguration.ExchangeCredentials = new Dictionary<ExchangeCredentialType, string>();
+
+            switch (BotConfiguration.CryptoExchangeAPIEnum)
+            {
+                case CryptoExchangeAPIEnum.Coinmate:
+                    
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinmate_ClientId] = config["CoinMateCredentials_ClientId"];
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinmate_PublicKey] = config["CoinMateCredentials_PublicKey"];
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinmate_PrivateKey] = config["CoinMateCredentials_PrivateKey"];
+                    break;
+
+                case CryptoExchangeAPIEnum.Binance:
+                    throw new NotImplementedException();
+
+                case CryptoExchangeAPIEnum.Coinbase:
+                    throw new NotImplementedException();
+
+                case CryptoExchangeAPIEnum.Huobi:
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Huobi_Key] = config["HuobiCredentials_Key"];
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Huobi_Secret] = config["HuobiCredentials_Secret"];
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+
+        }
+
+        private static CryptoExchangeAPIEnum SetCryptoExchangeAPIEnum(string exchangeName)
+        {
+            if (String.IsNullOrEmpty(exchangeName))
+            {
+                return CryptoExchangeAPIEnum.Coinmate;
+            }
+
+            if (exchangeName == "coinmate")
+            {
+                return CryptoExchangeAPIEnum.Coinmate;
+            }
+            else if (exchangeName == "huobi")
+            {
+                return CryptoExchangeAPIEnum.Huobi;
+            }else if (exchangeName == "coinbase")
+            {
+                return CryptoExchangeAPIEnum.Coinbase;
+            }else if(exchangeName == "binance")
+            {
+                return CryptoExchangeAPIEnum.Binance;
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
         }
     }
 }

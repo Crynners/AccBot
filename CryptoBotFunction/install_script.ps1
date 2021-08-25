@@ -1,58 +1,28 @@
-﻿
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+﻿Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+########################
+### LOADING USER-DEFINED VARIABLES ###
+########################
+$scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
+$VariableNameFile = join-path -path $scriptPath -childpath "init_variables.ps1"
 
-##############################
-### USER-DEFINED VARIABLES ###
-##############################
+. $VariableNameFile
 
-# Jméno, které se zobrazuje v Telegram notifikacích
-$Name='anonymous'
+if("coinmate" -eq $ExchangeName){
+    $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
+    $VariableNameFile = join-path -path $scriptPath -childpath "coinmate_variables.ps1"
+    . $VariableNameFile
 
-# Crypto, které na Coinmate chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
-$Currency='BTC'
+}elseif("huobi" -eq $ExchangeName){
+    $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
+    $VariableNameFile = join-path -path $scriptPath -childpath "huobi_variables.ps1"
+    . $VariableNameFile
+}else{
+    $err = "ERROR: The exchange name '$ExchangeName' is not supported."
+    Write-Error $err
+    pause
+    exit
+}
 
-# Fiat měna, za kterou chcete na Coinmate nakupovat crypto (MOŽNÉ HODNOTY: CZK, EUR)
-$Fiat='CZK'
-
-# Velikost chunku v CZK, resp. EUR, který chcete pravidelně nakupovat (MINIMUM pro CZK: 26; MINIMUM pro EUR: 1)
-$ChunkSize='26'
-
-# Jednou za kolik hodin chcete pravidelně nakupovat BTC
-$HourDivider='1'
-
-# Příznak, zdali chcete povolit Withdrawal v případě, že je fee menší než 0.1% (POVOLENÉ HODNOTY: true / false)
-$WithdrawalEnabled='false'
-
-# Adresa peněženky pro withdraw (aplikuje se pouze pokud WithdrawalEnabled = TRUE)
-$WithdrawalAddress=''
-
-# (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
-# Maximální limit na withdrawal fee v procentech. (DEFAULT: 0.001 = 0.1 %) 
-$MaxWithdrawalPercentageFee = '0.001'
-
-# (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
-# Maximální limit na withdrawal fee v absolutní hodnotě (Kč)
-# Pokud je nastaveno -1, uplatní se pouze podmínka procentuální => $MaxWithdrawalPercentageFee
-$MaxWithdrawalAbsoluteFee = -1
-
-# Adresa telegram kanálu, do kterého chcete dostávat notifikace (ve formátu @NázevKanálu)
-$TelegramChannel='@channel_name'
-
-# Privátní klíč telegram bota (POZOR, bot musí být členem kanálu výše)
-$TelegramBot='telegram_bot_hash'
-
-# ClientId z Coinmate API
-$CoinMateCredentials_ClientId='111'
-
-# Public key z Coinmate API
-$CoinMateCredentials_PublicKey='XXX'
-
-# Private key z Coinmate API
-$CoinMateCredentials_PrivateKey='XXX'
-
-# Příznak pro vytvoření logu na Azure. (POVOLENÉ HODNOTY: true / false). DOPORUČENÍ: Standardně mít vypnuté, tedy "false". 
-# Log zvyšuje měsíční náklady z cca 0.04 € / měsíc na cca 0.2 € / měsíc. Doporučujeme tedy zapnout pouze pokud Vám bot například nenakupuje jak by měl. 
-$CreateAzureLog = 'false'
 
 ########################
 ### SYSTEM VARIABLES ###
@@ -102,6 +72,8 @@ $cosmosDBName='AccBotDatabase'
 $cosmosContainerName='AccBotContainer'
 
 $zipDeploymentFileName = join-path -path $scriptPath -childpath $zipFile
+
+
 
 ##################################
 ###### Kontrola prerekvizit ######
@@ -371,6 +343,7 @@ Write-Host "[Step 8 / 9] Function app settings uploading -> Starting..." -Foregr
 
 $appsettingsResult = az functionapp config appsettings set --name $azFunctionName --resource-group $resourceGroupName `
         --settings "Name=$Name" `
+                    "ExchangeName=$ExchangeName" `
                     "Currency=$Currency" `
                     "Fiat=$Fiat" `
                     "ChunkSize=$ChunkSize" `
@@ -385,7 +358,9 @@ $appsettingsResult = az functionapp config appsettings set --name $azFunctionNam
                     "CosmosDbPrimaryKey=$CosmosDbPrimaryKey" `
                     "CoinMateCredentials_ClientId=$CoinMateCredentials_ClientId" `
                     "CoinMateCredentials_PublicKey=$CoinMateCredentials_PublicKey" `
-                    "CoinMateCredentials_PrivateKey=$CoinMateCredentials_PrivateKey"
+                    "CoinMateCredentials_PrivateKey=$CoinMateCredentials_PrivateKey" `
+                    "HuobiCredentials_Key=$HuobiCredentials_Key" `
+                    "HuobiCredentials_Secret=$HuobiCredentials_Secret"
 
 # Azure functionapp settings check
 $query = "[?contains(name, 'CosmosDbPrimaryKey')]"
@@ -437,3 +412,4 @@ $output = "The following entities were successfully created in Azure: `n`t Resou
 
 Write-Host $output -ForegroundColor green
 pause
+
