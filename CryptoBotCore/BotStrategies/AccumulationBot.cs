@@ -97,9 +97,12 @@ namespace CryptoBotCore.BotStrategies
 
                 double fee_cost = (withdrawFee / available);
 
+
                 double TAKER_FEE = cryptoExchangeAPI.getTakerFee();
 
                 double buyPrice = ((FiatBalance - FiatAfterBuy) / TAKER_FEE) / (available - init);
+
+                var feeInFiat = (withdrawFee * buyPrice).ToString("N2");
 
                 sbInformationMessage.Append("<b>Accumulation:</b> " + (available - init).ToString("N8") + " " + BotConfiguration.Currency + " for " + BotConfiguration.ChunkSize.ToString("N2") + $" {BotConfiguration.Fiat} @ " + (buyPrice).ToString("N2") + $" {BotConfiguration.Fiat}").Append("\r\n");
 
@@ -125,18 +128,20 @@ namespace CryptoBotCore.BotStrategies
                     if (!BotConfiguration.WithdrawalEnabled)
                         reason.Add("Turned off");
 
+                    var maxWithdrawalFeeInFiat = (BotConfiguration.MaxWithdrawalPercentageFee * buyPrice).ToString("N2");
+
                     List<string> limits = new List<string>
                     {
-                        (BotConfiguration.MaxWithdrawalPercentageFee * 100).ToString("N2") + " %"
+                        $"{(BotConfiguration.MaxWithdrawalPercentageFee * 100).ToString("N2")} % ({maxWithdrawalFeeInFiat} {BotConfiguration.Fiat})"
                     };
 
                     if (BotConfiguration.MaxWithdrawalAbsoluteFee != -1)
                     {
-                        limits.Add($"{BotConfiguration.MaxWithdrawalAbsoluteFee.ToString()} {BotConfiguration.Currency}");
+                        limits.Add($"{BotConfiguration.MaxWithdrawalAbsoluteFee.ToString("N2")} {BotConfiguration.Fiat}");
                     }
                     
 
-                    sbInformationMessage.Append("<b>Withdrawal:</b> Denied - [" + String.Join(", ", reason) + "] - fee cost " + (fee_cost * 100).ToString("N2") + " %, limit " + 
+                    sbInformationMessage.Append($"<b>Withdrawal:</b> Denied - [{String.Join(", ", reason)}] - fee cost {(fee_cost * 100).ToString("N2")} % ({feeInFiat} {BotConfiguration.Fiat}), limit " + 
                         String.Join(" AND ", limits)).Append("\r\n");
                 }
 
@@ -171,6 +176,9 @@ namespace CryptoBotCore.BotStrategies
 
                 var profit = ((accumulationSummary.AccumulatedCryptoAmount * buyPrice) / accumulationSummary.InvestedFiatAmount) - 1;
 
+                var currentCryptoBalance = afterBalance.Where(x => x.currency == BotConfiguration.Currency).Sum(x => x.available);
+                var currentCryptoBalanceInFiat = currentCryptoBalance * buyPrice;
+
                 StringBuilder sb = new StringBuilder();
                 sb.Append("🛒 <b>[ACTIONS]</b>").Append("\r\n");
                 sb.Append(sbInformationMessage.ToString());
@@ -182,7 +190,7 @@ namespace CryptoBotCore.BotStrategies
                 sb.Append("<b>Current Profit</b>: " + (profit * 100).ToString("N2") + " % (" + (profit * accumulationSummary.InvestedFiatAmount).ToString("N2") + $" {BotConfiguration.Fiat})").Append("\r\n");
 
                 sb.Append("<b>Fiat balance</b>: " + FiatAfterBuy.ToString("N2") + $" {BotConfiguration.Fiat}").Append("\r\n");
-                sb.Append("<b>Current balance</b>: " + afterBalance.Where(x => x.currency == BotConfiguration.Currency).Sum(x => x.available).ToString("N8") + " " + BotConfiguration.Currency).Append("\r\n");
+                sb.Append($"<b>Current balance</b>: {currentCryptoBalance.ToString("N8")} {BotConfiguration.Currency} ({currentCryptoBalanceInFiat.ToString("N2")} {BotConfiguration.Fiat})").Append("\r\n");
 
                 await SendMessageAsync(sb.ToString());
             }
