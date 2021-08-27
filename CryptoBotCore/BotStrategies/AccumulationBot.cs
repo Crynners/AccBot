@@ -104,6 +104,9 @@ namespace CryptoBotCore.BotStrategies
 
                 var feeInFiat = (withdrawFee * buyPrice).ToString("N2");
 
+                var currentCryptoBalance = afterBalance.Where(x => x.currency == BotConfiguration.Currency).Sum(x => x.available);
+                var currentCryptoBalanceInFiat = currentCryptoBalance * buyPrice;
+
                 sbInformationMessage.Append("<b>Accumulation:</b> " + (available - init).ToString("N8") + " " + BotConfiguration.Currency + " for " + BotConfiguration.ChunkSize.ToString("N2") + $" {BotConfiguration.Fiat} @ " + (buyPrice).ToString("N2") + $" {BotConfiguration.Fiat}").Append("\r\n");
 
                 //Send them home
@@ -128,7 +131,7 @@ namespace CryptoBotCore.BotStrategies
                     if (!BotConfiguration.WithdrawalEnabled)
                         reason.Add("Turned off");
 
-                    var maxWithdrawalFeeInFiat = (BotConfiguration.MaxWithdrawalPercentageFee * buyPrice).ToString("N2");
+                    var maxWithdrawalFeeInFiat = (BotConfiguration.MaxWithdrawalPercentageFee * currentCryptoBalanceInFiat).ToString("N2");
 
                     List<string> limits = new List<string>
                     {
@@ -175,9 +178,6 @@ namespace CryptoBotCore.BotStrategies
 
 
                 var profit = ((accumulationSummary.AccumulatedCryptoAmount * buyPrice) / accumulationSummary.InvestedFiatAmount) - 1;
-
-                var currentCryptoBalance = afterBalance.Where(x => x.currency == BotConfiguration.Currency).Sum(x => x.available);
-                var currentCryptoBalanceInFiat = currentCryptoBalance * buyPrice;
 
                 StringBuilder sb = new StringBuilder();
                 sb.Append("🛒 <b>[ACTIONS]</b>").Append("\r\n");
