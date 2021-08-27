@@ -19,6 +19,11 @@ namespace CryptoBotCore.Models
         Huobi_Key = 4, Huobi_Secret = 5
     }
 
+    public enum WithdrawalStateEnum
+    {
+        OK = 1, InsufficientKeyPrivilages = 2, UNKNOWN_FAIL = 3
+    }
+
 
     public enum OrderType
     {

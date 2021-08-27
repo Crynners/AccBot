@@ -151,9 +151,10 @@ namespace CryptoBotCore.API
             } while (true);
         }
 
-        public async Task withdrawAsync(double amount, string destinationAddress)
+        public async Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
         {
             int wait = 0;
+            var attempt = 0;
             do
             {
                 try
@@ -178,11 +179,22 @@ namespace CryptoBotCore.API
                         throw new Exception(result.errorMessage.ToString());
                     }
 
-                    return;
+                    return WithdrawalStateEnum.OK;
                 }
                 catch (Exception ex)
                 {
+                    if (ex.Message.Contains("Insufficient key privileges"))
+                    {
+                        return WithdrawalStateEnum.InsufficientKeyPrivilages;
+                    }
+
                     Log.LogError(JsonConvert.SerializeObject(ex));
+                    attempt++;
+
+                    if(attempt >= 5)
+                    {
+                        throw new Exception(JsonConvert.SerializeObject(ex));
+                    }
 
                     wait = (wait == 0) ? 200 : wait * 2;
                     Thread.Sleep(wait);
@@ -198,6 +210,8 @@ namespace CryptoBotCore.API
         public async Task<List<WalletBalances>> getBalancesAsync()
         {
             int wait = 0;
+            var attempt = 0;
+
             do
             {
                 try
@@ -228,11 +242,13 @@ namespace CryptoBotCore.API
                 catch (Exception ex)
                 {
                     Log.LogError(JsonConvert.SerializeObject(ex));
-
+                    attempt++;
                     wait = (wait == 0) ? 200 : wait * 2;
                     Thread.Sleep(wait);
                 }
-            } while (true);
+            } while (attempt < 5);
+
+            throw new Exception("Coinmate API is currently not available.");
         }
 
 

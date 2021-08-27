@@ -23,7 +23,7 @@ namespace CryptoBotCore.API
 
         Task<List<WalletBalances>> getBalancesAsync();
 
-        Task withdrawAsync(double amount, string destinationAddress);
+        Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress);
 
         /// <summary>
         /// Method represents buying of cryptocurrency

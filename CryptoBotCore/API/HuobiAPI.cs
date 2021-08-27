@@ -109,7 +109,7 @@ namespace CryptoBotCore.API
             }
         }
 
-        public async Task withdrawAsync(double amount, string destinationAddress)
+        public async Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
         {
             var accountResult = await client.GetAccountsAsync();
             if (!accountResult.Success)
@@ -120,13 +120,20 @@ namespace CryptoBotCore.API
 
             var fee = await getWithdrawalFeeAsync();
             var callResult = await client.WithdrawAsync(destinationAddress, this.pair_base.ToLower(), Convert.ToDecimal(amount), Convert.ToDecimal(fee));
-
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
+
+                if(callResult.Error?.Code == 1003)
+                {
+                    return WithdrawalStateEnum.InsufficientKeyPrivilages;
+                }
+
                 // Call failed, check callResult.Error for more info
                 throw new Exception(callResult.Error?.Message);
             }
+
+            return WithdrawalStateEnum.OK;
         }
     }
 }

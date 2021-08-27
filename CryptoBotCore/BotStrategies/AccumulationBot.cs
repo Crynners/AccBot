@@ -116,9 +116,14 @@ namespace CryptoBotCore.BotStrategies
                     (BotConfiguration.MaxWithdrawalAbsoluteFee == -1 || (withdrawFee * buyPrice) <= BotConfiguration.MaxWithdrawalAbsoluteFee)
                     )
                 {
-                    await cryptoExchangeAPI.withdrawAsync(available, BotConfiguration.WithdrawalAddress);
+                    var withdrawResult = await cryptoExchangeAPI.withdrawAsync(available, BotConfiguration.WithdrawalAddress);
 
-                    sbInformationMessage.Append("<b>Withdrawal:</b> " + available.ToString("N8") + " " + BotConfiguration.Currency + " to " + BotConfiguration.WithdrawalAddress + " with " + (fee_cost * 100).ToString("N2") + " % fee").Append("\r\n");
+                    if(withdrawResult == WithdrawalStateEnum.OK)
+                    {
+                        sbInformationMessage.Append("<b>Withdrawal:</b> " + available.ToString("N8") + " " + BotConfiguration.Currency + " to " + BotConfiguration.WithdrawalAddress + " with " + (fee_cost * 100).ToString("N2") + " % fee").Append("\r\n");
+                    }else if(withdrawResult == WithdrawalStateEnum.InsufficientKeyPrivilages){
+                        sbInformationMessage.Append($"<b>Withdrawal:</b>❌ Insufficient Key Privilages.").Append("\r\n");
+                    }
 
                 }
                 else
@@ -223,7 +228,7 @@ namespace CryptoBotCore.BotStrategies
             try
             {
                 TelegramBot = new TelegramBotClient(BotConfiguration.TelegramBot);
-                await TelegramBot.SendTextMessageAsync(BotConfiguration.TelegramChannel, message, Telegram.Bot.Types.Enums.ParseMode.Html);
+                await TelegramBot.SendTextMessageAsync(BotConfiguration.TelegramChannel, message.Substring(0, Math.Min(4000, message.Length)), Telegram.Bot.Types.Enums.ParseMode.Html);
             }
             catch (Exception e)
             {
