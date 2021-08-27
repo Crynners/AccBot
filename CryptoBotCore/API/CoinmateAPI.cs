@@ -29,8 +29,8 @@ namespace CryptoBotCore.API
 
         public CoinmateAPI(string pair, Dictionary<ExchangeCredentialType, string> credentials, ILogger log)
         {
-            this.pair_base = pair.Split('_')[1];
-            this.pair_quote = pair.Split('_')[0];
+            this.pair_base = pair.Split('_')[1].ToUpper();
+            this.pair_quote = pair.Split('_')[0].ToUpper();
 
             this.Log = log;
 
@@ -112,13 +112,13 @@ namespace CryptoBotCore.API
 
         public async Task<double> getWithdrawalFeeAsync()
         {
-            if (this.pair_base == "LTC")
+            if (this.pair_quote == "LTC")
             {
                 return 0.0004;
-            }else if(this.pair_base == "ETH")
+            }else if(this.pair_quote == "ETH")
             {
                 return 0.01;
-            }else if(this.pair_base == "DSH")
+            }else if(this.pair_quote == "DSH")
             {
                 return 0.00001;
             }
@@ -161,13 +161,13 @@ namespace CryptoBotCore.API
                     WebClient client = new WebClient();
                     client.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded");
 
-                    string keypair = pair_base == "BTC" ? "bitcoinWithdrawal" :
-                                     pair_base == "LTC" ? "litecoinWithdrawal" :
-                                     pair_base == "ETH" ? "ethereumWithdrawal" :
-                                     pair_base == "DASH" ? "dashWithdrawal" :
+                    string keypair = pair_quote == "BTC" ? "bitcoinWithdrawal" :
+                                     pair_quote == "LTC" ? "litecoinWithdrawal" :
+                                     pair_quote == "ETH" ? "ethereumWithdrawal" :
+                                     pair_quote == "DASH" ? "dashWithdrawal" :
                                      null;
 
-                    string fee_priority = pair_base == "BTC" ? "&feePriority=LOW" : "";
+                    string fee_priority = pair_quote == "BTC" ? "&feePriority=LOW" : "";
 
                     string body = "amount=" + amount + "&address=" + destinationAddress + fee_priority + "&" + getSecuredHeaderPart();
                     string response = await client.UploadStringTaskAsync("https://coinmate.io/api/" + keypair, body);
