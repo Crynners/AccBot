@@ -3,6 +3,7 @@ _Read the README in [English](https://github.com/Crynners/AccBot/blob/main/READM
 # Úvod
 Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který v pravidelných intervalech po malých částkách v Kč nebo Eurech nakupuje [BTC](https://cs.wikipedia.org/wiki/Bitcoin) _(eventuálně LTC, ETH, XMR nebo DASH a další)_ na nejznámějších burzách dle strategie [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html).
 
+<a name="exchangelist"></a>
 Seznam podporovaných burz:
  - [Coinmate](https://coinmate.io/)
  - [Huobi](https://www.huobi.com/en-us/)
@@ -28,8 +29,8 @@ Naše řešení je plně decentralizované v tom, že si každý nainstaluje sv�
 # Prerekvizity
 1. **Nainstalovaný [PowerShell](https://docs.microsoft.com/cs-cz/powershell/scripting/install/installing-powershell?view=powershell-7.1)**
 2. **Nainstalovaný [Azure CLI](https://docs.microsoft.com/cs-cz/cli/azure/install-azure-cli)**
-3. **Založený účet na burze [Coinmate](https://coinmate.io/)** (účet je zdarma; k tomu, abyste mohli na burzu zasílat fiat, je zapotřebí provést ověření [KYC](https://en.wikipedia.org/wiki/Know_your_customer)), nebo případně založený **účet na burze [Huobi](https://www.huobi.com/en-us/)**
-    - Pokud byste nás chtěli podpořit a zaregistrovat se přes náš referral link, můžete kliknutím na banner níže
+3. **Založený účet na [libovolné podporované burze](#exchangelist)**
+    - Pokud byste nás chtěli podpořit a zaregistrovat se přes náš referral link, můžete kliknutím na bannery níže
 
     <a href="https://coinmate.io?referral=ZWw4NVlXbDRVbTFVT0dKS1ZHczBZMXB1VEhKTlVRPT0"><img src="https://coinmate.io/static/img/banner/CoinMate_Banner_02.png" alt="Registrační odkaz přes referral" border="0"></a>
 
