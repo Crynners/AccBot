@@ -188,7 +188,7 @@ $CreateAzureLog = 'false'
   - V případě Kraken vyplňte následující hodnoty:
   ```powershell
   ######################################
-  ### HUOBI USER-DEFINED VARIABLES #####
+  ### KRAKEN USER-DEFINED VARIABLES #####
   ######################################
 
   # Crypto, které na Krakenu chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
@@ -216,7 +216,7 @@ $CreateAzureLog = 'false'
    - V případě Binance vyplňte následující hodnoty:
   ```powershell
   ######################################
-  ### HUOBI USER-DEFINED VARIABLES #####
+  ### BINANCE USER-DEFINED VARIABLES #####
   ######################################
 
   # Crypto, které na Binance chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH, ...)
@@ -241,7 +241,7 @@ $CreateAzureLog = 'false'
    - V případě FTX vyplňte následující hodnoty:
   ```powershell
   ######################################
-  ### HUOBI USER-DEFINED VARIABLES #####
+  ### FTX USER-DEFINED VARIABLES #####
   ######################################
 
   # Crypto, které na Binance chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH, ...)
