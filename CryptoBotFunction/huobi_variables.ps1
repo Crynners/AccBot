@@ -11,10 +11,10 @@ $Fiat='USDT'
 # Velikost chunku v USDT, resp. HUSD, který chcete pravidelně nakupovat (MINIMUM: 5)
 $ChunkSize='5'
 
-# ClientId z Coinmate API
+# API Key z Huobi API
 $HuobiCredentials_Key='XXX'
 
-# Public key z Coinmate API
+# API Secret z Huobi API
 $HuobiCredentials_Secret='XXX'
 
 ######################################

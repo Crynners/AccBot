@@ -19,7 +19,7 @@ namespace CryptoBotCore.BotStrategies
     {
 
         [NonSerialized]
-        private CryptoExchangeAPI cryptoExchangeAPI;
+        private ICryptoExchangeAPI cryptoExchangeAPI;
 
         TelegramBotClient TelegramBot { get; set; }
 
@@ -41,6 +41,13 @@ namespace CryptoBotCore.BotStrategies
                     break;
                 case CryptoExchangeAPIEnum.Huobi:
                     this.cryptoExchangeAPI = new HuobiAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
+                    break;
+                case CryptoExchangeAPIEnum.Binance:
+                    this.cryptoExchangeAPI = new BinanceAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
+                    break;
+                case CryptoExchangeAPIEnum.Kraken:
+                    this.cryptoExchangeAPI = new KrakenAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", 
+                                                             BotConfiguration.WithdrawalKeyName, BotConfiguration.ExchangeCredentials, Log);
                     break;
                 default:
                     throw new NotImplementedException();
@@ -98,7 +105,7 @@ namespace CryptoBotCore.BotStrategies
                 double fee_cost = (withdrawFee / available);
 
 
-                double TAKER_FEE = cryptoExchangeAPI.getTakerFee();
+                double TAKER_FEE = await cryptoExchangeAPI.getTakerFee();
 
                 double buyPrice = ((FiatBalance - FiatAfterBuy) / TAKER_FEE) / (available - init);
 
@@ -159,7 +166,7 @@ namespace CryptoBotCore.BotStrategies
 
                 AccumulationSummary accSumOLD = null;
 
-                //Aktualizace záznamu v CosmosDB na novou strukturu PartitionKey
+                //Update a CosmosDB record to the new PartitionKey structure
                 if (accumulationSummary.Buys == 0)
                 {
                     accSumOLD = await _cosmosDbContext.GetAccumulationSummary(BotConfiguration.Currency);
@@ -177,7 +184,7 @@ namespace CryptoBotCore.BotStrategies
 
                 if(accSumOLD != null)
                 {
-                    //Smazání starého záznamu z předchozí verze bota
+                    //Deleting an old record from a previous version of the bot
                     await _cosmosDbContext.DeleteItemAsync(accSumOLD.Id.ToString(), accSumOLD.CryptoName);
                 }
 

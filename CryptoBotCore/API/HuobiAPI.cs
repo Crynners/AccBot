@@ -10,18 +10,19 @@ using System.Threading.Tasks;
 
 namespace CryptoBotCore.API
 {
-    public class HuobiAPI : CryptoExchangeAPI
+    public class HuobiAPI : ICryptoExchangeAPI
     {
         private HuobiClient client { get; set; }
-        public string pair_base { get; set; }
         public string pair_quote { get; set; }
+        public string pair_base { get; set; }
 
         public ILogger Log { get; set; }
 
         public HuobiAPI(string pair, Dictionary<ExchangeCredentialType, string> credentials, ILogger log)
         {
-            this.pair_base = pair.Split('_')[1].ToUpper();
-            this.pair_quote = pair.Split('_')[0].ToUpper();
+            this.pair_base = pair.Split('_')[0].ToUpper();
+            this.pair_quote = pair.Split('_')[1].ToUpper();
+
 
             this.Log = log;
 
@@ -32,10 +33,26 @@ namespace CryptoBotCore.API
             });
         }
 
+        private async Task<decimal> getCurrentPrice()
+        {
+            var callResult = await client.GetOrderBookAsync($"{pair_base}{pair_quote}", 0);
+            // Make sure to check if the call was successful
+            if (!callResult.Success)
+            {
+                // Call failed, check callResult.Error for more info
+                throw new Exception(callResult.Error.Message);
+            }
+            else
+            {
+                // Call succeeded, callResult.Data will have the resulting data
+                return callResult.Data.Asks.FirstOrDefault().Price;
+            }
+        }
+
         public async Task<string> buyOrderAsync(double amount)
         {
-            
-            var convertedAmount = Convert.ToDecimal(amount);
+
+            var baseAmount = (decimal)amount / (await getCurrentPrice());
 
             var accountResult = await client.GetAccountsAsync();
             if (!accountResult.Success)
@@ -43,7 +60,9 @@ namespace CryptoBotCore.API
                 // Call failed, check accountResult .Error for more info
                 return accountResult.Error?.Message;
             }
-            var callResult = await client.PlaceOrderAsync(accountResult.Data.First().Id, $"{this.pair_quote}{this.pair_base}", Huobi.Net.Objects.HuobiOrderType.MarketBuy, convertedAmount);
+
+
+            var callResult = await client.PlaceOrderAsync(accountResult.Data.First().Id, $"{this.pair_base}{this.pair_quote}", Huobi.Net.Objects.HuobiOrderType.MarketBuy, baseAmount);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -89,23 +108,23 @@ namespace CryptoBotCore.API
             }
         }
 
-        public double getTakerFee()
+        public Task<double> getTakerFee()
         {
-            return 1.002;
+            return Task.FromResult(1.002);
         }
 
-        public async Task<double> getWithdrawalFeeAsync()
+        public Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
         {
             switch (this.pair_base)
             {
                 case "BTC":
-                    return 0.0004;
+                    return Task.FromResult(0.0004);
                 case "LTC":
-                    return 0.001;
+                    return Task.FromResult(0.001);
                 case "ETH":
-                    return 0.004;
+                    return Task.FromResult(0.004);
                 default:
-                    return -1;
+                    return Task.FromResult(Double.MaxValue);
             }
         }
 

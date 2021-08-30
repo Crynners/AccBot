@@ -10,6 +10,15 @@
     <ProjectReference Include="..\CryptoBotCore\CryptoBotCore.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="ftx_variables.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="kraken_variables.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="binance_variables.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="huobi_variables.ps1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

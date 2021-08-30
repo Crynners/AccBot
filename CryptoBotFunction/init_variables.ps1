@@ -2,7 +2,7 @@
 ### GENERAL USER-DEFINED VARIABLES ###
 ######################################
 # Burza, na kterou chcete napojit bota
-# (MOŽNÉ HODNOTY: coinmate, huobi)
+# (MOŽNÉ HODNOTY: coinmate, huobi, binance, kraken, ftx)
 $ExchangeName='coinmate'
 
 # Jméno, které se zobrazuje v Telegram notifikacích
@@ -17,6 +17,10 @@ $WithdrawalEnabled='false'
 
 # Adresa peněženky pro withdraw (aplikuje se pouze pokud WithdrawalEnabled = TRUE)
 $WithdrawalAddress=''
+
+# (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
+# Maximální limit na withdrawal fee v procentech. (DEFAULT: 0.001 = 0.1 %) 
+$MaxWithdrawalPercentageFee = '0.001'
 
 # Adresa telegram kanálu, do kterého chcete dostávat notifikace (ve formátu @NázevKanálu)
 $TelegramChannel='@channel_name'

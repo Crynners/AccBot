@@ -10,13 +10,16 @@ namespace CryptoBotCore.Models
 {
     public enum CryptoExchangeAPIEnum
     {
-        Coinmate = 1, Binance = 2, Huobi = 3, Coinbase = 4
+        Coinmate = 1, Binance = 2, Huobi = 3, Coinbase = 4, Kraken = 5, FTX = 6
     }
 
     public enum ExchangeCredentialType
     {
         Coinmate_ClientId = 1, Coinmate_PublicKey = 2, Coinmate_PrivateKey = 3,
-        Huobi_Key = 4, Huobi_Secret = 5
+        Huobi_Key = 4, Huobi_Secret = 5, 
+        Binance_Key = 6, Binance_Secret = 7, 
+        Kraken_Key = 8, Kraken_Secret = 9,
+        FTX_Key = 10, FTX_Secret = 11
     }
 
     public enum WithdrawalStateEnum

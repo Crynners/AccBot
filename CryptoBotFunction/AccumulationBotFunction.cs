@@ -59,6 +59,8 @@ namespace CryptoBotFunction
 
             BotConfiguration.ExchangeCredentials = new Dictionary<ExchangeCredentialType, string>();
 
+            BotConfiguration.WithdrawalKeyName = config["WithdrawalKeyName"];
+
             switch (BotConfiguration.CryptoExchangeAPIEnum)
             {
                 case CryptoExchangeAPIEnum.Coinmate:
@@ -69,7 +71,9 @@ namespace CryptoBotFunction
                     break;
 
                 case CryptoExchangeAPIEnum.Binance:
-                    throw new NotImplementedException();
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Binance_Key] = config["BinanceCredentials_Key"];
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Binance_Secret] = config["BinanceCredentials_Secret"];
+                    break;
 
                 case CryptoExchangeAPIEnum.Coinbase:
                     throw new NotImplementedException();
@@ -77,6 +81,17 @@ namespace CryptoBotFunction
                 case CryptoExchangeAPIEnum.Huobi:
                     BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Huobi_Key] = config["HuobiCredentials_Key"];
                     BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Huobi_Secret] = config["HuobiCredentials_Secret"];
+                    break;
+
+
+                case CryptoExchangeAPIEnum.Kraken:
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Kraken_Key] = config["KrakenCredentials_Key"];
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Kraken_Secret] = config["KrakenCredentials_Secret"];
+                    break;
+
+                case CryptoExchangeAPIEnum.FTX:
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.FTX_Key] = config["FTXCredentials_Key"];
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.FTX_Secret] = config["FTXCredentials_Secret"];
                     break;
 
                 default:

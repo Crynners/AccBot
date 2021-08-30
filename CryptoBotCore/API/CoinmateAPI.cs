@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace CryptoBotCore.API
 {
     [Serializable]
-    public class CoinmateAPI : CryptoExchangeAPI
+    public class CoinmateAPI : ICryptoExchangeAPI
     {
         private int clientId { get; set; }
         private string publicKey { get; set; }
@@ -24,13 +24,14 @@ namespace CryptoBotCore.API
         static object nonceLock = new object();
         public ILogger Log { get; set; }
 
-        public string pair_base { get; set; }
         public string pair_quote { get; set; }
+        public string pair_base { get; set; }
 
         public CoinmateAPI(string pair, Dictionary<ExchangeCredentialType, string> credentials, ILogger log)
         {
-            this.pair_base = pair.Split('_')[1].ToUpper();
-            this.pair_quote = pair.Split('_')[0].ToUpper();
+            this.pair_base = pair.Split('_')[0].ToUpper();
+            this.pair_quote = pair.Split('_')[1].ToUpper();
+
 
             this.Log = log;
 
@@ -88,7 +89,7 @@ namespace CryptoBotCore.API
 
                     //amount = Math.Floor(amount);
 
-                    string body = "total=" + amount + "&currencyPair=" + $"{this.pair_quote}_{this.pair_base}" + "&" + getSecuredHeaderPart();
+                    string body = "total=" + amount + "&currencyPair=" + $"{this.pair_base}_{this.pair_quote}" + "&" + getSecuredHeaderPart();
                     var response = await client.UploadStringTaskAsync(new Uri("https://coinmate.io/api/buyInstant"), body);
 
                     Response<string> result = JsonConvert.DeserializeObject<Response<string>>(response);
@@ -110,15 +111,15 @@ namespace CryptoBotCore.API
             } while (true);
         }
 
-        public async Task<double> getWithdrawalFeeAsync()
+        public async Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
         {
-            if (this.pair_quote == "LTC")
+            if (this.pair_base == "LTC")
             {
                 return 0.0004;
-            }else if(this.pair_quote == "ETH")
+            }else if(this.pair_base == "ETH")
             {
                 return 0.01;
-            }else if(this.pair_quote == "DSH")
+            }else if(this.pair_base == "DSH")
             {
                 return 0.00001;
             }
@@ -162,13 +163,13 @@ namespace CryptoBotCore.API
                     WebClient client = new WebClient();
                     client.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded");
 
-                    string keypair = pair_quote == "BTC" ? "bitcoinWithdrawal" :
-                                     pair_quote == "LTC" ? "litecoinWithdrawal" :
-                                     pair_quote == "ETH" ? "ethereumWithdrawal" :
-                                     pair_quote == "DASH" ? "dashWithdrawal" :
+                    string keypair = pair_base == "BTC" ? "bitcoinWithdrawal" :
+                                     pair_base == "LTC" ? "litecoinWithdrawal" :
+                                     pair_base == "ETH" ? "ethereumWithdrawal" :
+                                     pair_base == "DASH" ? "dashWithdrawal" :
                                      null;
 
-                    string fee_priority = pair_quote == "BTC" ? "&feePriority=LOW" : "";
+                    string fee_priority = pair_base == "BTC" ? "&feePriority=LOW" : "";
 
                     string body = "amount=" + amount + "&address=" + destinationAddress + fee_priority + "&" + getSecuredHeaderPart();
                     string response = await client.UploadStringTaskAsync("https://coinmate.io/api/" + keypair, body);
@@ -202,9 +203,9 @@ namespace CryptoBotCore.API
             } while (true);
         }
 
-        public double getTakerFee()
+        public Task<double> getTakerFee()
         {
-            return 1.0035;
+            return Task.FromResult(1.0035);
         }
 
         public async Task<List<WalletBalances>> getBalancesAsync()

@@ -7,19 +7,19 @@ using static CryptoBotCore.API.CoinmateAPI;
 
 namespace CryptoBotCore.API
 {
-    public interface CryptoExchangeAPI
+    public interface ICryptoExchangeAPI
     {
         /// <summary>
         /// Method which returns withdrawal fee for the acumulating cryptocurrency
         /// </summary>
         /// <returns>Absolute value of fee in the crypto currency</returns>
-        public Task<double> getWithdrawalFeeAsync();
+        public Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null);
 
         /// <summary>
         /// Method which returns taker fee
         /// </summary>
         /// <returns>Taker fee in percent</returns>
-        public double getTakerFee();
+        public Task<double> getTakerFee();
 
         Task<List<WalletBalances>> getBalancesAsync();
 

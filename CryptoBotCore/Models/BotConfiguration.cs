@@ -13,8 +13,13 @@ namespace CryptoBotCore.Models
         public static string Fiat { get; set; }
         public static Dictionary<ExchangeCredentialType, string> ExchangeCredentials { get; set; }
         public static int ChunkSize { get; set; }
-        
         public static string WithdrawalAddress { get; set; }
+        
+        /// <summary>
+        /// Only for Kraken Exchange
+        /// </summary>
+        public static string WithdrawalKeyName { get; set; }
+
         public static bool WithdrawalEnabled { get; set; }
         public static int MaxWithdrawalAbsoluteFee { get; set; }
         public static double MaxWithdrawalPercentageFee { get; set; }

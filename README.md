@@ -1,7 +1,7 @@
 _Read the README in [English](https://github.com/Crynners/AccBot/blob/main/README.en.md)._
 
 # Úvod
-Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který v pravidelných intervalech po malých částkách v Kč nebo Eurech nakupuje [BTC](https://cs.wikipedia.org/wiki/Bitcoin) _(eventuálně LTC, ETH, XMR nebo DASH)_ na burze [Coinmate](https://coinmate.io/) nebo [Huobi](https://www.huobi.com/en-us/) dle strategie [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html).
+Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který v pravidelných intervalech po malých částkách v Kč nebo Eurech nakupuje [BTC](https://cs.wikipedia.org/wiki/Bitcoin) _(eventuálně LTC, ETH, XMR nebo DASH a další)_ na nejznámějších burzách ([Coinmate](https://coinmate.io/), [Huobi](https://www.huobi.com/en-us/), [Kraken](https://www.kraken.com/), [Binance](https://www.binance.com/) nebo [FTX](https://ftx.com/)) dle strategie [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html).
 
 # Jednoduchý popis fungování bota
 * Nakupuje uživatelem definovanou částku v českých korunách _(typicky desítky Kč)_ / eurech _(typicky jednotky Eur)_ každých uživatelsky definovaných hodin _(ideálně dělitelných 24, aby nakupoval vždy ve stejný čas, tedy např. -> každou hodinu, 1x za 2h, 1x za 4h, 1x za 8h, etc.)_.

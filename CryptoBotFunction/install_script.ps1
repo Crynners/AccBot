@@ -7,6 +7,7 @@ $VariableNameFile = join-path -path $scriptPath -childpath "init_variables.ps1"
 
 . $VariableNameFile
 
+
 if("coinmate" -eq $ExchangeName){
     $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
     $VariableNameFile = join-path -path $scriptPath -childpath "coinmate_variables.ps1"
@@ -15,6 +16,18 @@ if("coinmate" -eq $ExchangeName){
 }elseif("huobi" -eq $ExchangeName){
     $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
     $VariableNameFile = join-path -path $scriptPath -childpath "huobi_variables.ps1"
+    . $VariableNameFile
+}elseif("kraken" -eq $ExchangeName){
+    $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
+    $VariableNameFile = join-path -path $scriptPath -childpath "kraken_variables.ps1"
+    . $VariableNameFile
+}elseif("ftx" -eq $ExchangeName){
+    $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
+    $VariableNameFile = join-path -path $scriptPath -childpath "ftx_variables.ps1"
+    . $VariableNameFile
+}elseif("binance" -eq $ExchangeName){
+    $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
+    $VariableNameFile = join-path -path $scriptPath -childpath "binance_variables.ps1"
     . $VariableNameFile
 }else{
     $err = "ERROR: The exchange name '$ExchangeName' is not supported."
@@ -359,6 +372,12 @@ $appsettingsResult = az functionapp config appsettings set --name $azFunctionNam
                     "CoinMateCredentials_ClientId=$CoinMateCredentials_ClientId" `
                     "CoinMateCredentials_PublicKey=$CoinMateCredentials_PublicKey" `
                     "CoinMateCredentials_PrivateKey=$CoinMateCredentials_PrivateKey" `
+                    "KrakenCredentials_Key=$KrakenCredentials_Key" `
+                    "KrakenCredentials_Secret=$KrakenCredentials_Secret" `
+                    "FTXCredentials_Key=$FTXCredentials_Key" `
+                    "FTXCredentials_Secret=$FTXCredentials_Secret" `
+                    "BinanceCredentials_Key=$BinanceCredentials_Key" `
+                    "BinanceCredentials_Secret=$BinanceCredentials_Secret" `
                     "HuobiCredentials_Key=$HuobiCredentials_Key" `
                     "HuobiCredentials_Secret=$HuobiCredentials_Secret"
 
