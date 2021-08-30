@@ -1,7 +1,20 @@
 _Read the README in [English](https://github.com/Crynners/AccBot/blob/main/README.en.md)._
 
 # Úvod
-Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který v pravidelných intervalech po malých částkách v Kč nebo Eurech nakupuje [BTC](https://cs.wikipedia.org/wiki/Bitcoin) _(eventuálně LTC, ETH, XMR nebo DASH a další)_ na nejznámějších burzách ([Coinmate](https://coinmate.io/), [Huobi](https://www.huobi.com/en-us/), [Kraken](https://www.kraken.com/), [Binance](https://www.binance.com/) nebo [FTX](https://ftx.com/)) dle strategie [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html).
+Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který v pravidelných intervalech po malých částkách v Kč nebo Eurech nakupuje [BTC](https://cs.wikipedia.org/wiki/Bitcoin) _(eventuálně LTC, ETH, XMR nebo DASH a další)_ na nejznámějších burzách dle strategie [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html).
+
+Seznam podporovaných burz:
+ - [Coinmate](https://coinmate.io/)
+ - [Huobi](https://www.huobi.com/en-us/)
+ - [Kraken](https://www.kraken.com/)
+ - [Binance](https://www.binance.com/)
+ - [FTX](https://ftx.com/)
+ - Bittrex - COMING SOON
+ - Bitfinex - COMING SOON
+
+# Proč AccBot?
+Různých botů na nakupování kryptoměn existuje již celá řada, nicméně dost často se jedná o uzavřené aplikace, kam je potřeba se zaregistrovat, vyplnit API klíče a bot pak za vás nakupuje / trejduje dle daných pravidel. Nevýhoda je, že daná aplikace pravděpodobně sbírá data a statistiky o vašich nákupech, kód je uzavřený, čili nemáte plnou kontrolu nad tím, co bot vlastně bude dělat.
+Naše řešení je plně decentralizované v tom, že si každý nainstaluje svého bota do svého vlastního prostředí. Jednotliví boti uživatelů jsou tak plně odděleni a žádná data se centrálně nikde neshromažďují. Statistiky se každému ukládají do jeho vlastní DB, které se pak vypisují dle libosti do soukromých Telegram kanálů.
 
 # Jednoduchý popis fungování bota
 * Nakupuje uživatelem definovanou částku v českých korunách _(typicky desítky Kč)_ / eurech _(typicky jednotky Eur)_ každých uživatelsky definovaných hodin _(ideálně dělitelných 24, aby nakupoval vždy ve stejný čas, tedy např. -> každou hodinu, 1x za 2h, 1x za 4h, 1x za 8h, etc.)_.
@@ -136,6 +149,84 @@ $CreateAzureLog = 'false'
   ### END USER-DEFINED VARIABLES #######
   ######################################
   ```
+  - V případě Kraken vyplňte následující hodnoty:
+  ```powershell
+  ######################################
+  ### HUOBI USER-DEFINED VARIABLES #####
+  ######################################
+
+  # Crypto, které na Krakenu chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
+  $Currency='BTC'
+
+  # Fiat měna, za kterou chcete na Krakenu nakupovat crypto (MOŽNÉ HODNOTY: USDT)
+  $Fiat='USDT'
+
+  # Velikost chunku v USDT (resp. ve $Fiat), který chcete pravidelně nakupovat (MINIMUM: dle burzy)
+  $ChunkSize='5'
+
+  # Název peněženky, do které chcete zaslat naakumulované krypto
+  $WithdrawalKeyName = ''
+
+  # API Key z Kraken API
+  $KrakenCredentials_Key='XXX'
+
+  # API Secret z Kraken API
+  $KrakenCredentials_Secret='XXX'
+
+  ######################################
+  ### END USER-DEFINED VARIABLES #######
+  ######################################
+  ```
+   - V případě Binance vyplňte následující hodnoty:
+  ```powershell
+  ######################################
+  ### HUOBI USER-DEFINED VARIABLES #####
+  ######################################
+
+  # Crypto, které na Binance chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH, ...)
+  $Currency='BTC'
+
+  # Fiat měna, za kterou chcete na Binance nakupovat crypto (MOŽNÉ HODNOTY: USDT, BUSD, USDC, DAI)
+  $Fiat='USDT'
+
+  # Velikost chunku v USDT (resp. ve $Fiat), který chcete pravidelně nakupovat (MINIMUM: dle burzy)
+  $ChunkSize='10'
+
+  # API Key z Binance API
+  $BinanceCredentials_Key='XXX'
+
+  # API Secret z Binance API
+  $BinanceCredentials_Secret='XXX'
+
+  ######################################
+  ### END USER-DEFINED VARIABLES #######
+  ######################################
+  ```
+   - V případě FTX vyplňte následující hodnoty:
+  ```powershell
+  ######################################
+  ### HUOBI USER-DEFINED VARIABLES #####
+  ######################################
+
+  # Crypto, které na Binance chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH, ...)
+  $Currency='BTC'
+
+  # Fiat měna, za kterou chcete na Binance nakupovat crypto (MOŽNÉ HODNOTY: USDT, BUSD, USDC, DAI)
+  $Fiat='USDT'
+
+  # Velikost chunku v USDT (resp. ve $Fiat), který chcete pravidelně nakupovat (MINIMUM: dle burzy)
+  $ChunkSize='5'
+
+  # API Key z FTX API
+  $FTXCredentials_Key='XXX'
+
+  # API Secret z FTX API
+  $FTXCredentials_Secret='XXX'
+
+  ######################################
+  ### END USER-DEFINED VARIABLES #######
+  ######################################
+  ``` 
 <a name="installscript"></a>
 9. 
   - <img src="https://user-images.githubusercontent.com/87997650/128522417-9bd02e68-a4d6-48bd-8661-81ec43ee3a47.png" width="25" height="25" />: Poklepáním spusťte **run.bat** file _(Pro Windows OS)._ 
