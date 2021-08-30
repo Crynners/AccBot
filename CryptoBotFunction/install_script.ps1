@@ -212,18 +212,30 @@ $primaryMasterKey = az cosmosdb keys list -n $cosmosDBAccountName -g $resourceGr
 $CosmosDbPrimaryKey = $primaryMasterKey.primaryMasterKey
 $CosmosDbEndpointUri = 'https://' + $CosmosDBAccountResult.name + '.documents.azure.com:443/'
 
-$randomMinutes = Get-Random -Maximum 60
 
-if ( 1 -eq $HourDivider )
-{
-    $HourDivider = '*'
-    $NextHour = ""
-}else{
-    $NextHour = $HourDivider + ". "
-    $HourDivider = '*/' + $HourDivider
+if ( ($NCronTabExpression -eq $null) -or ($NCronTabExpression -eq '')) {
+
+	Write-Verbose "Scheduler is set by HourDivider variable"
+
+	$randomMinutes = Get-Random -Maximum 60
+
+	if ( 1 -eq $HourDivider )
+	{
+		$HourDivider = '*'
+		$NextHour = ""
+	}else{
+		$NextHour = $HourDivider + ". "
+		$HourDivider = '*/' + $HourDivider
+	}
+
+	$DayDividerSchedule = '0 ' + $randomMinutes + ' ' + $HourDivider + ' * * *'
+
+} else {
+		
+	Write-Verbose "So you think you are PRO right? OK then, using your `$NCronTabExpression to set `$DayDividerSchedule"
+
+	$DayDividerSchedule = $NCronTabExpression
 }
-
-$DayDividerSchedule = '0 ' + $randomMinutes + ' ' + $HourDivider + ' * * *'
 
 
 
