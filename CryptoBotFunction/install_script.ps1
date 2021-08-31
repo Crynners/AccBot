@@ -433,13 +433,18 @@ if( $null -eq $DeployAzureFunctionResult ){
 
 Write-Host "[Step 9 / 9] Function app deployment -> DONE" -ForegroundColor cyan
 
+if ( ($NCronTabExpression -eq $null) -or ($NCronTabExpression -eq '')) {
+    $DeploymentResult = " => The AccBot bot is already deployed and should now start buying " + $Currency + " at " + $randomMinutes + ". minute every " + $NextHour + "hour." 
+}else{
+    $DeploymentResult = " => The AccBot bot is already deployed and should now start buying " + $Currency + " by NCRONTAB '" + $NCronTabExpression + "' expression. Check the details https://ncrontab.swimburger.net/"
+}
 
 #Zobrazit výstup co se stalo
 $output = "The following entities were successfully created in Azure: `n`t ResourceGroup: " + $resourceGroupName + "`n"`
                 + "`t CosmosDBAccount: " + $cosmosDBAccountName + "`n"`
                 + "`t Azure storage: " + $storageAccountName + "`n"`
                 + "`t Azure function: " + $azFunctionName + "`n"`
-                + " => The AccBot bot is already deployed and should now start buying " + $Currency + " at " + $randomMinutes + ". minute every " + $NextHour + "hour."
+                + $DeploymentResult
 
 Write-Host $output -ForegroundColor green
 pause
