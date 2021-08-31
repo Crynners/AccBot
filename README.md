@@ -1,3 +1,5 @@
+[![Github All Releases](https://img.shields.io/github/downloads/crynners/accbot/total.svg)](https://github.com/Crynners/AccBot/releases/latest)
+
 _Read the README in [English](https://github.com/Crynners/AccBot/blob/main/README.en.md)._
 
 # Úvod
