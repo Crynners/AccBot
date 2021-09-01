@@ -47,7 +47,7 @@ Our solution is fully decentralized in that everyone installs their own bot in t
 5.(Optional) Set up [Telegram notifications](#telegramnotifications). _(If, despite the recommendation, you do not want to use Telegram notifications, do not fill in the Telegram variables in the next step)_
 6. In Notepad (or another text editor), first open the **init_variables.ps1** file, which contains the general settings for the bot
 7. Edit the variables in the **## USER-DEFINED VARIABLES ###** section.
-``powershell
+```powershell
 ######################################
 ### GENERAL USER-DEFINED VARIABLES ###
 ######################################
