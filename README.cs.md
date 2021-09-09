@@ -18,6 +18,11 @@ Seznam podporovaných burz:
  - [Coinbase](https://www.coinbase.com/)
  - [KuCoin](https://www.kucoin.com/)
 
+# Proč DCA?
+ - [<img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 /> 📝Post na facebookové skupině bitcoinové CZ/SK komunitě od Josefa Tětka](https://www.facebook.com/groups/bitcoincz/posts/1758068064378420)
+ - [<img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 /> 🎥Video na Bitcoinovém kanálu](https://youtu.be/4y2VCEpiPQA)
+ - [<img src="https://www.countryflags.com/wp-content/uploads/united-states-of-america-flag-png-large.png" width=25 height=16 /> 📝Blog post: "Even God Couldn’t Beat Dollar-Cost Averaging"](https://ofdollarsanddata.com/even-god-couldnt-beat-dollar-cost-averaging/)
+
 # Proč AccBot?
 Různých botů na nakupování kryptoměn existuje již celá řada, nicméně dost často se jedná o uzavřené aplikace, kam je potřeba se zaregistrovat, vyplnit API klíče a bot pak za vás nakupuje / trejduje dle daných pravidel. Nevýhoda je, že daná aplikace pravděpodobně sbírá data a statistiky o vašich nákupech, kód je uzavřený, čili nemáte plnou kontrolu nad tím, co bot vlastně bude dělat.
 Naše řešení je plně decentralizované v tom, že si každý nainstaluje svého bota do svého vlastního prostředí. Jednotliví boti uživatelů jsou tak plně odděleni a žádná data se centrálně nikde neshromažďují. Statistiky se každému ukládají do jeho vlastní DB, které se pak vypisují dle libosti do soukromých Telegram kanálů.
