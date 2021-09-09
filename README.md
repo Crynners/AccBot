@@ -24,7 +24,7 @@ List of supported exchanges:
 There are many different bots for buying cryptocurrencies, but quite often they are closed applications where you need to register, fill in API keys and the bot then buys/trade for you according to the rules. The downside is that the app probably collects data and statistics about your purchases, the code is closed, so you don't have full control over what the bot will actually do.
 Our solution is fully decentralized in that everyone installs their own bot in their own environment. Thus, individual user bots are fully decoupled and no data is collected centrally anywhere. Everyone's statistics are stored in their own DB, which are then dumped at will to private Telegram channels.
 
-# A simple description of how the shoe works
+# A simple description of how the AccBot works
 * It buys a user-defined amount in Czech crowns _(typically tens of CZK)_ / Euros _(typically units of Euros)_ every user-defined hours _(ideally divisible by 24, so that it always buys at the same time, e.g. -> every hour, 1x in 2h, 1x in 4h, 1x in 8h, etc.)_.
 * It runs autonomously without the need to manage it somehow over time, you only need to keep track of your CZK account balance and replenish it regularly on the exchange _(e.g. once a month)_.
 * **Operating costs are practically zero** (it comes out to about 0.04 €/month for Azure hosting); the bot is implemented as [Azure function](https://azure.microsoft.com/cs-cz/services/functions/) for now, which runs at regular intervals and the whole solution is thus hosted on [Azure](https://azure.microsoft.com/cs-cz/). 
