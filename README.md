@@ -6,7 +6,7 @@
 _Přečíst README v [češtině <img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 />](https://github.com/Crynners/AccBot/blob/main/README.cs.md)_ 
 
 # Introduction
-Welcome to AccBot. AccBot is an open-source accumulation bot that buys [BTC](https://cs.wikipedia.org/wiki/Bitcoin) _(possibly LTC, ETH, XMR or DASH and others)_ at regular intervals in small amounts of CZK or EUR on the most popular exchanges according to the [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html) strategy.
+Welcome to AccBot. AccBot is an open-source accumulation bot that buys [BTC](https://cs.wikipedia.org/wiki/Bitcoin) _(possibly LTC, ETH, XMR or DASH and others)_ at regular intervals in small amounts of FIAT _(CZK, EUR, USD and others)_ on the most popular exchanges (see the list below) according to the [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html) strategy.
 
 <a name="exchangelist"></a>
 List of supported exchanges:
