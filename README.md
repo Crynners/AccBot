@@ -375,8 +375,7 @@ Alternatively, follow the following printscreen -> create via [Telegram desktop]
 ##
 **Q:** Can I accumulate BTC and ETH at the same time?
 
-**A:** Yes. Just run the script according to step 7 [of the installation guide](#installscript) with the configuration of the 1st bot (i.e. accumulation to BTC), and then run the script with the configuration of the 2nd bot. 
-⚠️ CAUTION: You need to change the **$AccBotName** variable (AccBot name) in the **init_variables.ps1** configuration file.
+**A:** Yes. Just run the script according to step 7 [of the installation guide](#installscript) with the configuration of the 1st bot (i.e. accumulation to BTC), and then run the script with the configuration of the 2nd bot. <br />⚠️CAUTION: You need to change the **$AccBotName** variable (AccBot name) in the **init_variables.ps1** configuration file.
 
 # Donate
 ![heart_donate](https://user-images.githubusercontent.com/87997650/127650190-188e401a-9942-4511-847e-d1010628777a.png)
