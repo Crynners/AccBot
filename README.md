@@ -15,8 +15,10 @@ Seznam podporovaných burz:
  - [Kraken](https://www.kraken.com/)
  - [Binance](https://www.binance.com/)
  - [FTX](https://ftx.com/)
- - Bittrex - COMING SOON
- - Bitfinex - COMING SOON
+ - [Bittrex](https://global.bittrex.com/)
+ - [Bitfinex](https://www.bitfinex.com/)
+ - [Coinbase](https://www.coinbase.com/)
+ - [KuCoin](https://www.kucoin.com/)
 
 # Proč AccBot?
 Různých botů na nakupování kryptoměn existuje již celá řada, nicméně dost často se jedná o uzavřené aplikace, kam je potřeba se zaregistrovat, vyplnit API klíče a bot pak za vás nakupuje / trejduje dle daných pravidel. Nevýhoda je, že daná aplikace pravděpodobně sbírá data a statistiky o vašich nákupech, kód je uzavřený, čili nemáte plnou kontrolu nad tím, co bot vlastně bude dělat.
@@ -43,7 +45,7 @@ Naše řešení je plně decentralizované v tom, že si každý nainstaluje sv�
 4. **Založený účet na [Azure](https://azure.microsoft.com/cs-cz/)** (účet je zdarma; platí se pouze za využité prostředky, které vychází na cca 0.04$ / měsíc)
 
 # Postup instalace
-1. Na Coinmate si [vygenerujte API klíče](https://coinmate.io/blog/using-the-coinmate-io-api/) (aby měl BOT přístup k prostředkům na burze a mohl provádět svoji akumulační činnost). Do poznámkového bloku si zapište vygenerovaný ClientId, PublicKey a PrivateKey -> budete je potřebovat v bodu 5.
+1. Vygenerujte si na své burze API klíče. Např pro Coinmate je [návod na vygenerování klíčů zde](https://coinmate.io/blog/using-the-coinmate-io-api/). Tento krok je důležitý k tomu, aby měl AccBot přístup k prostředkům na burze a mohl provádět svoji akumulační činnost. Do poznámkového bloku si zapište vygenerovaný ClientId, PublicKey a PrivateKey -> budete je potřebovat v bodu 5.
    - POZOR: Je nutné API klíčům přidat oprávnění na Trading, viz: 
 
    ![image](https://user-images.githubusercontent.com/87997650/127633515-b5828914-6183-4c60-8208-4e78d262f62e.png). 
@@ -61,30 +63,38 @@ Naše řešení je plně decentralizované v tom, že si každý nainstaluje sv�
 ### GENERAL USER-DEFINED VARIABLES ###
 ######################################
 # Burza, na kterou chcete napojit bota
-# (MOŽNÉ HODNOTY: coinmate, huobi, binance, kraken, ftx)
+# (MOŽNÉ HODNOTY: coinmate, huobi, binance, kraken, ftx, coinbase, kucoin, bitfinex, bittrex)
 $ExchangeName='coinmate'
 
 # Jméno, které se zobrazuje v Telegram notifikacích
 $Name='anonymous'
+
+# Jméno AccBota, kterého chcete nasadit. Využije se v momentě, kdy chcete akumulovat více párů najednou.
+# Použití: 
+# 1. Spustíte skript s např. AccBotName='BTC-AccBot' s konfigurací pro prvního bota
+# 2. Spustíte skript s např. AccBotName='ETH-AccBot' s konfigurací pro druhého bota
+# (POVOLENÉ HODNOTY: "a-z", "0-9", "-")
+
+$AccBotName='BTC-AccBot'
 
 ################################################
 ########### Nastavení časovače #################
 ################################################
 # Máte možnost vyplnit buďto proměnnou $HourDivider nebo $NCronTabExpression
 
-# Pokud chcete nakupovat méně než 1x za den, což je i doporučené nastavení (častěji po menších dávkách), vyplňte HourDivider
+# Pokud chcete nakupovat každých X hodin (méně než 1x za den), což je i doporučené nastavení (častěji po menších dávkách), vyplňte HourDivider
 # HourDivider určuje po kolika hodinách chcete pravidelně nakupovat
 # (MOŽNÉ HODNOTY: 1, 2, 3, 4, 6, 8, 12)
+
 $HourDivider='1'
 
-# Pokud chcete nakupovat např. pouze jednou za 2 dny, jednou týdně, 
-# nebo např. každé úterý a sobotu, vyplňte $NCronTabExpression
-# Formát této proměnné je v NCRONTAB, 
-# viz: https://docs.microsoft.com/cs-cz/azure/azure-functions/functions-bindings-timer?tabs=csharp#ncrontab-expressions
+# Pokud chcete nakupovat např. pouze jednou za 2 dny, jednou týdně, nebo např. každé úterý a sobotu, vyplňte $NCronTabExpression
+# Formát této proměnné je v NCRONTAB, viz: https://docs.microsoft.com/cs-cz/azure/azure-functions/functions-bindings-timer?tabs=csharp#ncrontab-expressions
 # Příklady:
 # "0 0 */2 * * *" -> jednou za dvě hodiny
 # "0 30 9 * * 1-5" -> v 9:30 každý pracovní den
 # Online generátor NCRONTAB hodnoty: https://ncrontab.swimburger.net/
+
 $NCronTabExpression = ''
 
 ################################################
@@ -121,6 +131,7 @@ $TelegramBot='telegram_bot_hash'
 # DOPORUČENÍ: Standardně mít vypnuté, tedy "false". 
 # Log zvyšuje měsíční náklady z cca 0.04 € / měsíc na cca 0.2 € / měsíc. 
 # Doporučujeme tedy zapnout pouze pokud Vám bot například nenakupuje jak by měl. 
+
 $CreateAzureLog = 'false'
 
 ##################################
@@ -128,12 +139,8 @@ $CreateAzureLog = 'false'
 ##################################
 ```
 8. Po uložení obecné konfigurace otevřte konfigurační soubor **coinmate_variables.ps1** nebo **huobi_variables.ps1** v závislosti na tom, na jaké burze chcete akumulovat.
-  - V případě Coinmate vyplňte následující hodnoty:
+  - V případě **Coinmate** vyplňte následující hodnoty:
   ```powershell
-  ######################################
-  ### COINMATE USER-DEFINED VARIABLES #####
-  ######################################
-
   # Crypto, které na Coinmate chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
   $Currency='BTC'
 
@@ -153,25 +160,12 @@ $CreateAzureLog = 'false'
   $CoinMateCredentials_PrivateKey='XXX'
 
   # (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
-  # Maximální limit na withdrawal fee v procentech. (DEFAULT: 0.001 = 0.1 %) 
-  $MaxWithdrawalPercentageFee = '0.001'
-
-  # (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
   # Maximální limit na withdrawal fee v absolutní hodnotě (Kč)
   # Pokud je nastaveno -1, uplatní se pouze podmínka procentuální => $MaxWithdrawalPercentageFee
   $MaxWithdrawalAbsoluteFee = -1
-
-
-  ######################################
-  ### END USER-DEFINED VARIABLES #######
-  ######################################
   ```
-  - V případě Huobi vyplňte následující hodnoty:
+  - V případě **Huobi** vyplňte následující hodnoty:
   ```powershell
-  ######################################
-  ### HUOBI USER-DEFINED VARIABLES #####
-  ######################################
-
   # Crypto, které na Huobi chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
   $Currency='BTC'
 
@@ -186,17 +180,9 @@ $CreateAzureLog = 'false'
 
   # API Secret z Huobi API
   $HuobiCredentials_Secret='XXX'
-
-  ######################################
-  ### END USER-DEFINED VARIABLES #######
-  ######################################
   ```
-  - V případě Kraken vyplňte následující hodnoty:
+  - V případě **Kraken** vyplňte následující hodnoty:
   ```powershell
-  ######################################
-  ### KRAKEN USER-DEFINED VARIABLES #####
-  ######################################
-
   # Crypto, které na Krakenu chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
   $Currency='BTC'
 
@@ -214,17 +200,9 @@ $CreateAzureLog = 'false'
 
   # API Secret z Kraken API
   $KrakenCredentials_Secret='XXX'
-
-  ######################################
-  ### END USER-DEFINED VARIABLES #######
-  ######################################
   ```
-   - V případě Binance vyplňte následující hodnoty:
+   - V případě **Binance** vyplňte následující hodnoty:
   ```powershell
-  ######################################
-  ### BINANCE USER-DEFINED VARIABLES #####
-  ######################################
-
   # Crypto, které na Binance chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH, ...)
   $Currency='BTC'
 
@@ -239,17 +217,9 @@ $CreateAzureLog = 'false'
 
   # API Secret z Binance API
   $BinanceCredentials_Secret='XXX'
-
-  ######################################
-  ### END USER-DEFINED VARIABLES #######
-  ######################################
   ```
-   - V případě FTX vyplňte následující hodnoty:
+   - V případě **FTX** vyplňte následující hodnoty:
   ```powershell
-  ######################################
-  ### FTX USER-DEFINED VARIABLES #####
-  ######################################
-
   # Crypto, které na Binance chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH, ...)
   $Currency='BTC'
 
@@ -259,15 +229,91 @@ $CreateAzureLog = 'false'
   # Velikost chunku v USDT (resp. ve $Fiat), který chcete pravidelně nakupovat (MINIMUM: dle burzy)
   $ChunkSize='5'
 
-  # API Key z FTX API
+  # API Key z Binance API
   $FTXCredentials_Key='XXX'
 
-  # API Secret z FTX API
+  # API Secret z Binance API
   $FTXCredentials_Secret='XXX'
+  ``` 
+   - V případě **Bitfinex** vyplňte následující hodnoty:
+  ```powershell
+  # Crypto, které na Krakenu chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
+  $Currency='BTC'
 
-  ######################################
-  ### END USER-DEFINED VARIABLES #######
-  ######################################
+  # Fiat měna, za kterou chcete na Krakenu nakupovat crypto (MOŽNÉ HODNOTY: USDT)
+  $Fiat='USDT'
+
+  # Velikost chunku v USDT (resp. ve $Fiat), který chcete pravidelně nakupovat (MINIMUM: dle burzy)
+  $ChunkSize='5'
+
+  # Název peněženky, do které chcete zaslat naakumulované krypto
+  $WithdrawalKeyName = ''
+
+  # API Key z Bitfinex API
+  $BitfinexCredentials_Key='XXX'
+
+  # API Secret z Bitfinex API
+  $BitfinexCredentials_Secret='XXX'
+  ```
+   - V případě **KuCoin** vyplňte následující hodnoty:
+  ```powershell
+  # Crypto, které na Huobi chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
+  $Currency='BTC'
+
+  # Fiat měna, za kterou chcete na Huobi nakupovat crypto (MOŽNÉ HODNOTY: USDT, HUSD)
+  $Fiat='USDT'
+
+  # Velikost chunku v USDT, resp. HUSD, který chcete pravidelně nakupovat (MINIMUM: 5)
+  $ChunkSize='5'
+
+  # API Key z KuCoin API
+  $KuCoinCredentials_Key='XXX'
+
+  # API Secret z KuCoin API
+  $KuCoinCredentials_Secret='XXX'
+
+  # API PassPhrase z KuCoin API
+  $KuCoinCredentials_PassPhrase='XXX'
+  ``` 
+   - V případě **Coinbase** vyplňte následující hodnoty:
+  ```powershell
+  # Crypto, které na Krakenu chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
+  $Currency='BTC'
+
+  # Fiat měna, za kterou chcete na Krakenu nakupovat crypto (MOŽNÉ HODNOTY: USDT)
+  $Fiat='USDT'
+
+  # Velikost chunku v USDT (resp. ve $Fiat), který chcete pravidelně nakupovat (MINIMUM: dle burzy)
+  $ChunkSize='5'
+
+  # Název peněženky, do které chcete zaslat naakumulované krypto
+  $WithdrawalKeyName = ''
+
+  # API Key z Coinbase API
+  $CoinbaseCredentials_Key='XXX'
+
+  # API Secret z Coinbase API
+  $CoinbaseCredentials_Secret='XXX'
+  ```
+   - V případě **Bittrex** vyplňte následující hodnoty:
+  ```powershell
+  # Crypto, které na Krakenu chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
+  $Currency='BTC'
+
+  # Fiat měna, za kterou chcete na Krakenu nakupovat crypto (MOŽNÉ HODNOTY: USDT)
+  $Fiat='USDT'
+
+  # Velikost chunku v USDT (resp. ve $Fiat), který chcete pravidelně nakupovat (MINIMUM: dle burzy)
+  $ChunkSize='5'
+
+  # Název peněženky, do které chcete zaslat naakumulované krypto
+  $WithdrawalKeyName = ''
+
+  # API Key z Bittrex API
+  $BittrexCredentials_Key='XXX'
+
+  # API Secret z Bittrex API
+  $BittrexCredentials_Secret='XXX'
   ``` 
 <a name="installscript"></a>
 9. 
