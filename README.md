@@ -364,10 +364,19 @@ Eventuálně postupujte dle následujících printscreenů -> vytvoření přes 
    ![image](https://user-images.githubusercontent.com/87997650/127707327-faa3fa84-56ab-4fce-be0f-7a3f81cadf38.png)
 5. Hotovo, do vytvořeného kanálu by Vám odteď měl bot zapisovat informace o nákupech se statistikami.
 
-# Úprava nastavení / Aktualizace již běžícího AccBota
+# FAQ
+**Q:** Jak si mohu změnit nastavení již běžícího AccBota?
 
-- Pokud Vám AccBot již úspěšně běží a chcete si časem změnit nějaké nastavení _(četnost nebo výše jednotlivých nákupů, povolení withdrawal, etc.)_, nejjednodušším způsobem je upravit **USER-DEFINED VARIABLES** v instalačním skriptu **install_script.ps1** a skript znovu spustit dle kroku 9 [instalačního návodu](#installscript).
-- Pokud chcete nasadit novou verzi AccBota, stáhněte si [ZIP z aktuálního RELEASE](https://github.com/Crynners/AccBot/releases/latest/download/AccBot_installation.zip), nastavte si konfigurační soubory **init_variables.ps1** a _{burzu, na které chcete akumulovat}_ **variables.ps1** a skript znovu spustit dle kroku 7 [instalačního návodu](#installscript).
+**A:** Pokud Vám AccBot již úspěšně běží a chcete si časem změnit nějaké nastavení _(četnost nebo výše jednotlivých nákupů, povolení withdrawal, etc.)_, nejjednodušším způsobem je upravit **USER-DEFINED VARIABLES** v instalačním skriptu **install_script.ps1** a skript znovu spustit dle kroku 9 [instalačního návodu](#installscript).
+##
+**Q:** Jak postupovat při nasazení nové verze AccBota?
+
+**A:** Stáhněte si [ZIP z aktuálního RELEASE](https://github.com/Crynners/AccBot/releases/latest/download/AccBot_installation.zip), nastavte si konfigurační soubory **init_variables.ps1** a _{burzu, na které chcete akumulovat}_ **variables.ps1** a skript znovu spustit dle kroku 7 [instalačního návodu](#installscript).
+##
+**Q:** Mohu zároveň akumulovat BTC a k tomu například i ETH?
+
+**A:** Ano. Stačí nejdřív spustit skript dle kroku 7 [instalačního návodu](#installscript) s konfigurací 1. bota (tedy např. akumulace do BTC), a poté spustit skript s konfigurací 2. bota. 
+⚠️POZOR: Je potřeba změnit proměnnou **$AccBotName** (název AccBota) v konfiguračním souboru **init_variables.ps1**.
 
 # Donate
 ![heart_donate](https://user-images.githubusercontent.com/87997650/127650190-188e401a-9942-4511-847e-d1010628777a.png)
