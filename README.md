@@ -20,6 +20,11 @@ List of supported exchanges:
  - [Coinbase](https://www.coinbase.com/)
  - [KuCoin](https://www.kucoin.com/)
 
+# Why DCA?
+ - [<img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 /> 📝Explanation in Facebook Bitcoin Community CZ & SK by Josef Tětek ](https://www.facebook.com/groups/bitcoincz/posts/1758068064378420)
+ - [<img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 /> 🎥Video on "Bitcoinovej kanál"](https://youtu.be/4y2VCEpiPQA)
+ - [<img src="https://www.countryflags.com/wp-content/uploads/united-states-of-america-flag-png-large.png" width=25 height=16 /> 📝Even God Couldn’t Beat Dollar-Cost Averaging](https://ofdollarsanddata.com/even-god-couldnt-beat-dollar-cost-averaging/)
+
 # Why AccBot?
 There are many different bots for buying cryptocurrencies, but quite often they are closed applications where you need to register, fill in API keys and the bot then buys/trade for you according to the rules. The downside is that the app probably collects data and statistics about your purchases, the code is closed, so you don't have full control over what the bot will actually do.
 Our solution is fully decentralized in that everyone installs their own bot in their own environment. Thus, individual user bots are fully decoupled and no data is collected centrally anywhere. Everyone's statistics are stored in their own DB, which are then dumped at will to private Telegram channels.
