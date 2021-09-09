@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,10 +8,14 @@
 
 
   <ItemGroup>
-    <PackageReference Include="Binance.Net" Version="7.0.5" />
-    <PackageReference Include="FTX.Net" Version="0.0.1-beta4" />
-    <PackageReference Include="Huobi.Net" Version="3.0.2" />
-    <PackageReference Include="KrakenExchange.Net" Version="2.0.5" />
+    <PackageReference Include="Binance.Net" Version="7.1.2" />
+    <PackageReference Include="Bitfinex.Net" Version="4.0.4" />
+    <PackageReference Include="Bittrex.Net" Version="6.0.5" />
+    <PackageReference Include="Coinbase" Version="6.0.1" />
+    <PackageReference Include="FTX.Net" Version="0.0.2" />
+    <PackageReference Include="Huobi.Net" Version="3.0.4" />
+    <PackageReference Include="KrakenExchange.Net" Version="2.0.8" />
+    <PackageReference Include="Kucoin.Net" Version="3.0.6" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.20.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.18" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.18" />

@@ -25,7 +25,6 @@ $CoinMateCredentials_PrivateKey='XXX'
 # Pokud je nastaveno -1, uplatní se pouze podmínka procentuální => $MaxWithdrawalPercentageFee
 $MaxWithdrawalAbsoluteFee = -1
 
-
 ######################################
 ### END USER-DEFINED VARIABLES #######
 ######################################

@@ -12,7 +12,6 @@ if("coinmate" -eq $ExchangeName){
     $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
     $VariableNameFile = join-path -path $scriptPath -childpath "coinmate_variables.ps1"
     . $VariableNameFile
-
 }elseif("huobi" -eq $ExchangeName){
     $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
     $VariableNameFile = join-path -path $scriptPath -childpath "huobi_variables.ps1"
@@ -28,6 +27,22 @@ if("coinmate" -eq $ExchangeName){
 }elseif("binance" -eq $ExchangeName){
     $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
     $VariableNameFile = join-path -path $scriptPath -childpath "binance_variables.ps1"
+    . $VariableNameFile
+}elseif("bitfinex" -eq $ExchangeName){
+    $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
+    $VariableNameFile = join-path -path $scriptPath -childpath "bitfinex_variables.ps1"
+    . $VariableNameFile
+}elseif("bittrex" -eq $ExchangeName){
+    $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
+    $VariableNameFile = join-path -path $scriptPath -childpath "bittrex_variables.ps1"
+    . $VariableNameFile
+}elseif("coinbase" -eq $ExchangeName){
+    $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
+    $VariableNameFile = join-path -path $scriptPath -childpath "coinbase_variables.ps1"
+    . $VariableNameFile
+}elseif("kucoin" -eq $ExchangeName){
+    $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
+    $VariableNameFile = join-path -path $scriptPath -childpath "kucoin_variables.ps1"
     . $VariableNameFile
 }else{
     $err = "ERROR: The exchange name '$ExchangeName' is not supported."
@@ -73,7 +88,7 @@ $cosmosDBAccountName = $cosmosDBAccountName.Substring(0,44)
 $appInsightsName ='appinsights-'+$([System.Guid]::NewGuid().ToString())
 $appInsightsName = $appInsightsName.Substring(0,44)
 
-$azFunctionName ='accbotfunction-'+$([System.Guid]::NewGuid().ToString())
+$azFunctionName ='azfunc-' + $AccBotName + '-'+$([System.Guid]::NewGuid().ToString())
 $azFunctionName = $azFunctionName.Substring(0,44)
 
 $randomNumber = Get-Random -Maximum 1000000000
@@ -95,6 +110,13 @@ $zipDeploymentFileName = join-path -path $scriptPath -childpath $zipFile
 # Kontrola dostupnosi deployment ZIP souboru
 if(![System.IO.File]::Exists($zipDeploymentFileName)){
     $err = "Deployment ZIP file '" + $zipDeploymentFileName+ "' is missing in the same directory as the PowerShell script! Please copy the ZIP file 'AccBot.zip to the same directory as the ps1 script.'"
+    Write-Error $err
+    pause
+    exit
+}
+
+if(!($AccBotName -match '^[a-z0-9]{1,}[a-z0-9\-]{1,13}[a-z0-9]{1,}$')){
+    $err = "Invalid AccBotName! Allowed values are only 'a-z', '0-9' or '-'."
     Write-Error $err
     pause
     exit
@@ -180,7 +202,7 @@ if ( $existingEntity.Count -gt 0 )
     Write-Host "[Step 4 / 9] CosmosDB DB Container -> DONE" -ForegroundColor cyan
 }else{
     #Vytvoření CosmosDB
-    $CosmosDBAccountResult = az cosmosdb create -n $cosmosDBAccountName -g $resourceGroupName --only-show-errors --default-consistency-level Session | ConvertFrom-Json
+    $CosmosDBAccountResult = az cosmosdb create -n $cosmosDBAccountName -g $resourceGroupName --only-show-errors --enable-free-tier true --default-consistency-level Session | ConvertFrom-Json
 
     # CosmosDB account check
     $query = "[?contains(name, 'accbotcosmosdbaccount') && resourceGroup == '" + $resourceGroupName + "']"
@@ -272,8 +294,6 @@ if ( $existingEntity.Count -gt 0 )
     }
 }
 
-
-
 Write-Host "[Step 5 / 9] Storage account -> DONE" -ForegroundColor cyan
 
 ########################################################### AZURE APP INSIGHTS ############################################################
@@ -318,13 +338,25 @@ Write-Host "[Step 6 / 9] App insights -> DONE" -ForegroundColor cyan
 ########################################################### AZURE FUNCTIONAPP ############################################################
 Write-Host "[Step 7 / 9] Function app -> Starting..." -ForegroundColor cyan
 
-#Kontrola, zdali již náhodou Azure functionapp v rámci resource group AccBot neexistuje
-$query = "[?contains(name, 'accbotfunction') && resourceGroup == '" + $resourceGroupName + "']"
+#Mazání starých Azure functionapp, které nerespektovaly možnost vytvoření více botů najednou
+$query = "[?(!contains(name, 'azfunc')) && resourceGroup == '" + $resourceGroupName + "']"
 $existingEntity = az functionapp list --query $query | ConvertFrom-Json
 
 if ( $existingEntity.Count -gt 0 )
 {
-    #Načtení existujícího Azure function app a pokud existuje, tak ji vymaž
+    $alreadyExistPrint = "Azure functionapp '" + $existingEntity.name + "' will be deleted because it has an outdated name."
+    Write-Warning $alreadyExistPrint
+
+    $removeFunctionApp = az functionapp delete --name $existingEntity.name --resource-group $resourceGroupName --only-show-errors
+}
+
+# Kontrola, zdali existuje přesně ta samá Azure functionapp
+$query = "[?contains(name, 'azfunc-" + $AccBotName + "') && resourceGroup == '" + $resourceGroupName + "']"
+$existingFunctionAppEntity = az functionapp list --query $query | ConvertFrom-Json
+
+if ( $existingFunctionAppEntity.Count -gt 0 )
+{
+    #Načtení existujícího Azure function app
     $AzFunctionAppResult = $existingEntity[0]
     $azFunctionName = $AzFunctionAppResult.name
 
@@ -338,26 +370,26 @@ if ( $existingEntity.Count -gt 0 )
         $appsettingsResult = az functionapp config appsettings set --name $azFunctionName --resource-group $resourceGroupName --settings "APPINSIGHTS_INSTRUMENTATIONKEY=$AppInsightInstrumentalKey"
     }
 
-    
 }else{
-    #Tvorba Azure function
+
+    #Tvorba Azure function s úplně novým Azure app plánem
     if( "false" -eq $CreateAzureLog){
         $FunctionAppResult = az functionapp create -g $resourceGroupName  -n $azFunctionName -s $storageAccountName --only-show-errors --disable-app-insights --functions-version 3 --consumption-plan-location $location
     }else {
         $FunctionAppResult = az functionapp create -g $resourceGroupName  -n $azFunctionName -s $storageAccountName --app-insights $appInsightsName --only-show-errors --functions-version 3 --consumption-plan-location $location
     }
+}
 
-    # Azure functionapp check
-    $query = "[?contains(name, 'accbotfunction') && resourceGroup == '" + $resourceGroupName + "']"
-    $existingEntity = az functionapp list --query $query | ConvertFrom-Json
+# Azure functionapp check
+$query = "[?contains(name, 'azfunc-" + $AccBotName + "') && resourceGroup == '" + $resourceGroupName + "']"
+$existingEntity = az functionapp list --query $query | ConvertFrom-Json
 
-    if ( $existingEntity.Count -eq 0 )
-    {
-        $err = "ERROR: Azure functionapp check failed."
-        Write-Error $err
-        pause
-        exit
-    }
+if ( $existingEntity.Count -eq 0 )
+{
+    $err = "ERROR: Azure functionapp check failed."
+    Write-Error $err
+    pause
+    exit
 }
 
 
@@ -390,6 +422,15 @@ $appsettingsResult = az functionapp config appsettings set --name $azFunctionNam
                     "FTXCredentials_Secret=$FTXCredentials_Secret" `
                     "BinanceCredentials_Key=$BinanceCredentials_Key" `
                     "BinanceCredentials_Secret=$BinanceCredentials_Secret" `
+                    "CoinbaseCredentials_Key=$CoinbaseCredentials_Key" `
+                    "CoinbaseCredentials_Secret=$CoinbaseCredentials_Secret" `
+                    "BitfinexCredentials_Key=$BitfinexCredentials_Key" `
+                    "BitfinexCredentials_Secret=$BitfinexCredentials_Secret" `
+                    "BittrexCredentials_Key=$BittrexCredentials_Key" `
+                    "BittrexCredentials_Secret=$BittrexCredentials_Secret" `
+                    "KuCoinCredentials_Key=$KuCoinCredentials_Key" `
+                    "KuCoinCredentials_Secret=$KuCoinCredentials_Secret" `
+                    "KuCoinCredentials_PassPhrase=$KuCoinCredentials_PassPhrase" `
                     "HuobiCredentials_Key=$HuobiCredentials_Key" `
                     "HuobiCredentials_Secret=$HuobiCredentials_Secret"
 

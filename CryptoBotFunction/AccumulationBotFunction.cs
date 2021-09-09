@@ -76,7 +76,9 @@ namespace CryptoBotFunction
                     break;
 
                 case CryptoExchangeAPIEnum.Coinbase:
-                    throw new NotImplementedException();
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinbase_Key] = config["CoinbaseCredentials_Key"];
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinbase_Secret] = config["CoinbaseCredentials_Secret"];
+                    break;
 
                 case CryptoExchangeAPIEnum.Huobi:
                     BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Huobi_Key] = config["HuobiCredentials_Key"];
@@ -92,6 +94,22 @@ namespace CryptoBotFunction
                 case CryptoExchangeAPIEnum.FTX:
                     BotConfiguration.ExchangeCredentials[ExchangeCredentialType.FTX_Key] = config["FTXCredentials_Key"];
                     BotConfiguration.ExchangeCredentials[ExchangeCredentialType.FTX_Secret] = config["FTXCredentials_Secret"];
+                    break;
+
+                case CryptoExchangeAPIEnum.Bittrex:
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bittrex_Key] = config["BittrexCredentials_Key"];
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bittrex_Secret] = config["BittrexCredentials_Secret"];
+                    break;
+
+                case CryptoExchangeAPIEnum.Bitfinex:
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bitfinex_Key] = config["BitfinexCredentials_Key"];
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bitfinex_Secret] = config["BitfinexCredentials_Secret"];
+                    break;
+
+                case CryptoExchangeAPIEnum.KuCoin:
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.KuCoin_Key] = config["KuCoinCredentials_Key"];
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.KuCoin_Secret] = config["KuCoinCredentials_Secret"];
+                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.KuCoin_PassPhrase] = config["KuCoinCredentials_PassPhrase"];
                     break;
 
                 default:

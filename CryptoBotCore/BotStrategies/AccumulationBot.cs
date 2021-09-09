@@ -25,7 +25,7 @@ namespace CryptoBotCore.BotStrategies
 
         private CosmosDbContext _cosmosDbContext;
 
-        ILogger Log;
+        readonly ILogger Log;
 
         public AccumulationBot(ILogger log)
         {
@@ -49,6 +49,22 @@ namespace CryptoBotCore.BotStrategies
                     this.cryptoExchangeAPI = new KrakenAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", 
                                                              BotConfiguration.WithdrawalKeyName, BotConfiguration.ExchangeCredentials, Log);
                     break;
+                case CryptoExchangeAPIEnum.Bitfinex:
+                    this.cryptoExchangeAPI = new BitfinexAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
+                    break;
+                case CryptoExchangeAPIEnum.Bittrex:
+                    this.cryptoExchangeAPI = new BittrexAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
+                    break;
+                case CryptoExchangeAPIEnum.FTX:
+                    this.cryptoExchangeAPI = new FtxAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
+                    break;
+                case CryptoExchangeAPIEnum.KuCoin:
+                    this.cryptoExchangeAPI = new KuCoinAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
+                    break;
+                case CryptoExchangeAPIEnum.Coinbase:
+                    this.cryptoExchangeAPI = new CoinbaseAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
+                    break;
+
                 default:
                     throw new NotImplementedException();
             }

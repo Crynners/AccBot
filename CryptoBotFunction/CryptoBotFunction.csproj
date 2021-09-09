@@ -10,7 +10,19 @@
     <ProjectReference Include="..\CryptoBotCore\CryptoBotCore.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="bitfinex_variables.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="coinbase_variables.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="ftx_variables.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="bittrex_variables.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="kucoin_variables.ps1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="kraken_variables.ps1">
