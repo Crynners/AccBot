@@ -83,13 +83,13 @@ $zipFile = 'AccBot.zip'
 $resourceGroupName='AccBot'
 
 $cosmosDBAccountName='accbotcosmosdbaccount-'+$([System.Guid]::NewGuid().ToString())
-$cosmosDBAccountName = $cosmosDBAccountName.Substring(0,44)
+$cosmosDBAccountName = $cosmosDBAccountName.Substring(0,43) + '0'
 
-$appInsightsName ='appinsights-'+$([System.Guid]::NewGuid().ToString())
-$appInsightsName = $appInsightsName.Substring(0,44)
+$appInsightsName ='appinsights-' + $([System.Guid]::NewGuid().ToString())
+$appInsightsName = $appInsightsName.Substring(0,43) + '0'
 
 $azFunctionName ='azfunc-' + $AccBotName + '-'+$([System.Guid]::NewGuid().ToString())
-$azFunctionName = $azFunctionName.Substring(0,44)
+$azFunctionName = $azFunctionName.Substring(0,43) + '0'
 
 $randomNumber = Get-Random -Maximum 1000000000
 $storageAccountName ='accbotsa' + $randomNumber

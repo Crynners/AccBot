@@ -3,332 +3,391 @@
 [![GitHub Release](https://img.shields.io/github/release/crynners/accbot.svg?style=flat)](https://github.com/Crynners/AccBot/releases/latest)
 [![Github All Releases](https://img.shields.io/github/downloads/crynners/accbot/total.svg)](https://github.com/Crynners/AccBot/releases/latest)
 
-_Read the README in [English](https://github.com/Crynners/AccBot/blob/main/README.en.md)._
+_Přečíst README v [češtině <img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 />](https://github.com/Crynners/AccBot/blob/main/README.cs.md)_ 
 
-# Úvod
-Vítejte na stránkách AccBota. AccBot je open-source akumulační bot, který v pravidelných intervalech po malých částkách v Kč nebo Eurech nakupuje [BTC](https://cs.wikipedia.org/wiki/Bitcoin) _(eventuálně LTC, ETH, XMR nebo DASH a další)_ na nejznámějších burzách dle strategie [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html).
+# Introduction
+Welcome to AccBot. AccBot is an open-source accumulation bot that buys [BTC](https://cs.wikipedia.org/wiki/Bitcoin) _(possibly LTC, ETH, XMR or DASH and others)_ at regular intervals in small amounts of FIAT _(CZK, EUR, USD and others)_ on the most popular exchanges (see the list below) according to the [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html) strategy.
 
 <a name="exchangelist"></a>
-Seznam podporovaných burz:
+List of supported exchanges:
  - [Coinmate](https://coinmate.io/)
  - [Huobi](https://www.huobi.com/en-us/)
  - [Kraken](https://www.kraken.com/)
  - [Binance](https://www.binance.com/)
  - [FTX](https://ftx.com/)
- - Bittrex - COMING SOON
- - Bitfinex - COMING SOON
+ - [Bittrex](https://global.bittrex.com/)
+ - [Bitfinex](https://www.bitfinex.com/)
+ - [Coinbase](https://www.coinbase.com/)
+ - [KuCoin](https://www.kucoin.com/)
 
-# Proč AccBot?
-Různých botů na nakupování kryptoměn existuje již celá řada, nicméně dost často se jedná o uzavřené aplikace, kam je potřeba se zaregistrovat, vyplnit API klíče a bot pak za vás nakupuje / trejduje dle daných pravidel. Nevýhoda je, že daná aplikace pravděpodobně sbírá data a statistiky o vašich nákupech, kód je uzavřený, čili nemáte plnou kontrolu nad tím, co bot vlastně bude dělat.
-Naše řešení je plně decentralizované v tom, že si každý nainstaluje svého bota do svého vlastního prostředí. Jednotliví boti uživatelů jsou tak plně odděleni a žádná data se centrálně nikde neshromažďují. Statistiky se každému ukládají do jeho vlastní DB, které se pak vypisují dle libosti do soukromých Telegram kanálů.
+# Why DCA?
+ - [<img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 /> 📝Explanation in Facebook Bitcoin Community CZ & SK by Josef Tětek ](https://www.facebook.com/groups/bitcoincz/posts/1758068064378420)
+ - [<img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 /> 🎥Video on "Bitcoinovej kanál"](https://youtu.be/4y2VCEpiPQA)
+ - [<img src="https://www.countryflags.com/wp-content/uploads/united-states-of-america-flag-png-large.png" width=25 height=16 /> 📝Even God Couldn’t Beat Dollar-Cost Averaging](https://ofdollarsanddata.com/even-god-couldnt-beat-dollar-cost-averaging/)
 
-# Jednoduchý popis fungování bota
-* Nakupuje uživatelem definovanou částku v českých korunách _(typicky desítky Kč)_ / eurech _(typicky jednotky Eur)_ každých uživatelsky definovaných hodin _(ideálně dělitelných 24, aby nakupoval vždy ve stejný čas, tedy např. -> každou hodinu, 1x za 2h, 1x za 4h, 1x za 8h, etc.)_.
-* Běží autonomně bez nutnosti jej nějak v čase spravovat, je zapotřebí si pouze hlídat stav svého Kč účtu a pravidelně jej na burze doplňovat _(např. jednou za měsíc)_.
-* **Náklady na provoz jsou prakticky nulové** (vychází to cca na 0.04 € / měsíčně za Azure hosting); bot je implementován zatím jako [Azure function](https://azure.microsoft.com/cs-cz/services/functions/), která se spouští v pravidelných intervalech a celé řešení je tedy hostované na [Azure](https://azure.microsoft.com/cs-cz/). 
-* (Volitelná funkcionalita) Po každém nákupu Vás informuje na Telegramovém kanále o tom, za jakou částku nakoupil. Tuto informaci doplní o statistiky, jaká je aktuální průměrná akumulovaná cena, etc. Viz příklad:
+# Why AccBot?
+There are many different bots for buying cryptocurrencies, but quite often they are closed applications where you need to register, fill in API keys and the bot then buys/trade for you according to the rules. The downside is that the app probably collects data and statistics about your purchases, the code is closed, so you don't have full control over what the bot will actually do.
+Our solution is fully decentralized in that everyone installs their own bot in their own environment. Thus, individual user bots are fully decoupled and no data is collected centrally anywhere. Everyone's statistics are stored in their own DB, which are then dumped at will to private Telegram channels.
+
+# A simple description of how the AccBot works
+* It buys a user-defined amount in Czech crowns _(typically tens of CZK)_ / Euros _(typically units of Euros)_ every user-defined hours _(ideally divisible by 24, so that it always buys at the same time, e.g. -> every hour, 1x in 2h, 1x in 4h, 1x in 8h, etc.)_.
+* It runs autonomously without the need to manage it somehow over time, you only need to keep track of your CZK account balance and replenish it regularly on the exchange _(e.g. once a month)_.
+* **Operating costs are practically zero** (it comes out to about 0.04 €/month for Azure hosting); the bot is implemented as [Azure function](https://azure.microsoft.com/cs-cz/services/functions/) for now, which runs at regular intervals and the whole solution is thus hosted on [Azure](https://azure.microsoft.com/cs-cz/). 
+* (Optional functionality) After each purchase, the Telegram channel informs you of the amount of the purchase. This information is supplemented with statistics, what is the current average accumulated price, etc. See example:
   * ![image](https://user-images.githubusercontent.com/87997650/127355720-fe73c0b5-5fd4-4d31-98dc-b569975f8a9e.png)
-* (Volitelná funkcionalita) Pokud je naakumulované dostatečné množství BTC, pak pokud je poplatek za výběr z celkové částky menší, než uživatelsky stanovený limit (např. 0.1 %), bot pošle naakumulované množství BTC z burzy do definované BTC peněženky (poznámka: pokud chcete využívat tuto funkcionalitu, doporučujeme povolit API odeslání pouze na Vaši konkrétní BTC peněženku, viz nastavení při vytváření API klíče na Coinmate)
+* (Optional functionality) If a sufficient amount of BTC is accumulated, then if the withdrawal fee from the total amount is less than the user defined limit (e.g. 0.1%), the bot will send the accumulated amount of BTC from the exchange to the defined BTC wallet (note: if you want to use this functionality, we recommend enabling API send only to your specific BTC wallet, see settings when creating an API key on Coinmate)
   * ![image](https://user-images.githubusercontent.com/87997650/127356371-6a9d1493-55f0-41cc-ab03-4a67cf610f42.png)
 
-# Prerekvizity
-1. **Nainstalovaný [PowerShell](https://docs.microsoft.com/cs-cz/powershell/scripting/install/installing-powershell?view=powershell-7.1)**
-2. **Nainstalovaný [Azure CLI](https://docs.microsoft.com/cs-cz/cli/azure/install-azure-cli)**
-3. **Založený účet na [libovolné podporované burze](#exchangelist)**
-    - Pokud byste nás chtěli podpořit a zaregistrovat se přes náš referral link, můžete kliknutím na bannery níže
+# Pre-requisites
+1. **Installed [PowerShell](https://docs.microsoft.com/cs-cz/powershell/scripting/install/installing-powershell?view=powershell-7.1)**
+2. **Installed [Azure CLI](https://docs.microsoft.com/cs-cz/cli/azure/install-azure-cli)**
+3. **An established account on [any supported exchange](#exchangelist)**
+    - If you would like to support us and sign up through our referral link, you can click on the banners below
 
-    <a href="https://coinmate.io?referral=ZWw4NVlXbDRVbTFVT0dKS1ZHczBZMXB1VEhKTlVRPT0"><img src="https://coinmate.io/static/img/banner/CoinMate_Banner_02.png" alt="Registrační odkaz přes referral" border="0"></a>
+    <a href="https://coinmate.io?referral=ZWw4NVlXbDRVbTFVT0dKS1ZHczBZMXB1VEhKTlVRPT0"><img src="https://coinmate.io/static/img/banner/CoinMate_Banner_02.png" alt="Registration link via referral" border="0"></a>
 
 
-4. **Založený účet na [Azure](https://azure.microsoft.com/cs-cz/)** (účet je zdarma; platí se pouze za využité prostředky, které vychází na cca 0.04$ / měsíc)
+4. **An account on [Azure](https://azure.microsoft.com/cs-cz/)** (the account is free; you only pay for the funds used, which comes out to about $0.04/month)
 
-# Postup instalace
-1. Na Coinmate si [vygenerujte API klíče](https://coinmate.io/blog/using-the-coinmate-io-api/) (aby měl BOT přístup k prostředkům na burze a mohl provádět svoji akumulační činnost). Do poznámkového bloku si zapište vygenerovaný ClientId, PublicKey a PrivateKey -> budete je potřebovat v bodu 5.
-   - POZOR: Je nutné API klíčům přidat oprávnění na Trading, viz: 
+# Installation procedure
+1. Generate API keys on your exchange. E.g. for Coinmate is [instructions for generating keys here](https://coinmate.io/blog/using-the-coinmate-io-api/). This step is important to allow AccBot to access funds on the exchange and perform its accumulation activity. Write down the generated ClientId, PublicKey and PrivateKey in your notepad -> you will need them in step 5.
+   - ATTENTION: You need to add Trading permissions to the API keys, see: 
 
    ![image](https://user-images.githubusercontent.com/87997650/127633515-b5828914-6183-4c60-8208-4e78d262f62e.png). 
-   - Pokud byste chtěli využít i funkci automatického výběru, zaškrtněte i volbu "Enable for Withdrawal". V takovém případě doporučujeme si zaškrtnout i "Enable for withdrawals to template addresses only", což znanená, že bot bude moci poslat naakumulované BTC pouze na Vámi definované adresy, viz: 
+   - If you'd like to use the autowithdrawal feature, check the "Enable for Withdrawal" option as well. In this case, we recommend that you also check "Enable for withdrawals to template addresses only", which means that the bot will only be able to send accumulated BTC to the addresses you define, see: 
 
    ![image](https://user-images.githubusercontent.com/87997650/127633656-a6698455-03b6-4b23-902d-e5642dbe4988.png)
 
-3. Stáhněte si [ZIP z aktuálního RELEASE](https://github.com/Crynners/AccBot/releases/latest/download/AccBot_installation.zip), který obsahuje instalační PowerShell skript a zbuilděného bota.
-4. ZIP z předchozího bodu rozbalte kamkoliv do Vašeho souborového systému
-5. (Nepovinné) Nastavte si [Telegram notifikace](#telegramnotifications). _(Pokud i přes doporučení nechcete Telegram notifikace využívat, v dalším kroku proměnné týkající se Telegramu nevyplňujte)_
-6. V poznámkovém bloku (nebo jiném textovém editoru) otevřte nejprve soubor **init_variables.ps1**, který obsahuje obecné nastavení bota
-7. Upravte proměnné v sekci **### USER-DEFINED VARIABLES ###**
+3. Download the [ZIP from the current RELEASE](https://github.com/Crynners/AccBot/releases/latest/download/AccBot_installation.zip), which contains the PowerShell installation script and the built bot.
+4. Unzip the ZIP from the previous point anywhere on your filesystem.
+5.(Optional) Set up [Telegram notifications](#telegramnotifications). _(If, despite the recommendation, you do not want to use Telegram notifications, do not fill in the Telegram variables in the next step)_
+6. In Notepad (or another text editor), first open the **init_variables.ps1** file, which contains the general settings for the bot
+7. Edit the variables in the **## USER-DEFINED VARIABLES ###** section.
 ```powershell
 ######################################
 ### GENERAL USER-DEFINED VARIABLES ###
 ######################################
-# Burza, na kterou chcete napojit bota
-# (MOŽNÉ HODNOTY: coinmate, huobi, binance, kraken, ftx)
+# Exchange you want to link the bot to
+# (POSSIBLE VALUES: coinmate, huobi, binance, kraken, ftx, coinbase, kucoin, bitfinex, bittrex)
 $ExchangeName='coinmate'
 
-# Jméno, které se zobrazuje v Telegram notifikacích
+#Name that appears in Telegram notifications
 $Name='anonymous'
 
-################################################
-########### Nastavení časovače #################
-################################################
-# Máte možnost vyplnit buďto proměnnou $HourDivider nebo $NCronTabExpression
+# The name of the AccBot you want to deploy. Used when you want to accumulate multiple pairs at once.
+# Usage: 
+# 1. Run the script with e.g. AccBotName='BTC-AccBot' with the configuration for the first bot
+# 2. Run a script with e.g. AccBotName='ETH-AccBot' with the configuration for the second bot
+# (ALLOWED VALUES: "a-z", "0-9", "-")
 
-# Pokud chcete nakupovat méně než 1x za den, což je i doporučené nastavení (častěji po menších dávkách), vyplňte HourDivider
-# HourDivider určuje po kolika hodinách chcete pravidelně nakupovat
-# (MOŽNÉ HODNOTY: 1, 2, 3, 4, 6, 8, 12)
+$AccBotName='BTC-AccBot'
+
+################################################
+########### Timer settings #####################
+################################################
+# You have the option to fill in either the $HourDivider or $NCronTabExpression variable
+
+# If you want to buy every X hours (less than once per day), which is also the recommended setting (more often in smaller batches), fill in HourDivider
+# HourDivider specifies how many hours you want to shop regularly
+# (POSSIBLE VALUES: 1, 2, 3, 4, 6, 8, 12)
+
 $HourDivider='1'
 
-# Pokud chcete nakupovat např. pouze jednou za 2 dny, jednou týdně, 
-# nebo např. každé úterý a sobotu, vyplňte $NCronTabExpression
-# Formát této proměnné je v NCRONTAB, 
-# viz: https://docs.microsoft.com/cs-cz/azure/azure-functions/functions-bindings-timer?tabs=csharp#ncrontab-expressions
-# Příklady:
-# "0 0 */2 * * *" -> jednou za dvě hodiny
-# "0 30 9 * * 1-5" -> v 9:30 každý pracovní den
-# Online generátor NCRONTAB hodnoty: https://ncrontab.swimburger.net/
+# If you only want to shop once every 2 days, once a week, or e.g. every Tuesday and Saturday, fill in $NCronTabExpression
+# The format of this variable is in NCRONTAB, see: https://docs.microsoft.com/cs-cz/azure/azure-functions/functions-bindings-timer?tabs=csharp#ncrontab-expressions
+# Examples:
+# "0 0 */2 * * * *" -> once every two hours
+# "0 30 9 * * * 1-5" -> at 9:30 every working day
+# Online NCRONTAB value generator: https://ncrontab.swimburger.net/
+
 $NCronTabExpression = ''
 
 ################################################
-########### Nastavení výběru z burzy ###########
+########### Exchange selection settings ########
 ################################################
 
-# Příznak, zdali chcete povolit Withdrawal v případě, že je fee menší než 0.1% 
-# POVOLENÉ HODNOTY: true / false
+# Flag if you want to enable Withdrawal if the fee is less than 0.1% 
+# ALLOWED VALUES: true / false
 $WithdrawalEnabled='false'
 
-# Adresa peněženky pro withdraw (aplikuje se pouze pokud WithdrawalEnabled = TRUE)
+# Wallet address for withdraw (only applies if WithdrawalEnabled = TRUE)
 $WithdrawalAddress=''
 
-# (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
-# Maximální limit na withdrawal fee v procentech.
+# (Only applied if $WithdrawalEnabled='true'). 
+# Maximum withdrawal fee limit in percentage.
 # DEFAULT: 0.001 = 0.1 %
 $MaxWithdrawalPercentageFee = '0.001'
 
 ################################################
-########### Nastavení Telegramu ################
+########### Telegram Settings ##################
 ################################################
 
-# Adresa telegram kanálu, do kterého chcete dostávat notifikace (ve formátu @NázevKanálu)
+# Address of the telegram channel you want to receive notifications to (in @ChannelName format)
 $TelegramChannel='@channel_name'
 
-# Privátní klíč telegram bota (POZOR, bot musí být členem kanálu výše)
+# Private key of the Telegram bot (ATTENTION, the bot must be a member of the channel above)
 $TelegramBot='telegram_bot_hash'
 
 ################################################
-########### Nastavení Azure logu ###############
+########### Azure log settings #################
 ################################################
 
-# Příznak pro vytvoření logu na Azure. (POVOLENÉ HODNOTY: true / false). 
-# DOPORUČENÍ: Standardně mít vypnuté, tedy "false". 
-# Log zvyšuje měsíční náklady z cca 0.04 € / měsíc na cca 0.2 € / měsíc. 
-# Doporučujeme tedy zapnout pouze pokud Vám bot například nenakupuje jak by měl. 
+The # flag to create a log on Azure. (ALLOWED VALUES: true / false). 
+# RECOMMENDATION: By default have it disabled, i.e. "false". 
+# Log increases the monthly cost from approx 0.04€/month to approx 0.2€/month. 
+# So it is recommended to turn it on only if your bot for example does not purchase as it should. 
+
 $CreateAzureLog = 'false'
 
 ##################################
 ### END USER-DEFINED VARIABLES ###
 ##################################
 ```
-8. Po uložení obecné konfigurace otevřte konfigurační soubor **coinmate_variables.ps1** nebo **huobi_variables.ps1** v závislosti na tom, na jaké burze chcete akumulovat.
-  - V případě Coinmate vyplňte následující hodnoty:
+8. After saving the general configuration, open the configuration file **coinmate_variables.ps1** or **huobi_variables.ps1** depending on which exchange you want to accumulate on.
+  - For **Coinmate**, fill in the following values:
   ```powershell
-  ######################################
-  ### COINMATE USER-DEFINED VARIABLES #####
-  ######################################
-
-  # Crypto, které na Coinmate chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
+  # Crypto you want to buy on Coinmate (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH)
   $Currency='BTC'
 
-  # Fiat měna, za kterou chcete na Coinmate nakupovat crypto (MOŽNÉ HODNOTY: CZK, EUR)
+  # Fiat currency you want to buy crypto with on Coinmate (POSSIBLE VALUES: CZK, EUR)
   $Fiat='CZK'
 
-  # Velikost chunku v CZK, resp. EUR, který chcete pravidelně nakupovat (MINIMUM pro CZK: 26; MINIMUM pro EUR: 1)
+  # Size of the chunk in CZK or EUR you want to buy regularly (MINIMUM for CZK: 26; MINIMUM for EUR: 1)
   $ChunkSize='26'
 
-  # ClientId z Coinmate API
+  # ClientId from Coinmate API
   $CoinMateCredentials_ClientId='111'
 
-  # Public key z Coinmate API
+  # Public key from Coinmate API
   $CoinMateCredentials_PublicKey='XXX'
 
-  # Private key z Coinmate API
+  # Private key from Coinmate API
   $CoinMateCredentials_PrivateKey='XXX'
 
-  # (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
-  # Maximální limit na withdrawal fee v procentech. (DEFAULT: 0.001 = 0.1 %) 
-  $MaxWithdrawalPercentageFee = '0.001'
-
-  # (Využije se pouze v případě, kdy $WithdrawalEnabled='true'). 
-  # Maximální limit na withdrawal fee v absolutní hodnotě (Kč)
-  # Pokud je nastaveno -1, uplatní se pouze podmínka procentuální => $MaxWithdrawalPercentageFee
+  # (Only used when $WithdrawalEnabled='true'). 
+  # Maximum withdrawal fee limit in absolute value (CZK)
+  # If set to -1, only the percentage condition is applied => $MaxWithdrawalPercentageFee
   $MaxWithdrawalAbsoluteFee = -1
-
-
-  ######################################
-  ### END USER-DEFINED VARIABLES #######
-  ######################################
   ```
-  - V případě Huobi vyplňte následující hodnoty:
+  - For **Huobi**, fill in the following values:
   ```powershell
-  ######################################
-  ### HUOBI USER-DEFINED VARIABLES #####
-  ######################################
-
-  # Crypto, které na Huobi chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
+  # Crypto you want to buy on Huobi (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH)
   $Currency='BTC'
 
-  # Fiat měna, za kterou chcete na Huobi nakupovat crypto (MOŽNÉ HODNOTY: USDT, HUSD)
+  # Fiat currency you want to buy crypto with on Huobi (POSSIBLE VALUES: USDT, HUSD)
   $Fiat='USDT'
 
-  # Velikost chunku v USDT, resp. HUSD, který chcete pravidelně nakupovat (MINIMUM: 5)
+  # The size of the USDT or HUSD chunk you want to buy regularly (MINIMUM: 5)
   $ChunkSize='5'
 
-  # API Key z Huobi API
+  # API Key from Huobi API
   $HuobiCredentials_Key='XXX'
 
-  # API Secret z Huobi API
+  # API Secret from Huobi API
   $HuobiCredentials_Secret='XXX'
-
-  ######################################
-  ### END USER-DEFINED VARIABLES #######
-  ######################################
   ```
-  - V případě Kraken vyplňte následující hodnoty:
+  - For **Kraken**, fill in the following values:
   ```powershell
-  ######################################
-  ### KRAKEN USER-DEFINED VARIABLES #####
-  ######################################
-
-  # Crypto, které na Krakenu chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
+  # Crypto you want to buy on Kraken (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH)
   $Currency='BTC'
 
-  # Fiat měna, za kterou chcete na Krakenu nakupovat crypto (MOŽNÉ HODNOTY: USDT)
+  # Fiat currency you want to buy crypto with on Kraken (POSSIBLE VALUES: USDT)
   $Fiat='USDT'
 
-  # Velikost chunku v USDT (resp. ve $Fiat), který chcete pravidelně nakupovat (MINIMUM: dle burzy)
+  # The size of the USDT (or $Fiat) chunk you want to buy regularly (MINIMUM: by exchange)
   $ChunkSize='5'
 
-  # Název peněženky, do které chcete zaslat naakumulované krypto
+  # Name of the wallet you want to send the accumulated crypto to
   $WithdrawalKeyName = ''
 
-  # API Key z Kraken API
+  # API Key from Kraken API
   $KrakenCredentials_Key='XXX'
 
-  # API Secret z Kraken API
+  # API Secret from Kraken API
   $KrakenCredentials_Secret='XXX'
-
-  ######################################
-  ### END USER-DEFINED VARIABLES #######
-  ######################################
   ```
-   - V případě Binance vyplňte následující hodnoty:
+  - In case of **Binance** fill in the following values:
   ```powershell
-  ######################################
-  ### BINANCE USER-DEFINED VARIABLES #####
-  ######################################
-
-  # Crypto, které na Binance chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH, ...)
+  # Crypto you want to buy on Binance (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH, ...)
   $Currency='BTC'
 
-  # Fiat měna, za kterou chcete na Binance nakupovat crypto (MOŽNÉ HODNOTY: USDT, BUSD, USDC, DAI)
+  # Fiat currency you want to buy crypto with on Binance (POSSIBLE VALUES: USDT, BUSD, USDC, DAI)
   $Fiat='USDT'
 
-  # Velikost chunku v USDT (resp. ve $Fiat), který chcete pravidelně nakupovat (MINIMUM: dle burzy)
+  # The size of the USDT (or $Fiat) chunk you want to buy regularly (MINIMUM: by exchange)
   $ChunkSize='10'
 
-  # API Key z Binance API
+  # API Key from Binance API
   $BinanceCredentials_Key='XXX'
 
-  # API Secret z Binance API
+  # API Secret from Binance API
   $BinanceCredentials_Secret='XXX'
-
-  ######################################
-  ### END USER-DEFINED VARIABLES #######
-  ######################################
   ```
-   - V případě FTX vyplňte následující hodnoty:
+   - For **FTX**, fill in the following values:
   ```powershell
-  ######################################
-  ### FTX USER-DEFINED VARIABLES #####
-  ######################################
-
-  # Crypto, které na Binance chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH, ...)
+  # Crypto you want to buy on Binance (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH, ...)
   $Currency='BTC'
 
-  # Fiat měna, za kterou chcete na Binance nakupovat crypto (MOŽNÉ HODNOTY: USDT, BUSD, USDC, DAI)
+  # Fiat currency you want to buy crypto with on Binance (POSSIBLE VALUES: USDT, BUSD, USDC, DAI)
   $Fiat='USDT'
 
-  # Velikost chunku v USDT (resp. ve $Fiat), který chcete pravidelně nakupovat (MINIMUM: dle burzy)
+  # The size of the USDT (or $Fiat) chunk you want to buy regularly (MINIMUM: by exchange)
   $ChunkSize='5'
 
-  # API Key z FTX API
+  # API Key from Binance API
   $FTXCredentials_Key='XXX'
 
-  # API Secret z FTX API
+  # API Secret from Binance API
   $FTXCredentials_Secret='XXX'
+  ``` 
+   - For **Bitfinex**, fill in the following values:
+  ```powershell
+  # Crypto you want to buy on Kraken (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH)
+  $Currency='BTC'
 
-  ######################################
-  ### END USER-DEFINED VARIABLES #######
-  ######################################
+  # Fiat currency you want to buy crypto with on Kraken (POSSIBLE VALUES: USDT)
+  $Fiat='USDT'
+
+  # The size of the USDT (or $Fiat) chunk you want to buy regularly (MINIMUM: by exchange)
+  $ChunkSize='5'
+
+  # Name of the wallet you want to send the accumulated crypto to
+  $WithdrawalKeyName = ''
+
+  # API Key from Bitfinex API
+  $BitfinexCredentials_Key='XXX'
+
+  # API Secret from Bitfinex API
+  $BitfinexCredentials_Secret='XXX'
+  ```
+   - For **KuCoin**, fill in the following values:
+  ```powershell
+  # Crypto you want to buy on Huobi (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH)
+  $Currency='BTC'
+
+  # Fiat currency you want to buy crypto with on Huobi (POSSIBLE VALUES: USDT, HUSD)
+  $Fiat='USDT'
+
+  # The size of the USDT or HUSD chunk you want to buy regularly (MINIMUM: 5)
+  $ChunkSize='5'
+
+  # API Key from KuCoin API
+  $KuCoinCredentials_Key='XXX'
+
+  # API Secret from KuCoin API
+  $KuCoinCredentials_Secret='XXX'
+
+  # API PassPhrase from KuCoin API
+  $KuCoinCredentials_PassPhrase='XXX'
+  ``` 
+   - For **Coinbase**, fill in the following values:
+  ```powershell
+  # Crypto you want to buy on Kraken (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH)
+  $Currency='BTC'
+
+  # Fiat currency you want to buy crypto with on Kraken (POSSIBLE VALUES: USDT)
+  $Fiat='USDT'
+
+  # The size of the USDT (or $Fiat) chunk you want to buy regularly (MINIMUM: by exchange)
+  $ChunkSize='5'
+
+  # Name of the wallet you want to send the accumulated crypto to
+  $WithdrawalKeyName = ''
+
+  # API Key from Coinbase API
+  $CoinbaseCredentials_Key='XXX'
+
+  # API Secret from Coinbase API
+  $CoinbaseCredentials_Secret='XXX'
+  ```
+   - For **Bittrex**, fill in the following values:
+  ```powershell
+  # Crypto you want to buy on Kraken (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH)
+  $Currency='BTC'
+
+  # Fiat currency you want to buy crypto with on Kraken (POSSIBLE VALUES: USDT)
+  $Fiat='USDT'
+
+  # The size of the USDT (or $Fiat) chunk you want to buy regularly (MINIMUM: by exchange)
+  $ChunkSize='5'
+
+  # Name of the wallet you want to send the accumulated crypto to
+  $WithdrawalKeyName = ''
+
+  # API Key from Bittrex API
+  $BittrexCredentials_Key='XXX'
+
+  # API Secret from Bittrex API
+  $BittrexCredentials_Secret='XXX'
   ``` 
 <a name="installscript"></a>
 9. 
-  - <img src="https://user-images.githubusercontent.com/87997650/128522417-9bd02e68-a4d6-48bd-8661-81ec43ee3a47.png" width="25" height="25" />: Poklepáním spusťte **run.bat** file _(Pro Windows OS)._ 
-  - <img src="https://user-images.githubusercontent.com/87997650/128523326-a7456256-4f01-41ef-9c21-1fe5968923cf.png" width="25" height="25" /> / <img src="https://user-images.githubusercontent.com/87997650/128523557-566d738d-67f5-43ac-a65e-080105f92abb.png" width="25" height="25" />: Spusťte PowerShell a v něm proveďte příkaz 
+  - <img src="https://user-images.githubusercontent.com/87997650/128522417-9bd02e68-a4d6-48bd-8661-81ec43ee3a47.png" width="25" height="25" />: Double-click to run **run.bat** file _(For Windows OS)._
+  - <img src="https://user-images.githubusercontent.com/87997650/128523326-a7456256-4f01-41ef-9c21-1fe5968923cf.png" width="25" height="25" /> / <img src="https://user-images.githubusercontent.com/87997650/128523557-566d738d-67f5-43ac-a65e-080105f92abb.png" width="25" height="25" />: Run PowerShell and execute the command in PowerShell 
     ```powershell 
     powershell.exe -executionpolicy bypass -file .\install_script.ps1
     ``` 
-Skript Vám automaticky připraví všechny potřebné resources na Azure. Na začátku by mělo vyskočit i okno s přihlášením do Azure portal. 
+The script will automatically prepare all the resources you need on Azure. It should also pop up the Azure portal login window at the beginning. 
 
-**POZOR: Instalace trvá několik minut, vyčkejte prosím na její dokončení.** Na závěr by se měla objevit následující hláška:
+** WARNING: The installation takes a few minutes, please wait for it to complete.** The following message should appear at the end:
 
 ![image](https://user-images.githubusercontent.com/87997650/128522145-3acfef81-ede6-4e40-95f0-627a532ca5d2.png)
 
 <a name="telegramnotifications"></a>
-# (Nepovinné) Nastavení Telegram notifikací
+# (Optional) Telegram notifications settings
 
-Tato část není povinná pro provoz bota, nicméně jde o velkou přidanou hodnotu, neboť Vás bot bude pravidelně informovat po každém nákupu jaké je Vaše průměrná cena naakumulovaného BTC a kolik BTC jste již naakumulovali. Zároveň si budete moci v reálném čase ověřovat, že bot funguje.
+This part is not mandatory for the bot to work, however it is a great added value as the bot will periodically inform you after each purchase what your average BTC accrued price is and how many BTC you have already accrued. You will also be able to verify in real time that the bot is working.
 
-1. Založení účtu na [Telegramu](https://telegram.org/)
-2. Vytvoření bota přes BotFather dle [návodu](https://sendpulse.com/knowledge-base/chatbot/create-telegram-chatbot).
-   - Token z návodu se poté vloží do proměnné **$TelegramBot** z PowerShell skriptu
-3. Vytvoření nového kanálu ([videonávod](https://youtu.be/q6-k_LGbw_k) pro vytvoření z mobilní aplikace -> [Android](https://play.google.com/store/apps/details?id=org.telegram.messenger&hl=cs&gl=US) nebo [iOS](https://apps.apple.com/us/app/telegram-messenger/id686449807) verze). 
-Eventuálně postupujte dle následujících printscreenů -> vytvoření přes [Telegram desktop](https://desktop.telegram.org/).
-   - V levém horním rohu klikněte na nastavení
+1. Create an account on [Telegram](https://telegram.org/)
+2. Create a bot via BotFather according to [instructions](https://sendpulse.com/knowledge-base/chatbot/create-telegram-chatbot).
+   - The token from the tutorial is then inserted into the **$TelegramBot** variable from the PowerShell script
+3. Create a new channel ([video tutorial](https://youtu.be/q6-k_LGbw_k) to create from the mobile app -> [Android](https://play.google.com/store/apps/details?id=org.telegram.messenger&hl=cs&gl=US) or [iOS](https://apps.apple.com/us/app/telegram-messenger/id686449807) version). 
+Alternatively, follow the following printscreen -> create via [Telegram desktop](https://desktop.telegram.org/).
+   - In the top left corner, click on settings
    
    ![image](https://user-images.githubusercontent.com/87997650/127706308-0ca1aead-f5a8-42eb-b740-6463d820636f.png)
-   - Klikněte na tlačítko `New Channel`
+   - Click on the `New Channel` button
    
    ![image](https://user-images.githubusercontent.com/87997650/127706363-c10948dd-2d97-4dc1-9028-718d1f802153.png)
-   - Pojmenujte si svůj kanál a potvrďte založení tlačítkem
+   - Name your channel and confirm the creation with the button
    
    ![image](https://user-images.githubusercontent.com/87997650/127706441-52c861f9-3f76-49a0-8d42-9c5d48c657cc.png)
-   - Kanál označte jako **Public** a vymyslete pro něj unikátní název. Tento název se poté vyplňte ve formátu `@MyAccBotChannel` (v případě příkladu níže) do proměnné **$TelegramChannel** v powershell skriptu
+   - Mark the channel as **Public** and come up with a unique name for it. This name is then filled in the format `@MyAccBotChannel` (in the case of the example below) in the **$TelegramChannel** variable in the powershell script
    ![image](https://user-images.githubusercontent.com/87997650/127706976-591cb415-4bc2-444b-95fc-56aaa9d58e73.png)
-   - Pokud chcete vytvořený kanál nastavit jako **Private** postupujte takto:
-   - Zjistěte Id vašeho privátního kanálu, např. tak, že kanál otevřete ve [webovém rozhraní Telegram](https://web.telegram.org)
-   - URL adresa bude mít formát https://web.telegram.org/z/#{IdKanálu}
-   - Pozor! pro odesílání zpráv přes vytvořeného bota musíte před Id přidat ještě -100. Pokud tedy vaše adresa byla např. https://web.telegram.org/z/#-123456789, výsledné Id bude -100123456789.
-   - Toto získané Id vložte do proměnné **$TelegramChannel** namísto názvu kanálu.
-4. Do kanálu pozvěte svého bota (vyhledejte ho dle jména), kterého jste vytvořili v bodu 2 přes BotFather.
+   - To set the created channel as **Private** do the following:
+     - Find out the Id of your private channel, e.g. by opening the channel in the [Telegram web interface](https://web.telegram.org)
+     - The URL address will be in the format https://web.telegram.org/z/#{ChannelId}
+     - ⚠️Attention: to send messages via the created bot you have to add -100 before the Id. So if your address was e.g. https://web.telegram.org/z/#-123456789, the resulting Id would be -100123456789.
+     - Put this resulting Id into the **$TelegramChannel** variable instead of the channel name.
+4. Invite your bot (search for it by name) that you created in step 2 via BotFather to the channel.
    ![image](https://user-images.githubusercontent.com/87997650/127707214-174f6dd0-a990-49d8-8cb0-6c9c9e290102.png)
-   - Potvrďte bota jako administrátora kanálu
+   - Confirm the bot as a channel administrator
    
    ![image](https://user-images.githubusercontent.com/87997650/127707275-af26e4f8-3c8b-46ff-b437-1e0d29a9ce77.png)
-   - Ponechte defaultní volbu oprávnění bota
+   - Leave the default permissions of the bot
    
    ![image](https://user-images.githubusercontent.com/87997650/127707327-faa3fa84-56ab-4fce-be0f-7a3f81cadf38.png)
-5. Hotovo, do vytvořeného kanálu by Vám odteď měl bot zapisovat informace o nákupech se statistikami.
+5. Done, the bot should now write information about purchases with statistics to the created channel.
 
-# Úprava nastavení / Aktualizace již běžícího AccBota
+# FAQ
+**Q:** How can I change the settings of a running AccBot?
 
-- Pokud Vám AccBot již úspěšně běží a chcete si časem změnit nějaké nastavení _(četnost nebo výše jednotlivých nákupů, povolení withdrawal, etc.)_, nejjednodušším způsobem je upravit **USER-DEFINED VARIABLES** v instalačním skriptu **install_script.ps1** a skript znovu spustit dle kroku 9 [instalačního návodu](#installscript).
-- Pokud chcete nasadit novou verzi AccBota, stáhněte si [ZIP z aktuálního RELEASE](https://github.com/Crynners/AccBot/releases/latest/download/AccBot_installation.zip), nastavte si konfigurační soubory **init_variables.ps1** a _{burzu, na které chcete akumulovat}_ **variables.ps1** a skript znovu spustit dle kroku 7 [instalačního návodu](#installscript).
+**A:** If AccBot is already running successfully and you want to change some settings over time _(frequency or amount of individual purchases, withdrawal permissions, etc.)_, the easiest way is to edit **USER-DEFINED VARIABLES** in the installation script **install_script.ps1** and run the script again according to step 9 [of the installation instructions](#installscript).
+##
+**Q:** How to deploy a new version of AccBot?
+
+**A:** Download the [ZIP from the current RELEASE](https://github.com/Crynners/AccBot/releases/latest/download/AccBot_installation.zip), set up the configuration files **init_variables.ps1** and _{burst you want to accumulate}_ **variables.ps1** and re-run the script according to step 7 of the [installation instructions](#installscript).
+##
+**Q:** Can I accumulate BTC and ETH at the same time?
+
+**A:** Yes. Just run the script according to step 7 [of the installation guide](#installscript) with the configuration of the 1st bot (i.e. accumulation to BTC), and then run the script with the configuration of the 2nd bot. <br />⚠️CAUTION: You need to change the **$AccBotName** variable (AccBot name) in the **init_variables.ps1** configuration file.
 
 # Donate
 ![heart_donate](https://user-images.githubusercontent.com/87997650/127650190-188e401a-9942-4511-847e-d1010628777a.png)
 
-AccBota jsme se rozhodli poskytnout zcela zdarma, neboť chceme co nejvíce lidem umožnit co nejjednodušší a nejlevnější cestu k aplikaci strategie [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html). Věříme, že pravidelné spoření v Bitcoinu je tím nejlepším způsobem k zajištění do budoucna. Investovat do BTC se zapojením emocí a s ambicemi predikovat trh se totiž ve většině případů nevyplácí.
+We decided to provide AccBot completely free of charge, as we want to give as many people as possible the easiest and cheapest way to apply the [DCA](https://www.fxstreet.cz/jiri-makovsky-co-je-dollar-cost-averaging-a-jak-funguje.html) strategy. We believe that saving regularly in Bitcoin is the best way to secure for the future. In fact, investing in BTC with emotions involved and with ambitions to predict the market does not pay off in most cases.
 
-Pokud byste nás chtěli podpořit, rozhodně se tomu bránit nebudeme. Níže jsou uvedeny jednotlivé peněženky, kam nám můžete zaslat příspěvek třeba na pivo. :) Děkujeme <3
+If you'd like to support us, we certainly won't stop you from doing so. Below are the individual wallets where you can send us a donation, for example for a beer. :) Thank you <3
 
 - **BTC ❤️**: bc1q2hz79m4csklecqgusu9e2yjnrr6e9ca6nhu0at
      - <img src="https://user-images.githubusercontent.com/87997650/127651099-d9e1b381-adcf-46a5-9d17-59f87176304d.png" width="150" height="150" />
