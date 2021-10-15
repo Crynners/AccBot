@@ -55,93 +55,73 @@ namespace CryptoBotFunction
             BotConfiguration.CosmosDbEndpointUri = config["CosmosDbEndpointUri"];
             BotConfiguration.CosmosDbPrimaryKey = config["CosmosDbPrimaryKey"];
 
-            BotConfiguration.CryptoExchangeAPIEnum = SetCryptoExchangeAPIEnum(config["ExchangeName"]?.ToLower());
-
-            BotConfiguration.ExchangeCredentials = new Dictionary<ExchangeCredentialType, string>();
+            BotConfiguration.CryptoExchangeAPIEnum = FillCryptoExchangeParameters(config);
 
             BotConfiguration.WithdrawalKeyName = config["WithdrawalKeyName"];
-
-            switch (BotConfiguration.CryptoExchangeAPIEnum)
-            {
-                case CryptoExchangeAPIEnum.Coinmate:
-                    
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinmate_ClientId] = config["CoinMateCredentials_ClientId"];
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinmate_PublicKey] = config["CoinMateCredentials_PublicKey"];
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinmate_PrivateKey] = config["CoinMateCredentials_PrivateKey"];
-                    break;
-
-                case CryptoExchangeAPIEnum.Binance:
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Binance_Key] = config["BinanceCredentials_Key"];
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Binance_Secret] = config["BinanceCredentials_Secret"];
-                    break;
-
-                case CryptoExchangeAPIEnum.Coinbase:
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinbase_Key] = config["CoinbaseCredentials_Key"];
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinbase_Secret] = config["CoinbaseCredentials_Secret"];
-                    break;
-
-                case CryptoExchangeAPIEnum.Huobi:
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Huobi_Key] = config["HuobiCredentials_Key"];
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Huobi_Secret] = config["HuobiCredentials_Secret"];
-                    break;
-
-
-                case CryptoExchangeAPIEnum.Kraken:
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Kraken_Key] = config["KrakenCredentials_Key"];
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Kraken_Secret] = config["KrakenCredentials_Secret"];
-                    break;
-
-                case CryptoExchangeAPIEnum.FTX:
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.FTX_Key] = config["FTXCredentials_Key"];
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.FTX_Secret] = config["FTXCredentials_Secret"];
-                    break;
-
-                case CryptoExchangeAPIEnum.Bittrex:
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bittrex_Key] = config["BittrexCredentials_Key"];
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bittrex_Secret] = config["BittrexCredentials_Secret"];
-                    break;
-
-                case CryptoExchangeAPIEnum.Bitfinex:
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bitfinex_Key] = config["BitfinexCredentials_Key"];
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bitfinex_Secret] = config["BitfinexCredentials_Secret"];
-                    break;
-
-                case CryptoExchangeAPIEnum.KuCoin:
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.KuCoin_Key] = config["KuCoinCredentials_Key"];
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.KuCoin_Secret] = config["KuCoinCredentials_Secret"];
-                    BotConfiguration.ExchangeCredentials[ExchangeCredentialType.KuCoin_PassPhrase] = config["KuCoinCredentials_PassPhrase"];
-                    break;
-
-                default:
-                    throw new NotImplementedException();
-            }
-
         }
 
-        private static CryptoExchangeAPIEnum SetCryptoExchangeAPIEnum(string exchangeName)
+        private static CryptoExchangeAPIEnum FillCryptoExchangeParameters(IConfigurationRoot config)
         {
-            if (String.IsNullOrEmpty(exchangeName))
-            {
-                return CryptoExchangeAPIEnum.Coinmate;
-            }
+            var exchangeName = config["ExchangeName"]?.ToLower();
+            BotConfiguration.ExchangeCredentials = new Dictionary<ExchangeCredentialType, string>();
 
-            if (exchangeName == "coinmate")
+            if (String.IsNullOrEmpty(exchangeName) || exchangeName == "coinmate")
             {
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinmate_ClientId] = config["CoinMateCredentials_ClientId"];
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinmate_PublicKey] = config["CoinMateCredentials_PublicKey"];
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinmate_PrivateKey] = config["CoinMateCredentials_PrivateKey"];
                 return CryptoExchangeAPIEnum.Coinmate;
             }
             else if (exchangeName == "huobi")
             {
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Huobi_Key] = config["HuobiCredentials_Key"];
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Huobi_Secret] = config["HuobiCredentials_Secret"];
                 return CryptoExchangeAPIEnum.Huobi;
             }else if (exchangeName == "coinbase")
             {
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinbase_Key] = config["CoinbaseCredentials_Key"];
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Coinbase_Secret] = config["CoinbaseCredentials_Secret"];
                 return CryptoExchangeAPIEnum.Coinbase;
             }else if(exchangeName == "binance")
             {
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Binance_Key] = config["BinanceCredentials_Key"];
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Binance_Secret] = config["BinanceCredentials_Secret"];
                 return CryptoExchangeAPIEnum.Binance;
+            }
+            else if (exchangeName == "bittrex")
+            {
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bittrex_Key] = config["BittrexCredentials_Key"];
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bittrex_Secret] = config["BittrexCredentials_Secret"];
+                return CryptoExchangeAPIEnum.Bittrex;
+            }
+            else if (exchangeName == "kraken")
+            {
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Kraken_Key] = config["KrakenCredentials_Key"];
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Kraken_Secret] = config["KrakenCredentials_Secret"];
+                return CryptoExchangeAPIEnum.Kraken;
+            }
+            else if (exchangeName == "kucoin")
+            {
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.KuCoin_Key] = config["KuCoinCredentials_Key"];
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.KuCoin_Secret] = config["KuCoinCredentials_Secret"];
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.KuCoin_PassPhrase] = config["KuCoinCredentials_PassPhrase"];
+                return CryptoExchangeAPIEnum.KuCoin;
+            }
+            else if (exchangeName == "bitfinex")
+            {
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bitfinex_Key] = config["BitfinexCredentials_Key"];
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bitfinex_Secret] = config["BitfinexCredentials_Secret"];
+                return CryptoExchangeAPIEnum.Bitfinex;
+            }
+            else if (exchangeName == "ftx")
+            {
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.FTX_Key] = config["FTXCredentials_Key"];
+                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.FTX_Secret] = config["FTXCredentials_Secret"];
+                return CryptoExchangeAPIEnum.FTX;
             }
             else
             {
-                throw new NotImplementedException();
+                throw new NotImplementedException($"Exchange '{exchangeName}' is not implemented yet!");
             }
         }
     }
