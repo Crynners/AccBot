@@ -33,8 +33,8 @@ namespace CryptoBotCore.API
 
             this.Log = log;
 
-            var key = credentials[ExchangeCredentialType.Bittrex_Key];
-            var secret = credentials[ExchangeCredentialType.Bittrex_Secret];
+            var key = credentials[ExchangeCredentialType.Bitfinex_Key];
+            var secret = credentials[ExchangeCredentialType.Bitfinex_Key];
 
             client = new BitfinexClient(new BitfinexClientOptions()
             {

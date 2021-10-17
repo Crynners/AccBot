@@ -33,8 +33,8 @@ namespace CryptoBotCore.API
 
             this.Log = log;
 
-            var key = credentials[ExchangeCredentialType.Binance_Key];
-            var secret = credentials[ExchangeCredentialType.Binance_Secret];
+            var key = credentials[ExchangeCredentialType.Kraken_Key];
+            var secret = credentials[ExchangeCredentialType.Kraken_Secret];
 
             client = new KrakenClient(new KrakenClientOptions()
             {
