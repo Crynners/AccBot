@@ -1,20 +1,24 @@
 ﻿######################################
-### HUOBI USER-DEFINED VARIABLES #####
+### FTX USER-DEFINED VARIABLES #######
 ######################################
 
-# Crypto, které na Binance chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH, ...)
+# Crypto you want to buy on FTX (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH, ...)
 $Currency='BTC'
 
-# Fiat měna, za kterou chcete na Binance nakupovat crypto (MOŽNÉ HODNOTY: USDT, BUSD, USDC, DAI)
+# Fiat currency you want to buy crypto with on FTX (POSSIBLE VALUES: USD, USDT, EUR, TRYB, BRZ, ...)
 $Fiat='USDT'
 
-# Velikost chunku v USDT (resp. ve $Fiat), který chcete pravidelně nakupovat (MINIMUM: dle burzy)
+# The size of the USDT (or $Fiat) chunk you want to buy regularly (MINIMUM: by exchange)
 $ChunkSize='5'
 
-# API Key z Binance API
+# Name of the subaccount you want the bot to use
+# Defaults to the main account if the string is left empty
+$Account='DCA'
+
+# API Key from FTX API
 $FTXCredentials_Key='XXX'
 
-# API Secret z Binance API
+# API Secret from FTX API
 $FTXCredentials_Secret='XXX'
 
 ######################################
