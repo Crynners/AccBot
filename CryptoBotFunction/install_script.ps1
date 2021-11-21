@@ -357,7 +357,7 @@ $existingFunctionAppEntity = az functionapp list --query $query | ConvertFrom-Js
 if ( $existingFunctionAppEntity.Count -gt 0 )
 {
     #Načtení existujícího Azure function app
-    $AzFunctionAppResult = $existingEntity[0]
+    $AzFunctionAppResult = $existingFunctionAppEntity[0]
     $azFunctionName = $AzFunctionAppResult.name
 
     $alreadyExistPrint = "Azure functionapp '" + $azFunctionName + "' already exists. This step will be skipped."
