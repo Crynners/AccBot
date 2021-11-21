@@ -126,8 +126,6 @@ namespace CryptoBotCore.CosmosDB
             return summary;
         }
 
-        
-
         public async Task UpdateItemAsync(AccumulationSummary item)
         {
             await this.container.UpsertItemAsync<AccumulationSummary>(item, new PartitionKey(item.CryptoName.ToString()));

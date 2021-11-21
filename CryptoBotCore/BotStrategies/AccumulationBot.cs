@@ -13,11 +13,8 @@ using Telegram.Bot;
 
 namespace CryptoBotCore.BotStrategies
 {
-
-
     public class AccumulationBot
     {
-
         [NonSerialized]
         private ICryptoExchangeAPI cryptoExchangeAPI;
 
@@ -32,7 +29,7 @@ namespace CryptoBotCore.BotStrategies
             Log = log;
         }
 
-        private void inicializeAPI()
+        private void initializeAPI()
         {
             switch (BotConfiguration.CryptoExchangeAPIEnum)
             {
@@ -56,7 +53,8 @@ namespace CryptoBotCore.BotStrategies
                     this.cryptoExchangeAPI = new BittrexAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
                     break;
                 case CryptoExchangeAPIEnum.FTX:
-                    this.cryptoExchangeAPI = new FtxAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
+                    this.cryptoExchangeAPI = new FtxAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}",
+                                                          BotConfiguration.Account, BotConfiguration.ExchangeCredentials, Log);
                     break;
                 case CryptoExchangeAPIEnum.KuCoin:
                     this.cryptoExchangeAPI = new KuCoinAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
@@ -68,25 +66,22 @@ namespace CryptoBotCore.BotStrategies
                 default:
                     throw new NotImplementedException();
             }
-            
         }
-
 
         public async Task Tick()
         {
-
             try
             {
-
                 StringBuilder sbInformationMessage = new StringBuilder();
                 Log.LogInformation("Start Tick: " + DateTime.Now);
 
                 if (cryptoExchangeAPI == null)
                 {
-                    inicializeAPI();
+                    initializeAPI();
                 }
 
                 var pair = $"{BotConfiguration.Currency}_{BotConfiguration.Fiat}";
+                var account = string.IsNullOrEmpty(BotConfiguration.Account)?"main":BotConfiguration.Account;
 
                 var initBalance = await cryptoExchangeAPI.getBalancesAsync();
 
@@ -95,7 +90,10 @@ namespace CryptoBotCore.BotStrategies
 
                 Dictionary<string, StringBuilder> sb_actions = new Dictionary<string, StringBuilder>();
 
-
+                // The account should have strictly more money povisionned than what the bot expects to buy 
+                // This is to account for any potential price slippage between the moment it calculated the size of the spot position to buy
+                // And the actual market buy order executed
+                // Otherwise we could fail buying despite thinking we have enough and it should have executed
                 if (FiatBalance > BotConfiguration.ChunkSize)
                 {
                     var response = await cryptoExchangeAPI.buyOrderAsync(BotConfiguration.ChunkSize);
@@ -104,10 +102,12 @@ namespace CryptoBotCore.BotStrategies
                 }
                 else
                 {
-                    await SendMessageAsync($"Not enough money ({FiatBalance} {BotConfiguration.Fiat})", MessageTypeEnum.Warning);
+                    var sbWarningMessage = new StringBuilder();
+                    sbWarningMessage.Append($"Not enough {BotConfiguration.Fiat} on the {account} account").Append("\r\n");
+                    sbWarningMessage.Append($"The account balance ({FiatBalance} {BotConfiguration.Fiat}) should be strictly superior than the bot configuration chunk size ({BotConfiguration.ChunkSize} {BotConfiguration.Fiat})");
+                    await SendMessageAsync(sbWarningMessage.ToString(), MessageTypeEnum.Warning);
                     return;
                 }
-      
 
                 var afterBalance = await cryptoExchangeAPI.getBalancesAsync();
                 double FiatAfterBuy = afterBalance.Where(x => x.currency == BotConfiguration.Fiat).Sum(x => x.available);
@@ -147,7 +147,6 @@ namespace CryptoBotCore.BotStrategies
                     }else if(withdrawResult == WithdrawalStateEnum.InsufficientKeyPrivilages){
                         sbInformationMessage.Append($"<b>Withdrawal:</b>❌ Insufficient Key Privilages.").Append("\r\n");
                     }
-
                 }
                 else
                 {
@@ -171,7 +170,6 @@ namespace CryptoBotCore.BotStrategies
                         limits.Add($"{BotConfiguration.MaxWithdrawalAbsoluteFee.ToString("N2")} {BotConfiguration.Fiat}");
                     }
                     
-
                     sbInformationMessage.Append($"<b>Withdrawal:</b> Denied - [{String.Join(", ", reason)}] - fee cost {(fee_cost * 100).ToString("N2")} % ({feeInFiat} {BotConfiguration.Fiat}), limit " + 
                         String.Join(" AND ", limits)).Append("\r\n");
                 }
@@ -204,6 +202,10 @@ namespace CryptoBotCore.BotStrategies
                     await _cosmosDbContext.DeleteItemAsync(accSumOLD.Id.ToString(), accSumOLD.CryptoName);
                 }
 
+#if DEBUG
+                // Removing any trace of our test/debug
+                await _cosmosDbContext.DeleteItemAsync(accumulationSummary.Id.ToString(), accumulationSummary.CryptoName);
+#endif
 
                 var profit = ((accumulationSummary.AccumulatedCryptoAmount * buyPrice) / accumulationSummary.InvestedFiatAmount) - 1;
 
@@ -232,19 +234,22 @@ namespace CryptoBotCore.BotStrategies
 
         public async Task<string> SendMessageAsync(string message, MessageTypeEnum messageType = MessageTypeEnum.Information, int attempt = 0)
         {
+            var username = BotConfiguration.UserName.Replace(' ','_'); // so that spaces don't break the hashtag created in telegram
+            var account = string.IsNullOrEmpty(BotConfiguration.Account)?"Main":BotConfiguration.Account + "_Account";
+
             switch (messageType)
             {
                 case MessageTypeEnum.Information:
                     Log.LogInformation(message);
-                    message = $"#AccuBot - #{BotConfiguration.Currency} - #{BotConfiguration.UserName}{Environment.NewLine}{message}";
+                    message = $"#AccuBot - #{BotConfiguration.Currency} - #{username} - #{account}{Environment.NewLine}{message}";
                     break;
                 case MessageTypeEnum.Warning:
                     Log.LogWarning(message);
-                    message = $"⚠️ #AccuBot - #{BotConfiguration.Currency} - #{BotConfiguration.UserName}{Environment.NewLine}{message}";
+                    message = $"⚠️ #AccuBot - #{BotConfiguration.Currency} - #{username} - #{account}{Environment.NewLine}{message}";
                     break;
                 case MessageTypeEnum.Error:
                     Log.LogError(message);
-                    message = $"❌ #AccuBot - #{BotConfiguration.Currency} - #{BotConfiguration.UserName}{Environment.NewLine}{message}";
+                    message = $"❌ #AccuBot - #{BotConfiguration.Currency} - #{username} - #{account}{Environment.NewLine}{message}";
                     break;
             }
 

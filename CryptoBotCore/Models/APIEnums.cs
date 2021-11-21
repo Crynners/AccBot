@@ -19,11 +19,11 @@ namespace CryptoBotCore.Models
         Huobi_Key = 4, Huobi_Secret = 5, 
         Binance_Key = 6, Binance_Secret = 7, 
         Kraken_Key = 8, Kraken_Secret = 9,
-        FTX_Key = 10, FTX_Secret = 11,
-        KuCoin_Key = 12, KuCoin_Secret = 13, KuCoin_PassPhrase = 14,
-        Bittrex_Key = 15, Bittrex_Secret = 16,
-        Bitfinex_Key = 17, Bitfinex_Secret = 18,
-        Coinbase_Key = 19, Coinbase_Secret = 20
+        FTX_Key = 10, FTX_Secret = 11, FTX_Account = 12,
+        KuCoin_Key = 13, KuCoin_Secret = 14, KuCoin_PassPhrase = 15,
+        Bittrex_Key = 16, Bittrex_Secret = 17,
+        Bitfinex_Key = 18, Bitfinex_Secret = 19,
+        Coinbase_Key = 20, Coinbase_Secret = 21
     }
 
     public enum WithdrawalStateEnum

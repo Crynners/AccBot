@@ -11,6 +11,10 @@ namespace CryptoBotCore.Models
         public static string TelegramBot { get; set; }
         public static string Currency { get; set; }
         public static string Fiat { get; set; }
+        /// <summary>
+        /// Only for FTX Exchange
+        /// </summary>
+        public static string Account { get; set; }
         public static Dictionary<ExchangeCredentialType, string> ExchangeCredentials { get; set; }
         public static int ChunkSize { get; set; }
         public static string WithdrawalAddress { get; set; }

@@ -404,6 +404,7 @@ $appsettingsResult = az functionapp config appsettings set --name $azFunctionNam
                     "Currency=$Currency" `
                     "Fiat=$Fiat" `
                     "ChunkSize=$ChunkSize" `
+                    "Account=$Account" `
                     "DayDividerSchedule=$DayDividerSchedule" `
                     "WithdrawalEnabled=$WithdrawalEnabled" `
                     "WithdrawalAddress=$WithdrawalAddress" `

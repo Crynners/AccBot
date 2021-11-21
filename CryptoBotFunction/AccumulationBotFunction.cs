@@ -37,6 +37,7 @@ namespace CryptoBotFunction
             BotConfiguration.Currency = config["Currency"];
             BotConfiguration.Fiat = config["Fiat"];
             BotConfiguration.UserName = config["Name"];
+            BotConfiguration.Account = config["Account"];
             BotConfiguration.ChunkSize = Int32.Parse(config["ChunkSize"]);
 
             var WithdrawalEnabledValid = bool.TryParse(config["WithdrawalEnabled"], out bool WithdrawalEnabled);

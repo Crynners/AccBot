@@ -12,7 +12,7 @@
     <PackageReference Include="Bitfinex.Net" Version="4.0.4" />
     <PackageReference Include="Bittrex.Net" Version="6.0.5" />
     <PackageReference Include="Coinbase" Version="6.0.1" />
-    <PackageReference Include="FTX.Net" Version="0.0.2" />
+    <PackageReference Include="FTX.Net" Version="0.1.8" />
     <PackageReference Include="Huobi.Net" Version="3.0.4" />
     <PackageReference Include="KrakenExchange.Net" Version="2.0.8" />
     <PackageReference Include="Kucoin.Net" Version="3.0.6" />

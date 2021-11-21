@@ -15,36 +15,37 @@ namespace CryptoBotCore.API
 {
     class FtxAPI : ICryptoExchangeAPI
     {
+        private string account { get; set; }
 
         public ILogger Log { get; set; }
 
         public string pair_quote { get; set; }
         public string pair_base { get; set; }
-
+        
         public FTXClient client { get; set; }
 
-        public FtxAPI(string pair, Dictionary<ExchangeCredentialType, string> credentials, ILogger log)
+        public FtxAPI(string pair, string account, Dictionary<ExchangeCredentialType, string> credentials, ILogger log)
         {
             this.pair_base = pair.Split('_')[0].ToUpper();
             this.pair_quote = pair.Split('_')[1].ToUpper();
-            
 
             this.Log = log;
 
             var key = credentials[ExchangeCredentialType.FTX_Key];
             var secret = credentials[ExchangeCredentialType.FTX_Secret];
+            // the FTX api's result displays the "Main Account" account (as seen in the web UI) as "main"
+            this.account = string.IsNullOrEmpty(account)?"main":account; 
 
             client = new FTXClient(new FTXClientOptions()
             {
                 // Specify options for the client
                 ApiCredentials = new ApiCredentials(key, secret)
             });
-
         }
 
         private async Task<decimal> getCurrentPrice()
         {
-            var callResult = await client.GetOrderBookAsync($"{pair_base}{pair_quote}", 0);
+            var callResult = await client.GetOrderBookAsync($"{pair_base}/{pair_quote}", 0);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -54,7 +55,13 @@ namespace CryptoBotCore.API
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return callResult.Data.Asks.FirstOrDefault().Price;
+                var entryBook = callResult.Data.Asks.FirstOrDefault();
+                if(entryBook == null)
+                    // Fall back to a less precise value
+                    entryBook = callResult.Data.Bids.FirstOrDefault();
+                if(entryBook == null)
+                    throw new Exception($"Cannot define the current price for {pair_base}/{pair_quote} on FTX.");
+                return entryBook.Price;
             }
         }
 
@@ -62,7 +69,11 @@ namespace CryptoBotCore.API
         {
             var baseAmount = (decimal)amount / (await getCurrentPrice());
 
-            var callResult = await client.PlaceOrderAsync($"{pair_base}{pair_quote}", FTX.Net.Enums.OrderSide.Buy, FTX.Net.Enums.OrderType.Market, quantity: baseAmount);
+#if DEBUG
+            // We don't want to buy for real as we're in a test/debug scenario
+            return "";
+#else
+            var callResult = await client.PlaceOrderAsync($"{pair_base}/{pair_quote}", FTX.Net.Enums.OrderSide.Buy, FTX.Net.Enums.OrderType.Market, quantity: baseAmount, subaccountName: account);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -74,6 +85,7 @@ namespace CryptoBotCore.API
                 // Call succeeded, callResult.Data will have the resulting data
                 return callResult.Data.Id.ToString();
             }
+#endif
         }
 
         public async Task<List<WalletBalances>> getBalancesAsync()
@@ -91,11 +103,18 @@ namespace CryptoBotCore.API
 
                 var wallets = new List<WalletBalances>();
 
-                foreach (KeyValuePair<string, IEnumerable<FTXBalance>> entry in callResult.Data)
+                foreach (KeyValuePair<string, IEnumerable<FTXBalance>> ftxAccounts in callResult.Data)
                 {
-                    wallets.Add(new WalletBalances(entry.Key, Convert.ToDouble(entry.Value.FirstOrDefault().Free)));
+                    var ftxAccountName = ftxAccounts.Key;
+                    if(ftxAccountName == account)
+                    {
+                        var ftxAccountBalances = ftxAccounts.Value;
+                        foreach (var entry in ftxAccountBalances)
+                        {
+                            wallets.Add(new WalletBalances(entry.Asset, Convert.ToDouble(entry.Free)));
+                        }
+                    }
                 }
-
                 return wallets;
             }
         }
@@ -119,7 +138,7 @@ namespace CryptoBotCore.API
 
         public async Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
         {
-            var callResult = await client.GetWithdrawalFeesAsync(this.pair_base, (decimal)amount, destinationAddress);
+            var callResult = await client.GetWithdrawalFeesAsync(this.pair_base, (decimal)(amount??0), destinationAddress??""); // protecting from null values as the underlying lib don't support them
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -132,7 +151,6 @@ namespace CryptoBotCore.API
                 // Call succeeded, callResult.Data will have the resulting data
                 return Convert.ToDouble(callResult.Data.Fee);
             }
-
         }
 
         public async Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
