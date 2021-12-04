@@ -186,7 +186,7 @@ namespace CryptoBotCore.API
                 {
                     if (ex.Message.Contains("Insufficient key privileges"))
                     {
-                        return WithdrawalStateEnum.InsufficientKeyPrivilages;
+                        return WithdrawalStateEnum.InsufficientKeyPrivileges;
                     }
 
                     Log.LogError(JsonConvert.SerializeObject(ex));
@@ -205,7 +205,8 @@ namespace CryptoBotCore.API
 
         public Task<double> getTakerFee()
         {
-            return Task.FromResult(1.0035);
+            // TODO: find an API call to get this value dynamically as one could have rebates due to its last 30 day trading volume
+            return Task.FromResult(0.0035); // HARDCODED: value is up to date on 24/11/2021 as a base default value
         }
 
         public async Task<List<WalletBalances>> getBalancesAsync()

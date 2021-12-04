@@ -87,7 +87,7 @@ namespace CryptoBotCore.API
         public Task<double> getTakerFee()
         {
             // TODO: Add methods for taker fee
-            return Task.FromResult(0.005);
+            return Task.FromResult(0.005); // HARDCODED: value is up to date on 24/11/2021 
         }
 
         public Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)

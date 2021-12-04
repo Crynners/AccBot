@@ -29,6 +29,7 @@ namespace CryptoBotCore.API
         /// Method represents buying of cryptocurrency
         /// </summary>
         /// <param name="amount">Amount of FIAT currency</param>
+        /// <returns>Order id</returns>
         public Task<string> buyOrderAsync(double amount);
     }
 }

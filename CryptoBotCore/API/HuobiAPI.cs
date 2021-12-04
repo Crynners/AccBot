@@ -109,8 +109,9 @@ namespace CryptoBotCore.API
         }
 
         public Task<double> getTakerFee()
-        {
-            return Task.FromResult(1.002);
+        { 
+            // TODO: find an API call to get this value dynamically as one could have rebates due to referrals or holding/staking HT (Huobi Token)
+            return Task.FromResult(0.002); // HARDCODED: value seems up to date on 24/11/2021 as a base default value
         }
 
         public Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
@@ -145,7 +146,7 @@ namespace CryptoBotCore.API
 
                 if(callResult.Error?.Code == 1003)
                 {
-                    return WithdrawalStateEnum.InsufficientKeyPrivilages;
+                    return WithdrawalStateEnum.InsufficientKeyPrivileges;
                 }
 
                 // Call failed, check callResult.Error for more info
