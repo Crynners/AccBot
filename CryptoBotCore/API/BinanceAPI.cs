@@ -37,10 +37,9 @@ namespace CryptoBotCore.API
                 // Specify options for the client
                 ApiCredentials = new ApiCredentials(key, secret)
             });
-
         }
 
-        public async Task<string> buyOrderAsync(double amount)
+        public async Task<string> buyOrderAsync(decimal amount)
         {
             var callResult = await client.Spot.Order.PlaceOrderAsync($"{pair_base}{pair_quote}", Binance.Net.Enums.OrderSide.Buy, Binance.Net.Enums.OrderType.Market, quoteOrderQuantity: (decimal?)amount);
             // Make sure to check if the call was successful
@@ -74,14 +73,14 @@ namespace CryptoBotCore.API
 
                 foreach (var item in balances)
                 {
-                    wallets.Add(new WalletBalances(item.Asset, Convert.ToDouble(item.Free)));
+                    wallets.Add(new WalletBalances(item.Asset, item.Free));
                 }
 
                 return wallets;
             }
         }
 
-        public async Task<double> getTakerFee()
+        public async Task<decimal> getTakerFee()
         {
             var callResult = await client.Spot.Market.GetTradeFeeAsync($"{pair_base}{pair_quote}");
 
@@ -95,11 +94,11 @@ namespace CryptoBotCore.API
             {
                 // Call succeeded, callResult.Data will have the resulting data
                 var item = callResult.Data.Where(x => x.Symbol == $"{pair_base}{pair_quote}").FirstOrDefault();
-                return Convert.ToDouble(item.TakerFee);
+                return item.TakerFee;
             }
         }
 
-        public async Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
+        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
         {
             var callResult = await client.WithdrawDeposit.GetAssetDetailsAsync();
 
@@ -113,12 +112,11 @@ namespace CryptoBotCore.API
             {
                 // Call succeeded, callResult.Data will have the resulting data
                 var withdrawInfo = callResult.Data[this.pair_base];
-                return Convert.ToDouble(withdrawInfo.WithdrawFee);
+                return withdrawInfo.WithdrawFee;
             }
-
         }
 
-        public async Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
+        public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
             var callResult = await client.WithdrawDeposit.WithdrawAsync(this.pair_base, destinationAddress, Convert.ToDecimal(amount));
             // Make sure to check if the call was successful

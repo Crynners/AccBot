@@ -57,7 +57,7 @@ namespace CryptoBotCore.API
             }
         }
 
-        public async Task<string> buyOrderAsync(double amount)
+        public async Task<string> buyOrderAsync(decimal amount)
         {
             var baseAmount = (decimal)amount / (await getCurrentPrice());
             var callResult = await client.PlaceOrderAsync($"{pair_base}{pair_quote}", 
@@ -93,7 +93,7 @@ namespace CryptoBotCore.API
 
                 foreach (var account in callResult.Data)
                 {
-                    wallets.Add(new WalletBalances(account.Currency, Convert.ToDouble(account.Available)));
+                    wallets.Add(new WalletBalances(account.Currency, account.Available));
                 }
                 
 
@@ -101,7 +101,7 @@ namespace CryptoBotCore.API
             }
         }
 
-        public async Task<double> getTakerFee()
+        public async Task<decimal> getTakerFee()
         {
             var callResult = await client.GetTradingFeesAsync();
 
@@ -113,21 +113,19 @@ namespace CryptoBotCore.API
             }
             else
             {
-
                 // Call succeeded, callResult.Data will have the resulting data
                 var takerFee = callResult.Data.Where(x => x.Symbol == $"{pair_base}{pair_quote}").FirstOrDefault().TakerRate;
-                return Convert.ToDouble(takerFee);
+                return takerFee;
             }
-
         }
 
-        public Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
+        public Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
         {
-            // the method to get the withdrawal fee probably doesn't exist, so you'd better return the maximum double value so that the withdrawal is never performed
-            return Task.FromResult(double.MaxValue);
+            // the method to get the withdrawal fee probably doesn't exist, so you'd better return the maximum decimal value so that the withdrawal is never performed
+            return Task.FromResult(decimal.MaxValue);
         }
 
-        public async Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
+        public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
             var callResult = await client.WithdrawAsync(this.pair_base, (decimal)amount, destinationAddress);
 

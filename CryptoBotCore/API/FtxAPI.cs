@@ -65,9 +65,9 @@ namespace CryptoBotCore.API
             }
         }
 
-        public async Task<string> buyOrderAsync(double amount)
+        public async Task<string> buyOrderAsync(decimal amount)
         {
-            var baseAmount = (decimal)amount / (await getCurrentPrice());
+            var baseAmount = amount / (await getCurrentPrice());
 
 #if DEBUG
             // We don't want to buy for real as we're in a test/debug scenario
@@ -111,7 +111,7 @@ namespace CryptoBotCore.API
                         var ftxAccountBalances = ftxAccounts.Value;
                         foreach (var entry in ftxAccountBalances)
                         {
-                            wallets.Add(new WalletBalances(entry.Asset, Convert.ToDouble(entry.Free)));
+                            wallets.Add(new WalletBalances(entry.Asset, entry.Free));
                         }
                     }
                 }
@@ -119,7 +119,7 @@ namespace CryptoBotCore.API
             }
         }
 
-        public async Task<double> getTakerFee()
+        public async Task<decimal> getTakerFee()
         {
             var callResult = await client.GetAccountInfoAsync();
 
@@ -132,13 +132,13 @@ namespace CryptoBotCore.API
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return Convert.ToDouble(callResult.Data.TakerFee);
+                return callResult.Data.TakerFee;
             }
         }
 
-        public async Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
+        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
         {
-            var callResult = await client.GetWithdrawalFeesAsync(this.pair_base, (decimal)(amount??0), destinationAddress??""); // protecting from null values as the underlying lib don't support them
+            var callResult = await client.GetWithdrawalFeesAsync(this.pair_base, (amount??0m), destinationAddress??""); // protecting from null values as the underlying lib don't support them
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -149,11 +149,11 @@ namespace CryptoBotCore.API
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return Convert.ToDouble(callResult.Data.Fee);
+                return callResult.Data.Fee;
             }
         }
 
-        public async Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
+        public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
             var callResult = await client.WithdrawAsync(this.pair_base, Convert.ToDecimal(amount), destinationAddress);
             // Make sure to check if the call was successful

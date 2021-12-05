@@ -40,7 +40,7 @@ namespace CryptoBotCore.API
 
         }
 
-        public async Task<string> buyOrderAsync(double amount)
+        public async Task<string> buyOrderAsync(decimal amount)
         {
             var callResult = await client.Accounts.ListAccountsAsync();
             var accountId = callResult.Data.Where(x => x.Currency.Code == this.pair_quote).FirstOrDefault().Id;
@@ -76,7 +76,7 @@ namespace CryptoBotCore.API
 
                 foreach (var account in callResult.Data)
                 {
-                    wallets.Add(new WalletBalances(account.Currency.Code, Convert.ToDouble(account.Balance.Amount)));
+                    wallets.Add(new WalletBalances(account.Currency.Code, account.Balance.Amount));
                 }
                 
 
@@ -84,21 +84,20 @@ namespace CryptoBotCore.API
             }
         }
 
-        public Task<double> getTakerFee()
+        public Task<decimal> getTakerFee()
         {
             // TODO: Add methods for taker fee
-            return Task.FromResult(0.005); // HARDCODED: value is up to date on 24/11/2021 
+            return Task.FromResult(0.005m); // HARDCODED: value is up to date on 24/11/2021 
         }
 
-        public Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
+        public Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
         {
             // TODO: Add methods for withdrawal fees
-            return Task.FromResult(double.MaxValue);
+            return Task.FromResult(decimal.MaxValue);
         }
 
-        public Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
+        public Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
-
             // TODO: Implement withdraws
             return Task.FromResult(WithdrawalStateEnum.OK);
         }

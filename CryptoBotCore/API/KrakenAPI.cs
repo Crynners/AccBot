@@ -60,9 +60,9 @@ namespace CryptoBotCore.API
             }
         }
 
-        public async Task<string> buyOrderAsync(double amount)
+        public async Task<string> buyOrderAsync(decimal amount)
         {
-            var baseAmount = (decimal)amount / (await getCurrentPrice());
+            var baseAmount = amount / (await getCurrentPrice());
 
             var callResult = await client.PlaceOrderAsync($"{pair_base}{pair_quote}", Kraken.Net.Objects.OrderSide.Buy, Kraken.Net.Objects.OrderType.Market, quantity: baseAmount);
             // Make sure to check if the call was successful
@@ -95,14 +95,14 @@ namespace CryptoBotCore.API
                 var balancesQuote = callResult.Data[this.pair_quote];
                 var balancesBase = callResult.Data[this.pair_base];
 
-                wallets.Add(new WalletBalances(this.pair_quote, Convert.ToDouble(balancesQuote.Available)));
-                wallets.Add(new WalletBalances(this.pair_base, Convert.ToDouble(balancesBase.Available)));
+                wallets.Add(new WalletBalances(this.pair_quote, balancesQuote.Available));
+                wallets.Add(new WalletBalances(this.pair_base, balancesBase.Available));
 
                 return wallets;
             }
         }
 
-        public async Task<double> getTakerFee()
+        public async Task<decimal> getTakerFee()
         {
             var callResult = await client.GetSymbolsAsync(new List<string> { $"{pair_base}{pair_quote}" });
 
@@ -114,17 +114,15 @@ namespace CryptoBotCore.API
             }
             else
             {
-
                 // Call succeeded, callResult.Data will have the resulting data
                 var takerFee = callResult.Data[$"{pair_base}{pair_quote}"].Fees.Where(x => x.Volume == 0).FirstOrDefault().FeePercentage;
-                return Convert.ToDouble(takerFee);
+                return takerFee;
             }
-
         }
 
-        public async Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
+        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
         {
-            var callResult = await client.GetWithdrawInfoAsync(this.pair_base, this.withdrawal_keyname, (decimal)0.5);
+            var callResult = await client.GetWithdrawInfoAsync(this.pair_base, this.withdrawal_keyname, (amount??0m));
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -136,14 +134,13 @@ namespace CryptoBotCore.API
             {
                 // Call succeeded, callResult.Data will have the resulting data
                 var withdrawInfo = callResult.Data.Fee;
-                return Convert.ToDouble(withdrawInfo);
+                return withdrawInfo;
             }
-
         }
 
-        public async Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
+        public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
-            var callResult = await client.WithdrawAsync(this.pair_base, this.withdrawal_keyname, (decimal)amount);
+            var callResult = await client.WithdrawAsync(this.pair_base, this.withdrawal_keyname, amount);
 
             // Make sure to check if the call was successful
             if (!callResult.Success)

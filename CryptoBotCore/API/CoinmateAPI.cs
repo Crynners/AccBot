@@ -77,7 +77,7 @@ namespace CryptoBotCore.API
         }
 
 
-        public async Task<string> buyOrderAsync(double amount)
+        public async Task<string> buyOrderAsync(decimal amount)
         {
             int wait = 0;
             do
@@ -111,17 +111,17 @@ namespace CryptoBotCore.API
             } while (true);
         }
 
-        public async Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
+        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
         {
             if (this.pair_base == "LTC")
             {
-                return 0.0004;
+                return 0.0004m; // HARDCODED
             }else if(this.pair_base == "ETH")
             {
-                return 0.01;
+                return 0.01m; // HARDCODED
             }else if(this.pair_base == "DSH")
             {
-                return 0.00001;
+                return 0.00001m; // HARDCODED
             }
 
             int wait = 0;
@@ -152,7 +152,7 @@ namespace CryptoBotCore.API
             } while (true);
         }
 
-        public async Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
+        public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
             int wait = 0;
             var attempt = 0;
@@ -203,10 +203,10 @@ namespace CryptoBotCore.API
             } while (true);
         }
 
-        public Task<double> getTakerFee()
+        public Task<decimal> getTakerFee()
         {
             // TODO: find an API call to get this value dynamically as one could have rebates due to its last 30 day trading volume
-            return Task.FromResult(0.0035); // HARDCODED: value is up to date on 24/11/2021 as a base default value
+            return Task.FromResult(0.0035m); // HARDCODED: value is up to date on 24/11/2021 as a base default value
         }
 
         public async Task<List<WalletBalances>> getBalancesAsync()
@@ -264,8 +264,8 @@ namespace CryptoBotCore.API
 
         private class BTCWithdrawalFee_Data
         {
-            public double low { get; set; }
-            public double high { get; set; }
+            public decimal low { get; set; }
+            public decimal high { get; set; }
             public long timestamp { get; set; }
         }
 
@@ -280,9 +280,9 @@ namespace CryptoBotCore.API
         private class BalanceCurrency
         {
             public string currency { get; set; }
-            public double balance { get; set; }
-            public double reserved { get; set; }
-            public double available { get; set; }
+            public decimal balance { get; set; }
+            public decimal reserved { get; set; }
+            public decimal available { get; set; }
         }
 
         private class BalanceData

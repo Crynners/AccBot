@@ -8,7 +8,7 @@ namespace CryptoBotCore.Models
     public class WalletBalances
     {
 
-        public WalletBalances(string currency, Double available)
+        public WalletBalances(string currency, decimal available)
         {
             this.currency = currency;
             this.available = available;
@@ -20,6 +20,6 @@ namespace CryptoBotCore.Models
         /// <summary>
         /// How much X there is in this wallet that is available to trade
         /// </summary>
-        public double available { get; set; }
+        public decimal available { get; set; }
     }
 }

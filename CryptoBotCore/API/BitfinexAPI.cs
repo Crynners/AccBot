@@ -41,7 +41,6 @@ namespace CryptoBotCore.API
                 // Specify options for the client
                 ApiCredentials = new ApiCredentials(key, secret)
             });
-
         }
 
         private async Task<decimal> getCurrentPrice()
@@ -60,7 +59,7 @@ namespace CryptoBotCore.API
             }
         }
 
-        public async Task<string> buyOrderAsync(double amount)
+        public async Task<string> buyOrderAsync(decimal amount)
         {
             var currentPrice = await getCurrentPrice();
             var baseAmount = (decimal)amount / currentPrice;
@@ -97,15 +96,14 @@ namespace CryptoBotCore.API
 
                 foreach (var account in callResult.Data)
                 {
-                    wallets.Add(new WalletBalances(account.Currency, Convert.ToDouble(account.BalanceAvailable)));
+                    wallets.Add(new WalletBalances(account.Currency, account.BalanceAvailable??0m));
                 }
-                
 
                 return wallets;
             }
         }
 
-        public async Task<double> getTakerFee()
+        public async Task<decimal> getTakerFee()
         {
             var callResult = await client.GetAccountInfoAsync();
 
@@ -120,12 +118,11 @@ namespace CryptoBotCore.API
 
                 // Call succeeded, callResult.Data will have the resulting data
                 var takerFee = callResult.Data.TakerFee;
-                return Convert.ToDouble(takerFee);
+                return takerFee;
             }
-
         }
 
-        public async Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
+        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
         {
             var callResult = await client.GetWithdrawalFeesAsync();
 
@@ -140,11 +137,11 @@ namespace CryptoBotCore.API
 
                 // Call succeeded, callResult.Data will have the resulting data
                 var withdrawFee = callResult.Data.Withdraw[this.pair_base];
-                return Convert.ToDouble(withdrawFee);
+                return withdrawFee;
             }
         }
 
-        public async Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
+        public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
             //maping into withdrawal_type, see https://docs.bitfinex.com/v1/reference#rest-auth-withdrawal
             string withdrawal_type;
