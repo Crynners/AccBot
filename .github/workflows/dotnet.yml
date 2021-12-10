@@ -44,9 +44,9 @@ jobs:
         tag_name: v1.0.${{ github.run_number }}
         release_name: Release v1.0.${{ github.run_number }}
         body: |
-            Aktuální verze Coinmate akumulačního bota běžícího na Azure. 
+            The current version of the AccBot running on Azure. 
 
-            Postup instalace naleznete v [README](https://github.com/Crynners/AccBot).
+            Installation instructions can be found in [README](https://github.com/Crynners/AccBot).
     - name: Upload asset to GitHub Release
       uses: actions/upload-release-asset@v1
       env:
@@ -65,7 +65,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 3.1.x
+        dotnet-version: 6.0.x
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
@@ -74,4 +74,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: accbot-content
-        path: CryptoBotFunction/bin/Release/netcoreapp3.1
+        path: CryptoBotFunction/bin/Release/net6.0
