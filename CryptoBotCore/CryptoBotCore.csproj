@@ -1,33 +1,35 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
-
-
   <ItemGroup>
-    <PackageReference Include="Binance.Net" Version="7.1.2" />
-    <PackageReference Include="Bitfinex.Net" Version="4.0.4" />
-    <PackageReference Include="Bittrex.Net" Version="6.0.5" />
-    <PackageReference Include="Coinbase" Version="6.0.1" />
-    <PackageReference Include="FTX.Net" Version="0.1.8" />
-    <PackageReference Include="Huobi.Net" Version="3.0.4" />
-    <PackageReference Include="KrakenExchange.Net" Version="2.0.8" />
-    <PackageReference Include="Kucoin.Net" Version="3.0.6" />
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.20.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.18" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.18" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="3.1.18" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="Telegram.Bot" Version="16.0.2" />
+    <Content Include="..\..\..\..\.nuget\packages\microsoft.azure.cosmos\3.20.1\contentFiles\any\netstandard2.0\ThirdPartyNotice.txt" Link="ThirdPartyNotice.txt">
+      <Private>False</Private>
+      <NuGetPackageVersion>3.20.1</NuGetPackageVersion>
+      <NuGetItemType>Content</NuGetItemType>
+      <NuGetPackageId>Microsoft.Azure.Cosmos</NuGetPackageId>
+      <Pack>false</Pack>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="AppSettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <PackageReference Include="Binance.Net" Version="7.2.6" />
+    <PackageReference Include="Bitfinex.Net" Version="4.2.4" />
+    <PackageReference Include="Bittrex.Net" Version="6.1.5" />
+    <PackageReference Include="Coinbase" Version="6.0.1" />
+    <PackageReference Include="FTX.Net" Version="0.1.9" />
+    <PackageReference Include="Huobi.Net" Version="3.2.4" />
+    <PackageReference Include="KrakenExchange.Net" Version="2.2.4" />
+    <PackageReference Include="Kucoin.Net" Version="3.1.6" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.23.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
+    <PackageReference Include="Telegram.Bot" Version="17.0.0" />
   </ItemGroup>
 
 </Project>

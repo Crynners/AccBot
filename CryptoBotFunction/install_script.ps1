@@ -374,9 +374,9 @@ if ( $existingFunctionAppEntity.Count -gt 0 )
 
     #Tvorba Azure function s úplně novým Azure app plánem
     if( "false" -eq $CreateAzureLog){
-        $FunctionAppResult = az functionapp create -g $resourceGroupName  -n $azFunctionName -s $storageAccountName --only-show-errors --disable-app-insights --functions-version 3 --consumption-plan-location $location
+        $FunctionAppResult = az functionapp create -g $resourceGroupName  -n $azFunctionName -s $storageAccountName --only-show-errors --disable-app-insights --runtime "dotnet"  --consumption-plan-location $location
     }else {
-        $FunctionAppResult = az functionapp create -g $resourceGroupName  -n $azFunctionName -s $storageAccountName --app-insights $appInsightsName --only-show-errors --functions-version 3 --consumption-plan-location $location
+        $FunctionAppResult = az functionapp create -g $resourceGroupName  -n $azFunctionName -s $storageAccountName --app-insights $appInsightsName --only-show-errors --runtime "dotnet"  --consumption-plan-location $location
     }
 }
 
@@ -399,7 +399,8 @@ Write-Host "[Step 7 / 9] Function app -> DONE" -ForegroundColor cyan
 Write-Host "[Step 8 / 9] Function app settings uploading -> Starting..." -ForegroundColor cyan
 
 $appsettingsResult = az functionapp config appsettings set --name $azFunctionName --resource-group $resourceGroupName `
-        --settings "Name=$Name" `
+        --settings  "FUNCTIONS_EXTENSION_VERSION=~4" `
+                    "Name=$Name" `
                     "ExchangeName=$ExchangeName" `
                     "Currency=$Currency" `
                     "Fiat=$Fiat" `

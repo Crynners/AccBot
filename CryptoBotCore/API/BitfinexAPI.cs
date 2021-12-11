@@ -45,12 +45,12 @@ namespace CryptoBotCore.API
 
         private async Task<decimal> getCurrentPrice()
         {
-            var callResult = await client.GetTickerAsync();
+            var callResult = await client.GetTickerAsync($"{pair_base}{pair_quote}");
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult?.Error?.Message);
             }
             else
             {
