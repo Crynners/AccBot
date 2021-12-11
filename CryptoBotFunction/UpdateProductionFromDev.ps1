@@ -32,7 +32,7 @@ Write-Output "Checking the installed dotnet framework"
 Get-Command dotnet | Out-Null
 if(! $?){
     Write-Output "The dotnet command is not available"
-    choco install dotnet-sdk
+    choco install dotnet-sdk # installs .net core 6
 }
 $version = [Version](dotnet --version)
 if($Null -eq $version){
@@ -40,7 +40,7 @@ if($Null -eq $version){
     exit 1
 }
 if($version -lt [Version]"6.0"){
-    Write-Output "The installed dotnet version is too low, it should be at least 3.1"
+    Write-Output "The installed dotnet version is too low, it should be at least 6.0"
     exit 1
 }
 
@@ -48,12 +48,29 @@ if(! (get-command dotnet).Source -like "*\Program Files\*"){
     Write-Output "We advise to install the x64 binary of dotnet instead of the x86 version"
     Write-Output "Apparently, Visual Studio code debugging function requires x64 binaries"
     Write-Output "Source : http://disq.us/p/2ghvcri"
+    # even though it's only sure that it's mandatory for azure-functions-core-tools
 }
 
 Write-Output "Checking the installed azure functions tools"
 Get-Command func | Out-Null
 if(! $?){
-    choco upgrade -y azure-functions-core-tools --params "'/x64'" # is equal to : choco install azure-functions-core-tools-3 --params="'/x64:true'"
+    Write-Output "The func command is not available"
+    # ref https://github.com/Azure/azure-functions-core-tools/blob/master/README.md#installing
+    # https://docs.microsoft.com/fr-fr/azure/azure-functions/functions-run-local?tabs=v4%2Cwindows%2Ccsharp%2Cportal%2Cbash%2Ckeda#install-the-azure-functions-core-tools
+    # choco upgrade -y azure-functions-core-tools-3 --params "'/x64'" # is equal to : choco install azure-functions-core-tool --params="'/x64:true'"
+    # choco upgrade -y azure-functions-core-tools-4 --params "'/x64'" # is equal to : choco install azure-functions-core-tool --params="'/x64:true'"
+    Write-Output "Please install using the resources found at https://github.com/Azure/azure-functions-core-tools/blob/master/README.md#installing"
+    Write-Output "Direct link for .msi x64 : https://go.microsoft.com/fwlink/?linkid=2174087"
+    exit 1
+}
+$version = [Version](func --version)
+if($Null -eq $version){
+    Write-Output "Error trying to get the func version"
+    exit 1
+}
+if($version -lt [Version]"4.0"){
+    Write-Output "The installed func version is too low, it should be at least 4.0"
+    exit 1
 }
 
 # the following lines are an adaptation of the content of the file AccBot/.github/workflows/dotnet.yml
