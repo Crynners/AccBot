@@ -4,7 +4,7 @@
 $ErrorActionPreference = "Stop"
 
 $CurrentDirectory = "$PSScriptRoot"
-$BinaryFolderOutput = "$CurrentDirectory\CryptoBotFunction\bin\Release\net6.0"
+$BinaryFolderOutput = "$CurrentDirectory\bin\Release\net6.0"
 
 $zipFile = "AccBot.zip"
 $resourceGroupName= "AccBot"
@@ -69,7 +69,7 @@ if(! $?){
   exit 1
 }
 Write-Output "Packaging the binaries"
-Remove-Item "$BinaryFolderOutput\local.settings.json"
+Remove-Item "$BinaryFolderOutput\local.settings.json" # this file potentially contains sensitive data 
 Remove-Item "$BinaryFolderOutput\*.ps1"
 Remove-Item "$BinaryFolderOutput\*.bat"
 Compress-Archive -Force -Path "$BinaryFolderOutput\*" -DestinationPath "$CurrentDirectory\$zipFile" # overwrite if present
