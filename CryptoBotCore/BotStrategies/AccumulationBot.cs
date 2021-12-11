@@ -19,9 +19,14 @@ namespace CryptoBotCore.BotStrategies
         [NonSerialized]
         private ICryptoExchangeAPI cryptoExchangeAPI;
 
-        TelegramBotClient TelegramBot { get; set; }
+        private string pair = $"{BotConfiguration.Currency}_{BotConfiguration.Fiat}";
+        private string account = string.IsNullOrEmpty(BotConfiguration.Account)?"main":BotConfiguration.Account;
 
-        private CosmosDbContext _cosmosDbContext;
+        // for display
+        private int roundDigitsFiat = 2; // HARDCODED: 2 digits as fiat money are only displayed up to 2 numbers after the decimal part // FTX displays up to 4 digits though
+        private int roundDigitsCurrency = 8; // HARDCODED: 8 digits as BTC leads the crypto currency markets/exchange by having satoshis as subdivisions (0.00000001)
+        private int roundDigitsFillingPrice = 0; // HARDCODED: we buy x.xxxxxxxx BTC for X EUR or USD, not x.xx
+        private int roundDigitsFees = 8; // HARDCODED: set to match roundDigitsCurrency
 
         readonly ILogger Log;
 
@@ -30,7 +35,7 @@ namespace CryptoBotCore.BotStrategies
             Log = log;
         }
         
-        private void initializeAPI()
+        private void InitializeAPI()
         {
             switch (BotConfiguration.CryptoExchangeAPIEnum)
             {
@@ -73,21 +78,11 @@ namespace CryptoBotCore.BotStrategies
         {
             try
             {
-                StringBuilder sbActions = new StringBuilder();
                 Log.LogInformation("Start Tick: " + DateTime.Now);
 
-                if (cryptoExchangeAPI == null)
-                {
-                    initializeAPI();
+                if (cryptoExchangeAPI == null){
+                    InitializeAPI();
                 }
-
-                var pair = $"{BotConfiguration.Currency}_{BotConfiguration.Fiat}";
-                var account = string.IsNullOrEmpty(BotConfiguration.Account)?"main":BotConfiguration.Account;
-                // for display
-                int roundDigitsFiat = 2; // HARDCODED: 2 digits as fiat money are only displayed up to 2 numbers after the decimal part // FTX displays up to 4 digits though
-                int roundDigitsCurrency = 8; // HARDCODED: 8 digits as BTC leads the crypto currency markets/exchange by having satoshis as subdivisions (0.00000001)
-                int roundDigitsFillingPrice = 0; // HARDCODED: we buy x.xxxxxxxx BTC for X EUR or USD, not x.xx
-                int roundDigitsFees = roundDigitsCurrency;
 
                 /*  
                     Starting here, some values may be wrongly infered in case of concurrent or parallel actions made on the account used by this bot
@@ -96,37 +91,25 @@ namespace CryptoBotCore.BotStrategies
                 decimal initialFiatBalance = initialBalances.Where(x => x.currency == BotConfiguration.Fiat).Sum(x => x.available);
                 decimal initialCurrencyBalance = initialBalances.Where(x => x.currency == BotConfiguration.Currency).Sum(x => x.available);
 
-                // The account should have strictly more money povisionned than what the bot expects to buy 
-                // This is to account for any potential price slippage between the moment it calculated the size of the spot position to buy
-                // And the actual market buy order executed
-                // Otherwise we could fail buying despite thinking we have enough and it should have executed
-                if (initialFiatBalance > 2) // BotConfiguration.ChunkSize
-                {
-                    // Placing a market buy order
-                    await cryptoExchangeAPI.buyOrderAsync(BotConfiguration.ChunkSize);
-
-                    Log.LogInformation($"Market buy {BotConfiguration.Currency} for {BotConfiguration.ChunkSize} {BotConfiguration.Fiat}");
-                }
-                else
-                {
-                    var sbWarningMessage = new StringBuilder();
-                    sbWarningMessage.Append($"Not enough {BotConfiguration.Fiat} on the {account} account").Append("\r\n");
-                    sbWarningMessage.Append($"The account balance ({initialFiatBalance} {BotConfiguration.Fiat}) should be strictly superior than the bot configuration chunk size ({BotConfiguration.ChunkSize} {BotConfiguration.Fiat})");
-                    await SendMessageAsync(sbWarningMessage.ToString(), MessageTypeEnum.Warning);
-                    return;
+                var isSuccess = await AttemptBuy(initialFiatBalance); // Doesn't actually buy if running in DEBUG
+                if(! isSuccess){
+                    SendWarningMessage(initialFiatBalance);
                 }
 
                 var postBuyBalances = await cryptoExchangeAPI.getBalancesAsync();
                 decimal postBuyFiatBalance = postBuyBalances.Where(x => x.currency == BotConfiguration.Fiat).Sum(x => x.available);
                 decimal postBuyCurrencyBalance = postBuyBalances.Where(x => x.currency == BotConfiguration.Currency).Sum(x => x.available);
 
-#if DEBUG
-                // faking an arbitrary setup to test the formulas below and notifications
+        #if DEBUG
+                // as we didn't actually buy in the AttemptBuy function due to being in DEBUG mode,
+                // we have to fake some data to be able to properly test the formulas and notifications below 
                 initialFiatBalance = (initialFiatBalance!=0)?initialFiatBalance:(BotConfiguration.ChunkSize*2);
                 initialCurrencyBalance = (initialCurrencyBalance!=0)?initialCurrencyBalance:(0.0004m*2);
                 postBuyFiatBalance =  initialFiatBalance - BotConfiguration.ChunkSize;
                 postBuyCurrencyBalance = initialCurrencyBalance + 0.0004m;
-#endif
+        #endif
+
+        #region Stats calculus
                 decimal totalCostOfOperation = initialFiatBalance - postBuyFiatBalance; // the fee is included in this result as it's already paid in FIAT as we used a market buy order
                 decimal takerFee = await cryptoExchangeAPI.getTakerFee(); // ex : 0.00063 representing 0,063%
 
@@ -136,120 +119,20 @@ namespace CryptoBotCore.BotStrategies
                 decimal fillingPrice = currencyCost/currencyBought; // price in FIAT for 1 full coin of the currency we bought at the time of the filling
                 decimal feeCost = totalCostOfOperation * takerFee; // expressed in FIAT value as market buy order always are in FIAT 
 
-                decimal withdrawalFeeCurrencyCost = await cryptoExchangeAPI.getWithdrawalFeeAsync(postBuyCurrencyBalance); // returns 0 ?!? when no param with FTX
-                decimal withdrawalPercentageFee = (withdrawalFeeCurrencyCost / postBuyCurrencyBalance); // percent of the overall crypto we'd like to move
-                decimal withdrawalFeeFiatCost = withdrawalFeeCurrencyCost * fillingPrice;
-
                 var currentCryptoBalanceValueInFiat = postBuyCurrencyBalance * fillingPrice;
+        #endregion
 
                 /*  
                     End of the sensitive part where some values may be wrongly infered in case of concurrent or parallel actions made on the account used by this bot
                 */
 
-                sbActions.Append($"<b>Accumulation:</b>").Append("\r\n");
-                sbActions.Append($"Just bought {currencyBought.ToString($"N{roundDigitsCurrency}")} {BotConfiguration.Currency} for {currencyCost.ToString($"N{roundDigitsFiat}")} {BotConfiguration.Fiat} @ {fillingPrice.ToString($"N{roundDigitsFillingPrice}")} {BotConfiguration.Fiat}").Append("\r\n");
-                sbActions.Append($"Fees are {feeCost.ToString($"N{roundDigitsFees}")} {BotConfiguration.Fiat}").Append("\r\n");
+                var withdrawalMessageBlock = await AttemptWithdrawal(postBuyCurrencyBalance, fillingPrice, currentCryptoBalanceValueInFiat);
 
-                // Withdraw all the currency accumulated if enabled and the cost is in the configuration bounds
-                if (BotConfiguration.WithdrawalEnabled && 
-                    !String.IsNullOrEmpty(BotConfiguration.WithdrawalAddress) &&
-                    withdrawalPercentageFee <= BotConfiguration.MaxWithdrawalPercentageFee &&
-                    (BotConfiguration.MaxWithdrawalAbsoluteFee == -1 || withdrawalFeeFiatCost <= BotConfiguration.MaxWithdrawalAbsoluteFee)
-                    )
-                {
-                    var withdrawResult = await cryptoExchangeAPI.withdrawAsync(postBuyCurrencyBalance, BotConfiguration.WithdrawalAddress);
+                var accumulationSummary = await UpdateSummary(totalCostOfOperation, currencyBought);
 
-                    // construct the notification message
-                    if(withdrawResult == WithdrawalStateEnum.OK)
-                    {
-                        sbActions.Append($"<b>Withdrawal:</b>✔️ Success").Append("\r\n");
-                        sbActions.Append($"Initiated transfer of {postBuyCurrencyBalance.ToString($"N{roundDigitsCurrency}")} {BotConfiguration.Currency} to the address {BotConfiguration.WithdrawalAddress}").Append("\r\n");
-                        sbActions.Append($"Fees are {(withdrawalPercentageFee * 100).ToString($"N{roundDigitsFiat}")} % ({withdrawalFeeFiatCost} {BotConfiguration.Fiat})").Append("\r\n");
-                    }else if(withdrawResult == WithdrawalStateEnum.InsufficientKeyPrivileges){
-                        sbActions.Append($"<b>Withdrawal:</b>❌ Error [Insufficient key privileges]").Append("\r\n");
-                    }
-                }
-                else
-                {
-                    // construct the notification message
-                    List<string> reason = new List<string>();
-                    if (withdrawalPercentageFee > BotConfiguration.MaxWithdrawalPercentageFee)
-                        reason.Add("Fee percentage limit exceeded");
-                    if (withdrawalFeeFiatCost > BotConfiguration.MaxWithdrawalAbsoluteFee)
-                        reason.Add("Fee absolute limit exceeded");
-                    if (String.IsNullOrEmpty(BotConfiguration.WithdrawalAddress))
-                        reason.Add("No address");
-                    if (!BotConfiguration.WithdrawalEnabled)
-                        reason.Add("Turned off");
-
-                    var maxWithdrawalFeeInFiat = (BotConfiguration.MaxWithdrawalPercentageFee * currentCryptoBalanceValueInFiat).ToString($"N{roundDigitsFiat}");
-                    List<string> limits = new List<string>
-                    {
-                        $"{(BotConfiguration.MaxWithdrawalPercentageFee * 100).ToString($"N{roundDigitsFiat}")} % ({maxWithdrawalFeeInFiat} {BotConfiguration.Fiat})"
-                    };
-                    if (BotConfiguration.MaxWithdrawalAbsoluteFee != -1)
-                    {
-                        limits.Add($"{BotConfiguration.MaxWithdrawalAbsoluteFee.ToString($"N{roundDigitsFiat}")} {BotConfiguration.Fiat}");
-                    }
-                    
-                    sbActions.Append($"<b>Withdrawal:</b>Denied [{String.Join(", ", reason)}]").Append("\r\n");
-                    sbActions.Append($"Fees would have been {(withdrawalPercentageFee * 100).ToString($"N{roundDigitsFiat}")} % ({withdrawalFeeFiatCost} {BotConfiguration.Fiat})").Append("\r\n");
-                    sbActions.Append($"The limits being {String.Join(" and ", limits)}").Append("\r\n");
-                }
-
-                _cosmosDbContext = new CosmosDbContext();
-                var accumulationSummary = await _cosmosDbContext.GetAccumulationSummary(pair);
-
-                AccumulationSummary accSumOLD = null;
-
-                //Update a CosmosDB record to the new PartitionKey structure
-                if (accumulationSummary.Buys == 0)
-                {
-                    accSumOLD = await _cosmosDbContext.GetAccumulationSummary(BotConfiguration.Currency);
-                    accumulationSummary.AccumulatedCryptoAmount = accSumOLD.AccumulatedCryptoAmount;
-                    accumulationSummary.Buys = accSumOLD.Buys;
-                    accumulationSummary.InvestedFiatAmount = accSumOLD.InvestedFiatAmount;
-                }
-
-                accumulationSummary.Buys += 1;
-                accumulationSummary.InvestedFiatAmount += totalCostOfOperation; // includes the fees
-                accumulationSummary.AccumulatedCryptoAmount += currencyBought;
-
-                await _cosmosDbContext.UpdateItemAsync(accumulationSummary);
-
-                if(accSumOLD != null)
-                {
-                    //Deleting an old record from a previous version of the bot
-                    await _cosmosDbContext.DeleteItemAsync(accSumOLD.Id.ToString(), accSumOLD.CryptoName);
-                }
-
-#if DEBUG
-                // Removing any trace of our test/debug
-                await _cosmosDbContext.DeleteItemAsync(accumulationSummary.Id.ToString(), accumulationSummary.CryptoName);
-#endif
-
-                decimal profitPercent = ((accumulationSummary.AccumulatedCryptoAmount * fillingPrice) / accumulationSummary.InvestedFiatAmount) - 1;
-                decimal averageInvestedFiatAmount = accumulationSummary.InvestedFiatAmount/accumulationSummary.Buys;
-                decimal averageCryptoAmountBought = accumulationSummary.AccumulatedCryptoAmount/accumulationSummary.Buys;
-                decimal averageBuyingPrice = averageInvestedFiatAmount/averageCryptoAmountBought; // also equal to : accumulationSummary.InvestedFiatAmount/accumulationSummary.AccumulatedCryptoAmount
-
-                StringBuilder sb = new StringBuilder();
-                sb.Append("\r\n");
-                sb.Append("<b>[ACTIONS]</b>").Append("\r\n");
-                sb.Append(sbActions.ToString());
-                sb.Append("\r\n");
-                sb.Append("<b>[SUMMARY]</b>").Append("\r\n");
-                sb.Append("<b>Total accumulation</b>: " + accumulationSummary.AccumulatedCryptoAmount.ToString($"N{roundDigitsCurrency}") + " " + BotConfiguration.Currency + " (" + accumulationSummary.InvestedFiatAmount.ToString($"N{roundDigitsFiat}") + $" {BotConfiguration.Fiat})").Append("\r\n");
-                sb.Append("<b>Avg Accumulated Price</b>: " + averageBuyingPrice.ToString($"N{roundDigitsFillingPrice}") + $" {BotConfiguration.Fiat}/" + BotConfiguration.Currency).Append("\r\n");
-                sb.Append("<b>Current Price</b>: " + fillingPrice.ToString($"N{roundDigitsFillingPrice}") + $" {BotConfiguration.Fiat}/" + BotConfiguration.Currency).Append("\r\n");
-                sb.Append("<b>Current Profit</b>: " + (profitPercent * 100).ToString($"N{roundDigitsFiat}") + " % (" + (profitPercent * accumulationSummary.InvestedFiatAmount).ToString($"N{roundDigitsFiat}") + $" {BotConfiguration.Fiat})").Append("\r\n");
-
-                sb.Append("<b>Fiat balance</b>: " + postBuyFiatBalance.ToString($"N{roundDigitsFiat}") + $" {BotConfiguration.Fiat}").Append("\r\n");
-                sb.Append($"<b>Current balance</b>: {postBuyCurrencyBalance.ToString($"N{roundDigitsCurrency}")} {BotConfiguration.Currency} ({currentCryptoBalanceValueInFiat.ToString($"N{roundDigitsFiat}")} {BotConfiguration.Fiat})").Append("\r\n");
-
-                sb.Append($"<b>Avg invested amount</b>: {averageInvestedFiatAmount.ToString($"N{roundDigitsFiat}")} {BotConfiguration.Fiat} over {accumulationSummary.Buys} transactions").Append("\r\n");
-
-                await SendMessageAsync(sb.ToString());
+                await SendSuccessMessage(withdrawalMessageBlock, accumulationSummary, currencyBought, 
+                                        currencyCost, fillingPrice, feeCost, postBuyFiatBalance, 
+                                        postBuyCurrencyBalance, currentCryptoBalanceValueInFiat);
             }
             catch (Exception ex)
             {
@@ -258,7 +141,183 @@ namespace CryptoBotCore.BotStrategies
             }
         }
 
-        public async Task<string> SendMessageAsync(string message, MessageTypeEnum messageType = MessageTypeEnum.Information, int attempt = 0)
+        private async Task<bool> AttemptBuy(decimal initialFiatBalance){
+            // The account should have strictly more money povisionned than what the bot expects to buy 
+            // This is to account for any potential price slippage between the moment it calculated the size of the spot position to buy
+            // And the actual market buy order executed
+            // Otherwise we could fail buying despite thinking we have enough and it should have executed
+            if (initialFiatBalance <= BotConfiguration.ChunkSize){
+                return false;
+            }
+            // Placing a market buy order
+            await cryptoExchangeAPI.buyOrderAsync(BotConfiguration.ChunkSize);
+            Log.LogInformation($"Market buy {BotConfiguration.Currency} for {BotConfiguration.ChunkSize} {BotConfiguration.Fiat}");
+            return true;
+        }
+
+        private async Task<string> AttemptWithdrawal(decimal postBuyCurrencyBalance, decimal fillingPrice, decimal currentCryptoBalanceValueInFiat)
+        {
+            var sbActions = new StringBuilder();
+
+            decimal withdrawalFeeCurrencyCost = await cryptoExchangeAPI.getWithdrawalFeeAsync(postBuyCurrencyBalance); // returns 0 ?!? when no param with FTX
+            decimal withdrawalPercentageFee = (withdrawalFeeCurrencyCost / postBuyCurrencyBalance); // percent of the overall crypto we'd like to move
+            decimal withdrawalFeeFiatCost = withdrawalFeeCurrencyCost * fillingPrice;
+
+            // Withdraw all the currency accumulated if enabled and the cost is in the configuration bounds
+            if (BotConfiguration.WithdrawalEnabled && 
+                !String.IsNullOrEmpty(BotConfiguration.WithdrawalAddress) &&
+                withdrawalPercentageFee <= BotConfiguration.MaxWithdrawalPercentageFee &&
+                (BotConfiguration.MaxWithdrawalAbsoluteFee == -1 || withdrawalFeeFiatCost <= BotConfiguration.MaxWithdrawalAbsoluteFee)
+                )
+            {
+                var withdrawResult = await cryptoExchangeAPI.withdrawAsync(postBuyCurrencyBalance, BotConfiguration.WithdrawalAddress);
+
+                // construct the notification message
+                if(withdrawResult == WithdrawalStateEnum.OK)
+                {
+                    sbActions.Append($"<b>Withdrawal:</b>✔️ Success").Append("\r\n");
+                    sbActions.Append($"Initiated transfer of {postBuyCurrencyBalance.ToString($"N{roundDigitsCurrency}")} {BotConfiguration.Currency} to the address {BotConfiguration.WithdrawalAddress}").Append("\r\n");
+                    sbActions.Append($"Fees are {(withdrawalPercentageFee * 100).ToString($"N{roundDigitsFiat}")} % ({withdrawalFeeFiatCost} {BotConfiguration.Fiat})").Append("\r\n");
+                }else if(withdrawResult == WithdrawalStateEnum.InsufficientKeyPrivileges){
+                    sbActions.Append($"<b>Withdrawal:</b>❌ Error [Insufficient key privileges]").Append("\r\n");
+                }
+            }
+            else
+            {
+                // construct the notification message
+                List<string> reason = new List<string>();
+                if (withdrawalPercentageFee > BotConfiguration.MaxWithdrawalPercentageFee)
+                    reason.Add("Fee percentage limit exceeded");
+                if (withdrawalFeeFiatCost > BotConfiguration.MaxWithdrawalAbsoluteFee)
+                    reason.Add("Fee absolute limit exceeded");
+                if (String.IsNullOrEmpty(BotConfiguration.WithdrawalAddress))
+                    reason.Add("No address");
+                if (!BotConfiguration.WithdrawalEnabled)
+                    reason.Add("Turned off");
+
+                var maxWithdrawalFeeInFiat = (BotConfiguration.MaxWithdrawalPercentageFee * currentCryptoBalanceValueInFiat).ToString($"N{roundDigitsFiat}");
+                List<string> limits = new List<string>
+                {
+                    $"{(BotConfiguration.MaxWithdrawalPercentageFee * 100).ToString($"N{roundDigitsFiat}")} % ({maxWithdrawalFeeInFiat} {BotConfiguration.Fiat})"
+                };
+                if (BotConfiguration.MaxWithdrawalAbsoluteFee != -1)
+                {
+                    limits.Add($"{BotConfiguration.MaxWithdrawalAbsoluteFee.ToString($"N{roundDigitsFiat}")} {BotConfiguration.Fiat}");
+                }
+                
+                sbActions.Append($"<b>Withdrawal:</b> Denied [{String.Join(", ", reason)}]").Append("\r\n");
+                sbActions.Append($"Fees would have been {(withdrawalPercentageFee * 100).ToString($"N{roundDigitsFiat}")} % ({withdrawalFeeFiatCost} {BotConfiguration.Fiat})").Append("\r\n");
+                sbActions.Append($"The limits being {String.Join(" and ", limits)}").Append("\r\n");
+            }
+
+            return sbActions.ToString();
+        }
+
+        #region Data persistence
+        private async Task<AccumulationSummary> UpdateSummary(decimal totalCostOfOperation, decimal currencyBought)
+        {
+            var _cosmosDbContext = new CosmosDbContext();
+
+            var accumulationSummary = await _cosmosDbContext.GetAccumulationSummary(pair);
+
+            accumulationSummary = await MigrateLegacyDatabaseRecord(_cosmosDbContext, accumulationSummary);
+            accumulationSummary.Increment(totalCostOfOperation,currencyBought);
+
+        #if ! DEBUG
+            await _cosmosDbContext.UpdateItemAsync(accumulationSummary);
+        #endif
+
+            return accumulationSummary;
+        }
+
+        private async Task<AccumulationSummary> MigrateLegacyDatabaseRecord(CosmosDbContext _cosmosDbContext, AccumulationSummary accumulationSummary){
+            //Update a CosmosDB record to the new PartitionKey structure
+            AccumulationSummary accSumOLD = null;
+            // if we didn't get a result, that might mean that there are "old format" data to migrate
+            if (accumulationSummary.Buys == 0) 
+            {
+                // so, let's query the "old" way
+                accSumOLD = await _cosmosDbContext.GetAccumulationSummary(BotConfiguration.Currency); 
+            }
+
+            if(accSumOLD != null)
+            {
+                // we found old data to migrate, let's pass it to the rest of the code as if it was found from the initial "recent" query format
+                accumulationSummary.AccumulatedCryptoAmount = accSumOLD.AccumulatedCryptoAmount;
+                accumulationSummary.Buys = accSumOLD.Buys;
+                accumulationSummary.InvestedFiatAmount = accSumOLD.InvestedFiatAmount;
+                
+            #if ! DEBUG
+                // now we can delete the old record as we don't want data saved in this "old" way anymore
+                await _cosmosDbContext.DeleteItemAsync(accSumOLD.Id.ToString(), accSumOLD.CryptoName);
+            #endif
+            }
+
+            // this returned value has to be saved later or we will lose forever the existing data
+            return accumulationSummary;
+        }
+        #endregion
+
+        #region Messaging
+
+        #region Generate display message
+        private string GenerateActionsMessageBlock(decimal currencyBought, decimal currencyCost, decimal fillingPrice, decimal feeCost){
+            var sbAccumulationStats = new StringBuilder();
+
+            sbAccumulationStats.Append($"<b>Accumulation:</b>").Append("\r\n");
+            sbAccumulationStats.Append($"Just bought {currencyBought.ToString($"N{roundDigitsCurrency}")} {BotConfiguration.Currency} for {currencyCost.ToString($"N{roundDigitsFiat}")} {BotConfiguration.Fiat} @ {fillingPrice.ToString($"N{roundDigitsFillingPrice}")} {BotConfiguration.Fiat}").Append("\r\n");
+            sbAccumulationStats.Append($"Fees are {feeCost.ToString($"N{roundDigitsFees}")} {BotConfiguration.Fiat}").Append("\r\n");
+
+            return sbAccumulationStats.ToString();
+        }
+
+        private string GenerateSummaryMessageBlock(AccumulationSummary accumulationSummary, decimal fillingPrice, decimal postBuyFiatBalance, decimal postBuyCurrencyBalance, decimal currentCryptoBalanceValueInFiat){
+            var sb = new StringBuilder();
+
+            decimal profitPercent = ((accumulationSummary.AccumulatedCryptoAmount * fillingPrice) / accumulationSummary.InvestedFiatAmount) - 1;
+            decimal averageInvestedFiatAmount = accumulationSummary.InvestedFiatAmount/accumulationSummary.Buys;
+            decimal averageCryptoAmountBought = accumulationSummary.AccumulatedCryptoAmount/accumulationSummary.Buys;
+            decimal averageBuyingPrice = averageInvestedFiatAmount/averageCryptoAmountBought; // also equal to : accumulationSummary.InvestedFiatAmount/accumulationSummary.AccumulatedCryptoAmount
+
+            sb.Append("<b>Total accumulation</b>: " + accumulationSummary.AccumulatedCryptoAmount.ToString($"N{roundDigitsCurrency}") + " " + BotConfiguration.Currency + " (" + accumulationSummary.InvestedFiatAmount.ToString($"N{roundDigitsFiat}") + $" {BotConfiguration.Fiat})").Append("\r\n");
+            sb.Append("<b>Avg Accumulated Price</b>: " + averageBuyingPrice.ToString($"N{roundDigitsFillingPrice}") + $" {BotConfiguration.Fiat}/" + BotConfiguration.Currency).Append("\r\n");
+            sb.Append("<b>Current Price</b>: " + fillingPrice.ToString($"N{roundDigitsFillingPrice}") + $" {BotConfiguration.Fiat}/" + BotConfiguration.Currency).Append("\r\n");
+            sb.Append("<b>Current Profit</b>: " + (profitPercent * 100).ToString($"N{roundDigitsFiat}") + " % (" + (profitPercent * accumulationSummary.InvestedFiatAmount).ToString($"N{roundDigitsFiat}") + $" {BotConfiguration.Fiat})").Append("\r\n");
+
+            sb.Append("<b>Fiat balance</b>: " + postBuyFiatBalance.ToString($"N{roundDigitsFiat}") + $" {BotConfiguration.Fiat}").Append("\r\n");
+            sb.Append($"<b>Current balance</b>: {postBuyCurrencyBalance.ToString($"N{roundDigitsCurrency}")} {BotConfiguration.Currency} ({currentCryptoBalanceValueInFiat.ToString($"N{roundDigitsFiat}")} {BotConfiguration.Fiat})").Append("\r\n");
+
+            sb.Append($"<b>Avg invested amount</b>: {averageInvestedFiatAmount.ToString($"N{roundDigitsFiat}")} {BotConfiguration.Fiat} over {accumulationSummary.Buys} transactions").Append("\r\n");
+
+            return sb.ToString();
+        }
+        #endregion
+
+        private async Task SendSuccessMessage(string withdrawalMessageBlock, AccumulationSummary accumulationSummary, decimal currencyBought, decimal currencyCost, decimal fillingPrice, decimal feeCost, decimal postBuyFiatBalance, decimal postBuyCurrencyBalance, decimal currentCryptoBalanceValueInFiat){
+            var accumulationStatsMessageBlock = GenerateActionsMessageBlock(currencyBought, currencyCost, fillingPrice, feeCost);
+            var summaryMessageBlock = GenerateSummaryMessageBlock(accumulationSummary, fillingPrice, postBuyFiatBalance, postBuyCurrencyBalance, currentCryptoBalanceValueInFiat);
+
+            var sb = new StringBuilder();
+            sb.Append("\r\n");
+            sb.Append("<b>[ACTIONS]</b>").Append("\r\n");
+            sb.Append(accumulationStatsMessageBlock);
+            sb.Append(withdrawalMessageBlock);
+            sb.Append("\r\n");
+            sb.Append("<b>[SUMMARY]</b>").Append("\r\n");
+            sb.Append(summaryMessageBlock);
+
+            await SendMessageAsync(sb.ToString());
+        }
+
+        private async Task SendWarningMessage(decimal initialFiatBalance){
+            var sbWarningMessage = new StringBuilder();
+            sbWarningMessage.Append($"Not enough {BotConfiguration.Fiat} on the {account} account").Append("\r\n");
+            sbWarningMessage.Append($"The account balance ({initialFiatBalance} {BotConfiguration.Fiat}) should be strictly superior than the bot configuration chunk size ({BotConfiguration.ChunkSize} {BotConfiguration.Fiat})");
+
+            await SendMessageAsync(sbWarningMessage.ToString(), MessageTypeEnum.Warning);
+        }
+
+        private async Task<string> SendMessageAsync(string message, MessageTypeEnum messageType = MessageTypeEnum.Information, int attempt = 0)
         {
             var username = BotConfiguration.UserName.Replace(' ','_'); // so that spaces don't break the hashtag created in telegram
             var account = string.IsNullOrEmpty(BotConfiguration.Account)?"Main":BotConfiguration.Account + "_Account";
@@ -281,7 +340,7 @@ namespace CryptoBotCore.BotStrategies
 
             try
             {
-                TelegramBot = new TelegramBotClient(BotConfiguration.TelegramBot);
+                var TelegramBot = new TelegramBotClient(BotConfiguration.TelegramBot);
                 await TelegramBot.SendTextMessageAsync(BotConfiguration.TelegramChannel, message.Substring(0, Math.Min(4000, message.Length)), Telegram.Bot.Types.Enums.ParseMode.Html); // Why risking to truncate the message to 4000 chars ?
             }
             catch (Exception e)
@@ -298,5 +357,6 @@ namespace CryptoBotCore.BotStrategies
 
             return null;
         }
+        #endregion
     }
 }
