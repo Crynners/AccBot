@@ -96,8 +96,8 @@ namespace CryptoBotCore.API
 
                     if (result.error)
                     {
-                        Log.LogError(result.errorMessage.ToString());
-                        throw new Exception(result.errorMessage.ToString());
+                        Log.LogError(result.errorMessage?.ToString());
+                        throw new Exception(result.errorMessage?.ToString());
                     }
 
                     return result.data;
@@ -111,7 +111,7 @@ namespace CryptoBotCore.API
             } while (true);
         }
 
-        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
+        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
             if (this.pair_base == "LTC")
             {
@@ -137,7 +137,7 @@ namespace CryptoBotCore.API
 
                     if (result.error)
                     {
-                        throw new Exception(result.errorMessage.ToString());
+                        throw new Exception(result.errorMessage?.ToString());
                     }
 
                     return result.data.low;
@@ -163,7 +163,7 @@ namespace CryptoBotCore.API
                     WebClient client = new WebClient();
                     client.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded");
 
-                    string keypair = pair_base == "BTC" ? "bitcoinWithdrawal" :
+                    string? keypair = pair_base == "BTC" ? "bitcoinWithdrawal" :
                                      pair_base == "LTC" ? "litecoinWithdrawal" :
                                      pair_base == "ETH" ? "ethereumWithdrawal" :
                                      pair_base == "DASH" ? "dashWithdrawal" :
@@ -177,7 +177,7 @@ namespace CryptoBotCore.API
 
                     if (result.error)
                     {
-                        throw new Exception(result.errorMessage.ToString());
+                        throw new Exception(result.errorMessage?.ToString());
                     }
 
                     return WithdrawalStateEnum.OK;
@@ -226,12 +226,16 @@ namespace CryptoBotCore.API
 
                     if (result.error)
                     {
-                        Log.LogError(result.errorMessage.ToString());
-                        throw new Exception(result.errorMessage.ToString());
+                        Log.LogError(result.errorMessage?.ToString());
+                        throw new Exception(result.errorMessage?.ToString());
                     }
 
                     var wallets = new List<WalletBalances>();
 
+                    if(result.data == null){
+                        Log.LogError("No data found");
+                        throw new Exception("No data found");
+                    }
                     wallets.Add(new WalletBalances("CZK", result.data.CZK.available));
                     wallets.Add(new WalletBalances("EUR", result.data.EUR.available));
                     wallets.Add(new WalletBalances("BTC", result.data.BTC.available));
@@ -253,13 +257,11 @@ namespace CryptoBotCore.API
             throw new Exception("Coinmate API is currently not available.");
         }
 
-
-
         private class Response<T>
         {
             public bool error { get; set; }
-            public object errorMessage { get; set; }
-            public T data { get; set; }
+            public object? errorMessage { get; set; }
+            public T? data { get; set; }
         }
 
         private class BTCWithdrawalFee_Data
@@ -271,15 +273,19 @@ namespace CryptoBotCore.API
 
         private class BTCWithdrawalFee_RootObject
         {
+            public BTCWithdrawalFee_RootObject(){
+                this.data = new BTCWithdrawalFee_Data();
+            }
+
             public bool error { get; set; }
-            public object errorMessage { get; set; }
+            public object? errorMessage { get; set; }
             public BTCWithdrawalFee_Data data { get; set; }
         }
 
 
         private class BalanceCurrency
         {
-            public string currency { get; set; }
+            public string? currency { get; set; }
             public decimal balance { get; set; }
             public decimal reserved { get; set; }
             public decimal available { get; set; }
@@ -287,6 +293,16 @@ namespace CryptoBotCore.API
 
         private class BalanceData
         {
+            public BalanceData()
+            {
+                this.EUR = new BalanceCurrency();
+                this.CZK = new BalanceCurrency();
+                this.BTC = new BalanceCurrency();
+                this.LTC = new BalanceCurrency();
+                this.ETH = new BalanceCurrency();
+                this.DASH = new BalanceCurrency();  
+            }
+
             public BalanceCurrency EUR { get; set; }
             public BalanceCurrency CZK { get; set; }
             public BalanceCurrency BTC { get; set; }

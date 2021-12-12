@@ -17,7 +17,8 @@ namespace CryptoBotCore.BotStrategies
     public class AccumulationBot
     {
         [NonSerialized]
-        private ICryptoExchangeAPI cryptoExchangeAPI;
+        private ICryptoExchangeAPI? cryptoExchangeAPI = null;
+        readonly ILogger Log;
 
         private string pair = $"{BotConfiguration.Currency}_{BotConfiguration.Fiat}";
         private string account = string.IsNullOrEmpty(BotConfiguration.Account)?"main":BotConfiguration.Account;
@@ -27,8 +28,6 @@ namespace CryptoBotCore.BotStrategies
         private int roundDigitsCurrency = 8; // HARDCODED: 8 digits as BTC leads the crypto currency markets/exchange by having satoshis as subdivisions (0.00000001)
         private int roundDigitsFillingPrice = 0; // HARDCODED: we buy x.xxxxxxxx BTC for X EUR or USD, not x.xx
         private int roundDigitsFees = 8; // HARDCODED: set to match roundDigitsCurrency
-
-        readonly ILogger Log;
 
         public AccumulationBot(ILogger log)
         {
@@ -87,26 +86,32 @@ namespace CryptoBotCore.BotStrategies
                 /*  
                     Starting here, some values may be wrongly infered in case of concurrent or parallel actions made on the account used by this bot
                 */
+        #if DEBUG 
+                // as we want to make sure to be able to DEBUG even though there too few FIAT on the account,
+                // we prefer to fake a rich enough account
+                // fixing values will also help debugging/testing/developping future stats calculus
+                var initialFiatBalance = BotConfiguration.ChunkSize*2;
+                var initialCurrencyBalance = 0.0004m*2;
+        #else
                 var initialBalances = await cryptoExchangeAPI.getBalancesAsync();
                 decimal initialFiatBalance = initialBalances.Where(x => x.currency == BotConfiguration.Fiat).Sum(x => x.available);
                 decimal initialCurrencyBalance = initialBalances.Where(x => x.currency == BotConfiguration.Currency).Sum(x => x.available);
-
+        #endif
                 var isSuccess = await AttemptBuy(initialFiatBalance); // Doesn't actually buy if running in DEBUG
                 if(! isSuccess){
-                    SendWarningMessage(initialFiatBalance);
+                    await SendWarningMessage(initialFiatBalance);
+                    return;
                 }
-
-                var postBuyBalances = await cryptoExchangeAPI.getBalancesAsync();
-                decimal postBuyFiatBalance = postBuyBalances.Where(x => x.currency == BotConfiguration.Fiat).Sum(x => x.available);
-                decimal postBuyCurrencyBalance = postBuyBalances.Where(x => x.currency == BotConfiguration.Currency).Sum(x => x.available);
 
         #if DEBUG
                 // as we didn't actually buy in the AttemptBuy function due to being in DEBUG mode,
                 // we have to fake some data to be able to properly test the formulas and notifications below 
-                initialFiatBalance = (initialFiatBalance!=0)?initialFiatBalance:(BotConfiguration.ChunkSize*2);
-                initialCurrencyBalance = (initialCurrencyBalance!=0)?initialCurrencyBalance:(0.0004m*2);
-                postBuyFiatBalance =  initialFiatBalance - BotConfiguration.ChunkSize;
-                postBuyCurrencyBalance = initialCurrencyBalance + 0.0004m;
+                var postBuyFiatBalance =  initialFiatBalance - BotConfiguration.ChunkSize;
+                var postBuyCurrencyBalance = initialCurrencyBalance + 0.0004m;
+        #else
+                var postBuyBalances = await cryptoExchangeAPI.getBalancesAsync();
+                decimal postBuyFiatBalance = postBuyBalances.Where(x => x.currency == BotConfiguration.Fiat).Sum(x => x.available);
+                decimal postBuyCurrencyBalance = postBuyBalances.Where(x => x.currency == BotConfiguration.Currency).Sum(x => x.available);
         #endif
 
         #region Stats calculus
@@ -137,7 +142,6 @@ namespace CryptoBotCore.BotStrategies
             catch (Exception ex)
             {
                 await SendMessageAsync(ex.ToString(), MessageTypeEnum.Error);
-                return;
             }
         }
 
@@ -149,8 +153,13 @@ namespace CryptoBotCore.BotStrategies
             if (initialFiatBalance <= BotConfiguration.ChunkSize){
                 return false;
             }
+            
+        #if !DEBUG
             // Placing a market buy order
-            await cryptoExchangeAPI.buyOrderAsync(BotConfiguration.ChunkSize);
+            await cryptoExchangeAPI.buyOrderAsync(BotConfiguration.ChunkSize);     
+        #endif
+            // We don't want to buy for real if we're in a test/debug scenario
+            
             Log.LogInformation($"Market buy {BotConfiguration.Currency} for {BotConfiguration.ChunkSize} {BotConfiguration.Fiat}");
             return true;
         }
@@ -223,7 +232,7 @@ namespace CryptoBotCore.BotStrategies
             accumulationSummary = await MigrateLegacyDatabaseRecord(_cosmosDbContext, accumulationSummary);
             accumulationSummary.Increment(totalCostOfOperation,currencyBought);
 
-        #if ! DEBUG
+        #if !DEBUG
             await _cosmosDbContext.UpdateItemAsync(accumulationSummary);
         #endif
 
@@ -232,7 +241,7 @@ namespace CryptoBotCore.BotStrategies
 
         private async Task<AccumulationSummary> MigrateLegacyDatabaseRecord(CosmosDbContext _cosmosDbContext, AccumulationSummary accumulationSummary){
             //Update a CosmosDB record to the new PartitionKey structure
-            AccumulationSummary accSumOLD = null;
+            AccumulationSummary? accSumOLD = null;
             // if we didn't get a result, that might mean that there are "old format" data to migrate
             if (accumulationSummary.Buys == 0) 
             {
@@ -247,7 +256,7 @@ namespace CryptoBotCore.BotStrategies
                 accumulationSummary.Buys = accSumOLD.Buys;
                 accumulationSummary.InvestedFiatAmount = accSumOLD.InvestedFiatAmount;
                 
-            #if ! DEBUG
+            #if !DEBUG
                 // now we can delete the old record as we don't want data saved in this "old" way anymore
                 await _cosmosDbContext.DeleteItemAsync(accSumOLD.Id.ToString(), accSumOLD.CryptoName);
             #endif
@@ -317,7 +326,7 @@ namespace CryptoBotCore.BotStrategies
             await SendMessageAsync(sbWarningMessage.ToString(), MessageTypeEnum.Warning);
         }
 
-        private async Task<string> SendMessageAsync(string message, MessageTypeEnum messageType = MessageTypeEnum.Information, int attempt = 0)
+        private async Task SendMessageAsync(string message, MessageTypeEnum messageType = MessageTypeEnum.Information, int attempt = 0)
         {
             var username = BotConfiguration.UserName.Replace(' ','_'); // so that spaces don't break the hashtag created in telegram
             var account = string.IsNullOrEmpty(BotConfiguration.Account)?"Main":BotConfiguration.Account + "_Account";
@@ -348,14 +357,11 @@ namespace CryptoBotCore.BotStrategies
                 if (attempt >= 2)
                 {
                     Log.LogError(e, "SendTextMessageAsync error");
-                    return e.ToString();
                 }
                 //Repeat if exception (i.e. too many requests) occured
                 Thread.Sleep(300);
-                return await SendMessageAsync(message, MessageTypeEnum.Error , ++attempt);
+                await SendMessageAsync(message, MessageTypeEnum.Error , ++attempt);
             }
-
-            return null;
         }
         #endregion
     }

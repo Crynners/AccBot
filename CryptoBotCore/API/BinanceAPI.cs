@@ -46,7 +46,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -62,7 +62,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -88,17 +88,17 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                var item = callResult.Data.Where(x => x.Symbol == $"{pair_base}{pair_quote}").FirstOrDefault();
+                var item = callResult.Data.Where(x => x.Symbol == $"{pair_base}{pair_quote}").First();
                 return item.TakerFee;
             }
         }
 
-        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
+        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
             var callResult = await client.WithdrawDeposit.GetAssetDetailsAsync();
 
@@ -106,7 +106,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -123,7 +123,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {

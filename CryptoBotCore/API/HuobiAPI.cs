@@ -40,12 +40,12 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return callResult.Data.Asks.FirstOrDefault().Price;
+                return callResult.Data.Asks.First().Price;
             }
         }
 
@@ -57,7 +57,7 @@ namespace CryptoBotCore.API
             if (!accountResult.Success)
             {
                 // Call failed, check accountResult .Error for more info
-                return accountResult.Error?.Message;
+                throw new Exception(accountResult.Error?.Message);
             }
 
             var callResult = await client.PlaceOrderAsync(accountResult.Data.First().Id, $"{this.pair_base}{this.pair_quote}", Huobi.Net.Objects.HuobiOrderType.MarketBuy, baseAmount);
@@ -65,7 +65,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                return callResult.Error?.Message;
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -112,7 +112,7 @@ namespace CryptoBotCore.API
             return Task.FromResult(0.002m); // HARDCODED: value seems up to date on 24/11/2021 as a base default value
         }
 
-        public Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
+        public Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
             switch (this.pair_base)
             {

@@ -48,12 +48,12 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return callResult.Data.Ask.FirstOrDefault().Price;
+                return callResult.Data.Ask.First().Price;
             }
         }
 
@@ -69,7 +69,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -85,7 +85,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -109,17 +109,17 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                var takerFee = callResult.Data.Where(x => x.Symbol == $"{pair_base}{pair_quote}").FirstOrDefault().TakerRate;
+                var takerFee = callResult.Data.Where(x => x.Symbol == $"{pair_base}{pair_quote}").First().TakerRate;
                 return takerFee;
             }
         }
 
-        public Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
+        public Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
             // the method to get the withdrawal fee probably doesn't exist, so you'd better return the maximum decimal value so that the withdrawal is never performed
             return Task.FromResult(decimal.MaxValue);
@@ -133,7 +133,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {

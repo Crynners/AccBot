@@ -13,7 +13,7 @@ namespace CryptoBotCore.API
         /// Method which returns withdrawal fee for the acumulating cryptocurrency
         /// </summary>
         /// <returns>Absolute value of fee in the crypto currency</returns>
-        public Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null);
+        public Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null);
 
         /// <summary>
         /// Method which returns taker fee

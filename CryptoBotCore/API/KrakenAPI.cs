@@ -51,12 +51,12 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return callResult.Data.Asks.FirstOrDefault().Price;
+                return callResult.Data.Asks.First().Price;
             }
         }
 
@@ -69,12 +69,12 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return callResult.Data.OrderIds.FirstOrDefault();
+                return callResult.Data.OrderIds.First();
             }
         }
 
@@ -85,7 +85,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -110,17 +110,17 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                var takerFee = callResult.Data[$"{pair_base}{pair_quote}"].Fees.Where(x => x.Volume == 0).FirstOrDefault().FeePercentage;
+                var takerFee = callResult.Data[$"{pair_base}{pair_quote}"].Fees.Where(x => x.Volume == 0).First().FeePercentage;
                 return takerFee;
             }
         }
 
-        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
+        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
             var callResult = await client.GetWithdrawInfoAsync(this.pair_base, this.withdrawal_keyname, (amount??0m));
 
@@ -128,7 +128,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -146,7 +146,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {

@@ -12,7 +12,6 @@ namespace CryptoBotCore.Models
         {
             this.currency = currency;
             this.available = available;
-  
         }
 
         public string currency { get; set; }

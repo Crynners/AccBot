@@ -43,7 +43,7 @@ namespace CryptoBotCore.API
         public async Task<string> buyOrderAsync(decimal amount)
         {
             var callResult = await client.Accounts.ListAccountsAsync();
-            var accountId = callResult.Data.Where(x => x.Currency.Code == this.pair_quote).FirstOrDefault().Id;
+            var accountId = callResult.Data.Where(x => x.Currency.Code == this.pair_quote).First().Id;
 
             var buyResult = await client.Buys.PlaceBuyOrderAsync(accountId, new Coinbase.Models.PlaceBuy() { Total = amount.ToString(), Currency = this.pair_base }); 
 
@@ -90,7 +90,7 @@ namespace CryptoBotCore.API
             return Task.FromResult(0.005m); // HARDCODED: value is up to date on 24/11/2021 
         }
 
-        public Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string destinationAddress = null)
+        public Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
             // TODO: Add methods for withdrawal fees
             return Task.FromResult(decimal.MaxValue);
