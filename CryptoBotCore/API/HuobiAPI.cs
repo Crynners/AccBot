@@ -40,34 +40,32 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return callResult.Data.Asks.FirstOrDefault().Price;
+                return callResult.Data.Asks.First().Price;
             }
         }
 
-        public async Task<string> buyOrderAsync(double amount)
+        public async Task<string> buyOrderAsync(decimal amount)
         {
-
-            var baseAmount = (decimal)amount / (await getCurrentPrice());
+            var baseAmount = amount / (await getCurrentPrice());
 
             var accountResult = await client.GetAccountsAsync();
             if (!accountResult.Success)
             {
                 // Call failed, check accountResult .Error for more info
-                return accountResult.Error?.Message;
+                throw new Exception(accountResult.Error?.Message);
             }
-
 
             var callResult = await client.PlaceOrderAsync(accountResult.Data.First().Id, $"{this.pair_base}{this.pair_quote}", Huobi.Net.Objects.HuobiOrderType.MarketBuy, baseAmount);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                return callResult.Error?.Message;
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -101,34 +99,35 @@ namespace CryptoBotCore.API
 
                 foreach(var item in balances)
                 {
-                    wallets.Add(new WalletBalances(item.Currency, Convert.ToDouble(item.Balance)));
+                    wallets.Add(new WalletBalances(item.Currency, item.Balance));
                 }
 
                 return wallets;
             }
         }
 
-        public Task<double> getTakerFee()
-        {
-            return Task.FromResult(1.002);
+        public Task<decimal> getTakerFee()
+        { 
+            // TODO: find an API call to get this value dynamically as one could have rebates due to referrals or holding/staking HT (Huobi Token)
+            return Task.FromResult(0.002m); // HARDCODED: value seems up to date on 24/11/2021 as a base default value
         }
 
-        public Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
+        public Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
             switch (this.pair_base)
             {
                 case "BTC":
-                    return Task.FromResult(0.0004);
+                    return Task.FromResult(0.0004m); // HARDCODED
                 case "LTC":
-                    return Task.FromResult(0.001);
+                    return Task.FromResult(0.001m); // HARDCODED
                 case "ETH":
-                    return Task.FromResult(0.004);
+                    return Task.FromResult(0.004m); // HARDCODED
                 default:
-                    return Task.FromResult(Double.MaxValue);
+                    return Task.FromResult(Decimal.MaxValue);
             }
         }
 
-        public async Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
+        public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
             var accountResult = await client.GetAccountsAsync();
             if (!accountResult.Success)
@@ -145,7 +144,7 @@ namespace CryptoBotCore.API
 
                 if(callResult.Error?.Code == 1003)
                 {
-                    return WithdrawalStateEnum.InsufficientKeyPrivilages;
+                    return WithdrawalStateEnum.InsufficientKeyPrivileges;
                 }
 
                 // Call failed, check callResult.Error for more info

@@ -28,7 +28,7 @@ namespace CryptoBotCore.Models
 
     public enum WithdrawalStateEnum
     {
-        OK = 1, InsufficientKeyPrivilages = 2, UNKNOWN_FAIL = 3
+        OK = 1, InsufficientKeyPrivileges = 2, UNKNOWN_FAIL = 3
     }
 
 

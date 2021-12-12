@@ -26,7 +26,7 @@ namespace CryptoBotCore.Models
 
         public static bool WithdrawalEnabled { get; set; }
         public static int MaxWithdrawalAbsoluteFee { get; set; }
-        public static double MaxWithdrawalPercentageFee { get; set; }
+        public static decimal MaxWithdrawalPercentageFee { get; set; }
         public static string UserName { get; set; }
         public static string CosmosDbEndpointUri { get; set; }
         public static string CosmosDbPrimaryKey { get; set; }

@@ -54,6 +54,9 @@ namespace CryptoBotCore.CosmosDB
 
         public async Task AddItemAsync(AccumulationSummary item)
         {
+            if(item.CryptoName == null){
+                throw new Exception();
+            }
             await this.container.CreateItemAsync<AccumulationSummary>(item, new PartitionKey(item.CryptoName.ToString()));
         }
 
@@ -62,7 +65,7 @@ namespace CryptoBotCore.CosmosDB
             await this.container.DeleteItemAsync<AccumulationSummary>(id, new PartitionKey(cryptoName));
         }
 
-        public async Task<AccumulationSummary> GetItemAsync(string id)
+        public async Task<AccumulationSummary?> GetItemAsync(string id)
         {
             try
             {
@@ -73,7 +76,6 @@ namespace CryptoBotCore.CosmosDB
             {
                 return null;
             }
-
         }
 
         public async Task<IEnumerable<AccumulationSummary>> GetItemsAsync(string queryString)
@@ -101,7 +103,7 @@ namespace CryptoBotCore.CosmosDB
                 results.AddRange(response.ToList());
             }
 
-            return results.FirstOrDefault();
+            return results.First();
         }
 
         public async Task<AccumulationSummary> GetAccumulationSummary(string CryptoName)
@@ -128,6 +130,9 @@ namespace CryptoBotCore.CosmosDB
 
         public async Task UpdateItemAsync(AccumulationSummary item)
         {
+            if(item.CryptoName == null){
+                throw new Exception();
+            }
             await this.container.UpsertItemAsync<AccumulationSummary>(item, new PartitionKey(item.CryptoName.ToString()));
         }
     }

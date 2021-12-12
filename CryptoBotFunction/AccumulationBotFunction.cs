@@ -45,8 +45,8 @@ namespace CryptoBotFunction
 
             BotConfiguration.WithdrawalAddress = config["WithdrawalAddress"];
 
-            var isPercentageFeeValid = Double.TryParse(config["MaxWithdrawalPercentageFee"], out double MaxWithdrawalPercentageFee);
-            BotConfiguration.MaxWithdrawalPercentageFee = isPercentageFeeValid ? MaxWithdrawalPercentageFee : 0.001;
+            var isPercentageFeeValid = decimal.TryParse(config["MaxWithdrawalPercentageFee"], out decimal MaxWithdrawalPercentageFee);
+            BotConfiguration.MaxWithdrawalPercentageFee = isPercentageFeeValid ? MaxWithdrawalPercentageFee : 0.001m; // HARDCODED
 
             var isMaxWithdrawalAbsoluteFeeValid = Int32.TryParse(config["MaxWithdrawalAbsoluteFee"], out int MaxWithdrawalAbsoluteFee);
             BotConfiguration.MaxWithdrawalAbsoluteFee = isMaxWithdrawalAbsoluteFeeValid ? MaxWithdrawalAbsoluteFee : -1;

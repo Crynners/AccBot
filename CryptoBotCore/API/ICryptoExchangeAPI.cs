@@ -13,22 +13,23 @@ namespace CryptoBotCore.API
         /// Method which returns withdrawal fee for the acumulating cryptocurrency
         /// </summary>
         /// <returns>Absolute value of fee in the crypto currency</returns>
-        public Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null);
+        public Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null);
 
         /// <summary>
         /// Method which returns taker fee
         /// </summary>
         /// <returns>Taker fee in percent</returns>
-        public Task<double> getTakerFee();
+        public Task<decimal> getTakerFee();
 
         Task<List<WalletBalances>> getBalancesAsync();
 
-        Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress);
+        Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress);
 
         /// <summary>
         /// Method represents buying of cryptocurrency
         /// </summary>
         /// <param name="amount">Amount of FIAT currency</param>
-        public Task<string> buyOrderAsync(double amount);
+        /// <returns>Order id</returns>
+        public Task<string> buyOrderAsync(decimal amount);
     }
 }

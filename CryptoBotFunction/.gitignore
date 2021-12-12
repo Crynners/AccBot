@@ -4,6 +4,9 @@
 # Azure Functions localsettings file
 local.settings.json
 
+# Output of UpdateProductionFromDev.ps1
+AccBot.zip
+
 # User-specific files
 *.suo
 *.user

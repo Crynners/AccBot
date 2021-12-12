@@ -40,14 +40,14 @@ namespace CryptoBotCore.API
 
         }
 
-        public async Task<string> buyOrderAsync(double amount)
+        public async Task<string> buyOrderAsync(decimal amount)
         {
             var callResult = await client.Spot.PlaceOrderAsync($"{pair_base}{pair_quote}", Guid.NewGuid().ToString(), KucoinOrderSide.Buy, KucoinNewOrderType.Market, funds: (decimal)amount);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -63,7 +63,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -71,15 +71,14 @@ namespace CryptoBotCore.API
 
                 foreach (var account in callResult.Data)
                 {
-                    wallets.Add(new WalletBalances(account.Currency, Convert.ToDouble(account.Available)));
+                    wallets.Add(new WalletBalances(account.Currency, account.Available));
                 }
-                
 
                 return wallets;
             }
         }
 
-        public async Task<double> getTakerFee()
+        public async Task<decimal> getTakerFee()
         {
             var callResult = await client.Spot.GetSymbolTradingFeesAsync(new List<string> { $"{pair_base}{pair_quote}" });
 
@@ -87,19 +86,17 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
-
                 // Call succeeded, callResult.Data will have the resulting data
-                var takerFee = callResult.Data.Where(x => x.Symbol == $"{pair_base}{pair_quote}").FirstOrDefault().TakerFeeRate;
-                return Convert.ToDouble(takerFee);
+                var takerFee = callResult.Data.Where(x => x.Symbol == $"{pair_base}{pair_quote}").First().TakerFeeRate;
+                return takerFee;
             }
-
         }
 
-        public async Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
+        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
             var callResult = await client.Spot.GetWithdrawalQuotasAsync(this.pair_base);
 
@@ -107,26 +104,25 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
                 var withdrawInfo = callResult.Data.WithdrawMinFee;
-                return Convert.ToDouble(withdrawInfo);
+                return withdrawInfo;
             }
-
         }
 
-        public async Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
+        public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
-            var callResult = await client.Spot.WithdrawAsync(this.pair_base, destinationAddress, (decimal)amount);
+            var callResult = await client.Spot.WithdrawAsync(this.pair_base, destinationAddress, amount);
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {

@@ -50,7 +50,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -65,27 +65,21 @@ namespace CryptoBotCore.API
             }
         }
 
-        public async Task<string> buyOrderAsync(double amount)
+        public async Task<string> buyOrderAsync(decimal amount)
         {
-            var baseAmount = (decimal)amount / (await getCurrentPrice());
-
-#if DEBUG
-            // We don't want to buy for real as we're in a test/debug scenario
-            return "";
-#else
+            var baseAmount = amount / (await getCurrentPrice());
             var callResult = await client.PlaceOrderAsync($"{pair_base}/{pair_quote}", FTX.Net.Enums.OrderSide.Buy, FTX.Net.Enums.OrderType.Market, quantity: baseAmount, subaccountName: account);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
                 return callResult.Data.Id.ToString();
             }
-#endif
         }
 
         public async Task<List<WalletBalances>> getBalancesAsync()
@@ -95,7 +89,7 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
@@ -111,7 +105,7 @@ namespace CryptoBotCore.API
                         var ftxAccountBalances = ftxAccounts.Value;
                         foreach (var entry in ftxAccountBalances)
                         {
-                            wallets.Add(new WalletBalances(entry.Asset, Convert.ToDouble(entry.Free)));
+                            wallets.Add(new WalletBalances(entry.Asset, entry.Free));
                         }
                     }
                 }
@@ -119,7 +113,7 @@ namespace CryptoBotCore.API
             }
         }
 
-        public async Task<double> getTakerFee()
+        public async Task<decimal> getTakerFee()
         {
             var callResult = await client.GetAccountInfoAsync();
 
@@ -127,40 +121,40 @@ namespace CryptoBotCore.API
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return Convert.ToDouble(callResult.Data.TakerFee);
+                return callResult.Data.TakerFee;
             }
         }
 
-        public async Task<double> getWithdrawalFeeAsync(double? amount = null, string destinationAddress = null)
+        public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
-            var callResult = await client.GetWithdrawalFeesAsync(this.pair_base, (decimal)(amount??0), destinationAddress??""); // protecting from null values as the underlying lib don't support them
+            var callResult = await client.GetWithdrawalFeesAsync(this.pair_base, (amount??0m), destinationAddress??""); // protecting from null values as the underlying lib don't support them
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return Convert.ToDouble(callResult.Data.Fee);
+                return callResult.Data.Fee;
             }
         }
 
-        public async Task<WithdrawalStateEnum> withdrawAsync(double amount, string destinationAddress)
+        public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
             var callResult = await client.WithdrawAsync(this.pair_base, Convert.ToDecimal(amount), destinationAddress);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
                 // Call failed, check callResult.Error for more info
-                throw new Exception(callResult.Error.Message);
+                throw new Exception(callResult.Error?.Message);
             }
             else
             {
