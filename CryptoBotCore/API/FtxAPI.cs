@@ -45,7 +45,9 @@ namespace CryptoBotCore.API
 
         private async Task<decimal> getCurrentPrice()
         {
-            var callResult = await client.GetOrderBookAsync($"{pair_base}/{pair_quote}", 0);
+            var callResult = await client.GetOrderBookAsync($"{pair_base}/{pair_quote}", 20); 
+            // depth of the orderbook arbitrarly set to 20 (default value according to the official FTX api doc)
+            // depth can't be set to 0 or we get an error 400 with the answer "Depth cannot be negative"
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
