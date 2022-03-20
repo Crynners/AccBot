@@ -80,6 +80,7 @@ namespace CryptoBotCore.API
         public async Task<string> buyOrderAsync(decimal amount)
         {
             int wait = 0;
+            var attempt = 0;
             do
             {
                 try
@@ -104,9 +105,14 @@ namespace CryptoBotCore.API
                 }
                 catch (Exception ex)
                 {
+                    attempt++;
+                    if (attempt >= 3)
+                    {
+                        throw new Exception(JsonConvert.SerializeObject(ex));
+                    }
                     Log.LogError(JsonConvert.SerializeObject(ex));
                     wait = (wait == 0) ? 200 : wait * 2;
-                    Thread.Sleep(wait);
+                    await Task.Delay(wait);
                 }
             } while (true);
         }
@@ -125,6 +131,7 @@ namespace CryptoBotCore.API
             }
 
             int wait = 0;
+            var attempt = 0;
             do
             {
                 try
@@ -144,10 +151,15 @@ namespace CryptoBotCore.API
                 }
                 catch (Exception ex)
                 {
+                    attempt++;
+                    if (attempt >= 3)
+                    {
+                        throw new Exception(JsonConvert.SerializeObject(ex));
+                    }
                     Log.LogError(JsonConvert.SerializeObject(ex));
 
                     wait = (wait == 0) ? 200 : wait * 2;
-                    Thread.Sleep(wait);
+                    await Task.Delay(wait);
                 }
             } while (true);
         }
@@ -192,13 +204,13 @@ namespace CryptoBotCore.API
                     Log.LogError(JsonConvert.SerializeObject(ex));
                     attempt++;
 
-                    if(attempt >= 5)
+                    if(attempt >= 3)
                     {
                         throw new Exception(JsonConvert.SerializeObject(ex));
                     }
 
                     wait = (wait == 0) ? 200 : wait * 2;
-                    Thread.Sleep(wait);
+                    await Task.Delay(wait);
                 }
             } while (true);
         }
@@ -249,10 +261,15 @@ namespace CryptoBotCore.API
                 {
                     Log.LogError(JsonConvert.SerializeObject(ex));
                     attempt++;
+
+                    if (attempt >= 3)
+                    {
+                        throw new Exception(JsonConvert.SerializeObject(ex));
+                    }
                     wait = (wait == 0) ? 200 : wait * 2;
-                    Thread.Sleep(wait);
+                    await Task.Delay(wait);
                 }
-            } while (attempt < 5);
+            } while (true);
 
             throw new Exception("Coinmate API is currently not available.");
         }

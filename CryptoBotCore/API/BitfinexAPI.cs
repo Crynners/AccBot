@@ -1,17 +1,13 @@
 ﻿
 using Bitfinex.Net;
+using Bitfinex.Net.Clients;
 using Bitfinex.Net.Objects;
 using Bittrex.Net;
 using Bittrex.Net.Objects;
 using CryptoBotCore.Models;
 using CryptoExchange.Net.Authentication;
-using Kucoin.Net.Objects;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace CryptoBotCore.API
 {
@@ -45,7 +41,7 @@ namespace CryptoBotCore.API
 
         private async Task<decimal> getCurrentPrice()
         {
-            var callResult = await client.GetTickerAsync($"{pair_base}{pair_quote}");
+            var callResult = await client.SpotApi.ExchangeData.GetTickerAsync($"{pair_base}{pair_quote}");
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -55,7 +51,7 @@ namespace CryptoBotCore.API
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return callResult.Data.Where(x => x.Symbol == $"{pair_base}{pair_quote}").First().Ask;
+                return callResult.Data.BestAskPrice;
             }
         }
 
@@ -63,9 +59,9 @@ namespace CryptoBotCore.API
         {
             var currentPrice = await getCurrentPrice();
             var baseAmount = (decimal)amount / currentPrice;
-            var callResult = await client.PlaceOrderAsync($"{pair_base}{pair_quote}", 
-                                                            Bitfinex.Net.Objects.OrderSide.Buy, 
-                                                            Bitfinex.Net.Objects.OrderType.Market,
+            var callResult = await client.SpotApi.Trading.PlaceOrderAsync($"{pair_base}{pair_quote}", 
+                                                            Bitfinex.Net.Enums.OrderSide.Buy, 
+                                                            Bitfinex.Net.Enums.OrderType.Market,
                                                             currentPrice,
                                                             baseAmount);
             // Make sure to check if the call was successful
@@ -83,7 +79,7 @@ namespace CryptoBotCore.API
 
         public async Task<List<WalletBalances>> getBalancesAsync()
         {
-            var callResult = await client.GetBalancesAsync();
+            var callResult = await client.SpotApi.Account.GetBalancesAsync();
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -96,7 +92,7 @@ namespace CryptoBotCore.API
 
                 foreach (var account in callResult.Data)
                 {
-                    wallets.Add(new WalletBalances(account.Currency, account.BalanceAvailable??0m));
+                    wallets.Add(new WalletBalances(account.Asset, account.Available??0m));
                 }
 
                 return wallets;
@@ -105,7 +101,7 @@ namespace CryptoBotCore.API
 
         public async Task<decimal> getTakerFee()
         {
-            var callResult = await client.GetAccountInfoAsync();
+            var callResult = await client.SpotApi.Account.GetAccountInfoAsync();
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -124,7 +120,7 @@ namespace CryptoBotCore.API
 
         public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
-            var callResult = await client.GetWithdrawalFeesAsync();
+            var callResult = await client.SpotApi.Account.GetWithdrawalFeesAsync();
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -161,7 +157,7 @@ namespace CryptoBotCore.API
                 withdrawal_type = this.pair_base.ToLower();
             }
 
-            var callResult = await client.WithdrawAsync(withdrawal_type, WithdrawWallet.Trading, (decimal)amount, destinationAddress);
+            var callResult = await client.SpotApi.Account.WithdrawAsync(withdrawal_type, Bitfinex.Net.Enums.WithdrawWallet.Trading, (decimal)amount, destinationAddress);
 
             // Make sure to check if the call was successful
             if (!callResult.Success)

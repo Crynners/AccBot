@@ -1,15 +1,10 @@
 ﻿
 using Bittrex.Net;
+using Bittrex.Net.Clients;
 using Bittrex.Net.Objects;
 using CryptoBotCore.Models;
 using CryptoExchange.Net.Authentication;
-using Kucoin.Net.Objects;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CryptoBotCore.API
 {
@@ -43,7 +38,7 @@ namespace CryptoBotCore.API
 
         private async Task<decimal> getCurrentPrice()
         {
-            var callResult = await client.GetOrderBookAsync($"{pair_base}{pair_quote}", 0);
+            var callResult = await client.SpotApi.ExchangeData.GetOrderBookAsync($"{pair_base}{pair_quote}", 0);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -53,17 +48,17 @@ namespace CryptoBotCore.API
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return callResult.Data.Ask.First().Price;
+                return callResult.Data.Asks.First().Price;
             }
         }
 
         public async Task<string> buyOrderAsync(decimal amount)
         {
             var baseAmount = (decimal)amount / (await getCurrentPrice());
-            var callResult = await client.PlaceOrderAsync($"{pair_base}{pair_quote}", 
-                                                            Bittrex.Net.Objects.OrderSide.Buy, 
-                                                            Bittrex.Net.Objects.OrderType.Market,
-                                                            TimeInForce.FillOrKill,
+            var callResult = await client.SpotApi.Trading.PlaceOrderAsync($"{pair_base}{pair_quote}", 
+                                                            Bittrex.Net.Enums.OrderSide.Buy, 
+                                                            Bittrex.Net.Enums.OrderType.Market,
+                                                            Bittrex.Net.Enums.TimeInForce.FillOrKill,
                                                             baseAmount);
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -80,7 +75,7 @@ namespace CryptoBotCore.API
 
         public async Task<List<WalletBalances>> getBalancesAsync()
         {
-            var callResult = await client.GetBalancesAsync();
+            var callResult = await client.SpotApi.Account.GetBalancesAsync();
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -93,7 +88,7 @@ namespace CryptoBotCore.API
 
                 foreach (var account in callResult.Data)
                 {
-                    wallets.Add(new WalletBalances(account.Currency, account.Available));
+                    wallets.Add(new WalletBalances(account.Asset, account.Available));
                 }
                 
 
@@ -103,7 +98,7 @@ namespace CryptoBotCore.API
 
         public async Task<decimal> getTakerFee()
         {
-            var callResult = await client.GetTradingFeesAsync();
+            var callResult = await client.SpotApi.Account.GetTradingFeesAsync();
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -127,7 +122,7 @@ namespace CryptoBotCore.API
 
         public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
-            var callResult = await client.WithdrawAsync(this.pair_base, (decimal)amount, destinationAddress);
+            var callResult = await client.SpotApi.Account.WithdrawAsync(this.pair_base, (decimal)amount, destinationAddress);
 
             // Make sure to check if the call was successful
             if (!callResult.Success)

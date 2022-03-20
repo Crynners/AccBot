@@ -16,7 +16,11 @@ namespace CryptoBotFunction
     public static class AccumulationBotFunction
     {
         [FunctionName("AccumulationBotFunction")]
-        public static void Run([TimerTrigger("%DayDividerSchedule%")] TimerInfo myTimer, ILogger log)
+        public static void Run([TimerTrigger("%DayDividerSchedule%"
+            #if DEBUG || TEST
+            , RunOnStartup=true
+            #endif
+            )] TimerInfo myTimer, ILogger log)
         {
             LoadAppSettings();
 
@@ -28,6 +32,7 @@ namespace CryptoBotFunction
         {
             var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
             var builder = new ConfigurationBuilder()
+                .AddJsonFile($"local.settings.json", true, true)
               .AddJsonFile($"appsettings.json", true, true)
               .AddJsonFile($"appsettings.{env}.json", true, true)
               .AddEnvironmentVariables();

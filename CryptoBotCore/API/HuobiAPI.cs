@@ -1,12 +1,9 @@
 ﻿using CryptoBotCore.Models;
 using CryptoExchange.Net.Authentication;
-using Huobi.Net;
+using Huobi.Net.Clients;
+using Huobi.Net.Objects;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace CryptoBotCore.API
 {
@@ -35,7 +32,7 @@ namespace CryptoBotCore.API
 
         private async Task<decimal> getCurrentPrice()
         {
-            var callResult = await client.GetOrderBookAsync($"{pair_base}{pair_quote}", 0);
+            var callResult = await client.SpotApi.ExchangeData.GetOrderBookAsync($"{pair_base}{pair_quote}", 0);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -53,14 +50,18 @@ namespace CryptoBotCore.API
         {
             var baseAmount = amount / (await getCurrentPrice());
 
-            var accountResult = await client.GetAccountsAsync();
+            var accountResult = await client.SpotApi.Account.GetAccountsAsync();
             if (!accountResult.Success)
             {
                 // Call failed, check accountResult .Error for more info
                 throw new Exception(accountResult.Error?.Message);
             }
 
-            var callResult = await client.PlaceOrderAsync(accountResult.Data.First().Id, $"{this.pair_base}{this.pair_quote}", Huobi.Net.Objects.HuobiOrderType.MarketBuy, baseAmount);
+            var callResult = await client.SpotApi.Trading.PlaceOrderAsync(accountResult.Data.First().Id, 
+                                                                          $"{this.pair_base}{this.pair_quote}", 
+                                                                          Huobi.Net.Enums.OrderSide.Buy,
+                                                                          Huobi.Net.Enums.OrderType.Market,
+                                                                          baseAmount);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -75,7 +76,7 @@ namespace CryptoBotCore.API
 
         public async Task<List<WalletBalances>> getBalancesAsync()
         {
-            var accountResult = await client.GetAccountsAsync();
+            var accountResult = await client.SpotApi.Account.GetAccountsAsync();
             if (!accountResult.Success)
             {
                 // Call failed, check accountResult .Error for more info
@@ -83,7 +84,7 @@ namespace CryptoBotCore.API
             }
 
 
-            var callResult = await client.GetBalancesAsync(accountResult.Data.First().Id);
+            var callResult = await client.SpotApi.Account.GetBalancesAsync(accountResult.Data.First().Id);
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -93,13 +94,13 @@ namespace CryptoBotCore.API
             }
             else
             {
-                var balances = callResult.Data.Where(x => x.Type == Huobi.Net.Objects.HuobiBalanceType.Trade);
+                var balances = callResult.Data.Where(x => x.Type == Huobi.Net.Enums.BalanceType.Trade);
 
                 var wallets = new List<WalletBalances>();
 
                 foreach(var item in balances)
                 {
-                    wallets.Add(new WalletBalances(item.Currency, item.Balance));
+                    wallets.Add(new WalletBalances(item.Asset, item.Balance));
                 }
 
                 return wallets;
@@ -129,7 +130,7 @@ namespace CryptoBotCore.API
 
         public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
-            var accountResult = await client.GetAccountsAsync();
+            var accountResult = await client.SpotApi.Account.GetAccountsAsync();
             if (!accountResult.Success)
             {
                 // Call failed, check accountResult .Error for more info
@@ -137,7 +138,7 @@ namespace CryptoBotCore.API
             }
 
             var fee = await getWithdrawalFeeAsync();
-            var callResult = await client.WithdrawAsync(destinationAddress, this.pair_base.ToLower(), Convert.ToDecimal(amount), Convert.ToDecimal(fee));
+            var callResult = await client.SpotApi.Account.WithdrawAsync(destinationAddress, this.pair_base.ToLower(), Convert.ToDecimal(amount), Convert.ToDecimal(fee));
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {

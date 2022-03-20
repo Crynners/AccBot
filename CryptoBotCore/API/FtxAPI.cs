@@ -2,14 +2,11 @@
 using Binance.Net.Objects;
 using CryptoBotCore.Models;
 using CryptoExchange.Net.Authentication;
-using FTX.Net;
+using FTX.Net.Clients;
 using FTX.Net.Objects;
+using FTX.Net.Objects.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace CryptoBotCore.API
 {
@@ -45,9 +42,7 @@ namespace CryptoBotCore.API
 
         private async Task<decimal> getCurrentPrice()
         {
-            var callResult = await client.GetOrderBookAsync($"{pair_base}/{pair_quote}", 20); 
-            // depth of the orderbook arbitrarly set to 20 (default value according to the official FTX api doc)
-            // depth can't be set to 0 or we get an error 400 with the answer "Depth cannot be negative"
+            var callResult = await client.TradeApi.CommonSpotClient.GetOrderBookAsync($"{pair_base}/{pair_quote}"); 
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -70,7 +65,7 @@ namespace CryptoBotCore.API
         public async Task<string> buyOrderAsync(decimal amount)
         {
             var baseAmount = amount / (await getCurrentPrice());
-            var callResult = await client.PlaceOrderAsync($"{pair_base}/{pair_quote}", FTX.Net.Enums.OrderSide.Buy, FTX.Net.Enums.OrderType.Market, quantity: baseAmount, subaccountName: account);
+            var callResult = await client.TradeApi.Trading.PlaceOrderAsync($"{pair_base}/{pair_quote}", FTX.Net.Enums.OrderSide.Buy, FTX.Net.Enums.OrderType.Market, quantity: baseAmount, subaccountName: account);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -86,7 +81,7 @@ namespace CryptoBotCore.API
 
         public async Task<List<WalletBalances>> getBalancesAsync()
         {
-            var callResult = await client.GetAllAccountBalancesAsync();
+            var callResult = await client.TradeApi.Account.GetAllAccountBalancesAsync();
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -107,7 +102,7 @@ namespace CryptoBotCore.API
                         var ftxAccountBalances = ftxAccounts.Value;
                         foreach (var entry in ftxAccountBalances)
                         {
-                            wallets.Add(new WalletBalances(entry.Asset, entry.Free));
+                            wallets.Add(new WalletBalances(entry.Asset, entry.Available));
                         }
                     }
                 }
@@ -117,7 +112,7 @@ namespace CryptoBotCore.API
 
         public async Task<decimal> getTakerFee()
         {
-            var callResult = await client.GetAccountInfoAsync();
+            var callResult = await client.TradeApi.Account.GetAccountInfoAsync();
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -134,7 +129,7 @@ namespace CryptoBotCore.API
 
         public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
-            var callResult = await client.GetWithdrawalFeesAsync(this.pair_base, (amount??0m), destinationAddress??""); // protecting from null values as the underlying lib don't support them
+            var callResult = await client.TradeApi.Account.GetWithdrawalFeesAsync(this.pair_base, (amount??0m), destinationAddress??""); // protecting from null values as the underlying lib don't support them
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -151,7 +146,7 @@ namespace CryptoBotCore.API
 
         public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
-            var callResult = await client.WithdrawAsync(this.pair_base, Convert.ToDecimal(amount), destinationAddress);
+            var callResult = await client.TradeApi.Account.WithdrawAsync(this.pair_base, Convert.ToDecimal(amount), destinationAddress);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {

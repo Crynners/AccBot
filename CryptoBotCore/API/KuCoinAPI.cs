@@ -1,13 +1,8 @@
 ﻿
 using CryptoBotCore.Models;
-using Kucoin.Net;
+using Kucoin.Net.Clients;
 using Kucoin.Net.Objects;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CryptoBotCore.API
 {
@@ -42,7 +37,10 @@ namespace CryptoBotCore.API
 
         public async Task<string> buyOrderAsync(decimal amount)
         {
-            var callResult = await client.Spot.PlaceOrderAsync($"{pair_base}{pair_quote}", Guid.NewGuid().ToString(), KucoinOrderSide.Buy, KucoinNewOrderType.Market, funds: (decimal)amount);
+            var callResult = await client.SpotApi.Trading.PlaceOrderAsync($"{pair_base}{pair_quote}", Kucoin.Net.Enums.OrderSide.Buy, 
+                                                                            Kucoin.Net.Enums.NewOrderType.Market,
+                                                                            
+                                                                            quoteQuantity: (decimal)amount);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -52,13 +50,13 @@ namespace CryptoBotCore.API
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                return callResult.Data.OrderId;
+                return callResult.Data.Id;
             }
         }
 
         public async Task<List<WalletBalances>> getBalancesAsync()
         {
-            var callResult = await client.Spot.GetAccountsAsync();
+            var callResult = await client.SpotApi.Account.GetAccountsAsync();
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -71,7 +69,7 @@ namespace CryptoBotCore.API
 
                 foreach (var account in callResult.Data)
                 {
-                    wallets.Add(new WalletBalances(account.Currency, account.Available));
+                    wallets.Add(new WalletBalances(account.Asset, account.Available));
                 }
 
                 return wallets;
@@ -80,7 +78,7 @@ namespace CryptoBotCore.API
 
         public async Task<decimal> getTakerFee()
         {
-            var callResult = await client.Spot.GetSymbolTradingFeesAsync(new List<string> { $"{pair_base}{pair_quote}" });
+            var callResult = await client.SpotApi.Account.GetSymbolTradingFeesAsync(new List<string> { $"{pair_base}{pair_quote}" });
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -98,7 +96,7 @@ namespace CryptoBotCore.API
 
         public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
-            var callResult = await client.Spot.GetWithdrawalQuotasAsync(this.pair_base);
+            var callResult = await client.SpotApi.Account.GetWithdrawalQuotasAsync(this.pair_base);
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -116,7 +114,7 @@ namespace CryptoBotCore.API
 
         public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
-            var callResult = await client.Spot.WithdrawAsync(this.pair_base, destinationAddress, amount);
+            var callResult = await client.SpotApi.Account.WithdrawAsync(this.pair_base, destinationAddress, amount);
 
             // Make sure to check if the call was successful
             if (!callResult.Success)

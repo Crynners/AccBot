@@ -1,13 +1,10 @@
 ﻿
 using CryptoBotCore.Models;
 using CryptoExchange.Net.Authentication;
-using Kraken.Net;
+using Kraken.Net.Clients;
+using Kraken.Net.Objects;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace CryptoBotCore.API
 {
@@ -46,7 +43,7 @@ namespace CryptoBotCore.API
 
         private async Task<decimal> getCurrentPrice()
         {
-            var callResult = await client.GetOrderBookAsync($"{pair_base}{pair_quote}", 0);
+            var callResult = await client.SpotApi.ExchangeData.GetOrderBookAsync($"{pair_base}{pair_quote}", 0);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -64,7 +61,10 @@ namespace CryptoBotCore.API
         {
             var baseAmount = amount / (await getCurrentPrice());
 
-            var callResult = await client.PlaceOrderAsync($"{pair_base}{pair_quote}", Kraken.Net.Objects.OrderSide.Buy, Kraken.Net.Objects.OrderType.Market, quantity: baseAmount);
+            var callResult = await client.SpotApi.Trading.PlaceOrderAsync($"{pair_base}{pair_quote}", 
+                                                                            Kraken.Net.Enums.OrderSide.Buy, 
+                                                                            Kraken.Net.Enums.OrderType.Market, 
+                                                                            quantity: baseAmount);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -80,7 +80,7 @@ namespace CryptoBotCore.API
 
         public async Task<List<WalletBalances>> getBalancesAsync()
         {
-            var callResult = await client.GetAvailableBalancesAsync();
+            var callResult = await client.SpotApi.Account.GetAvailableBalancesAsync();
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -104,7 +104,7 @@ namespace CryptoBotCore.API
 
         public async Task<decimal> getTakerFee()
         {
-            var callResult = await client.GetSymbolsAsync(new List<string> { $"{pair_base}{pair_quote}" });
+            var callResult = await client.SpotApi.ExchangeData.GetSymbolsAsync(new List<string> { $"{pair_base}{pair_quote}" });
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -122,7 +122,7 @@ namespace CryptoBotCore.API
 
         public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
-            var callResult = await client.GetWithdrawInfoAsync(this.pair_base, this.withdrawal_keyname, (amount??0m));
+            var callResult = await client.SpotApi.Account.GetWithdrawInfoAsync(this.pair_base, this.withdrawal_keyname, (amount??0m));
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -140,7 +140,7 @@ namespace CryptoBotCore.API
 
         public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
-            var callResult = await client.WithdrawAsync(this.pair_base, this.withdrawal_keyname, amount);
+            var callResult = await client.SpotApi.Account.WithdrawAsync(this.pair_base, this.withdrawal_keyname, amount);
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
