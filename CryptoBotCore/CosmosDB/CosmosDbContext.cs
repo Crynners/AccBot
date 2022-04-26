@@ -103,7 +103,7 @@ namespace CryptoBotCore.CosmosDB
                 results.AddRange(response.ToList());
             }
 
-            return results.First();
+            return results.FirstOrDefault();
         }
 
         public async Task<AccumulationSummary> GetAccumulationSummary(string CryptoName)
