@@ -5,71 +5,78 @@ using CryptoBotCore.BotStrategies;
 using CryptoBotCore.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Azure.WebJobs.Host;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.Functions.Worker;
 
 namespace CryptoBotFunction
 {
-    public static class AccumulationBotFunction
+    public class AccumulationBotFunction
     {
-        [FunctionName("AccumulationBotFunction")]
-        public static void Run([TimerTrigger("%DayDividerSchedule%"
+        private readonly ILogger<AccumulationBotFunction> _logger;
+        private readonly IConfiguration _configuration;
+
+        public AccumulationBotFunction(ILoggerFactory loggerFactory, IConfiguration configuration)
+        {
+            _logger = loggerFactory.CreateLogger<AccumulationBotFunction>();
+            _configuration = configuration; // Inject configuration
+        }
+
+        [Function("AccumulationBotFunction")]
+        public void Run([TimerTrigger("%DayDividerSchedule%"
             #if DEBUG || TEST
             , RunOnStartup=true
             #endif
-            )] TimerInfo myTimer, ILogger log)
+            )] TimerInfo myTimer)
         {
-            LoadAppSettings();
+            LoadAppSettings(); // Consider moving this logic to startup/DI
+            _logger.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
-            var accumulationBot = new AccumulationBot(log);
+            var accumulationBot = new AccumulationBot(_logger); // Pass the correct logger
             accumulationBot.Tick().GetAwaiter().GetResult();
+
+            if (myTimer.ScheduleStatus is not null)
+            {
+                _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
+            }
         }
 
-        private static void LoadAppSettings()
+        private void LoadAppSettings()
         {
-            var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            var builder = new ConfigurationBuilder()
-                .AddJsonFile($"local.settings.json", true, true)
-              .AddJsonFile($"appsettings.json", true, true)
-              .AddJsonFile($"appsettings.{env}.json", true, true)
-              .AddEnvironmentVariables();
+            BotConfiguration.Currency = _configuration["Currency"];
+            BotConfiguration.Fiat = _configuration["Fiat"];
+            BotConfiguration.UserName = _configuration["Name"];
+            BotConfiguration.Account = _configuration["Account"];
+            BotConfiguration.ChunkSize = Int32.Parse(_configuration["ChunkSize"] ?? "0"); // Added null check
 
-            var config = builder.Build();
+            var WithdrawalEnabledValid = bool.TryParse(_configuration["WithdrawalEnabled"], out bool WithdrawalEnabled);
+            BotConfiguration.WithdrawalEnabled = WithdrawalEnabledValid && WithdrawalEnabled;
 
-            BotConfiguration.Currency = config["Currency"];
-            BotConfiguration.Fiat = config["Fiat"];
-            BotConfiguration.UserName = config["Name"];
-            BotConfiguration.Account = config["Account"];
-            BotConfiguration.ChunkSize = Int32.Parse(config["ChunkSize"]);
+            BotConfiguration.WithdrawalAddress = _configuration["WithdrawalAddress"];
 
-            var WithdrawalEnabledValid = bool.TryParse(config["WithdrawalEnabled"], out bool WithdrawalEnabled);
-            BotConfiguration.WithdrawalEnabled = WithdrawalEnabledValid ? WithdrawalEnabled : false;
-
-            BotConfiguration.WithdrawalAddress = config["WithdrawalAddress"];
-
-            var isPercentageFeeValid = decimal.TryParse(config["MaxWithdrawalPercentageFee"], out decimal MaxWithdrawalPercentageFee);
+            var isPercentageFeeValid = decimal.TryParse(_configuration["MaxWithdrawalPercentageFee"], out decimal MaxWithdrawalPercentageFee);
             BotConfiguration.MaxWithdrawalPercentageFee = isPercentageFeeValid ? MaxWithdrawalPercentageFee : 0.001m; // HARDCODED
 
-            var isMaxWithdrawalAbsoluteFeeValid = Int32.TryParse(config["MaxWithdrawalAbsoluteFee"], out int MaxWithdrawalAbsoluteFee);
+            var isMaxWithdrawalAbsoluteFeeValid = Int32.TryParse(_configuration["MaxWithdrawalAbsoluteFee"], out int MaxWithdrawalAbsoluteFee);
             BotConfiguration.MaxWithdrawalAbsoluteFee = isMaxWithdrawalAbsoluteFeeValid ? MaxWithdrawalAbsoluteFee : -1;
 
-            BotConfiguration.TelegramChannel = config["TelegramChannel"];
-            BotConfiguration.TelegramBot = config["TelegramBot"];
-            BotConfiguration.CosmosDbEndpointUri = config["CosmosDbEndpointUri"];
-            BotConfiguration.CosmosDbPrimaryKey = config["CosmosDbPrimaryKey"];
+            BotConfiguration.TelegramChannel = _configuration["TelegramChannel"];
+            BotConfiguration.TelegramBot = _configuration["TelegramBot"];
+            BotConfiguration.CosmosDbEndpointUri = _configuration["CosmosDbEndpointUri"];
+            BotConfiguration.CosmosDbPrimaryKey = _configuration["CosmosDbPrimaryKey"];
 
-            BotConfiguration.CryptoExchangeAPIEnum = FillCryptoExchangeParameters(config);
+            BotConfiguration.CryptoExchangeAPIEnum = FillCryptoExchangeParameters(_configuration); // Pass IConfiguration
 
-            BotConfiguration.WithdrawalKeyName = config["WithdrawalKeyName"];
+            BotConfiguration.WithdrawalKeyName = _configuration["WithdrawalKeyName"];
+            _logger.LogInformation("Application settings loaded.");
         }
 
-        private static CryptoExchangeAPIEnum FillCryptoExchangeParameters(IConfigurationRoot config)
+        private CryptoExchangeAPIEnum FillCryptoExchangeParameters(IConfiguration config)
         {
             var exchangeName = config["ExchangeName"]?.ToLower();
             BotConfiguration.ExchangeCredentials = new Dictionary<ExchangeCredentialType, string>();
+            _logger.LogInformation($"Configuring exchange: {exchangeName}");
 
             if (String.IsNullOrEmpty(exchangeName) || exchangeName == "coinmate")
             {
@@ -121,6 +128,7 @@ namespace CryptoBotFunction
             }
             else
             {
+                _logger.LogError($"Exchange '{exchangeName}' is not implemented yet!");
                 throw new NotImplementedException($"Exchange '{exchangeName}' is not implemented yet!");
             }
         }
