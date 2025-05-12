@@ -20,10 +20,6 @@ if("coinmate" -eq $ExchangeName){
     $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
     $VariableNameFile = join-path -path $scriptPath -childpath "kraken_variables.ps1"
     . $VariableNameFile
-}elseif("ftx" -eq $ExchangeName){
-    $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
-    $VariableNameFile = join-path -path $scriptPath -childpath "ftx_variables.ps1"
-    . $VariableNameFile
 }elseif("binance" -eq $ExchangeName){
     $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
     $VariableNameFile = join-path -path $scriptPath -childpath "binance_variables.ps1"

@@ -119,12 +119,6 @@ namespace CryptoBotFunction
                 BotConfiguration.ExchangeCredentials[ExchangeCredentialType.Bitfinex_Secret] = config["BitfinexCredentials_Secret"];
                 return CryptoExchangeAPIEnum.Bitfinex;
             }
-            else if (exchangeName == "ftx")
-            {
-                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.FTX_Key] = config["FTXCredentials_Key"];
-                BotConfiguration.ExchangeCredentials[ExchangeCredentialType.FTX_Secret] = config["FTXCredentials_Secret"];
-                return CryptoExchangeAPIEnum.FTX;
-            }
             else
             {
                 throw new NotImplementedException($"Exchange '{exchangeName}' is not implemented yet!");

@@ -57,10 +57,6 @@ namespace CryptoBotCore.BotStrategies
                 case CryptoExchangeAPIEnum.Bittrex:
                     this.cryptoExchangeAPI = new BittrexAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
                     break;
-                case CryptoExchangeAPIEnum.FTX:
-                    this.cryptoExchangeAPI = new FtxAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}",
-                                                          BotConfiguration.Account, BotConfiguration.ExchangeCredentials, Log);
-                    break;
                 case CryptoExchangeAPIEnum.KuCoin:
                     this.cryptoExchangeAPI = new KuCoinAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
                     break;

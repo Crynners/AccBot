@@ -15,7 +15,6 @@ List of supported exchanges:
  - [Huobi](https://www.huobi.com/en-us/)
  - [Kraken](https://www.kraken.com/)
  - [Binance](https://www.binance.com/)
- - [FTX](https://ftx.com/)
  - [Bittrex](https://global.bittrex.com/)
  - [Bitfinex](https://www.bitfinex.com/)
  - [Coinbase](https://www.coinbase.com/)
@@ -24,7 +23,7 @@ List of supported exchanges:
 # Why DCA?
  - [<img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 /> 📝Explanation in Facebook Bitcoin Community CZ & SK by Josef Tětek ](https://www.facebook.com/groups/bitcoincz/posts/1758068064378420)
  - [<img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 /> 🎥Video on "Bitcoinovej kanál"](https://youtu.be/4y2VCEpiPQA)
- - [<img src="https://www.countryflags.com/wp-content/uploads/united-states-of-america-flag-png-large.png" width=25 height=16 /> 📝Even God Couldn’t Beat Dollar-Cost Averaging](https://ofdollarsanddata.com/even-god-couldnt-beat-dollar-cost-averaging/)
+ - [<img src="https://www.countryflags.com/wp-content/uploads/united-states-of-america-flag-png-large.png" width=25 height=16 /> 📝Even God Couldn't Beat Dollar-Cost Averaging](https://ofdollarsanddata.com/even-god-couldnt-beat-dollar-cost-averaging/)
 
 # Why AccBot?
 There are many different bots for buying cryptocurrencies, but quite often they are closed applications where you need to register, fill in API keys and the bot then buys/trade for you according to the rules. The downside is that the app probably collects data and statistics about your purchases, the code is closed, so you don't have full control over what the bot will actually do.
@@ -69,14 +68,14 @@ Our solution is fully decentralized in that everyone installs their own bot in t
 ### GENERAL USER-DEFINED VARIABLES ###
 ######################################
 # Exchange you want to link the bot to
-# (POSSIBLE VALUES: coinmate, huobi, binance, kraken, ftx, coinbase, kucoin, bitfinex, bittrex)
+# (POSSIBLE VALUES: coinmate, huobi, binance, kraken, coinbase, kucoin, bitfinex, bittrex)
 $ExchangeName='coinmate'
 
 #Name that appears in Telegram notifications
 $Name='anonymous'
 
 # The name of the AccBot you want to deploy. Used when you want to accumulate multiple pairs at once.
-# Usage: 
+# Usage:
 # 1. Run the script with e.g. AccBotName='BTC-AccBot' with the configuration for the first bot
 # 2. Run a script with e.g. AccBotName='ETH-AccBot' with the configuration for the second bot
 # (ALLOWED VALUES: "a-z", "0-9", "-")
@@ -224,23 +223,6 @@ $CreateAzureLog = 'false'
   # API Secret from Binance API
   $BinanceCredentials_Secret='XXX'
   ```
-   - For **FTX**, fill in the following values:
-  ```powershell
-  # Crypto you want to buy on Binance (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH, ...)
-  $Currency='BTC'
-
-  # Fiat currency you want to buy crypto with on Binance (POSSIBLE VALUES: USDT, BUSD, USDC, DAI)
-  $Fiat='USDT'
-
-  # The size of the USDT (or $Fiat) chunk you want to buy regularly (MINIMUM: by exchange)
-  $ChunkSize='5'
-
-  # API Key from Binance API
-  $FTXCredentials_Key='XXX'
-
-  # API Secret from Binance API
-  $FTXCredentials_Secret='XXX'
-  ``` 
    - For **Bitfinex**, fill in the following values:
   ```powershell
   # Crypto you want to buy on Kraken (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH)

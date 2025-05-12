@@ -12,7 +12,7 @@ Seznam podporovaných burz:
  - [Huobi](https://www.huobi.com/en-us/)
  - [Kraken](https://www.kraken.com/)
  - [Binance](https://www.binance.com/)
- - [FTX](https://ftx.com/)
+
  - [Bittrex](https://global.bittrex.com/)
  - [Bitfinex](https://www.bitfinex.com/)
  - [Coinbase](https://www.coinbase.com/)
@@ -21,7 +21,7 @@ Seznam podporovaných burz:
 # Proč DCA?
  - [<img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 /> 📝Post na facebookové skupině bitcoinové CZ/SK komunitě od Josefa Tětka](https://www.facebook.com/groups/bitcoincz/posts/1758068064378420)
  - [<img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 /> 🎥Video na Bitcoinovém kanálu](https://youtu.be/4y2VCEpiPQA)
- - [<img src="https://www.countryflags.com/wp-content/uploads/united-states-of-america-flag-png-large.png" width=25 height=16 /> 📝Blog post: "Even God Couldn’t Beat Dollar-Cost Averaging"](https://ofdollarsanddata.com/even-god-couldnt-beat-dollar-cost-averaging/)
+ - [<img src="https://www.countryflags.com/wp-content/uploads/united-states-of-america-flag-png-large.png" width=25 height=16 /> 📝Blog post: "Even God Couldn't Beat Dollar-Cost Averaging"](https://ofdollarsanddata.com/even-god-couldnt-beat-dollar-cost-averaging/)
 
 # Proč AccBot?
 Různých botů na nakupování kryptoměn existuje již celá řada, nicméně dost často se jedná o uzavřené aplikace, kam je potřeba se zaregistrovat, vyplnit API klíče a bot pak za vás nakupuje / trejduje dle daných pravidel. Nevýhoda je, že daná aplikace pravděpodobně sbírá data a statistiky o vašich nákupech, kód je uzavřený, čili nemáte plnou kontrolu nad tím, co bot vlastně bude dělat.
@@ -221,23 +221,6 @@ $CreateAzureLog = 'false'
   # API Secret z Binance API
   $BinanceCredentials_Secret='XXX'
   ```
-   - V případě **FTX** vyplňte následující hodnoty:
-  ```powershell
-  # Crypto, které na Binance chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH, ...)
-  $Currency='BTC'
-
-  # Fiat měna, za kterou chcete na Binance nakupovat crypto (MOŽNÉ HODNOTY: USDT, BUSD, USDC, DAI)
-  $Fiat='USDT'
-
-  # Velikost chunku v USDT (resp. ve $Fiat), který chcete pravidelně nakupovat (MINIMUM: dle burzy)
-  $ChunkSize='5'
-
-  # API Key z Binance API
-  $FTXCredentials_Key='XXX'
-
-  # API Secret z Binance API
-  $FTXCredentials_Secret='XXX'
-  ``` 
    - V případě **Bitfinex** vyplňte následující hodnoty:
   ```powershell
   # Crypto, které na Krakenu chcete nakupovat (MOŽNÉ HODNOTY: BTC, LTC, ETH, XRP, DASH)
