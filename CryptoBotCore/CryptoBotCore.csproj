@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Test</Configurations>
@@ -19,18 +19,17 @@
 
   <ItemGroup>
     <PackageReference Include="Binance.Net" Version="8.0.9" />
-    <PackageReference Include="Bitfinex.Net" Version="5.0.6" />
+    <PackageReference Include="Bitfinex.Net" Version="7.11.0" />
     <PackageReference Include="Bittrex.Net" Version="7.0.6" />
     <PackageReference Include="Coinbase" Version="6.0.1" />
-    <PackageReference Include="FTX.Net" Version="1.0.6" />
     <PackageReference Include="Huobi.Net" Version="4.0.7" />
-    <PackageReference Include="KrakenExchange.Net" Version="3.0.5" />
-    <PackageReference Include="Kucoin.Net" Version="4.0.5" />
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.26.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
-    <PackageReference Include="Telegram.Bot" Version="17.0.0" />
+    <PackageReference Include="KrakenExchange.Net" Version="5.3.0" />
+    <PackageReference Include="Kucoin.Net" Version="5.19.0" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.46.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />
+    <PackageReference Include="Telegram.Bot" Version="22.1.3" />
   </ItemGroup>
 
 </Project>

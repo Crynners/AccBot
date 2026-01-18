@@ -1,0 +1,378 @@
+@page
+@model DashboardModel
+@{
+    ViewData["Title"] = L["Dashboard_Title"];
+    var culture = ViewContext.HttpContext.Items["Culture"] as string ?? "cs";
+}
+
+@if (Model.Registration == null || Model.AllRegistrations.Count == 0)
+{
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card text-center">
+                <div class="card-body py-5">
+                    <i class="bi bi-exclamation-triangle text-yellow display-1 mb-3"></i>
+                    <h4>@L["Dashboard_NotFound"]</h4>
+                    <p class="text-secondary">@L["Dashboard_NotFoundDesc"]</p>
+                    <a href="/@culture/Register" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>@L["Dashboard_RegisterNew"]
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <h2 class="mb-2">
+                <i class="bi bi-speedometer2 text-orange me-2"></i>@L["Dashboard_Title"]
+            </h2>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <code class="fs-6">@Model.Registration.MiningAddress</code>
+                @if (Model.AllRegistrations.Count > 1)
+                {
+                    <div class="btn-group" role="group">
+                        @foreach (var reg in Model.AllRegistrations)
+                        {
+                            var isActive = reg.PoolVariant == Model.Pool;
+                            <a href="/@culture/Dashboard?address=@Model.Address&pool=@reg.PoolVariant"
+                               class="btn btn-sm @(isActive ? "btn-primary" : "btn-outline-secondary")">
+                                <i class="bi bi-globe me-1"></i>@reg.PoolVariant
+                            </a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <span class="badge pool-badge rounded-pill">
+                        <i class="bi bi-globe me-1"></i>@(Model.Registration.PoolVariant).ckpool.org
+                    </span>
+                }
+                @if (Model.Registration.NotificationsEnabled)
+                {
+                    <span class="badge bg-success rounded-pill">
+                        <i class="bi bi-bell-fill me-1"></i>@L["Dashboard_NotificationsOn"]
+                    </span>
+                }
+            </div>
+        </div>
+        <a href="/@culture/Settings?address=@Model.Address&pool=@Model.Pool" class="btn btn-outline-primary">
+            <i class="bi bi-gear me-1"></i> @L["Nav_Settings"]
+        </a>
+    </div>
+
+    @if (Model.Stats == null)
+    {
+        <div class="alert alert-warning d-flex align-items-center">
+            <i class="bi bi-cloud-slash me-2 fs-4"></i>
+            <div>
+                <strong>@L["Dashboard_StatsError"]</strong><br />
+                <small>@L["Dashboard_StatsErrorDesc"]</small>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Main Stats Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-4 col-md-6">
+                <div class="card card-stat h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="stat-label">
+                            <i class="bi bi-lightning-charge me-1"></i>@L["Dashboard_BestShareSession"]
+                        </div>
+                        <div class="stat-value text-orange">@FormatShare(Model.Stats.BestShare)</div>
+                        @if (Model.CurrentDifficulty.HasValue && Model.Stats.BestShare > 0)
+                        {
+                            var percentage = (Model.Stats.BestShare / Model.CurrentDifficulty.Value) * 100;
+                            <div class="mt-2">
+                                <div class="progress-bar-custom">
+                                    <div class="progress-bar-fill" style="width: @Math.Min(percentage, 100).ToString(System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                                </div>
+                                <small class="text-secondary">@percentage.ToString("F4")% @L["Dashboard_OfDifficulty"]</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="card card-stat h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="stat-label">
+                            <i class="bi bi-trophy me-1"></i>@L["Dashboard_BestShareEver"]
+                        </div>
+                        <div class="stat-value text-green">@FormatShare(Model.Stats.BestEver)</div>
+                        @if (Model.CurrentDifficulty.HasValue && Model.Stats.BestEver > 0)
+                        {
+                            var percentage = (Model.Stats.BestEver / Model.CurrentDifficulty.Value) * 100;
+                            <div class="mt-2">
+                                <div class="progress-bar-custom">
+                                    <div class="progress-bar-fill" style="width: @Math.Min(percentage, 100).ToString(System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                                </div>
+                                <small class="text-secondary">@percentage.ToString("F4")% @L["Dashboard_OfDifficulty"]</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="card card-stat h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="stat-label">
+                            <i class="bi bi-boxes me-1"></i>@L["Dashboard_TotalShares"]
+                        </div>
+                        <div class="stat-value text-blue">@Model.Stats.Shares.ToString("N0")</div>
+                        <small class="text-secondary mt-2 d-block">
+                            <i class="bi bi-people me-1"></i>@Model.Stats.Workers @L["Dashboard_ActiveWorkers"]
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hashrate Card -->
+        <div class="card mb-4">
+            <div class="card-header d-flex align-items-center">
+                <i class="bi bi-speedometer me-2 text-blue"></i>
+                <strong>@L["Dashboard_Hashrate"]</strong>
+            </div>
+            <div class="card-body">
+                <div class="row text-center g-3">
+                    <div class="col">
+                        <div class="stat-label">1 min</div>
+                        <div class="fw-bold fs-5">@(Model.Stats.Hashrate1m ?? "0")</div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-label">5 min</div>
+                        <div class="fw-bold fs-5">@(Model.Stats.Hashrate5m ?? "0")</div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-label">1 hour</div>
+                        <div class="fw-bold fs-5 text-blue">@(Model.Stats.Hashrate1hr ?? "0")</div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-label">1 day</div>
+                        <div class="fw-bold fs-5">@(Model.Stats.Hashrate1d ?? "0")</div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-label">7 days</div>
+                        <div class="fw-bold fs-5">@(Model.Stats.Hashrate7d ?? "0")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bitcoin Difficulty -->
+        @if (Model.DifficultyInfo != null)
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-currency-bitcoin me-2 text-yellow"></i>
+                    <strong>@L["Dashboard_BitcoinNetwork"]</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center g-3">
+                        <div class="col-6 col-md-3">
+                            <div class="stat-label">@L["Dashboard_CurrentDifficulty"]</div>
+                            <div class="fw-bold fs-5 text-yellow">@FormatDifficulty(Model.CurrentDifficulty ?? 0)</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-label">@L["Dashboard_Progress"]</div>
+                            <div class="fw-bold fs-5">@Model.DifficultyInfo.ProgressPercent.ToString("F1")%</div>
+                            <div class="progress-bar-custom mt-1">
+                                <div class="progress-bar-fill" style="width: @Model.DifficultyInfo.ProgressPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-label">@L["Dashboard_EstChange"]</div>
+                            <div class="fw-bold fs-5 @(Model.DifficultyInfo.DifficultyChange >= 0 ? "text-danger" : "text-green")">
+                                @(Model.DifficultyInfo.DifficultyChange >= 0 ? "+" : "")@Model.DifficultyInfo.DifficultyChange.ToString("F2")%
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-label">@L["Dashboard_BlocksLeft"]</div>
+                            <div class="fw-bold fs-5">@Model.DifficultyInfo.RemainingBlocks</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Solo Mining Lottery -->
+        @if (Model.ChancePerWeek.HasValue || Model.ExpectedDaysToBlock.HasValue || Model.LastBlockFoundMatch != null)
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-dice-5 me-2 text-purple"></i>
+                    <strong>@L["Dashboard_Lottery"]</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center g-3">
+                        @if (Model.UserHashrateValue.HasValue && Model.UserHashrateValue > 0)
+                        {
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">@L["Dashboard_YourHashrate"]</div>
+                                <div class="fw-bold fs-5 text-blue">@FormatHashrateValue(Model.UserHashrateValue.Value)</div>
+                            </div>
+                        }
+                        @if (Model.ChancePerWeek.HasValue)
+                        {
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">@L["Dashboard_ChancePerWeek"]</div>
+                                <div class="fw-bold fs-5 text-blue">@FormatChance(Model.ChancePerWeek.Value)</div>
+                            </div>
+                        }
+                        @if (Model.ChancePerYear.HasValue)
+                        {
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">@L["Dashboard_ChancePerYear"]</div>
+                                <div class="fw-bold fs-5 text-green">@FormatChance(Model.ChancePerYear.Value)</div>
+                            </div>
+                        }
+                        @if (Model.ExpectedDaysToBlock.HasValue)
+                        {
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">@L["Dashboard_ExpectedTime"]</div>
+                                <div class="fw-bold fs-5 text-orange">@FormatExpectedTime(Model.ExpectedDaysToBlock.Value)</div>
+                            </div>
+                        }
+                        @if (Model.LastBlockFoundMatch != null)
+                        {
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">@L["Dashboard_LastBlockFound"]</div>
+                                <div class="fw-bold fs-5 text-yellow">@Model.LastBlockFoundMatch.Date.ToString("d. M. yyyy")</div>
+                                <small class="text-secondary">(@FormatDifficulty(Model.LastBlockFoundMatch.Difficulty))</small>
+                            </div>
+                        }
+                        else if (Model.Stats?.BestEver > 0)
+                        {
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">@L["Dashboard_LastBlockFound"]</div>
+                                <div class="fw-bold fs-5 text-secondary">@L["Dashboard_NeverYet"]</div>
+                                <small class="text-secondary">@L["Dashboard_BestShareTooLow"]</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Workers Table -->
+        @if (Model.Stats?.Worker != null && Model.Stats.Worker.Any())
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-pc-display me-2 text-purple"></i>
+                    <strong>@L["Dashboard_Workers"]</strong>
+                    <span class="badge bg-secondary ms-2">@Model.Stats.Worker.Count</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr class="text-secondary">
+                                    <th class="ps-3">@L["Dashboard_Worker"]</th>
+                                    <th class="text-end">@L["Dashboard_Hashrate"]</th>
+                                    <th class="text-end">Best Share</th>
+                                    <th class="text-end d-none d-md-table-cell">Best Ever</th>
+                                    <th class="text-end d-none d-md-table-cell">@L["Dashboard_Shares"]</th>
+                                    <th class="text-end pe-3">@L["Dashboard_LastShare"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var worker in Model.Stats.Worker.OrderByDescending(w => w.BestShare))
+                                {
+                                    <tr>
+                                        <td class="ps-3">
+                                            <code>@GetWorkerDisplayName(worker.WorkerName)</code>
+                                        </td>
+                                        <td class="text-end text-blue">@(worker.Hashrate1hr ?? "0")</td>
+                                        <td class="text-end text-orange">@FormatShare(worker.BestShare)</td>
+                                        <td class="text-end text-green d-none d-md-table-cell">@FormatShare(worker.BestEver)</td>
+                                        <td class="text-end d-none d-md-table-cell">@worker.Shares.ToString("N0")</td>
+                                        <td class="text-end pe-3 text-secondary">@FormatLastShare(worker.LastShare)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+}
+
+@functions {
+    string FormatShare(double share)
+    {
+        if (share >= 1e15) return $"{share / 1e15:F2}P";
+        if (share >= 1e12) return $"{share / 1e12:F2}T";
+        if (share >= 1e9) return $"{share / 1e9:F2}G";
+        if (share >= 1e6) return $"{share / 1e6:F2}M";
+        if (share >= 1e3) return $"{share / 1e3:F2}K";
+        return share.ToString("F0");
+    }
+
+    string FormatDifficulty(double diff)
+    {
+        if (diff >= 1e12) return $"{diff / 1e12:F2}T";
+        if (diff >= 1e9) return $"{diff / 1e9:F2}G";
+        return diff.ToString("F0");
+    }
+
+    string FormatLastShare(long timestamp)
+    {
+        if (timestamp == 0) return L["Dashboard_Never"];
+        var dt = DateTimeOffset.FromUnixTimeSeconds(timestamp);
+        var ago = DateTimeOffset.UtcNow - dt;
+        if (ago.TotalMinutes < 1) return L["Dashboard_JustNow"];
+        if (ago.TotalMinutes < 60) return $"{(int)ago.TotalMinutes} {L["Dashboard_MinAgo"]}";
+        if (ago.TotalHours < 24) return $"{(int)ago.TotalHours} {L["Dashboard_HourAgo"]}";
+        return $"{(int)ago.TotalDays} {L["Dashboard_DayAgo"]}";
+    }
+
+    string GetWorkerDisplayName(string? fullName)
+    {
+        if (string.IsNullOrEmpty(fullName)) return "Unknown";
+        var parts = fullName.Split('.');
+        return parts.Length > 1 ? parts[^1] : fullName;
+    }
+
+    string FormatChance(double percentage)
+    {
+        if (percentage >= 100) return $"{percentage:F1} %";
+        if (percentage >= 10) return $"{percentage:F2} %";
+        if (percentage >= 1) return $"{percentage:F3} %";
+        if (percentage >= 0.01) return $"{percentage:F4} %";
+        if (percentage >= 0.0001) return $"{percentage:F6} %";
+        if (percentage >= 0.0000001) return $"{percentage:F9} %";
+        // For extremely small values, show in scientific notation with %
+        return $"{percentage:E2} %";
+    }
+
+    string FormatExpectedTime(double days)
+    {
+        if (days < 1) return $"{days * 24:F1} {L["Dashboard_Hours"]}";
+        if (days < 7) return $"{days:F1} {L["Dashboard_Days"]}";
+        if (days < 30) return $"{days / 7:F1} {L["Dashboard_Weeks"]}";
+        if (days < 365) return $"{days / 30:F1} {L["Dashboard_Months"]}";
+        if (days < 3650) return $"{days / 365:F1} {L["Dashboard_Years"]}";
+        return $"{days / 365:F0} {L["Dashboard_Years"]}";
+    }
+
+    string FormatHashrateValue(double hashrate)
+    {
+        if (hashrate >= 1e21) return $"{hashrate / 1e21:F2} ZH/s";
+        if (hashrate >= 1e18) return $"{hashrate / 1e18:F2} EH/s";
+        if (hashrate >= 1e15) return $"{hashrate / 1e15:F2} PH/s";
+        if (hashrate >= 1e12) return $"{hashrate / 1e12:F2} TH/s";
+        if (hashrate >= 1e9) return $"{hashrate / 1e9:F2} GH/s";
+        if (hashrate >= 1e6) return $"{hashrate / 1e6:F2} MH/s";
+        if (hashrate >= 1e3) return $"{hashrate / 1e3:F2} KH/s";
+        return $"{hashrate:F0} H/s";
+    }
+}
+

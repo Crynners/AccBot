@@ -1,0 +1,323 @@
+@{
+    var currentCulture = ViewContext.HttpContext.Items["Culture"] as string ?? "cs";
+    var currentPath = Context.Request.Path.Value ?? "/";
+    var currentQuery = Context.Request.QueryString.Value ?? "";
+
+    // Build URLs for language switcher
+    var csUrl = "/cs" + currentPath + currentQuery;
+    var enUrl = "/en" + currentPath + currentQuery;
+}
+<!DOCTYPE html>
+<html lang="@currentCulture" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - @L["AppName"]</title>
+    <link rel="icon" type="image/png" href="/solominator.png" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-orange: #f78166;
+            --accent-green: #3fb950;
+            --accent-blue: #58a6ff;
+            --accent-purple: #a371f7;
+            --accent-yellow: #d29922;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            background-color: var(--bg-secondary) !important;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: var(--accent-orange) !important;
+        }
+
+        .card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .card-header {
+            background-color: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        .card-stat {
+            transition: transform 0.2s;
+        }
+
+        .card-stat:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .text-orange { color: var(--accent-orange) !important; }
+        .text-green { color: var(--accent-green) !important; }
+        .text-blue { color: var(--accent-blue) !important; }
+        .text-purple { color: var(--accent-purple) !important; }
+        .text-yellow { color: var(--accent-yellow) !important; }
+
+        .pool-badge {
+            font-size: 0.75rem;
+            padding: 0.35em 0.65em;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-primary {
+            background-color: var(--accent-orange);
+            border-color: var(--accent-orange);
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background-color: #e86f55;
+            border-color: #e86f55;
+        }
+
+        .btn-outline-primary {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--accent-orange);
+            border-color: var(--accent-orange);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-color);
+        }
+
+        .btn-danger {
+            background-color: #f85149;
+            border-color: #f85149;
+        }
+
+        .form-control, .form-select {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .form-control:focus, .form-select:focus {
+            background-color: var(--bg-tertiary);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 0.2rem rgba(88, 166, 255, 0.25);
+            color: var(--text-primary);
+        }
+
+        .form-control::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--text-primary);
+        }
+
+        .table > :not(caption) > * > * {
+            background-color: transparent;
+            border-bottom-color: var(--border-color);
+        }
+
+        .table-hover > tbody > tr:hover > * {
+            background-color: var(--bg-tertiary);
+        }
+
+        code {
+            color: var(--accent-orange);
+            background-color: var(--bg-tertiary);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .alert-warning {
+            background-color: rgba(210, 153, 34, 0.15);
+            border-color: var(--accent-yellow);
+            color: var(--accent-yellow);
+        }
+
+        .alert-danger {
+            background-color: rgba(248, 81, 73, 0.15);
+            border-color: #f85149;
+            color: #f85149;
+        }
+
+        .alert-success {
+            background-color: rgba(63, 185, 80, 0.15);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .alert-info {
+            background-color: rgba(88, 166, 255, 0.15);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        footer {
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            margin-top: auto;
+        }
+
+        .progress-bar-custom {
+            height: 4px;
+            background-color: var(--bg-tertiary);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background-color: var(--accent-green);
+            border-radius: 2px;
+        }
+
+        .success-box {
+            background-color: rgba(63, 185, 80, 0.1);
+            border: 1px solid var(--accent-green);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .accordion {
+            --bs-accordion-bg: var(--bg-secondary);
+            --bs-accordion-border-color: var(--border-color);
+            --bs-accordion-btn-bg: var(--bg-tertiary);
+            --bs-accordion-btn-color: var(--text-primary);
+            --bs-accordion-active-bg: var(--bg-tertiary);
+            --bs-accordion-active-color: var(--text-primary);
+        }
+
+        .accordion-button::after {
+            filter: invert(1);
+        }
+
+        .modal-content {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-header, .modal-footer {
+            border-color: var(--border-color);
+        }
+
+        .breadcrumb {
+            --bs-breadcrumb-divider-color: var(--text-secondary);
+            --bs-breadcrumb-item-active-color: var(--text-primary);
+        }
+
+        .breadcrumb a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        .lang-switch {
+            font-size: 0.85rem;
+        }
+
+        .lang-switch a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .lang-switch a:hover, .lang-switch a.active {
+            color: var(--accent-orange);
+        }
+
+        
+        @@media (max-width: 768px) {
+            .stat-value {
+                font-size: 1.4rem;
+            }
+            .table {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container">
+                <a class="navbar-brand d-flex align-items-center gap-2" href="/@currentCulture/">
+                    <img src="/solominator.png" alt="SoloMinator" height="32" />
+                    @L["AppName"]
+                </a>
+                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto align-items-center">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/@currentCulture/Register">
+                                <i class="bi bi-plus-circle me-1"></i> @L["Nav_Register"]
+                            </a>
+                        </li>
+                        <li class="nav-item lang-switch ms-3">
+                            <a href="@csUrl" class="@(currentCulture == "cs" ? "active" : "")">CS</a>
+                            <span class="text-secondary">|</span>
+                            <a href="@enUrl" class="@(currentCulture == "en" ? "active" : "")">EN</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container py-4">
+        <main role="main">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="py-4">
+        <div class="container text-center">
+            <small class="text-secondary">
+                <i class="bi bi-lightning-charge text-yellow"></i>
+                SoloMinator - Solo mining tracker | @DateTime.UtcNow.Year
+            </small>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "resourceGroupName": {
+      "type": "string",
+      "defaultValue": "Web",
+      "metadata": {
+        "_parameterType": "resourceGroup",
+        "description": "Název skupiny prostředků daného prostředku. Pro lepší sledování se doporučuje umístit prostředky do stejné skupiny prostředků."
+      }
+    },
+    "resourceGroupLocation": {
+      "type": "string",
+      "defaultValue": "centralus",
+      "metadata": {
+        "_parameterType": "location",
+        "description": "Umístění skupiny prostředků. Skupiny prostředků můžou mít jiné umístění než prostředky."
+      }
+    },
+    "resourceLocation": {
+      "type": "string",
+      "defaultValue": "[parameters('resourceGroupLocation')]",
+      "metadata": {
+        "_parameterType": "location",
+        "description": "Umístění prostředku. Pokud se v umístění skupiny prostředků podporuje daný poskytovatel prostředků, použije se standardně toto umístění."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "name": "[parameters('resourceGroupName')]",
+      "location": "[parameters('resourceGroupLocation')]",
+      "apiVersion": "2019-10-01"
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "[concat(parameters('resourceGroupName'), 'Deployment', uniqueString(concat('NightScoutLeaderboard', subscription().subscriptionId)))]",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "apiVersion": "2019-10-01",
+      "dependsOn": [
+        "[parameters('resourceGroupName')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+            {
+              "kind": "web",
+              "name": "NightScoutLeaderboard",
+              "type": "microsoft.insights/components",
+              "location": "[parameters('resourceLocation')]",
+              "properties": {},
+              "apiVersion": "2015-05-01"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "_dependencyType": "appInsights.azure"
+  }
+}

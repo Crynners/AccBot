@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter</value></resheader>
+
+  <!-- Common -->
+  <data name="AppName" xml:space="preserve"><value>SoloMinator</value></data>
+  <data name="AppDescription" xml:space="preserve"><value>Solo Mining Notification Service for CKPool</value></data>
+
+  <!-- Navigation -->
+  <data name="Nav_Register" xml:space="preserve"><value>Register Address</value></data>
+  <data name="Nav_Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Nav_Settings" xml:space="preserve"><value>Settings</value></data>
+
+  <!-- Index Page -->
+  <data name="Index_Title" xml:space="preserve"><value>Solo Mining Tracker</value></data>
+  <data name="Index_Subtitle" xml:space="preserve"><value>Track your CKPool solo mining stats</value></data>
+  <data name="Index_ViewDashboard" xml:space="preserve"><value>View Dashboard</value></data>
+  <data name="Index_ViewDashboardHelp" xml:space="preserve"><value>Enter a Bitcoin address to view mining statistics</value></data>
+  <data name="Index_ViewDashboardButton" xml:space="preserve"><value>View Statistics</value></data>
+  <data name="Index_AddressLabel" xml:space="preserve"><value>Bitcoin Mining Address</value></data>
+  <data name="Index_AddressPlaceholder" xml:space="preserve"><value>Your BTC address</value></data>
+  <data name="Index_AddressHelp" xml:space="preserve"><value>Your wallet address used for solo mining on CKPool</value></data>
+  <data name="Index_PoolLabel" xml:space="preserve"><value>Pool Region</value></data>
+  <data name="Index_PoolSolo" xml:space="preserve"><value>solo.ckpool.org (North America)</value></data>
+  <data name="Index_PoolEuSolo" xml:space="preserve"><value>eusolo.ckpool.org (Europe/Africa)</value></data>
+  <data name="Index_PoolAuSolo" xml:space="preserve"><value>ausolo.ckpool.org (Oceania)</value></data>
+  <data name="Index_Feature1_Title" xml:space="preserve"><value>Real-time Stats</value></data>
+  <data name="Index_Feature1_Desc" xml:space="preserve"><value>Hashrate &amp; shares</value></data>
+  <data name="Index_Feature2_Title" xml:space="preserve"><value>Best Share</value></data>
+  <data name="Index_Feature2_Desc" xml:space="preserve"><value>Track your progress</value></data>
+  <data name="Index_Feature3_Title" xml:space="preserve"><value>Notifications</value></data>
+  <data name="Index_Feature3_Desc" xml:space="preserve"><value>Telegram alerts</value></data>
+  <data name="Index_BitcoinNetwork" xml:space="preserve"><value>Bitcoin Network</value></data>
+  <data name="Index_NetworkHashrate" xml:space="preserve"><value>Network Hashrate</value></data>
+  <data name="Index_Difficulty" xml:space="preserve"><value>Difficulty</value></data>
+  <data name="Index_NextAdjustment" xml:space="preserve"><value>Next Adjustment</value></data>
+  <data name="Index_BlocksLeft" xml:space="preserve"><value>Blocks Left</value></data>
+
+  <!-- Register Page -->
+  <data name="Register_Title" xml:space="preserve"><value>Register Address</value></data>
+  <data name="Register_Subtitle" xml:space="preserve"><value>Register your mining address for tracking and notifications</value></data>
+  <data name="Register_CardTitle" xml:space="preserve"><value>Register Mining Address</value></data>
+  <data name="Register_Submit" xml:space="preserve"><value>Verify &amp; Register</value></data>
+  <data name="Register_BackToHome" xml:space="preserve"><value>Back to Home</value></data>
+
+  <!-- Dashboard Page -->
+  <data name="Dashboard_Title" xml:space="preserve"><value>Mining Dashboard</value></data>
+  <data name="Dashboard_NotFound" xml:space="preserve"><value>Registration Not Found</value></data>
+  <data name="Dashboard_NotFoundDesc" xml:space="preserve"><value>This address is not registered or has been deleted.</value></data>
+  <data name="Dashboard_RegisterNew" xml:space="preserve"><value>Register New Address</value></data>
+  <data name="Dashboard_Success" xml:space="preserve"><value>Registration Successful!</value></data>
+  <data name="Dashboard_SuccessDesc" xml:space="preserve"><value>Your address has been registered. Save this link to access your dashboard.</value></data>
+  <data name="Dashboard_CopyLink" xml:space="preserve"><value>Copy Link</value></data>
+  <data name="Dashboard_LinkCopied" xml:space="preserve"><value>Link copied!</value></data>
+  <data name="Dashboard_NotificationsOn" xml:space="preserve"><value>Notifications ON</value></data>
+  <data name="Dashboard_StatsError" xml:space="preserve"><value>Could not fetch mining statistics.</value></data>
+  <data name="Dashboard_StatsErrorDesc" xml:space="preserve"><value>The pool might be temporarily unavailable. Please try again later.</value></data>
+  <data name="Dashboard_BestShareSession" xml:space="preserve"><value>Best Share (Session)</value></data>
+  <data name="Dashboard_BestShareEver" xml:space="preserve"><value>Best Share (Ever)</value></data>
+  <data name="Dashboard_TotalShares" xml:space="preserve"><value>Total Shares</value></data>
+  <data name="Dashboard_ActiveWorkers" xml:space="preserve"><value>active workers</value></data>
+  <data name="Dashboard_Hashrate" xml:space="preserve"><value>Hashrate</value></data>
+  <data name="Dashboard_BitcoinNetwork" xml:space="preserve"><value>Bitcoin Network</value></data>
+  <data name="Dashboard_CurrentDifficulty" xml:space="preserve"><value>Current Difficulty</value></data>
+  <data name="Dashboard_Progress" xml:space="preserve"><value>Progress</value></data>
+  <data name="Dashboard_EstChange" xml:space="preserve"><value>Est. Change</value></data>
+  <data name="Dashboard_BlocksLeft" xml:space="preserve"><value>Blocks Left</value></data>
+  <data name="Dashboard_Workers" xml:space="preserve"><value>Workers</value></data>
+  <data name="Dashboard_Worker" xml:space="preserve"><value>Worker</value></data>
+  <data name="Dashboard_Shares" xml:space="preserve"><value>Shares</value></data>
+  <data name="Dashboard_LastShare" xml:space="preserve"><value>Last Share</value></data>
+  <data name="Dashboard_OfDifficulty" xml:space="preserve"><value>of difficulty</value></data>
+  <data name="Dashboard_JustNow" xml:space="preserve"><value>Just now</value></data>
+  <data name="Dashboard_MinAgo" xml:space="preserve"><value>min ago</value></data>
+  <data name="Dashboard_HourAgo" xml:space="preserve"><value>h ago</value></data>
+  <data name="Dashboard_DayAgo" xml:space="preserve"><value>d ago</value></data>
+  <data name="Dashboard_Never" xml:space="preserve"><value>Never</value></data>
+  <data name="Dashboard_Lottery" xml:space="preserve"><value>Solo Mining Lottery</value></data>
+  <data name="Dashboard_YourHashrate" xml:space="preserve"><value>Your hashrate</value></data>
+  <data name="Dashboard_ChancePerWeek" xml:space="preserve"><value>Chance per week</value></data>
+  <data name="Dashboard_ChancePerYear" xml:space="preserve"><value>Chance per year</value></data>
+  <data name="Dashboard_ExpectedTime" xml:space="preserve"><value>Expected time</value></data>
+  <data name="Dashboard_LastBlockFound" xml:space="preserve"><value>Last block</value></data>
+  <data name="Dashboard_WouldHaveFound" xml:space="preserve"><value>with your best share</value></data>
+  <data name="Dashboard_NeverYet" xml:space="preserve"><value>Never yet</value></data>
+  <data name="Dashboard_BestShareTooLow" xml:space="preserve"><value>best share too low</value></data>
+  <data name="Dashboard_Hours" xml:space="preserve"><value>hours</value></data>
+  <data name="Dashboard_Days" xml:space="preserve"><value>days</value></data>
+  <data name="Dashboard_Weeks" xml:space="preserve"><value>weeks</value></data>
+  <data name="Dashboard_Months" xml:space="preserve"><value>months</value></data>
+  <data name="Dashboard_Years" xml:space="preserve"><value>years</value></data>
+
+  <!-- Settings Page -->
+  <data name="Settings_Title" xml:space="preserve"><value>Settings</value></data>
+  <data name="Settings_Saved" xml:space="preserve"><value>Settings saved successfully.</value></data>
+  <data name="Settings_SaveError" xml:space="preserve"><value>Failed to save settings.</value></data>
+  <data name="Settings_Telegram" xml:space="preserve"><value>Telegram Notifications</value></data>
+  <data name="Settings_TelegramDesc" xml:space="preserve"><value>Receive notifications when you achieve a new best share or when Bitcoin difficulty adjusts.</value></data>
+  <data name="Settings_ChatId" xml:space="preserve"><value>Telegram Chat ID</value></data>
+  <data name="Settings_ChatIdPlaceholder" xml:space="preserve"><value>e.g., -1001234567890 or 123456789</value></data>
+  <data name="Settings_ChatIdHelp" xml:space="preserve"><value>Your personal or group chat ID.</value></data>
+  <data name="Settings_EnableNotifications" xml:space="preserve"><value>Enable notifications</value></data>
+  <data name="Settings_Save" xml:space="preserve"><value>Save Settings</value></data>
+  <data name="Settings_HowToGetChatId" xml:space="preserve"><value>How to get Telegram Chat ID?</value></data>
+  <data name="Settings_PersonalChat" xml:space="preserve"><value>For Personal Chat:</value></data>
+  <data name="Settings_Personal_Step1" xml:space="preserve"><value>Open Telegram and search for &lt;code&gt;@getidsbot&lt;/code&gt;</value></data>
+  <data name="Settings_Personal_Step2" xml:space="preserve"><value>Start a chat and send &lt;code&gt;/start&lt;/code&gt;</value></data>
+  <data name="Settings_Personal_Step3" xml:space="preserve"><value>The bot will reply with your user ID</value></data>
+  <data name="Settings_GroupChat" xml:space="preserve"><value>For Group Chat:</value></data>
+  <data name="Settings_Group_Step1" xml:space="preserve"><value>Add &lt;code&gt;@getidsbot&lt;/code&gt; to your group</value></data>
+  <data name="Settings_Group_Step2" xml:space="preserve"><value>Send &lt;code&gt;/id&lt;/code&gt; command in the group</value></data>
+  <data name="Settings_Group_Step3" xml:space="preserve"><value>The bot will reply with the group ID</value></data>
+  <data name="Settings_Group_Step4" xml:space="preserve"><value>Group IDs typically start with &lt;code&gt;-100&lt;/code&gt;</value></data>
+  <data name="Settings_Group_Step5" xml:space="preserve"><value>You can remove the bot from the group after getting the ID</value></data>
+  <data name="Settings_TelegramNote" xml:space="preserve"><value>Make sure the SoloMinator bot is added to your chat and has permission to send messages.</value></data>
+  <data name="Settings_Details" xml:space="preserve"><value>Registration Details</value></data>
+  <data name="Settings_MiningAddress" xml:space="preserve"><value>Mining Address</value></data>
+  <data name="Settings_Pool" xml:space="preserve"><value>Pool</value></data>
+  <data name="Settings_Registered" xml:space="preserve"><value>Registered</value></data>
+  <data name="Settings_LastUpdated" xml:space="preserve"><value>Last Updated</value></data>
+  <data name="Settings_DangerZone" xml:space="preserve"><value>Danger Zone</value></data>
+  <data name="Settings_DeleteDesc" xml:space="preserve"><value>Deleting your registration will remove all settings and stop notifications.</value></data>
+  <data name="Settings_Delete" xml:space="preserve"><value>Delete Registration</value></data>
+  <data name="Settings_DeleteConfirm" xml:space="preserve"><value>Confirm Deletion</value></data>
+  <data name="Settings_DeleteQuestion" xml:space="preserve"><value>Are you sure you want to delete your registration?</value></data>
+  <data name="Settings_DeleteWarning" xml:space="preserve"><value>This will remove all settings and stop notifications.</value></data>
+  <data name="Settings_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Settings_ActiveSubscriptions" xml:space="preserve"><value>Linked Chats</value></data>
+  <data name="Settings_AddSubscription" xml:space="preserve"><value>Add New Chat</value></data>
+  <data name="Settings_SubscriptionChat" xml:space="preserve"><value>Chat</value></data>
+  <data name="Settings_SubscriptionStatus" xml:space="preserve"><value>Status</value></data>
+  <data name="Settings_SubscriptionDate" xml:space="preserve"><value>Date</value></data>
+  <data name="Settings_SubscriptionActions" xml:space="preserve"><value>Actions</value></data>
+  <data name="Settings_SubscriptionActive" xml:space="preserve"><value>Active</value></data>
+  <data name="Settings_SubscriptionPaused" xml:space="preserve"><value>Paused</value></data>
+  <data name="Settings_Pause" xml:space="preserve"><value>Pause</value></data>
+  <data name="Settings_Resume" xml:space="preserve"><value>Resume</value></data>
+  <data name="Settings_GenerateLink" xml:space="preserve"><value>Link Telegram</value></data>
+  <data name="Settings_GenerateLinkDesc" xml:space="preserve"><value>Click to generate a link to connect your Telegram chat.</value></data>
+  <data name="Settings_LinkReady" xml:space="preserve"><value>Link is ready!</value></data>
+  <data name="Settings_LinkExpires" xml:space="preserve"><value>Link is valid for 30 minutes. Click the button below to open Telegram.</value></data>
+  <data name="Settings_OpenTelegram" xml:space="preserve"><value>Open in Telegram</value></data>
+  <data name="Settings_LinkGenerated" xml:space="preserve"><value>Link has been generated.</value></data>
+  <data name="Settings_SubscriptionDeleted" xml:space="preserve"><value>Subscription has been removed.</value></data>
+  <data name="Settings_ConfirmDeleteSubscription" xml:space="preserve"><value>Are you sure you want to remove this subscription?</value></data>
+  <data name="Settings_ManualSetup" xml:space="preserve"><value>Manual Setup (Advanced)</value></data>
+  <data name="Settings_ManualSetupDesc" xml:space="preserve"><value>If automatic linking doesn't work, you can enter Chat ID manually.</value></data>
+
+  <!-- Validation -->
+  <data name="Validation_AddressRequired" xml:space="preserve"><value>Mining address is required</value></data>
+  <data name="Validation_AddressInvalid" xml:space="preserve"><value>Invalid Bitcoin address format</value></data>
+</root>

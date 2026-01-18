@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter</value></resheader>
+
+  <!-- Common -->
+  <data name="AppName" xml:space="preserve"><value>SoloMinator</value></data>
+  <data name="AppDescription" xml:space="preserve"><value>Solo Mining Notification Service pro CKPool</value></data>
+
+  <!-- Navigation -->
+  <data name="Nav_Register" xml:space="preserve"><value>Registrovat adresu</value></data>
+  <data name="Nav_Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Nav_Settings" xml:space="preserve"><value>Nastavení</value></data>
+
+  <!-- Index Page -->
+  <data name="Index_Title" xml:space="preserve"><value>Solo Mining Tracker</value></data>
+  <data name="Index_Subtitle" xml:space="preserve"><value>Sledujte své statistiky těžby na CKPool</value></data>
+  <data name="Index_ViewDashboard" xml:space="preserve"><value>Zobrazit dashboard</value></data>
+  <data name="Index_ViewDashboardHelp" xml:space="preserve"><value>Zadejte Bitcoin adresu pro zobrazení statistik těžby</value></data>
+  <data name="Index_ViewDashboardButton" xml:space="preserve"><value>Zobrazit statistiky</value></data>
+  <data name="Index_AddressLabel" xml:space="preserve"><value>Bitcoin těžební adresa</value></data>
+  <data name="Index_AddressPlaceholder" xml:space="preserve"><value>Vaše BTC adresa</value></data>
+  <data name="Index_AddressHelp" xml:space="preserve"><value>Vaše peněženková adresa používaná pro solo těžbu na CKPool</value></data>
+  <data name="Index_PoolLabel" xml:space="preserve"><value>Region poolu</value></data>
+  <data name="Index_PoolSolo" xml:space="preserve"><value>solo.ckpool.org (Severní Amerika)</value></data>
+  <data name="Index_PoolEuSolo" xml:space="preserve"><value>eusolo.ckpool.org (Evropa/Afrika)</value></data>
+  <data name="Index_PoolAuSolo" xml:space="preserve"><value>ausolo.ckpool.org (Oceánie)</value></data>
+  <data name="Index_Feature1_Title" xml:space="preserve"><value>Statistiky v reálném čase</value></data>
+  <data name="Index_Feature1_Desc" xml:space="preserve"><value>Hashrate a shares</value></data>
+  <data name="Index_Feature2_Title" xml:space="preserve"><value>Best Share</value></data>
+  <data name="Index_Feature2_Desc" xml:space="preserve"><value>Sledování pokroku</value></data>
+  <data name="Index_Feature3_Title" xml:space="preserve"><value>Notifikace</value></data>
+  <data name="Index_Feature3_Desc" xml:space="preserve"><value>Telegram upozornění</value></data>
+  <data name="Index_BitcoinNetwork" xml:space="preserve"><value>Bitcoin síť</value></data>
+  <data name="Index_NetworkHashrate" xml:space="preserve"><value>Hashrate sítě</value></data>
+  <data name="Index_Difficulty" xml:space="preserve"><value>Obtížnost</value></data>
+  <data name="Index_NextAdjustment" xml:space="preserve"><value>Příští úprava</value></data>
+  <data name="Index_BlocksLeft" xml:space="preserve"><value>Zbývá bloků</value></data>
+
+  <!-- Register Page -->
+  <data name="Register_Title" xml:space="preserve"><value>Registrovat adresu</value></data>
+  <data name="Register_Subtitle" xml:space="preserve"><value>Zaregistrujte svou těžební adresu pro sledování a notifikace</value></data>
+  <data name="Register_CardTitle" xml:space="preserve"><value>Registrace těžební adresy</value></data>
+  <data name="Register_Submit" xml:space="preserve"><value>Ověřit a registrovat</value></data>
+  <data name="Register_BackToHome" xml:space="preserve"><value>Zpět na hlavní stránku</value></data>
+
+  <!-- Dashboard Page -->
+  <data name="Dashboard_Title" xml:space="preserve"><value>Mining Dashboard</value></data>
+  <data name="Dashboard_NotFound" xml:space="preserve"><value>Registrace nenalezena</value></data>
+  <data name="Dashboard_NotFoundDesc" xml:space="preserve"><value>Tato adresa není registrována nebo byla smazána.</value></data>
+  <data name="Dashboard_RegisterNew" xml:space="preserve"><value>Registrovat novou adresu</value></data>
+  <data name="Dashboard_Success" xml:space="preserve"><value>Registrace úspěšná!</value></data>
+  <data name="Dashboard_SuccessDesc" xml:space="preserve"><value>Vaše adresa byla zaregistrována. Uložte si tento odkaz pro přístup k dashboardu.</value></data>
+  <data name="Dashboard_CopyLink" xml:space="preserve"><value>Kopírovat odkaz</value></data>
+  <data name="Dashboard_LinkCopied" xml:space="preserve"><value>Odkaz zkopírován!</value></data>
+  <data name="Dashboard_NotificationsOn" xml:space="preserve"><value>Notifikace zapnuty</value></data>
+  <data name="Dashboard_StatsError" xml:space="preserve"><value>Nepodařilo se načíst statistiky těžby.</value></data>
+  <data name="Dashboard_StatsErrorDesc" xml:space="preserve"><value>Pool může být dočasně nedostupný. Zkuste to později.</value></data>
+  <data name="Dashboard_BestShareSession" xml:space="preserve"><value>Best Share (relace)</value></data>
+  <data name="Dashboard_BestShareEver" xml:space="preserve"><value>Best Share (celkem)</value></data>
+  <data name="Dashboard_TotalShares" xml:space="preserve"><value>Celkem shares</value></data>
+  <data name="Dashboard_ActiveWorkers" xml:space="preserve"><value>aktivních workerů</value></data>
+  <data name="Dashboard_Hashrate" xml:space="preserve"><value>Hashrate</value></data>
+  <data name="Dashboard_BitcoinNetwork" xml:space="preserve"><value>Bitcoin síť</value></data>
+  <data name="Dashboard_CurrentDifficulty" xml:space="preserve"><value>Aktuální obtížnost</value></data>
+  <data name="Dashboard_Progress" xml:space="preserve"><value>Postup</value></data>
+  <data name="Dashboard_EstChange" xml:space="preserve"><value>Oček. změna</value></data>
+  <data name="Dashboard_BlocksLeft" xml:space="preserve"><value>Zbývá bloků</value></data>
+  <data name="Dashboard_Workers" xml:space="preserve"><value>Workery</value></data>
+  <data name="Dashboard_Worker" xml:space="preserve"><value>Worker</value></data>
+  <data name="Dashboard_Shares" xml:space="preserve"><value>Shares</value></data>
+  <data name="Dashboard_LastShare" xml:space="preserve"><value>Poslední share</value></data>
+  <data name="Dashboard_OfDifficulty" xml:space="preserve"><value>z obtížnosti</value></data>
+  <data name="Dashboard_JustNow" xml:space="preserve"><value>Právě teď</value></data>
+  <data name="Dashboard_MinAgo" xml:space="preserve"><value>min zpět</value></data>
+  <data name="Dashboard_HourAgo" xml:space="preserve"><value>h zpět</value></data>
+  <data name="Dashboard_DayAgo" xml:space="preserve"><value>d zpět</value></data>
+  <data name="Dashboard_Never" xml:space="preserve"><value>Nikdy</value></data>
+  <data name="Dashboard_Lottery" xml:space="preserve"><value>Solo Mining Loterie</value></data>
+  <data name="Dashboard_YourHashrate" xml:space="preserve"><value>Váš hashrate</value></data>
+  <data name="Dashboard_ChancePerWeek" xml:space="preserve"><value>Šance za týden</value></data>
+  <data name="Dashboard_ChancePerYear" xml:space="preserve"><value>Šance za rok</value></data>
+  <data name="Dashboard_ExpectedTime" xml:space="preserve"><value>Očekávaný čas</value></data>
+  <data name="Dashboard_LastBlockFound" xml:space="preserve"><value>Poslední blok</value></data>
+  <data name="Dashboard_WouldHaveFound" xml:space="preserve"><value>s vaším best share</value></data>
+  <data name="Dashboard_NeverYet" xml:space="preserve"><value>Zatím nikdy</value></data>
+  <data name="Dashboard_BestShareTooLow" xml:space="preserve"><value>best share příliš nízký</value></data>
+  <data name="Dashboard_Hours" xml:space="preserve"><value>hodin</value></data>
+  <data name="Dashboard_Days" xml:space="preserve"><value>dní</value></data>
+  <data name="Dashboard_Weeks" xml:space="preserve"><value>týdnů</value></data>
+  <data name="Dashboard_Months" xml:space="preserve"><value>měsíců</value></data>
+  <data name="Dashboard_Years" xml:space="preserve"><value>let</value></data>
+
+  <!-- Settings Page -->
+  <data name="Settings_Title" xml:space="preserve"><value>Nastavení</value></data>
+  <data name="Settings_Saved" xml:space="preserve"><value>Nastavení uloženo.</value></data>
+  <data name="Settings_SaveError" xml:space="preserve"><value>Nepodařilo se uložit nastavení.</value></data>
+  <data name="Settings_Telegram" xml:space="preserve"><value>Telegram notifikace</value></data>
+  <data name="Settings_TelegramDesc" xml:space="preserve"><value>Dostávejte upozornění při novém best share nebo změně obtížnosti Bitcoinu.</value></data>
+  <data name="Settings_ChatId" xml:space="preserve"><value>Telegram Chat ID</value></data>
+  <data name="Settings_ChatIdPlaceholder" xml:space="preserve"><value>např. -1001234567890 nebo 123456789</value></data>
+  <data name="Settings_ChatIdHelp" xml:space="preserve"><value>ID vašeho osobního nebo skupinového chatu.</value></data>
+  <data name="Settings_EnableNotifications" xml:space="preserve"><value>Povolit notifikace</value></data>
+  <data name="Settings_Save" xml:space="preserve"><value>Uložit nastavení</value></data>
+  <data name="Settings_HowToGetChatId" xml:space="preserve"><value>Jak získat Telegram Chat ID?</value></data>
+  <data name="Settings_PersonalChat" xml:space="preserve"><value>Pro osobní chat:</value></data>
+  <data name="Settings_Personal_Step1" xml:space="preserve"><value>Otevřete Telegram a vyhledejte &lt;code&gt;@getidsbot&lt;/code&gt;</value></data>
+  <data name="Settings_Personal_Step2" xml:space="preserve"><value>Spusťte chat a pošlete příkaz &lt;code&gt;/start&lt;/code&gt;</value></data>
+  <data name="Settings_Personal_Step3" xml:space="preserve"><value>Bot vám odpoví s vaším uživatelským ID</value></data>
+  <data name="Settings_GroupChat" xml:space="preserve"><value>Pro skupinový chat:</value></data>
+  <data name="Settings_Group_Step1" xml:space="preserve"><value>Přidejte &lt;code&gt;@getidsbot&lt;/code&gt; do vaší skupiny</value></data>
+  <data name="Settings_Group_Step2" xml:space="preserve"><value>Pošlete do skupiny příkaz &lt;code&gt;/id&lt;/code&gt;</value></data>
+  <data name="Settings_Group_Step3" xml:space="preserve"><value>Bot odpoví s ID skupiny</value></data>
+  <data name="Settings_Group_Step4" xml:space="preserve"><value>ID skupiny obvykle začíná na &lt;code&gt;-100&lt;/code&gt;</value></data>
+  <data name="Settings_Group_Step5" xml:space="preserve"><value>Po získání ID můžete bota ze skupiny odebrat</value></data>
+  <data name="Settings_TelegramNote" xml:space="preserve"><value>Ujistěte se, že bot SoloMinator je přidán do vašeho chatu a má oprávnění posílat zprávy.</value></data>
+  <data name="Settings_Details" xml:space="preserve"><value>Detail registrace</value></data>
+  <data name="Settings_MiningAddress" xml:space="preserve"><value>Těžební adresa</value></data>
+  <data name="Settings_Pool" xml:space="preserve"><value>Pool</value></data>
+  <data name="Settings_Registered" xml:space="preserve"><value>Registrováno</value></data>
+  <data name="Settings_LastUpdated" xml:space="preserve"><value>Poslední změna</value></data>
+  <data name="Settings_DangerZone" xml:space="preserve"><value>Nebezpečná zóna</value></data>
+  <data name="Settings_DeleteDesc" xml:space="preserve"><value>Smazání registrace odstraní všechna nastavení a zastaví notifikace.</value></data>
+  <data name="Settings_Delete" xml:space="preserve"><value>Smazat registraci</value></data>
+  <data name="Settings_DeleteConfirm" xml:space="preserve"><value>Potvrdit smazání</value></data>
+  <data name="Settings_DeleteQuestion" xml:space="preserve"><value>Opravdu chcete smazat registraci?</value></data>
+  <data name="Settings_DeleteWarning" xml:space="preserve"><value>Tato akce odstraní všechna nastavení a zastaví notifikace.</value></data>
+  <data name="Settings_Cancel" xml:space="preserve"><value>Zrušit</value></data>
+  <data name="Settings_ActiveSubscriptions" xml:space="preserve"><value>Propojené chaty</value></data>
+  <data name="Settings_AddSubscription" xml:space="preserve"><value>Přidat nový chat</value></data>
+  <data name="Settings_SubscriptionChat" xml:space="preserve"><value>Chat</value></data>
+  <data name="Settings_SubscriptionStatus" xml:space="preserve"><value>Stav</value></data>
+  <data name="Settings_SubscriptionDate" xml:space="preserve"><value>Datum</value></data>
+  <data name="Settings_SubscriptionActions" xml:space="preserve"><value>Akce</value></data>
+  <data name="Settings_SubscriptionActive" xml:space="preserve"><value>Aktivní</value></data>
+  <data name="Settings_SubscriptionPaused" xml:space="preserve"><value>Pozastaveno</value></data>
+  <data name="Settings_Pause" xml:space="preserve"><value>Pozastavit</value></data>
+  <data name="Settings_Resume" xml:space="preserve"><value>Obnovit</value></data>
+  <data name="Settings_GenerateLink" xml:space="preserve"><value>Propojit Telegram</value></data>
+  <data name="Settings_GenerateLinkDesc" xml:space="preserve"><value>Kliknutím vygenerujete odkaz pro propojení Telegram chatu.</value></data>
+  <data name="Settings_LinkReady" xml:space="preserve"><value>Odkaz je připraven!</value></data>
+  <data name="Settings_LinkExpires" xml:space="preserve"><value>Odkaz je platný 30 minut. Klikněte na tlačítko níže pro otevření Telegramu.</value></data>
+  <data name="Settings_OpenTelegram" xml:space="preserve"><value>Otevřít v Telegramu</value></data>
+  <data name="Settings_LinkGenerated" xml:space="preserve"><value>Odkaz byl vygenerován.</value></data>
+  <data name="Settings_SubscriptionDeleted" xml:space="preserve"><value>Propojení bylo odstraněno.</value></data>
+  <data name="Settings_ConfirmDeleteSubscription" xml:space="preserve"><value>Opravdu chcete odstranit toto propojení?</value></data>
+  <data name="Settings_ManualSetup" xml:space="preserve"><value>Ruční nastavení (pokročilé)</value></data>
+  <data name="Settings_ManualSetupDesc" xml:space="preserve"><value>Pokud automatické propojení nefunguje, můžete Chat ID zadat ručně.</value></data>
+
+  <!-- Validation -->
+  <data name="Validation_AddressRequired" xml:space="preserve"><value>Těžební adresa je povinná</value></data>
+  <data name="Validation_AddressInvalid" xml:space="preserve"><value>Neplatný formát Bitcoin adresy</value></data>
+</root>

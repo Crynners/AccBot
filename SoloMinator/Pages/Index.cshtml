@@ -1,0 +1,143 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = L["Index_Title"];
+    var culture = ViewContext.HttpContext.Items["Culture"] as string ?? "cs";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+        <div class="text-center mb-4">
+            <h1 class="display-5 fw-bold d-flex align-items-center justify-content-center gap-3">
+                <img src="/solominator.png" alt="" height="48" />
+                @L["Index_Title"]
+            </h1>
+            <p class="text-secondary lead">
+                @L["Index_Subtitle"]
+            </p>
+        </div>
+
+        <!-- View Dashboard -->
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-speedometer2 text-orange"></i>
+                @L["Index_ViewDashboard"]
+            </div>
+            <div class="card-body p-4">
+                <form method="get" action="/@culture/Dashboard">
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="bi bi-currency-bitcoin text-yellow me-1"></i>
+                            @L["Index_AddressLabel"]
+                        </label>
+                        <input type="text" name="address" class="form-control form-control-lg"
+                               placeholder="@L["Index_AddressPlaceholder"]" required />
+                        <small class="text-secondary mt-1 d-block">
+                            @L["Index_ViewDashboardHelp"]
+                        </small>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-arrow-right me-2"></i>
+                            @L["Index_ViewDashboardButton"]
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bitcoin Network Info -->
+        @if (Model.DifficultyInfo != null || Model.CurrentDifficulty.HasValue || Model.NetworkHashrate != null)
+        {
+            <div class="card mt-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-currency-bitcoin me-2 text-yellow"></i>
+                    <strong>@L["Index_BitcoinNetwork"]</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center g-3">
+                        @if (Model.NetworkHashrate != null)
+                        {
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">@L["Index_NetworkHashrate"]</div>
+                                <div class="fw-bold fs-5 text-blue">@Model.NetworkHashrate</div>
+                            </div>
+                        }
+                        @if (Model.CurrentDifficulty.HasValue)
+                        {
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">@L["Index_Difficulty"]</div>
+                                <div class="fw-bold fs-5 text-yellow">@FormatDifficulty(Model.CurrentDifficulty.Value)</div>
+                            </div>
+                        }
+                        @if (Model.DifficultyInfo != null)
+                        {
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">@L["Index_NextAdjustment"]</div>
+                                <div class="fw-bold fs-5 @(Model.DifficultyInfo.DifficultyChange >= 0 ? "text-danger" : "text-green")">
+                                    @(Model.DifficultyInfo.DifficultyChange >= 0 ? "+" : "")@Model.DifficultyInfo.DifficultyChange.ToString("F2")%
+                                </div>
+                                <div class="progress-bar-custom mt-1">
+                                    <div class="progress-bar-fill" style="width: @Model.DifficultyInfo.ProgressPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">@L["Index_BlocksLeft"]</div>
+                                <div class="fw-bold fs-5">@Model.DifficultyInfo.RemainingBlocks</div>
+                                <small class="text-secondary">~@FormatTimeToAdjustment(Model.DifficultyInfo.RemainingBlocks)</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="row g-3 mt-4">
+            <div class="col-md-4">
+                <div class="card h-100 card-stat">
+                    <div class="card-body text-center p-3">
+                        <i class="bi bi-graph-up-arrow text-orange fs-2 mb-2"></i>
+                        <h6 class="mb-1">@L["Index_Feature1_Title"]</h6>
+                        <small class="text-secondary">@L["Index_Feature1_Desc"]</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 card-stat">
+                    <div class="card-body text-center p-3">
+                        <i class="bi bi-trophy text-green fs-2 mb-2"></i>
+                        <h6 class="mb-1">@L["Index_Feature2_Title"]</h6>
+                        <small class="text-secondary">@L["Index_Feature2_Desc"]</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 card-stat">
+                    <div class="card-body text-center p-3">
+                        <i class="bi bi-telegram text-blue fs-2 mb-2"></i>
+                        <h6 class="mb-1">@L["Index_Feature3_Title"]</h6>
+                        <small class="text-secondary">@L["Index_Feature3_Desc"]</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string FormatDifficulty(double diff)
+    {
+        if (diff >= 1e12) return $"{diff / 1e12:F2}T";
+        if (diff >= 1e9) return $"{diff / 1e9:F2}G";
+        return diff.ToString("F0");
+    }
+
+    string FormatTimeToAdjustment(int blocksLeft)
+    {
+        var minutes = blocksLeft * 10;
+        var hours = minutes / 60;
+        var days = hours / 24;
+        if (days >= 1) return $"{days}d {hours % 24}h";
+        return $"{hours}h {minutes % 60}m";
+    }
+}

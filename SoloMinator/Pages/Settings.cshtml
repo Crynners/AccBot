@@ -1,0 +1,339 @@
+@page
+@model SettingsModel
+@{
+    ViewData["Title"] = L["Settings_Title"];
+    var culture = ViewContext.HttpContext.Items["Culture"] as string ?? "cs";
+}
+
+@if (Model.Registration == null)
+{
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card text-center">
+                <div class="card-body py-5">
+                    <i class="bi bi-exclamation-triangle text-yellow display-1 mb-3"></i>
+                    <h4>@L["Dashboard_NotFound"]</h4>
+                    <p class="text-secondary">@L["Dashboard_NotFoundDesc"]</p>
+                    <a href="/@culture/" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>@L["Dashboard_RegisterNew"]
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/@culture/Dashboard?address=@Model.Address&pool=@Model.Pool">
+                            <i class="bi bi-speedometer2 me-1"></i>@L["Nav_Dashboard"]
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active">@L["Nav_Settings"]</li>
+                </ol>
+            </nav>
+
+            <h2 class="mb-2">
+                <i class="bi bi-gear text-orange me-2"></i>@L["Settings_Title"]
+            </h2>
+            <p class="text-secondary mb-4">
+                <code>@Model.Registration.MiningAddress</code>
+            </p>
+
+            @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+            {
+                <div class="alert alert-success d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    @L[Model.SuccessMessage]
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <div class="alert alert-danger d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    @L[Model.ErrorMessage]
+                </div>
+            }
+
+            <!-- Telegram Subscriptions -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-telegram me-2 text-blue"></i>
+                    <strong>@L["Settings_Telegram"]</strong>
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary">
+                        @L["Settings_TelegramDesc"]
+                    </p>
+
+                    <!-- Active Subscriptions -->
+                    @if (Model.Subscriptions.Any())
+                    {
+                        <h6 class="mb-3">
+                            <i class="bi bi-list-check me-1"></i>@L["Settings_ActiveSubscriptions"]
+                        </h6>
+                        <div class="table-responsive mb-4">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>@L["Settings_SubscriptionChat"]</th>
+                                        <th>@L["Settings_SubscriptionStatus"]</th>
+                                        <th>@L["Settings_SubscriptionDate"]</th>
+                                        <th class="text-end">@L["Settings_SubscriptionActions"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var sub in Model.Subscriptions)
+                                    {
+                                        <tr>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(sub.TelegramUsername))
+                                                {
+                                                    <span>@@@sub.TelegramUsername</span>
+                                                }
+                                                else if (!string.IsNullOrEmpty(sub.TelegramFirstName))
+                                                {
+                                                    <span>@sub.TelegramFirstName</span>
+                                                }
+                                                else
+                                                {
+                                                    <code class="small">@sub.TelegramChatId</code>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (sub.IsActive)
+                                                {
+                                                    <span class="badge bg-success">@L["Settings_SubscriptionActive"]</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">@L["Settings_SubscriptionPaused"]</span>
+                                                }
+                                            </td>
+                                            <td class="small text-secondary">@sub.CreatedAt.ToString("yyyy-MM-dd")</td>
+                                            <td class="text-end">
+                                                <form method="post" asp-page-handler="ToggleSubscription" class="d-inline">
+                                                    <input type="hidden" name="Address" value="@Model.Address" />
+                                                    <input type="hidden" name="Pool" value="@Model.Pool" />
+                                                    <input type="hidden" name="subscriptionId" value="@sub.Id" />
+                                                    <input type="hidden" name="isActive" value="@(!sub.IsActive)" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="@(sub.IsActive ? L["Settings_Pause"] : L["Settings_Resume"])">
+                                                        <i class="bi @(sub.IsActive ? "bi-pause" : "bi-play")"></i>
+                                                    </button>
+                                                </form>
+                                                <form method="post" asp-page-handler="DeleteSubscription" class="d-inline">
+                                                    <input type="hidden" name="Address" value="@Model.Address" />
+                                                    <input type="hidden" name="Pool" value="@Model.Pool" />
+                                                    <input type="hidden" name="subscriptionId" value="@sub.Id" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="@L["Settings_Delete"]"
+                                                            onclick="return confirm('@L["Settings_ConfirmDeleteSubscription"]');">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    <!-- Generate Link Button -->
+                    <h6 class="mb-3">
+                        <i class="bi bi-link-45deg me-1"></i>@L["Settings_AddSubscription"]
+                    </h6>
+
+                    @if (!string.IsNullOrEmpty(Model.TelegramLinkUrl))
+                    {
+                        <div class="alert alert-success">
+                            <p class="mb-2">
+                                <i class="bi bi-check-circle me-1"></i>@L["Settings_LinkReady"]
+                            </p>
+                            <p class="small text-secondary mb-3">@L["Settings_LinkExpires"]</p>
+                            <a href="@Model.TelegramLinkUrl" target="_blank" class="btn btn-primary">
+                                <i class="bi bi-telegram me-1"></i>@L["Settings_OpenTelegram"]
+                            </a>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-secondary small mb-3">@L["Settings_GenerateLinkDesc"]</p>
+                        <form method="post" asp-page-handler="GenerateLink">
+                            <input type="hidden" name="Address" value="@Model.Address" />
+                            <input type="hidden" name="Pool" value="@Model.Pool" />
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-link-45deg me-1"></i>@L["Settings_GenerateLink"]
+                            </button>
+                        </form>
+                    }
+
+                    <hr class="my-4 border-secondary" />
+
+                    <!-- Legacy Manual Input (collapsed by default) -->
+                    <div class="accordion" id="telegramHelp">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#manualSetup">
+                                    <i class="bi bi-gear me-2"></i>
+                                    @L["Settings_ManualSetup"]
+                                </button>
+                            </h2>
+                            <div id="manualSetup" class="accordion-collapse collapse">
+                                <div class="accordion-body">
+                                    <p class="text-secondary small">@L["Settings_ManualSetupDesc"]</p>
+                                    <form method="post" asp-page-handler="UpdateTelegram">
+                                        <input type="hidden" name="Address" value="@Model.Address" />
+                                        <input type="hidden" name="Pool" value="@Model.Pool" />
+
+                                        <div class="mb-4">
+                                            <label class="form-label">
+                                                <i class="bi bi-chat-dots me-1"></i>@L["Settings_ChatId"]
+                                            </label>
+                                            <input type="text" name="TelegramChatId" class="form-control"
+                                                   value="@Model.Registration.TelegramChatId"
+                                                   placeholder="@L["Settings_ChatIdPlaceholder"]" />
+                                            <small class="text-secondary mt-1 d-block">
+                                                @L["Settings_ChatIdHelp"]
+                                            </small>
+                                        </div>
+
+                                        <div class="mb-4">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" name="NotificationsEnabled"
+                                                       id="notificationsEnabled" value="true"
+                                                       @(Model.Registration.NotificationsEnabled ? "checked" : "") />
+                                                <label class="form-check-label" for="notificationsEnabled">
+                                                    @L["Settings_EnableNotifications"]
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-secondary">
+                                            <i class="bi bi-check-lg me-1"></i>@L["Settings_Save"]
+                                        </button>
+                                    </form>
+
+                                    <hr class="my-4 border-secondary" />
+
+                                    <h6 class="text-orange">
+                                        <i class="bi bi-question-circle me-1"></i>@L["Settings_HowToGetChatId"]
+                                    </h6>
+                                    <div class="mt-3">
+                                        <h6 class="text-orange small">
+                                            <i class="bi bi-person me-1"></i>@L["Settings_PersonalChat"]
+                                        </h6>
+                                        <ol class="small mb-4">
+                                            <li>@L["Settings_Personal_Step1"]</li>
+                                            <li>@L["Settings_Personal_Step2"]</li>
+                                            <li>@L["Settings_Personal_Step3"]</li>
+                                        </ol>
+
+                                        <h6 class="text-blue small">
+                                            <i class="bi bi-people me-1"></i>@L["Settings_GroupChat"]
+                                        </h6>
+                                        <ol class="small mb-3">
+                                            <li>@L["Settings_Group_Step1"]</li>
+                                            <li>@L["Settings_Group_Step2"]</li>
+                                            <li>@L["Settings_Group_Step3"]</li>
+                                            <li>@L["Settings_Group_Step4"]</li>
+                                            <li>@L["Settings_Group_Step5"]</li>
+                                        </ol>
+
+                                        <div class="alert alert-info small">
+                                            <i class="bi bi-info-circle me-2"></i>
+                                            @L["Settings_TelegramNote"]
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Registration Info -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-info-circle me-2 text-purple"></i>
+                    <strong>@L["Settings_Details"]</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="stat-label">@L["Settings_MiningAddress"]</div>
+                            <code class="d-block text-truncate">@Model.Registration.MiningAddress</code>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-label">@L["Settings_Pool"]</div>
+                            <span>@(Model.Registration.PoolVariant).ckpool.org</span>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-label">@L["Settings_Registered"]</div>
+                            <span>@Model.Registration.CreatedAt.ToString("yyyy-MM-dd HH:mm") UTC</span>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-label">@L["Settings_LastUpdated"]</div>
+                            <span>@Model.Registration.UpdatedAt.ToString("yyyy-MM-dd HH:mm") UTC</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="card border-danger">
+                <div class="card-header bg-danger bg-opacity-25 d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle me-2 text-danger"></i>
+                    <strong class="text-danger">@L["Settings_DangerZone"]</strong>
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary">
+                        @L["Settings_DeleteDesc"]
+                    </p>
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="bi bi-trash me-1"></i>@L["Settings_Delete"]
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-danger">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>@L["Settings_DeleteConfirm"]
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>@L["Settings_DeleteQuestion"]</p>
+                    <p class="text-secondary small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        @L["Settings_DeleteWarning"]
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x me-1"></i>@L["Settings_Cancel"]
+                    </button>
+                    <form method="post" asp-page-handler="Delete" class="d-inline">
+                        <input type="hidden" name="Address" value="@Model.Address" />
+                        <input type="hidden" name="Pool" value="@Model.Pool" />
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i>@L["Settings_Delete"]
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
