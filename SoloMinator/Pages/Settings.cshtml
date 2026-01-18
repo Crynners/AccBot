@@ -41,9 +41,39 @@ else
             <h2 class="mb-2">
                 <i class="bi bi-gear text-orange me-2"></i>@L["Settings_Title"]
             </h2>
-            <p class="text-secondary mb-4">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
                 <code>@Model.Registration.MiningAddress</code>
-            </p>
+                <div class="d-flex align-items-center gap-2">
+                    @if (Model.AllRegistrations.Count > 1)
+                    {
+                        <div class="btn-group" role="group">
+                            @foreach (var reg in Model.AllRegistrations)
+                            {
+                                var isActive = reg.PoolVariant == Model.Pool;
+                                <a href="/@culture/Settings?address=@Model.Address&pool=@reg.PoolVariant"
+                                   class="btn btn-sm @(isActive ? "btn-primary" : "btn-outline-secondary")">
+                                    <i class="bi bi-globe me-1"></i>@reg.PoolVariant
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="badge pool-badge rounded-pill">
+                            <i class="bi bi-globe me-1"></i>@(Model.Registration.PoolVariant).ckpool.org
+                        </span>
+                    }
+                    <form method="post" asp-page-handler="DiscoverPools" class="d-inline">
+                        <input type="hidden" name="Address" value="@Model.Address" />
+                        <input type="hidden" name="Pool" value="@Model.Pool" />
+                        <button type="submit" class="btn btn-sm btn-outline-success"
+                                title="@L["Dashboard_DiscoverPools"]"
+                                data-bs-toggle="tooltip">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
 
             @if (!string.IsNullOrEmpty(Model.SuccessMessage))
             {
@@ -122,7 +152,7 @@ else
                                                     <input type="hidden" name="Address" value="@Model.Address" />
                                                     <input type="hidden" name="Pool" value="@Model.Pool" />
                                                     <input type="hidden" name="subscriptionId" value="@sub.Id" />
-                                                    <input type="hidden" name="isActive" value="@(!sub.IsActive)" />
+                                                    <input type="hidden" name="isActive" value="@(sub.IsActive ? "false" : "true")" />
                                                     <button type="submit" class="btn btn-sm btn-outline-secondary" title="@(sub.IsActive ? L["Settings_Pause"] : L["Settings_Resume"])">
                                                         <i class="bi @(sub.IsActive ? "bi-pause" : "bi-play")"></i>
                                                     </button>
@@ -173,88 +203,6 @@ else
                         </form>
                     }
 
-                    <hr class="my-4 border-secondary" />
-
-                    <!-- Legacy Manual Input (collapsed by default) -->
-                    <div class="accordion" id="telegramHelp">
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button"
-                                        data-bs-toggle="collapse" data-bs-target="#manualSetup">
-                                    <i class="bi bi-gear me-2"></i>
-                                    @L["Settings_ManualSetup"]
-                                </button>
-                            </h2>
-                            <div id="manualSetup" class="accordion-collapse collapse">
-                                <div class="accordion-body">
-                                    <p class="text-secondary small">@L["Settings_ManualSetupDesc"]</p>
-                                    <form method="post" asp-page-handler="UpdateTelegram">
-                                        <input type="hidden" name="Address" value="@Model.Address" />
-                                        <input type="hidden" name="Pool" value="@Model.Pool" />
-
-                                        <div class="mb-4">
-                                            <label class="form-label">
-                                                <i class="bi bi-chat-dots me-1"></i>@L["Settings_ChatId"]
-                                            </label>
-                                            <input type="text" name="TelegramChatId" class="form-control"
-                                                   value="@Model.Registration.TelegramChatId"
-                                                   placeholder="@L["Settings_ChatIdPlaceholder"]" />
-                                            <small class="text-secondary mt-1 d-block">
-                                                @L["Settings_ChatIdHelp"]
-                                            </small>
-                                        </div>
-
-                                        <div class="mb-4">
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" name="NotificationsEnabled"
-                                                       id="notificationsEnabled" value="true"
-                                                       @(Model.Registration.NotificationsEnabled ? "checked" : "") />
-                                                <label class="form-check-label" for="notificationsEnabled">
-                                                    @L["Settings_EnableNotifications"]
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        <button type="submit" class="btn btn-secondary">
-                                            <i class="bi bi-check-lg me-1"></i>@L["Settings_Save"]
-                                        </button>
-                                    </form>
-
-                                    <hr class="my-4 border-secondary" />
-
-                                    <h6 class="text-orange">
-                                        <i class="bi bi-question-circle me-1"></i>@L["Settings_HowToGetChatId"]
-                                    </h6>
-                                    <div class="mt-3">
-                                        <h6 class="text-orange small">
-                                            <i class="bi bi-person me-1"></i>@L["Settings_PersonalChat"]
-                                        </h6>
-                                        <ol class="small mb-4">
-                                            <li>@L["Settings_Personal_Step1"]</li>
-                                            <li>@L["Settings_Personal_Step2"]</li>
-                                            <li>@L["Settings_Personal_Step3"]</li>
-                                        </ol>
-
-                                        <h6 class="text-blue small">
-                                            <i class="bi bi-people me-1"></i>@L["Settings_GroupChat"]
-                                        </h6>
-                                        <ol class="small mb-3">
-                                            <li>@L["Settings_Group_Step1"]</li>
-                                            <li>@L["Settings_Group_Step2"]</li>
-                                            <li>@L["Settings_Group_Step3"]</li>
-                                            <li>@L["Settings_Group_Step4"]</li>
-                                            <li>@L["Settings_Group_Step5"]</li>
-                                        </ol>
-
-                                        <div class="alert alert-info small">
-                                            <i class="bi bi-info-circle me-2"></i>
-                                            @L["Settings_TelegramNote"]
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -286,19 +234,26 @@ else
                 </div>
             </div>
 
-            <!-- Danger Zone -->
-            <div class="card border-danger">
-                <div class="card-header bg-danger bg-opacity-25 d-flex align-items-center">
-                    <i class="bi bi-exclamation-triangle me-2 text-danger"></i>
-                    <strong class="text-danger">@L["Settings_DangerZone"]</strong>
-                </div>
-                <div class="card-body">
-                    <p class="text-secondary">
-                        @L["Settings_DeleteDesc"]
-                    </p>
-                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
-                        <i class="bi bi-trash me-1"></i>@L["Settings_Delete"]
-                    </button>
+            <!-- Danger Zone (collapsed) -->
+            <div class="accordion" id="dangerZone">
+                <div class="accordion-item border-danger">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-danger bg-opacity-10 text-danger" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#dangerZoneContent">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            @L["Settings_DangerZone"]
+                        </button>
+                    </h2>
+                    <div id="dangerZoneContent" class="accordion-collapse collapse">
+                        <div class="accordion-body">
+                            <p class="text-secondary">
+                                @L["Settings_DeleteDesc"]
+                            </p>
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                <i class="bi bi-trash me-1"></i>@L["Settings_Delete"]
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

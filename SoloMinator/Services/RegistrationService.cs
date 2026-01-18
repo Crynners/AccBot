@@ -33,8 +33,9 @@ public class RegistrationService : IRegistrationService
 
     public async Task<UserRegistrationEntity?> GetByAddressAndPoolAsync(string address, string poolVariant)
     {
+        var normalizedPool = poolVariant.ToLowerInvariant();
         return await _context.UserRegistrations
-            .FirstOrDefaultAsync(r => r.MiningAddress == address && r.PoolVariant == poolVariant);
+            .FirstOrDefaultAsync(r => r.MiningAddress == address && r.PoolVariant == normalizedPool);
     }
 
     public async Task<List<UserRegistrationEntity>> GetAllPoolsForAddressAsync(string address)
@@ -72,7 +73,7 @@ public class RegistrationService : IRegistrationService
 
     public async Task<UserRegistrationEntity> UpdateTelegramSettingsAsync(string address, string poolVariant, string? chatId, bool notificationsEnabled)
     {
-        var registration = await GetByAddressAndPoolAsync(address, poolVariant);
+        var registration = await GetByAddressAndPoolAsync(address, poolVariant.ToLowerInvariant());
         if (registration == null)
         {
             throw new InvalidOperationException("Registration not found");

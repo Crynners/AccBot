@@ -93,16 +93,17 @@ namespace SoloMinatorNotifier.Functions
                     return;
                 }
 
-                // Create unique wallet ID for this user (pool:address)
+                // Create unique wallet ID for this user (pool:address) - kept for backward compatibility
                 var walletId = $"{user.PoolVariant}:{user.MiningAddress}";
-                _logger.LogInformation("Saving stats for walletId: {WalletId}, BestEver: {BestEver}",
-                    walletId, stats.BestEver);
+                _logger.LogInformation("Saving stats for walletId: {WalletId}, UserRegistrationId: {UserId}, BestEver: {BestEver}",
+                    walletId, user.Id, stats.BestEver);
 
-                // Save stats and get notifications
+                // Save stats and get notifications (pass UserRegistrationId for optimized FK-based queries)
                 var notifications = await _miningStatsRepository.SaveStatsAndGetNotificationsAsync(
                     stats,
                     walletId,
-                    currentDifficulty);
+                    currentDifficulty,
+                    user.Id);  // Pass FK for optimized indexed lookups
 
                 _logger.LogInformation("Stats saved, {NotificationCount} notifications generated", notifications.Count);
 

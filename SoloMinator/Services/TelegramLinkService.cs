@@ -80,28 +80,41 @@ public class TelegramLinkService : ITelegramLinkService
 
     public async Task<TelegramLinkTokenEntity?> ValidateTokenAsync(string token)
     {
-        var linkToken = await _context.TelegramLinkTokens
-            .Include(t => t.UserRegistration)
-            .FirstOrDefaultAsync(t => t.Token == token && !t.IsUsed && t.ExpiresAt > DateTime.UtcNow);
-
-        if (linkToken == null)
+        // Use transaction to atomically validate and mark token as used to prevent race conditions
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            _logger.LogWarning("Invalid or expired token: {Token}", token.Substring(0, Math.Min(10, token.Length)) + "...");
-            return null;
-        }
+            var linkToken = await _context.TelegramLinkTokens
+                .Include(t => t.UserRegistration)
+                .FirstOrDefaultAsync(t => t.Token == token && !t.IsUsed && t.ExpiresAt > DateTime.UtcNow);
 
-        return linkToken;
+            if (linkToken == null)
+            {
+                _logger.LogWarning("Invalid or expired token: {Token}", token.Substring(0, Math.Min(10, token.Length)) + "...");
+                await transaction.RollbackAsync();
+                return null;
+            }
+
+            // Mark as used immediately within the same transaction
+            linkToken.IsUsed = true;
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return linkToken;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error validating token");
+            throw;
+        }
     }
 
     public async Task MarkTokenAsUsedAsync(int tokenId)
     {
-        var token = await _context.TelegramLinkTokens.FindAsync(tokenId);
-        if (token != null)
-        {
-            token.IsUsed = true;
-            await _context.SaveChangesAsync();
-            _logger.LogInformation("Token {TokenId} marked as used", tokenId);
-        }
+        // This method is now a no-op since ValidateTokenAsync marks the token as used atomically
+        // Kept for backward compatibility
+        _logger.LogDebug("MarkTokenAsUsedAsync called for token {TokenId} - token already marked as used during validation", tokenId);
     }
 
     public string GetDeepLink(string token)

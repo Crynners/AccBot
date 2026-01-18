@@ -7,6 +7,8 @@ public interface ICKPoolService
 {
     Task<(bool IsValid, MiningStatistics? Stats, string? Error)> ValidateAndGetStatsAsync(string address, string poolVariant);
     string GetPoolUrl(string poolVariant);
+    Task<Dictionary<string, (bool IsValid, MiningStatistics? Stats)>> CheckAllPoolsAsync(string address);
+    IReadOnlyList<string> AvailablePools { get; }
 }
 
 public class CKPoolService : ICKPoolService
@@ -18,8 +20,11 @@ public class CKPoolService : ICKPoolService
     {
         ["solo"] = "https://solo.ckpool.org",
         ["eusolo"] = "https://eusolo.ckpool.org",
-        ["ausolo"] = "https://ausolo.ckpool.org"
+        ["ausolo"] = "https://ausolo.ckpool.org",
+        ["braiins"] = "https://solo.braiins.com"
     };
+
+    private static readonly IReadOnlyList<string> CachedAvailablePools = PoolUrls.Keys.ToList().AsReadOnly();
 
     public CKPoolService(HttpClient httpClient, ILogger<CKPoolService> logger)
     {
@@ -30,6 +35,35 @@ public class CKPoolService : ICKPoolService
     public string GetPoolUrl(string poolVariant)
     {
         return PoolUrls.TryGetValue(poolVariant.ToLower(), out var url) ? url : PoolUrls["solo"];
+    }
+
+    public IReadOnlyList<string> AvailablePools => CachedAvailablePools;
+
+    public async Task<Dictionary<string, (bool IsValid, MiningStatistics? Stats)>> CheckAllPoolsAsync(string address)
+    {
+        var results = new Dictionary<string, (bool IsValid, MiningStatistics? Stats)>();
+
+        var tasks = PoolUrls.Keys.Select(async pool =>
+        {
+            try
+            {
+                var (isValid, stats, _) = await ValidateAndGetStatsAsync(address, pool);
+                return (Pool: pool, IsValid: isValid, Stats: stats);
+            }
+            catch
+            {
+                return (Pool: pool, IsValid: false, Stats: (MiningStatistics?)null);
+            }
+        });
+
+        var poolResults = await Task.WhenAll(tasks);
+
+        foreach (var result in poolResults)
+        {
+            results[result.Pool] = (result.IsValid, result.Stats);
+        }
+
+        return results;
     }
 
     public async Task<(bool IsValid, MiningStatistics? Stats, string? Error)> ValidateAndGetStatsAsync(string address, string poolVariant)

@@ -8,8 +8,7 @@
 <div class="row justify-content-center">
     <div class="col-lg-6 col-md-8">
         <div class="text-center mb-4">
-            <h1 class="display-5 fw-bold d-flex align-items-center justify-content-center gap-3">
-                <img src="/solominator.png" alt="" height="48" />
+            <h1 class="display-5 fw-bold">
                 @L["Index_Title"]
             </h1>
             <p class="text-secondary lead">
@@ -17,20 +16,20 @@
             </p>
         </div>
 
-        <!-- View Dashboard -->
-        <div class="card">
+        <!-- Main CTA Card -->
+        <div class="card border-orange" style="border-color: var(--accent-orange) !important;">
             <div class="card-header d-flex align-items-center gap-2">
-                <i class="bi bi-speedometer2 text-orange"></i>
+                <i class="bi bi-bell-fill text-orange"></i>
                 @L["Index_ViewDashboard"]
             </div>
             <div class="card-body p-4">
-                <form method="get" action="/@culture/Dashboard">
+                <form id="addressForm" method="get" action="/@culture/Dashboard">
                     <div class="mb-4">
                         <label class="form-label">
                             <i class="bi bi-currency-bitcoin text-yellow me-1"></i>
                             @L["Index_AddressLabel"]
                         </label>
-                        <input type="text" name="address" class="form-control form-control-lg"
+                        <input type="text" id="addressInput" name="address" class="form-control form-control-lg"
                                placeholder="@L["Index_AddressPlaceholder"]" required />
                         <small class="text-secondary mt-1 d-block">
                             @L["Index_ViewDashboardHelp"]
@@ -38,11 +37,56 @@
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="bi bi-arrow-right me-2"></i>
+                            <i class="bi bi-telegram me-2"></i>
                             @L["Index_ViewDashboardButton"]
                         </button>
                     </div>
                 </form>
+
+                <!-- Recent Addresses -->
+                <div id="recentAddresses" class="mt-4 d-none">
+                    <hr class="border-secondary" />
+                    <small class="text-secondary d-block mb-2">
+                        <i class="bi bi-clock-history me-1"></i>@L["Index_RecentAddresses"]
+                    </small>
+                    <div id="recentList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- How it works -->
+        <div class="mt-5">
+            <h5 class="text-center mb-4 text-secondary">
+                <i class="bi bi-info-circle me-2"></i>@L["Index_HowItWorks"]
+            </h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <div class="rounded-circle bg-orange d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background-color: var(--accent-orange) !important;">
+                            <i class="bi bi-1-circle-fill text-dark fs-4"></i>
+                        </div>
+                        <h6 class="mb-1">@L["Index_Step1_Title"]</h6>
+                        <small class="text-secondary">@L["Index_Step1_Desc"]</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <div class="rounded-circle bg-blue d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background-color: var(--accent-blue) !important;">
+                            <i class="bi bi-2-circle-fill text-dark fs-4"></i>
+                        </div>
+                        <h6 class="mb-1">@L["Index_Step2_Title"]</h6>
+                        <small class="text-secondary">@L["Index_Step2_Desc"]</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <div class="rounded-circle bg-green d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background-color: var(--accent-green) !important;">
+                            <i class="bi bi-3-circle-fill text-dark fs-4"></i>
+                        </div>
+                        <h6 class="mb-1">@L["Index_Step3_Title"]</h6>
+                        <small class="text-secondary">@L["Index_Step3_Desc"]</small>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -75,7 +119,7 @@
                             <div class="col-6 col-md-3">
                                 <div class="stat-label">@L["Index_NextAdjustment"]</div>
                                 <div class="fw-bold fs-5 @(Model.DifficultyInfo.DifficultyChange >= 0 ? "text-danger" : "text-green")">
-                                    @(Model.DifficultyInfo.DifficultyChange >= 0 ? "+" : "")@Model.DifficultyInfo.DifficultyChange.ToString("F2")%
+                                    @(Model.DifficultyInfo.DifficultyChange >= 0 ? "+" : "")@Model.DifficultyInfo.DifficultyChange.ToString("F2") %
                                 </div>
                                 <div class="progress-bar-custom mt-1">
                                     <div class="progress-bar-fill" style="width: @Model.DifficultyInfo.ProgressPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></div>
@@ -96,7 +140,7 @@
             <div class="col-md-4">
                 <div class="card h-100 card-stat">
                     <div class="card-body text-center p-3">
-                        <i class="bi bi-graph-up-arrow text-orange fs-2 mb-2"></i>
+                        <i class="bi bi-trophy-fill text-orange fs-2 mb-2"></i>
                         <h6 class="mb-1">@L["Index_Feature1_Title"]</h6>
                         <small class="text-secondary">@L["Index_Feature1_Desc"]</small>
                     </div>
@@ -105,7 +149,7 @@
             <div class="col-md-4">
                 <div class="card h-100 card-stat">
                     <div class="card-body text-center p-3">
-                        <i class="bi bi-trophy text-green fs-2 mb-2"></i>
+                        <i class="bi bi-bar-chart-fill text-yellow fs-2 mb-2"></i>
                         <h6 class="mb-1">@L["Index_Feature2_Title"]</h6>
                         <small class="text-secondary">@L["Index_Feature2_Desc"]</small>
                     </div>
@@ -140,4 +184,104 @@
         if (days >= 1) return $"{days}d {hours % 24}h";
         return $"{hours}h {minutes % 60}m";
     }
+}
+
+@section Scripts {
+<script>
+(function() {
+    const STORAGE_KEY = 'solominator_recent_addresses';
+    const MAX_ADDRESSES = 5;
+    const culture = '@culture';
+
+    function getRecentAddresses() {
+        try {
+            const data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    function saveRecentAddresses(addresses) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(addresses));
+        } catch {}
+    }
+
+    function addAddress(address) {
+        if (!address) return;
+        let addresses = getRecentAddresses();
+        // Remove if already exists
+        addresses = addresses.filter(a => a.address !== address);
+        // Add to beginning
+        addresses.unshift({ address: address, timestamp: Date.now() });
+        // Keep only MAX_ADDRESSES
+        addresses = addresses.slice(0, MAX_ADDRESSES);
+        saveRecentAddresses(addresses);
+    }
+
+    function removeAddress(address) {
+        let addresses = getRecentAddresses();
+        addresses = addresses.filter(a => a.address !== address);
+        saveRecentAddresses(addresses);
+        renderRecentAddresses();
+    }
+
+    function truncateAddress(addr) {
+        if (addr.length <= 20) return addr;
+        return addr.substring(0, 10) + '...' + addr.substring(addr.length - 8);
+    }
+
+    function renderRecentAddresses() {
+        const container = document.getElementById('recentAddresses');
+        const list = document.getElementById('recentList');
+        const addresses = getRecentAddresses();
+
+        if (addresses.length === 0) {
+            container.classList.add('d-none');
+            return;
+        }
+
+        container.classList.remove('d-none');
+        list.innerHTML = '';
+
+        addresses.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'd-flex align-items-center justify-content-between py-1';
+            div.innerHTML = `
+                <a href="/${culture}/Dashboard?address=${encodeURIComponent(item.address)}"
+                   class="text-blue text-decoration-none small text-truncate me-2"
+                   style="max-width: calc(100% - 30px);">
+                    <i class="bi bi-wallet2 me-1"></i>
+                    <code>${truncateAddress(item.address)}</code>
+                </a>
+                <button type="button" class="btn btn-link btn-sm text-secondary p-0 remove-addr"
+                        data-address="${item.address}" title="@L["Index_RemoveAddress"]">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            `;
+            list.appendChild(div);
+        });
+
+        // Add remove handlers
+        list.querySelectorAll('.remove-addr').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                removeAddress(this.dataset.address);
+            });
+        });
+    }
+
+    // On form submit, save the address
+    document.getElementById('addressForm').addEventListener('submit', function() {
+        const address = document.getElementById('addressInput').value.trim();
+        if (address) {
+            addAddress(address);
+        }
+    });
+
+    // Render on page load
+    renderRecentAddresses();
+})();
+</script>
 }

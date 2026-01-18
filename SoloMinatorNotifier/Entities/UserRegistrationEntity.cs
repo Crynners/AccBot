@@ -16,7 +16,7 @@ public class UserRegistrationEntity
 
     [Required]
     [MaxLength(50)]
-    public string PoolVariant { get; set; } = "solo"; // solo, eusolo, ausolo
+    public string PoolVariant { get; set; } = "solo"; // solo, eusolo, ausolo, braiins
 
     [MaxLength(50)]
     public string? TelegramChatId { get; set; }
@@ -32,6 +32,7 @@ public class UserRegistrationEntity
     {
         "eusolo" => "https://eusolo.ckpool.org",
         "ausolo" => "https://ausolo.ckpool.org",
+        "braiins" => "https://solo.braiins.com",
         _ => "https://solo.ckpool.org"
     };
 

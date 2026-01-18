@@ -5,7 +5,48 @@
     var culture = ViewContext.HttpContext.Items["Culture"] as string ?? "cs";
 }
 
-@if (Model.Registration == null || Model.AllRegistrations.Count == 0)
+@if (Model.AddressNotFoundAnywhere)
+{
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card text-center">
+                <div class="card-body py-5">
+                    <i class="bi bi-search text-yellow display-1 mb-3"></i>
+                    <h4>@L["Dashboard_AddressNotFound"]</h4>
+                    <p class="text-secondary mb-4">@L["Dashboard_AddressNotFoundDesc"]</p>
+
+                    <div class="mb-4">
+                        <p class="text-secondary small mb-2">@L["Dashboard_CheckedPools"]:</p>
+                        <div class="d-flex justify-content-center flex-wrap gap-2">
+                            @foreach (var pool in Model.CheckedPools)
+                            {
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-globe me-1"></i>@pool
+                                </span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info text-start mx-auto" style="max-width: 500px;">
+                        <h6 class="mb-2"><i class="bi bi-info-circle me-1"></i>@L["Dashboard_HowToStart"]</h6>
+                        <p class="small mb-2">@L["Dashboard_HowToStartDesc"]</p>
+                        <ul class="small mb-0">
+                            <li><a href="https://solo.ckpool.org" target="_blank">solo.ckpool.org</a></li>
+                            <li><a href="https://eusolo.ckpool.org" target="_blank">eusolo.ckpool.org</a></li>
+                            <li><a href="https://ausolo.ckpool.org" target="_blank">ausolo.ckpool.org</a></li>
+                            <li><a href="https://solo.braiins.com" target="_blank">solo.braiins.com</a></li>
+                        </ul>
+                    </div>
+
+                    <a href="/@culture/" class="btn btn-primary mt-3">
+                        <i class="bi bi-arrow-left me-2"></i>@L["Dashboard_TryAnotherAddress"]
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (Model.Registration == null || Model.AllRegistrations.Count == 0)
 {
     <div class="row justify-content-center">
         <div class="col-md-6">
@@ -14,8 +55,8 @@
                     <i class="bi bi-exclamation-triangle text-yellow display-1 mb-3"></i>
                     <h4>@L["Dashboard_NotFound"]</h4>
                     <p class="text-secondary">@L["Dashboard_NotFoundDesc"]</p>
-                    <a href="/@culture/Register" class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-2"></i>@L["Dashboard_RegisterNew"]
+                    <a href="/@culture/" class="btn btn-primary">
+                        <i class="bi bi-arrow-left me-2"></i>@L["Dashboard_TryAnotherAddress"]
                     </a>
                 </div>
             </div>
@@ -32,25 +73,36 @@ else
             </h2>
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <code class="fs-6">@Model.Registration.MiningAddress</code>
-                @if (Model.AllRegistrations.Count > 1)
-                {
-                    <div class="btn-group" role="group">
-                        @foreach (var reg in Model.AllRegistrations)
-                        {
-                            var isActive = reg.PoolVariant == Model.Pool;
-                            <a href="/@culture/Dashboard?address=@Model.Address&pool=@reg.PoolVariant"
-                               class="btn btn-sm @(isActive ? "btn-primary" : "btn-outline-secondary")">
-                                <i class="bi bi-globe me-1"></i>@reg.PoolVariant
-                            </a>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <span class="badge pool-badge rounded-pill">
-                        <i class="bi bi-globe me-1"></i>@(Model.Registration.PoolVariant).ckpool.org
-                    </span>
-                }
+                <div class="d-flex align-items-center gap-2">
+                    @if (Model.AllRegistrations.Count > 1)
+                    {
+                        <div class="btn-group" role="group">
+                            @foreach (var reg in Model.AllRegistrations)
+                            {
+                                var isActive = reg.PoolVariant == Model.Pool;
+                                <a href="/@culture/Dashboard?address=@Model.Address&pool=@reg.PoolVariant"
+                                   class="btn btn-sm @(isActive ? "btn-primary" : "btn-outline-secondary")">
+                                    <i class="bi bi-globe me-1"></i>@reg.PoolVariant
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="badge pool-badge rounded-pill">
+                            <i class="bi bi-globe me-1"></i>@(Model.Registration.PoolVariant).ckpool.org
+                        </span>
+                    }
+                    <form method="post" asp-page-handler="DiscoverPools" class="d-inline">
+                        <input type="hidden" name="Address" value="@Model.Address" />
+                        <input type="hidden" name="Pool" value="@Model.Pool" />
+                        <button type="submit" class="btn btn-sm btn-outline-success"
+                                title="@L["Dashboard_DiscoverPools"]"
+                                data-bs-toggle="tooltip">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </form>
+                </div>
                 @if (Model.Registration.NotificationsEnabled)
                 {
                     <span class="badge bg-success rounded-pill">
@@ -63,6 +115,30 @@ else
             <i class="bi bi-gear me-1"></i> @L["Nav_Settings"]
         </a>
     </div>
+
+    <!-- Telegram Notifications Status -->
+    @if (Model.ActiveSubscriptionsCount > 0)
+    {
+        <div class="d-flex align-items-center gap-2 mb-4 text-secondary">
+            <i class="bi bi-telegram text-blue"></i>
+            <span>@L["Dashboard_TelegramActive"] <strong class="text-green">@Model.ActiveSubscriptionsCount</strong> @(Model.ActiveSubscriptionsCount == 1 ? L["Dashboard_TelegramChannel"] : L["Dashboard_TelegramChannels"])</span>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning d-flex align-items-center justify-content-between mb-4">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-bell-slash me-2 fs-4"></i>
+                <div>
+                    <strong>@L["Dashboard_TelegramNone"]</strong><br />
+                    <small>@L["Dashboard_TelegramSetupHint"]</small>
+                </div>
+            </div>
+            <a href="/@culture/Settings?address=@Model.Address&pool=@Model.Pool" class="btn btn-warning btn-sm">
+                <i class="bi bi-telegram me-1"></i>@L["Dashboard_SetupTelegram"]
+            </a>
+        </div>
+    }
 
     @if (Model.Stats == null)
     {
@@ -181,7 +257,7 @@ else
                         </div>
                         <div class="col-6 col-md-3">
                             <div class="stat-label">@L["Dashboard_Progress"]</div>
-                            <div class="fw-bold fs-5">@Model.DifficultyInfo.ProgressPercent.ToString("F1")%</div>
+                            <div class="fw-bold fs-5">@Model.DifficultyInfo.ProgressPercent.ToString("F1") %</div>
                             <div class="progress-bar-custom mt-1">
                                 <div class="progress-bar-fill" style="width: @Model.DifficultyInfo.ProgressPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></div>
                             </div>
@@ -189,7 +265,7 @@ else
                         <div class="col-6 col-md-3">
                             <div class="stat-label">@L["Dashboard_EstChange"]</div>
                             <div class="fw-bold fs-5 @(Model.DifficultyInfo.DifficultyChange >= 0 ? "text-danger" : "text-green")">
-                                @(Model.DifficultyInfo.DifficultyChange >= 0 ? "+" : "")@Model.DifficultyInfo.DifficultyChange.ToString("F2")%
+                                @(Model.DifficultyInfo.DifficultyChange >= 0 ? "+" : "")@Model.DifficultyInfo.DifficultyChange.ToString("F2") %
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
@@ -242,19 +318,68 @@ else
                         @if (Model.LastBlockFoundMatch != null)
                         {
                             <div class="col-6 col-md-3">
-                                <div class="stat-label">@L["Dashboard_LastBlockFound"]</div>
+                                <div class="stat-label">@L["Dashboard_BestShareWouldWin"]</div>
                                 <div class="fw-bold fs-5 text-yellow">@Model.LastBlockFoundMatch.Date.ToString("d. M. yyyy")</div>
-                                <small class="text-secondary">(@FormatDifficulty(Model.LastBlockFoundMatch.Difficulty))</small>
+                                <small class="text-secondary">@L["Dashboard_DifficultyAtDate"] @FormatDifficulty(Model.LastBlockFoundMatch.Difficulty)</small>
                             </div>
                         }
                         else if (Model.Stats?.BestEver > 0)
                         {
                             <div class="col-6 col-md-3">
-                                <div class="stat-label">@L["Dashboard_LastBlockFound"]</div>
+                                <div class="stat-label">@L["Dashboard_BestShareWouldWin"]</div>
                                 <div class="fw-bold fs-5 text-secondary">@L["Dashboard_NeverYet"]</div>
                                 <small class="text-secondary">@L["Dashboard_BestShareTooLow"]</small>
                             </div>
                         }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Worker Charts -->
+        @if (Model.Stats?.Worker != null && Model.Stats.Worker.Count > 1)
+        {
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-pie-chart me-2 text-blue"></i>
+                                <strong>@L["Dashboard_HashrateDistribution"]</strong>
+                            </div>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary active" data-chart="hashrate" data-type="doughnut" title="@L["Dashboard_ChartPie"]">
+                                    <i class="bi bi-pie-chart"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" data-chart="hashrate" data-type="bar" title="@L["Dashboard_ChartBar"]">
+                                    <i class="bi bi-bar-chart"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body d-flex justify-content-center align-items-center">
+                            <canvas id="hashrateChart" style="max-height: 250px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-pie-chart me-2 text-orange"></i>
+                                <strong>@L["Dashboard_SharesDistribution"]</strong>
+                            </div>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary active" data-chart="shares" data-type="doughnut" title="@L["Dashboard_ChartPie"]">
+                                    <i class="bi bi-pie-chart"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" data-chart="shares" data-type="bar" title="@L["Dashboard_ChartBar"]">
+                                    <i class="bi bi-bar-chart"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body d-flex justify-content-center align-items-center">
+                            <canvas id="sharesChart" style="max-height: 250px;"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -373,6 +498,132 @@ else
         if (hashrate >= 1e6) return $"{hashrate / 1e6:F2} MH/s";
         if (hashrate >= 1e3) return $"{hashrate / 1e3:F2} KH/s";
         return $"{hashrate:F0} H/s";
+    }
+
+    double ParseHashrateToNumber(string? hashrate)
+    {
+        if (string.IsNullOrWhiteSpace(hashrate)) return 0;
+        hashrate = hashrate.Trim().ToUpper();
+        var numberPart = "";
+        var unitPart = "";
+        foreach (var c in hashrate)
+        {
+            if (char.IsDigit(c) || c == '.' || c == ',')
+                numberPart += c;
+            else if (char.IsLetter(c))
+                unitPart += c;
+        }
+        if (!double.TryParse(numberPart.Replace(',', '.'), System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var value))
+            return 0;
+        return unitPart switch
+        {
+            "Z" or "ZH" or "ZH/S" or "ZHS" => value * 1e21,
+            "E" or "EH" or "EH/S" or "EHS" => value * 1e18,
+            "P" or "PH" or "PH/S" or "PHS" => value * 1e15,
+            "T" or "TH" or "TH/S" or "THS" => value * 1e12,
+            "G" or "GH" or "GH/S" or "GHS" => value * 1e9,
+            "M" or "MH" or "MH/S" or "MHS" => value * 1e6,
+            "K" or "KH" or "KH/S" or "KHS" => value * 1e3,
+            _ => value
+        };
+    }
+}
+
+@if (Model.Stats?.Worker != null && Model.Stats.Worker.Count > 1)
+{
+    @section Scripts {
+    <script>
+    (function() {
+        const chartColors = [
+            '#f78166', '#3fb950', '#58a6ff', '#a371f7', '#d29922',
+            '#f85149', '#56d364', '#79c0ff', '#bc8cff', '#e3b341'
+        ];
+
+        const workerData = [
+            @foreach (var worker in Model.Stats.Worker)
+            {
+                var name = GetWorkerDisplayName(worker.WorkerName);
+                var hashrate = ParseHashrateToNumber(worker.Hashrate1hr);
+                var shares = worker.Shares;
+                @:{ name: "@Html.Raw(name)", hashrate: @hashrate.ToString(System.Globalization.CultureInfo.InvariantCulture), shares: @shares },
+            }
+        ];
+
+        // Sort by hashrate/shares descending for charts
+        const workerDataByHashrate = [...workerData].sort((a, b) => b.hashrate - a.hashrate);
+        const workerDataByShares = [...workerData].sort((a, b) => b.shares - a.shares);
+
+        const charts = {};
+
+        function createChart(canvasId, type, sortedWorkerData, valueKey) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return null;
+
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            const isBar = type === 'bar';
+            charts[canvasId] = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: sortedWorkerData.map(w => w.name),
+                    datasets: [{
+                        data: sortedWorkerData.map(w => w[valueKey]),
+                        backgroundColor: chartColors,
+                        borderColor: isBar ? chartColors : '#161b22',
+                        borderWidth: isBar ? 1 : 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    indexAxis: isBar ? 'y' : undefined,
+                    plugins: {
+                        legend: {
+                            display: !isBar,
+                            position: 'bottom',
+                            labels: { color: '#e6edf3', padding: 10, font: { size: 11 } }
+                        }
+                    },
+                    scales: isBar ? {
+                        x: {
+                            ticks: { color: '#8b949e' },
+                            grid: { color: '#30363d' }
+                        },
+                        y: {
+                            ticks: { color: '#e6edf3' },
+                            grid: { color: '#30363d' }
+                        }
+                    } : {}
+                }
+            });
+            return charts[canvasId];
+        }
+
+        // Initial charts
+        createChart('hashrateChart', 'doughnut', workerDataByHashrate, 'hashrate');
+        createChart('sharesChart', 'doughnut', workerDataByShares, 'shares');
+
+        // Toggle buttons
+        document.querySelectorAll('[data-chart][data-type]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const chartName = this.dataset.chart;
+                const chartType = this.dataset.type;
+                const canvasId = chartName + 'Chart';
+                const sortedData = chartName === 'hashrate' ? workerDataByHashrate : workerDataByShares;
+                const valueKey = chartName;
+
+                createChart(canvasId, chartType, sortedData, valueKey);
+
+                // Update active state
+                this.closest('.btn-group').querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    })();
+    </script>
     }
 }
 

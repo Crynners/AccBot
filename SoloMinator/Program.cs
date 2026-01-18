@@ -46,6 +46,7 @@ builder.Services.AddHttpClient<IBitcoinService, BitcoinService>();
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<ITelegramLinkService, TelegramLinkService>();
 builder.Services.AddScoped<ITelegramSubscriptionService, TelegramSubscriptionService>();
+builder.Services.AddScoped<ITelegramNotificationService, TelegramNotificationService>();
 
 var app = builder.Build();
 

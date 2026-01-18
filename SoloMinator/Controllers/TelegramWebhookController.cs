@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -41,8 +43,8 @@ public class TelegramWebhookController : ControllerBase
     [HttpPost("webhook/{secret}")]
     public async Task<IActionResult> HandleWebhook(string secret, [FromBody] Update update)
     {
-        // Validate webhook secret
-        if (secret != _settings.WebhookSecret)
+        // Validate webhook secret using constant-time comparison to prevent timing attacks
+        if (!IsValidWebhookSecret(secret))
         {
             _logger.LogWarning("Invalid webhook secret received");
             return Unauthorized();
@@ -100,12 +102,12 @@ public class TelegramWebhookController : ControllerBase
 
             var address = linkToken.UserRegistration?.MiningAddress ?? "Unknown";
             var poolVariant = linkToken.UserRegistration?.PoolVariant ?? "solo";
-            var displayName = !string.IsNullOrEmpty(firstName) ? firstName : "there";
+            var displayName = !string.IsNullOrEmpty(firstName) ? EscapeMarkdown(firstName) : "there";
 
             await SendMessageAsync(chatId,
                 $"✅ Success, {displayName}!\n\n" +
                 $"This chat is now linked to your mining address:\n" +
-                $"`{address}`\n\n" +
+                $"`{EscapeMarkdown(address)}`\n\n" +
                 $"You will receive notifications about:\n" +
                 $"• New best shares\n" +
                 $"• Bitcoin difficulty adjustments\n\n" +
@@ -171,14 +173,14 @@ public class TelegramWebhookController : ControllerBase
                     var workerName = worker.WorkerName.Contains('.')
                         ? worker.WorkerName.Substring(worker.WorkerName.LastIndexOf('.') + 1)
                         : worker.WorkerName;
-                    workerInfo += $"{i + 1}. {workerName}: {FormatShareNumber(worker.BestEver)}\n";
+                    workerInfo += $"{i + 1}. {EscapeMarkdown(workerName)}: {FormatShareNumber(worker.BestEver)}\n";
                 }
             }
 
             var message = $"📊 *Your Current Mining Stats* 📊\n\n" +
                          $"💎 *Best Share Ever:*\n" +
                          $"• {FormatShareNumber(stats.BestEver)} ({difficultyPercentage:F5}% of current difficulty)\n\n" +
-                         $"⛏️ *Pool:* {poolVariant}\n" +
+                         $"⛏️ *Pool:* {EscapeMarkdown(poolVariant)}\n" +
                          $"📅 *Last Sufficient Diff:* {suffDate}\n" +
                          $"🔢 *Total Shares:* {stats.Shares:N0}\n" +
                          workerInfo +
@@ -227,5 +229,36 @@ public class TelegramWebhookController : ControllerBase
         {
             _logger.LogError(ex, "Error sending Telegram message to chat {ChatId}", chatId);
         }
+    }
+
+    /// <summary>
+    /// Validates webhook secret using constant-time comparison to prevent timing attacks.
+    /// </summary>
+    private bool IsValidWebhookSecret(string providedSecret)
+    {
+        if (string.IsNullOrEmpty(providedSecret) || string.IsNullOrEmpty(_settings.WebhookSecret))
+            return false;
+
+        var providedBytes = Encoding.UTF8.GetBytes(providedSecret);
+        var expectedBytes = Encoding.UTF8.GetBytes(_settings.WebhookSecret);
+
+        return CryptographicOperations.FixedTimeEquals(providedBytes, expectedBytes);
+    }
+
+    /// <summary>
+    /// Escapes special Markdown characters to prevent injection attacks.
+    /// </summary>
+    private static string EscapeMarkdown(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return string.Empty;
+
+        return text
+            .Replace("\\", "\\\\")
+            .Replace("*", "\\*")
+            .Replace("_", "\\_")
+            .Replace("`", "\\`")
+            .Replace("[", "\\[")
+            .Replace("]", "\\]");
     }
 }

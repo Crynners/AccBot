@@ -42,42 +42,55 @@ public class TelegramSubscriptionService : ITelegramSubscriptionService
 
     public async Task<TelegramSubscriptionEntity> CreateSubscriptionAsync(int userRegistrationId, string chatId, string? username, string? firstName)
     {
-        // Check if subscription already exists
-        var existing = await _context.TelegramSubscriptions
-            .FirstOrDefaultAsync(s => s.UserRegistrationId == userRegistrationId && s.TelegramChatId == chatId);
-
-        if (existing != null)
+        // Use transaction to prevent race conditions on check-then-act
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            _logger.LogInformation("Subscription already exists for registration {RegistrationId} and chat {ChatId}", userRegistrationId, chatId);
+            // Check if subscription already exists
+            var existing = await _context.TelegramSubscriptions
+                .FirstOrDefaultAsync(s => s.UserRegistrationId == userRegistrationId && s.TelegramChatId == chatId);
 
-            // Update existing subscription if it was inactive
-            if (!existing.IsActive)
+            if (existing != null)
             {
-                existing.IsActive = true;
-                existing.TelegramUsername = username;
-                existing.TelegramFirstName = firstName;
-                await _context.SaveChangesAsync();
+                _logger.LogInformation("Subscription already exists for registration {RegistrationId} and chat {ChatId}", userRegistrationId, chatId);
+
+                // Update existing subscription if it was inactive
+                if (!existing.IsActive)
+                {
+                    existing.IsActive = true;
+                    existing.TelegramUsername = username;
+                    existing.TelegramFirstName = firstName;
+                    await _context.SaveChangesAsync();
+                }
+
+                await transaction.CommitAsync();
+                return existing;
             }
 
-            return existing;
+            var subscription = new TelegramSubscriptionEntity
+            {
+                UserRegistrationId = userRegistrationId,
+                TelegramChatId = chatId,
+                TelegramUsername = username,
+                TelegramFirstName = firstName,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.TelegramSubscriptions.Add(subscription);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            _logger.LogInformation("Created subscription for registration {RegistrationId} with chat {ChatId}", userRegistrationId, chatId);
+
+            return subscription;
         }
-
-        var subscription = new TelegramSubscriptionEntity
+        catch (Exception ex)
         {
-            UserRegistrationId = userRegistrationId,
-            TelegramChatId = chatId,
-            TelegramUsername = username,
-            TelegramFirstName = firstName,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _context.TelegramSubscriptions.Add(subscription);
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Created subscription for registration {RegistrationId} with chat {ChatId}", userRegistrationId, chatId);
-
-        return subscription;
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error creating subscription for registration {RegistrationId}", userRegistrationId);
+            throw;
+        }
     }
 
     public async Task<bool> DeleteSubscriptionAsync(int subscriptionId)

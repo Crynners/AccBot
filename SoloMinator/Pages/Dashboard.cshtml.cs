@@ -11,17 +11,20 @@ public class DashboardModel : PageModel
     private readonly IRegistrationService _registrationService;
     private readonly ICKPoolService _ckPoolService;
     private readonly IBitcoinService _bitcoinService;
+    private readonly ITelegramSubscriptionService _subscriptionService;
     private readonly ILogger<DashboardModel> _logger;
 
     public DashboardModel(
         IRegistrationService registrationService,
         ICKPoolService ckPoolService,
         IBitcoinService bitcoinService,
+        ITelegramSubscriptionService subscriptionService,
         ILogger<DashboardModel> logger)
     {
         _registrationService = registrationService;
         _ckPoolService = ckPoolService;
         _bitcoinService = bitcoinService;
+        _subscriptionService = subscriptionService;
         _logger = logger;
     }
 
@@ -45,6 +48,14 @@ public class DashboardModel : PageModel
     public double? ExpectedDaysToBlock { get; set; }
     public HistoricalDifficultyMatch? LastBlockFoundMatch { get; set; }
 
+    // Telegram notifications
+    public int ActiveSubscriptionsCount { get; set; }
+
+    // Auto-discovery
+    public bool AddressNotFoundAnywhere { get; set; } = false;
+    public List<string> DiscoveredPools { get; set; } = new();
+    public IReadOnlyList<string> CheckedPools => _ckPoolService.AvailablePools;
+
     public async Task<IActionResult> OnGetAsync()
     {
         if (string.IsNullOrWhiteSpace(Address))
@@ -57,7 +68,27 @@ public class DashboardModel : PageModel
 
         if (AllRegistrations.Count == 0)
         {
-            return Page();
+            // Auto-discovery: Check all pools in parallel
+            var poolResults = await _ckPoolService.CheckAllPoolsAsync(Address);
+
+            foreach (var (pool, result) in poolResults)
+            {
+                if (result.IsValid)
+                {
+                    DiscoveredPools.Add(pool);
+                    // Create registration for discovered pool
+                    var registration = await _registrationService.CreateRegistrationAsync(Address, pool);
+                    AllRegistrations.Add(registration);
+                    _logger.LogInformation("Auto-discovered and registered {Address} on {Pool}", Address, pool);
+                }
+            }
+
+            if (AllRegistrations.Count == 0)
+            {
+                // Address not found on any pool
+                AddressNotFoundAnywhere = true;
+                return Page();
+            }
         }
 
         // Select current registration based on pool parameter or first available
@@ -67,6 +98,10 @@ public class DashboardModel : PageModel
         }
         Registration ??= AllRegistrations.First();
         Pool = Registration.PoolVariant;
+
+        // Get active Telegram subscriptions count
+        var subscriptions = await _subscriptionService.GetSubscriptionsForRegistrationAsync(Registration.Id);
+        ActiveSubscriptionsCount = subscriptions.Count(s => s.IsActive);
 
         // Fetch stats in parallel
         var statsTask = _ckPoolService.ValidateAndGetStatsAsync(Registration.MiningAddress, Registration.PoolVariant);
@@ -117,6 +152,33 @@ public class DashboardModel : PageModel
         }
 
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostDiscoverPoolsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Address))
+        {
+            return RedirectToPage("/Index");
+        }
+
+        // Get existing registrations
+        AllRegistrations = await _registrationService.GetAllPoolsForAddressAsync(Address);
+        var existingPools = AllRegistrations.Select(r => r.PoolVariant).ToHashSet();
+
+        // Check all pools
+        var poolResults = await _ckPoolService.CheckAllPoolsAsync(Address);
+
+        foreach (var (pool, result) in poolResults)
+        {
+            if (result.IsValid && !existingPools.Contains(pool))
+            {
+                await _registrationService.CreateRegistrationAsync(Address, pool);
+                _logger.LogInformation("Discovered and registered {Address} on {Pool}", Address, pool);
+            }
+        }
+
+        // Redirect back to dashboard with the current or first new pool
+        return RedirectToPage("/Dashboard", new { address = Address, pool = Pool ?? "solo" });
     }
 
     private static double ParseHashrate(string hashrate)
