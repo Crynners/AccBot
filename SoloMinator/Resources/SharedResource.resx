@@ -84,6 +84,8 @@
   <data name="Dashboard_CheckedPools" xml:space="preserve"><value>Zkontrolované pooly</value></data>
   <data name="Dashboard_TryAnotherAddress" xml:space="preserve"><value>Zkusit jinou adresu</value></data>
   <data name="Dashboard_DiscoverPools" xml:space="preserve"><value>Detekovat další pooly</value></data>
+  <data name="Dashboard_NoNewPoolsFound" xml:space="preserve"><value>Žádné další pooly nenalezeny</value></data>
+  <data name="Dashboard_NewPoolsFound" xml:space="preserve"><value>Nalezeny nové pooly</value></data>
   <data name="Dashboard_HowToStart" xml:space="preserve"><value>Jak začít těžit?</value></data>
   <data name="Dashboard_HowToStartDesc" xml:space="preserve"><value>Pro zobrazení statistik musíte nejprve odeslat alespoň jeden share na některý z podporovaných poolů:</value></data>
   <data name="Dashboard_Success" xml:space="preserve"><value>Registrace úspěšná!</value></data>

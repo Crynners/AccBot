@@ -84,6 +84,8 @@
   <data name="Dashboard_CheckedPools" xml:space="preserve"><value>Checked pools</value></data>
   <data name="Dashboard_TryAnotherAddress" xml:space="preserve"><value>Try Another Address</value></data>
   <data name="Dashboard_DiscoverPools" xml:space="preserve"><value>Discover other pools</value></data>
+  <data name="Dashboard_NoNewPoolsFound" xml:space="preserve"><value>No additional pools found</value></data>
+  <data name="Dashboard_NewPoolsFound" xml:space="preserve"><value>New pools found</value></data>
   <data name="Dashboard_HowToStart" xml:space="preserve"><value>How to start mining?</value></data>
   <data name="Dashboard_HowToStartDesc" xml:space="preserve"><value>To see your statistics, you need to submit at least one share to one of the supported pools:</value></data>
   <data name="Dashboard_Success" xml:space="preserve"><value>Registration Successful!</value></data>

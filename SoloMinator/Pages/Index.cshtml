@@ -171,8 +171,8 @@
 @functions {
     string FormatDifficulty(double diff)
     {
-        if (diff >= 1e12) return $"{diff / 1e12:F2}T";
-        if (diff >= 1e9) return $"{diff / 1e9:F2}G";
+        if (diff >= 1e12) return $"{diff / 1e12:F2} T";
+        if (diff >= 1e9) return $"{diff / 1e9:F2} G";
         return diff.ToString("F0");
     }
 
@@ -189,14 +189,36 @@
 @section Scripts {
 <script>
 (function() {
-    const STORAGE_KEY = 'solominator_recent_addresses';
+    const COOKIE_NAME = 'solominator_addresses';
     const MAX_ADDRESSES = 5;
     const culture = '@culture';
 
+    // Get base domain for cookie (handles www and non-www)
+    function getBaseDomain() {
+        const hostname = window.location.hostname;
+        // For localhost or IP, return as-is
+        if (hostname === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+            return hostname;
+        }
+        // Remove www prefix and return with leading dot for subdomain sharing
+        return '.' + hostname.replace(/^www\./, '');
+    }
+
     function getRecentAddresses() {
         try {
-            const data = localStorage.getItem(STORAGE_KEY);
-            return data ? JSON.parse(data) : [];
+            const match = document.cookie.match(new RegExp('(^| )' + COOKIE_NAME + '=([^;]+)'));
+            if (match) {
+                return JSON.parse(decodeURIComponent(match[2]));
+            }
+            // Migration: try to read from localStorage
+            const localData = localStorage.getItem('solominator_recent_addresses');
+            if (localData) {
+                const addresses = JSON.parse(localData);
+                saveRecentAddresses(addresses); // Save to cookie
+                localStorage.removeItem('solominator_recent_addresses'); // Clean up
+                return addresses;
+            }
+            return [];
         } catch {
             return [];
         }
@@ -204,7 +226,10 @@
 
     function saveRecentAddresses(addresses) {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(addresses));
+            const domain = getBaseDomain();
+            const value = encodeURIComponent(JSON.stringify(addresses));
+            const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString();
+            document.cookie = `${COOKIE_NAME}=${value}; expires=${expires}; path=/; domain=${domain}; SameSite=Lax`;
         } catch {}
     }
 
@@ -271,14 +296,6 @@
             });
         });
     }
-
-    // On form submit, save the address
-    document.getElementById('addressForm').addEventListener('submit', function() {
-        const address = document.getElementById('addressInput').value.trim();
-        if (address) {
-            addAddress(address);
-        }
-    });
 
     // Render on page load
     renderRecentAddresses();

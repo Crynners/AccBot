@@ -365,6 +365,7 @@ MigrationBackup/
 *.zip
 func-logs/
 solominator-logs*/
+solominator-web-logs*/
 nul
 
 # Publish folders

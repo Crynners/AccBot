@@ -167,14 +167,28 @@ public class DashboardModel : PageModel
 
         // Check all pools
         var poolResults = await _ckPoolService.CheckAllPoolsAsync(Address);
+        var newPools = new List<string>();
 
         foreach (var (pool, result) in poolResults)
         {
             if (result.IsValid && !existingPools.Contains(pool))
             {
                 await _registrationService.CreateRegistrationAsync(Address, pool);
+                newPools.Add(pool);
                 _logger.LogInformation("Discovered and registered {Address} on {Pool}", Address, pool);
             }
+        }
+
+        // Set TempData message for feedback
+        if (newPools.Count > 0)
+        {
+            TempData["PoolDiscoveryMessage"] = string.Join(",", newPools);
+            TempData["PoolDiscoveryType"] = "success";
+        }
+        else
+        {
+            TempData["PoolDiscoveryMessage"] = "none";
+            TempData["PoolDiscoveryType"] = "info";
         }
 
         // Redirect back to dashboard with the current or first new pool

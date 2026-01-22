@@ -1,0 +1,6 @@
+# Build output
+clean_publish/
+clean_deploy.zip
+
+# Logs
+*-logs*/

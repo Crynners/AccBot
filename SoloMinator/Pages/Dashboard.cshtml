@@ -96,10 +96,10 @@ else
                     <form method="post" asp-page-handler="DiscoverPools" class="d-inline">
                         <input type="hidden" name="Address" value="@Model.Address" />
                         <input type="hidden" name="Pool" value="@Model.Pool" />
-                        <button type="submit" class="btn btn-sm btn-outline-success"
+                        <button type="submit" class="btn btn-sm btn-outline-secondary"
                                 title="@L["Dashboard_DiscoverPools"]"
                                 data-bs-toggle="tooltip">
-                            <i class="bi bi-plus-lg"></i>
+                            <i class="bi bi-search"></i>
                         </button>
                     </form>
                 </div>
@@ -115,6 +115,28 @@ else
             <i class="bi bi-gear me-1"></i> @L["Nav_Settings"]
         </a>
     </div>
+
+    <!-- Pool Discovery Feedback -->
+    @if (TempData["PoolDiscoveryMessage"] != null)
+    {
+        var message = TempData["PoolDiscoveryMessage"]?.ToString();
+        var msgType = TempData["PoolDiscoveryType"]?.ToString();
+        if (message == "none")
+        {
+            <div class="alert alert-info d-flex align-items-center mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                @L["Dashboard_NoNewPoolsFound"]
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(message))
+        {
+            var pools = message.Split(',');
+            <div class="alert alert-success d-flex align-items-center mb-4">
+                <i class="bi bi-check-circle me-2"></i>
+                @L["Dashboard_NewPoolsFound"]: @string.Join(", ", pools)
+            </div>
+        }
+    }
 
     <!-- Telegram Notifications Status -->
     @if (Model.ActiveSubscriptionsCount > 0)
@@ -168,7 +190,7 @@ else
                                 <div class="progress-bar-custom">
                                     <div class="progress-bar-fill" style="width: @Math.Min(percentage, 100).ToString(System.Globalization.CultureInfo.InvariantCulture)%"></div>
                                 </div>
-                                <small class="text-secondary">@percentage.ToString("F4")% @L["Dashboard_OfDifficulty"]</small>
+                                <small class="text-secondary">@FormatPercentage(percentage) @L["Dashboard_OfDifficulty"]</small>
                             </div>
                         }
                     </div>
@@ -188,7 +210,7 @@ else
                                 <div class="progress-bar-custom">
                                     <div class="progress-bar-fill" style="width: @Math.Min(percentage, 100).ToString(System.Globalization.CultureInfo.InvariantCulture)%"></div>
                                 </div>
-                                <small class="text-secondary">@percentage.ToString("F4")% @L["Dashboard_OfDifficulty"]</small>
+                                <small class="text-secondary">@FormatPercentage(percentage) @L["Dashboard_OfDifficulty"]</small>
                             </div>
                         }
                     </div>
@@ -219,23 +241,23 @@ else
                 <div class="row text-center g-3">
                     <div class="col">
                         <div class="stat-label">1 min</div>
-                        <div class="fw-bold fs-5">@(Model.Stats.Hashrate1m ?? "0")</div>
+                        <div class="fw-bold fs-5">@FormatHashrateString(Model.Stats.Hashrate1m)</div>
                     </div>
                     <div class="col">
                         <div class="stat-label">5 min</div>
-                        <div class="fw-bold fs-5">@(Model.Stats.Hashrate5m ?? "0")</div>
+                        <div class="fw-bold fs-5">@FormatHashrateString(Model.Stats.Hashrate5m)</div>
                     </div>
                     <div class="col">
                         <div class="stat-label">1 hour</div>
-                        <div class="fw-bold fs-5 text-blue">@(Model.Stats.Hashrate1hr ?? "0")</div>
+                        <div class="fw-bold fs-5 text-blue">@FormatHashrateString(Model.Stats.Hashrate1hr)</div>
                     </div>
                     <div class="col">
                         <div class="stat-label">1 day</div>
-                        <div class="fw-bold fs-5">@(Model.Stats.Hashrate1d ?? "0")</div>
+                        <div class="fw-bold fs-5">@FormatHashrateString(Model.Stats.Hashrate1d)</div>
                     </div>
                     <div class="col">
                         <div class="stat-label">7 days</div>
-                        <div class="fw-bold fs-5">@(Model.Stats.Hashrate7d ?? "0")</div>
+                        <div class="fw-bold fs-5">@FormatHashrateString(Model.Stats.Hashrate7d)</div>
                     </div>
                 </div>
             </div>
@@ -414,7 +436,7 @@ else
                                         <td class="ps-3">
                                             <code>@GetWorkerDisplayName(worker.WorkerName)</code>
                                         </td>
-                                        <td class="text-end text-blue">@(worker.Hashrate1hr ?? "0")</td>
+                                        <td class="text-end text-blue">@FormatHashrateString(worker.Hashrate1hr)</td>
                                         <td class="text-end text-orange">@FormatShare(worker.BestShare)</td>
                                         <td class="text-end text-green d-none d-md-table-cell">@FormatShare(worker.BestEver)</td>
                                         <td class="text-end d-none d-md-table-cell">@worker.Shares.ToString("N0")</td>
@@ -433,18 +455,18 @@ else
 @functions {
     string FormatShare(double share)
     {
-        if (share >= 1e15) return $"{share / 1e15:F2}P";
-        if (share >= 1e12) return $"{share / 1e12:F2}T";
-        if (share >= 1e9) return $"{share / 1e9:F2}G";
-        if (share >= 1e6) return $"{share / 1e6:F2}M";
-        if (share >= 1e3) return $"{share / 1e3:F2}K";
+        if (share >= 1e15) return $"{share / 1e15:F2} P";
+        if (share >= 1e12) return $"{share / 1e12:F2} T";
+        if (share >= 1e9) return $"{share / 1e9:F2} G";
+        if (share >= 1e6) return $"{share / 1e6:F2} M";
+        if (share >= 1e3) return $"{share / 1e3:F2} K";
         return share.ToString("F0");
     }
 
     string FormatDifficulty(double diff)
     {
-        if (diff >= 1e12) return $"{diff / 1e12:F2}T";
-        if (diff >= 1e9) return $"{diff / 1e9:F2}G";
+        if (diff >= 1e12) return $"{diff / 1e12:F2} T";
+        if (diff >= 1e9) return $"{diff / 1e9:F2} G";
         return diff.ToString("F0");
     }
 
@@ -476,6 +498,35 @@ else
         if (percentage >= 0.0000001) return $"{percentage:F9} %";
         // For extremely small values, show in scientific notation with %
         return $"{percentage:E2} %";
+    }
+
+    string FormatPercentage(double percentage)
+    {
+        // Format with enough precision but remove trailing zeros
+        var formatted = percentage.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
+        return formatted + " %";
+    }
+
+    string FormatHashrateString(string? hashrate)
+    {
+        if (string.IsNullOrWhiteSpace(hashrate)) return "0";
+        hashrate = hashrate.Trim();
+        // Check if it already has H/s suffix with space
+        if (hashrate.Contains("H/s", StringComparison.OrdinalIgnoreCase)) return hashrate;
+        // Check for unit suffix and add space + H/s
+        if (hashrate.Length > 0)
+        {
+            var lastChar = hashrate[^1];
+            if (lastChar == 'Z' || lastChar == 'E' || lastChar == 'P' || lastChar == 'T' ||
+                lastChar == 'G' || lastChar == 'M' || lastChar == 'K')
+            {
+                // Insert space before unit if not present
+                var numEnd = hashrate.Length - 1;
+                var numPart = hashrate[..numEnd].TrimEnd();
+                return numPart + " " + lastChar + "H/s";
+            }
+        }
+        return hashrate;
     }
 
     string FormatExpectedTime(double days)
@@ -530,6 +581,56 @@ else
     }
 }
 
+@if (Model.Stats != null && Model.Registration != null)
+{
+    <!-- Save valid address to recent list -->
+    <script>
+    (function() {
+        const COOKIE_NAME = 'solominator_addresses';
+        const MAX_ADDRESSES = 5;
+        const address = '@Model.Registration.MiningAddress';
+
+        function getBaseDomain() {
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+                return hostname;
+            }
+            return '.' + hostname.replace(/^www\./, '');
+        }
+
+        function getRecentAddresses() {
+            try {
+                const match = document.cookie.match(new RegExp('(^| )' + COOKIE_NAME + '=([^;]+)'));
+                if (match) {
+                    return JSON.parse(decodeURIComponent(match[2]));
+                }
+                return [];
+            } catch {
+                return [];
+            }
+        }
+
+        function saveRecentAddresses(addresses) {
+            try {
+                const domain = getBaseDomain();
+                const value = encodeURIComponent(JSON.stringify(addresses));
+                const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString();
+                document.cookie = `${COOKIE_NAME}=${value}; expires=${expires}; path=/; domain=${domain}; SameSite=Lax`;
+            } catch {}
+        }
+
+        // Add address to recent list
+        if (address) {
+            let addresses = getRecentAddresses();
+            addresses = addresses.filter(a => a.address !== address);
+            addresses.unshift({ address: address, timestamp: Date.now() });
+            addresses = addresses.slice(0, MAX_ADDRESSES);
+            saveRecentAddresses(addresses);
+        }
+    })();
+    </script>
+}
+
 @if (Model.Stats?.Worker != null && Model.Stats.Worker.Count > 1)
 {
     @section Scripts {
@@ -550,9 +651,15 @@ else
             }
         ];
 
+        // Convert hashrate to TH/s for display
+        const workerDataForChart = workerData.map(w => ({
+            ...w,
+            hashrateTH: w.hashrate / 1e12
+        }));
+
         // Sort by hashrate/shares descending for charts
-        const workerDataByHashrate = [...workerData].sort((a, b) => b.hashrate - a.hashrate);
-        const workerDataByShares = [...workerData].sort((a, b) => b.shares - a.shares);
+        const workerDataByHashrate = [...workerDataForChart].sort((a, b) => b.hashrateTH - a.hashrateTH);
+        const workerDataByShares = [...workerDataForChart].sort((a, b) => b.shares - a.shares);
 
         const charts = {};
 
@@ -565,6 +672,9 @@ else
             }
 
             const isBar = type === 'bar';
+            const isHashrate = valueKey === 'hashrateTH';
+            const unit = isHashrate ? ' TH/s' : '';
+
             charts[canvasId] = new Chart(ctx, {
                 type: type,
                 data: {
@@ -585,11 +695,24 @@ else
                             display: !isBar,
                             position: 'bottom',
                             labels: { color: '#e6edf3', padding: 10, font: { size: 11 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = isHashrate ? context.raw.toFixed(2) : context.raw.toLocaleString();
+                                    return context.label + ': ' + value + unit;
+                                }
+                            }
                         }
                     },
                     scales: isBar ? {
                         x: {
-                            ticks: { color: '#8b949e' },
+                            ticks: {
+                                color: '#8b949e',
+                                callback: function(value) {
+                                    return isHashrate ? value.toFixed(1) + unit : value;
+                                }
+                            },
                             grid: { color: '#30363d' }
                         },
                         y: {
@@ -603,7 +726,7 @@ else
         }
 
         // Initial charts
-        createChart('hashrateChart', 'doughnut', workerDataByHashrate, 'hashrate');
+        createChart('hashrateChart', 'doughnut', workerDataByHashrate, 'hashrateTH');
         createChart('sharesChart', 'doughnut', workerDataByShares, 'shares');
 
         // Toggle buttons
@@ -613,7 +736,7 @@ else
                 const chartType = this.dataset.type;
                 const canvasId = chartName + 'Chart';
                 const sortedData = chartName === 'hashrate' ? workerDataByHashrate : workerDataByShares;
-                const valueKey = chartName;
+                const valueKey = chartName === 'hashrate' ? 'hashrateTH' : 'shares';
 
                 createChart(canvasId, chartType, sortedData, valueKey);
 

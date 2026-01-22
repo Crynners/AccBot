@@ -54,12 +54,17 @@
             background-color: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: 8px;
+            overflow: hidden;
         }
 
         .card-header {
             background-color: var(--bg-tertiary);
             border-bottom: 1px solid var(--border-color);
             font-weight: 600;
+        }
+
+        .card-header:first-child {
+            border-radius: 7px 7px 0 0;
         }
 
         .card-stat {
@@ -306,8 +311,8 @@
     <footer class="py-4">
         <div class="container text-center">
             <small class="text-secondary">
-                <i class="bi bi-telegram text-blue"></i>
-                SoloMinator - Solo mining notifier | @DateTime.UtcNow.Year
+                <i class="bi bi-lightning-charge-fill text-orange"></i>
+                <span class="text-orange fw-semibold">SoloMinator</span> · Solo mining notifier · © @DateTime.UtcNow.Year
             </small>
         </div>
     </footer>
