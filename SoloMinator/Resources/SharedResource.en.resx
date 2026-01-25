@@ -73,7 +73,6 @@
   <data name="Index_BlocksLeft" xml:space="preserve"><value>Blocks to change</value></data>
   <data name="Index_RecentAddresses" xml:space="preserve"><value>Recent addresses</value></data>
   <data name="Index_RemoveAddress" xml:space="preserve"><value>Remove</value></data>
-
   <!-- Dashboard Page -->
   <data name="Dashboard_Title" xml:space="preserve"><value>Mining Dashboard</value></data>
   <data name="Dashboard_NotFound" xml:space="preserve"><value>Registration Not Found</value></data>
@@ -100,6 +99,11 @@
   <data name="Dashboard_TotalShares" xml:space="preserve"><value>Total Shares</value></data>
   <data name="Dashboard_ActiveWorkers" xml:space="preserve"><value>active workers</value></data>
   <data name="Dashboard_Hashrate" xml:space="preserve"><value>Hashrate</value></data>
+  <data name="Dashboard_Hashrate_1min" xml:space="preserve"><value>1 min</value></data>
+  <data name="Dashboard_Hashrate_5min" xml:space="preserve"><value>5 min</value></data>
+  <data name="Dashboard_Hashrate_1hour" xml:space="preserve"><value>1 hour</value></data>
+  <data name="Dashboard_Hashrate_1day" xml:space="preserve"><value>1 day</value></data>
+  <data name="Dashboard_Hashrate_7days" xml:space="preserve"><value>7 days</value></data>
   <data name="Dashboard_BitcoinNetwork" xml:space="preserve"><value>Bitcoin Network</value></data>
   <data name="Dashboard_CurrentDifficulty" xml:space="preserve"><value>Current Difficulty</value></data>
   <data name="Dashboard_Progress" xml:space="preserve"><value>Progress to difficulty change</value></data>

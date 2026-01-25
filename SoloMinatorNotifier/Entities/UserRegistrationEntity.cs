@@ -18,11 +18,6 @@ public class UserRegistrationEntity
     [MaxLength(50)]
     public string PoolVariant { get; set; } = "solo"; // solo, eusolo, ausolo, braiins
 
-    [MaxLength(50)]
-    public string? TelegramChatId { get; set; }
-
-    public bool NotificationsEnabled { get; set; } = false;
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

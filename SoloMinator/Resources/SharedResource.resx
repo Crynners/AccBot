@@ -73,7 +73,6 @@
   <data name="Index_BlocksLeft" xml:space="preserve"><value>Bloků do změny</value></data>
   <data name="Index_RecentAddresses" xml:space="preserve"><value>Nedávné adresy</value></data>
   <data name="Index_RemoveAddress" xml:space="preserve"><value>Odebrat</value></data>
-
   <!-- Dashboard Page -->
   <data name="Dashboard_Title" xml:space="preserve"><value>Mining Dashboard</value></data>
   <data name="Dashboard_NotFound" xml:space="preserve"><value>Registrace nenalezena</value></data>
@@ -100,6 +99,11 @@
   <data name="Dashboard_TotalShares" xml:space="preserve"><value>Celkem shares</value></data>
   <data name="Dashboard_ActiveWorkers" xml:space="preserve"><value>aktivních workerů</value></data>
   <data name="Dashboard_Hashrate" xml:space="preserve"><value>Hashrate</value></data>
+  <data name="Dashboard_Hashrate_1min" xml:space="preserve"><value>1 min</value></data>
+  <data name="Dashboard_Hashrate_5min" xml:space="preserve"><value>5 min</value></data>
+  <data name="Dashboard_Hashrate_1hour" xml:space="preserve"><value>1 hodina</value></data>
+  <data name="Dashboard_Hashrate_1day" xml:space="preserve"><value>1 den</value></data>
+  <data name="Dashboard_Hashrate_7days" xml:space="preserve"><value>7 dní</value></data>
   <data name="Dashboard_BitcoinNetwork" xml:space="preserve"><value>Bitcoin síť</value></data>
   <data name="Dashboard_CurrentDifficulty" xml:space="preserve"><value>Aktuální obtížnost</value></data>
   <data name="Dashboard_Progress" xml:space="preserve"><value>Postup ke změně obtížnosti</value></data>

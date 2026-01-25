@@ -12,7 +12,6 @@ namespace SoloMinatorNotifier.Repositories
 
     public interface IUserRegistrationRepository
     {
-        Task<List<UserRegistrationEntity>> GetUsersWithNotificationsEnabledAsync();
         Task<List<UserWithSubscriptions>> GetUsersWithActiveSubscriptionsAsync();
     }
 
@@ -25,17 +24,9 @@ namespace SoloMinatorNotifier.Repositories
             _dbContext = dbContext;
         }
 
-        public async Task<List<UserRegistrationEntity>> GetUsersWithNotificationsEnabledAsync()
-        {
-            return await _dbContext.UserRegistrations
-                .Where(u => u.NotificationsEnabled && !string.IsNullOrEmpty(u.TelegramChatId))
-                .ToListAsync();
-        }
-
         public async Task<List<UserWithSubscriptions>> GetUsersWithActiveSubscriptionsAsync()
         {
-            // Optimized: Single query using LEFT JOIN to get users with their subscriptions
-            // This replaces the previous 3 separate queries + in-memory merging
+            // Get users with active telegram subscriptions
             var usersWithSubscriptions = await _dbContext.UserRegistrations
                 .GroupJoin(
                     _dbContext.TelegramSubscriptions.Where(s => s.IsActive),
@@ -43,39 +34,22 @@ namespace SoloMinatorNotifier.Repositories
                     sub => sub.UserRegistrationId,
                     (user, subs) => new { User = user, Subscriptions = subs.ToList() }
                 )
-                .Where(x =>
-                    // Has active subscriptions
-                    x.Subscriptions.Any() ||
-                    // Or has legacy notifications enabled
-                    (x.User.NotificationsEnabled && !string.IsNullOrEmpty(x.User.TelegramChatId))
-                )
+                .Where(x => x.Subscriptions.Any())
                 .ToListAsync();
 
-            // Build result with merged chat IDs
+            // Build result with chat IDs
             var result = new List<UserWithSubscriptions>();
 
             foreach (var item in usersWithSubscriptions)
             {
-                var chatIds = new HashSet<string>();
-
-                // Add subscription chat IDs
-                foreach (var sub in item.Subscriptions)
-                {
-                    chatIds.Add(sub.TelegramChatId);
-                }
-
-                // Add legacy chat ID if notifications are enabled
-                if (item.User.NotificationsEnabled && !string.IsNullOrEmpty(item.User.TelegramChatId))
-                {
-                    chatIds.Add(item.User.TelegramChatId);
-                }
+                var chatIds = item.Subscriptions.Select(s => s.TelegramChatId).ToList();
 
                 if (chatIds.Count > 0)
                 {
                     result.Add(new UserWithSubscriptions
                     {
                         User = item.User,
-                        ChatIds = chatIds.ToList()
+                        ChatIds = chatIds
                     });
                 }
             }

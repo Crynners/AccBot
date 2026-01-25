@@ -103,12 +103,6 @@ else
                         </button>
                     </form>
                 </div>
-                @if (Model.Registration.NotificationsEnabled)
-                {
-                    <span class="badge bg-success rounded-pill">
-                        <i class="bi bi-bell-fill me-1"></i>@L["Dashboard_NotificationsOn"]
-                    </span>
-                }
             </div>
         </div>
         <a href="/@culture/Settings?address=@Model.Address&pool=@Model.Pool" class="btn btn-outline-primary">
@@ -240,23 +234,23 @@ else
             <div class="card-body">
                 <div class="row text-center g-3">
                     <div class="col">
-                        <div class="stat-label">1 min</div>
+                        <div class="stat-label">@L["Dashboard_Hashrate_1min"]</div>
                         <div class="fw-bold fs-5">@FormatHashrateString(Model.Stats.Hashrate1m)</div>
                     </div>
                     <div class="col">
-                        <div class="stat-label">5 min</div>
+                        <div class="stat-label">@L["Dashboard_Hashrate_5min"]</div>
                         <div class="fw-bold fs-5">@FormatHashrateString(Model.Stats.Hashrate5m)</div>
                     </div>
                     <div class="col">
-                        <div class="stat-label">1 hour</div>
+                        <div class="stat-label">@L["Dashboard_Hashrate_1hour"]</div>
                         <div class="fw-bold fs-5 text-blue">@FormatHashrateString(Model.Stats.Hashrate1hr)</div>
                     </div>
                     <div class="col">
-                        <div class="stat-label">1 day</div>
+                        <div class="stat-label">@L["Dashboard_Hashrate_1day"]</div>
                         <div class="fw-bold fs-5">@FormatHashrateString(Model.Stats.Hashrate1d)</div>
                     </div>
                     <div class="col">
-                        <div class="stat-label">7 days</div>
+                        <div class="stat-label">@L["Dashboard_Hashrate_7days"]</div>
                         <div class="fw-bold fs-5">@FormatHashrateString(Model.Stats.Hashrate7d)</div>
                     </div>
                 </div>
@@ -293,6 +287,7 @@ else
                         <div class="col-6 col-md-3">
                             <div class="stat-label">@L["Dashboard_BlocksLeft"]</div>
                             <div class="fw-bold fs-5">@Model.DifficultyInfo.RemainingBlocks</div>
+                            <small class="text-secondary">~@FormatTimeToAdjustment(Model.DifficultyInfo.RemainingBlocks)</small>
                         </div>
                     </div>
                 </div>
@@ -549,6 +544,15 @@ else
         if (hashrate >= 1e6) return $"{hashrate / 1e6:F2} MH/s";
         if (hashrate >= 1e3) return $"{hashrate / 1e3:F2} KH/s";
         return $"{hashrate:F0} H/s";
+    }
+
+    string FormatTimeToAdjustment(int blocksLeft)
+    {
+        var minutes = blocksLeft * 10;
+        var hours = minutes / 60;
+        var days = hours / 24;
+        if (days >= 1) return $"{days}d {hours % 24}h";
+        return $"{hours}h {minutes % 60}m";
     }
 
     double ParseHashrateToNumber(string? hashrate)

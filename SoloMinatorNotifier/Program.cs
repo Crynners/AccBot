@@ -32,7 +32,6 @@ var builder = new HostBuilder()
         services.AddScoped<IMiningStatsService, MiningStatsService>();
         services.AddScoped<MonitorMiningStats>();
         services.AddHttpClient<IDifficultyService, DifficultyService>();
-        services.AddScoped<IDifficultyService, DifficultyService>();
 
 #if DEBUG
         services.AddHostedService<DebugStartupService>();
