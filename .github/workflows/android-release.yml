@@ -23,29 +23,55 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x accbot-android/gradlew
 
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > accbot-android/accbot-upload.jks
+
       - name: Build Debug APK
         run: |
           cd accbot-android
           ./gradlew assembleDebug
 
-      - name: Build Release APK
+      - name: Build signed Release APK
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/accbot-android/accbot-upload.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd accbot-android
           ./gradlew assembleRelease
+
+      - name: Build signed AAB (for Play Store)
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/accbot-android/accbot-upload.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          cd accbot-android
+          ./gradlew bundleRelease
 
       - name: Extract version from tag
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Rename APKs with version
+      - name: Rename artifacts with version
         run: |
-          cd accbot-android/app/build/outputs/apk
-          if [ -f debug/app-debug.apk ]; then
-            mv debug/app-debug.apk debug/accbot-${{ steps.version.outputs.VERSION }}-debug.apk
+          cd accbot-android/app/build/outputs
+          if [ -f apk/debug/app-debug.apk ]; then
+            mv apk/debug/app-debug.apk apk/debug/accbot-${{ steps.version.outputs.VERSION }}-debug.apk
           fi
-          if [ -f release/app-release-unsigned.apk ]; then
-            mv release/app-release-unsigned.apk release/accbot-${{ steps.version.outputs.VERSION }}-release.apk
+          if [ -f apk/release/app-release.apk ]; then
+            mv apk/release/app-release.apk apk/release/accbot-${{ steps.version.outputs.VERSION }}-release.apk
           fi
+          if [ -f bundle/release/app-release.aab ]; then
+            mv bundle/release/app-release.aab bundle/release/accbot-${{ steps.version.outputs.VERSION }}-release.aab
+          fi
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f accbot-android/accbot-upload.jks
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -54,24 +80,24 @@ jobs:
           body: |
             ## AccBot Android v${{ steps.version.outputs.VERSION }}
 
-            Self-custody Bitcoin DCA app for Android.
+            Self-custody crypto DCA app for Android.
 
-            ### Installation
-            1. Download the APK file below
-            2. Enable "Install from unknown sources" in Android settings
-            3. Open the APK file to install
+            ### Downloads
+            - **APK** — install directly on your device (enable "Install from unknown sources")
+            - **AAB** — upload to Google Play Console
 
             ### What's New
             See the [commit history](https://github.com/${{ github.repository }}/commits/v${{ steps.version.outputs.VERSION }}) for changes.
           files: |
             accbot-android/app/build/outputs/apk/debug/accbot-${{ steps.version.outputs.VERSION }}-debug.apk
             accbot-android/app/build/outputs/apk/release/accbot-${{ steps.version.outputs.VERSION }}-release.apk
+            accbot-android/app/build/outputs/bundle/release/accbot-${{ steps.version.outputs.VERSION }}-release.aab
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Optional: Build and test on PRs
+  # Build and test on PRs
   test:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

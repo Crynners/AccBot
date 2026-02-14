@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0E0E1A"/>
+      <stop offset="100%" stop-color="#16213E"/>
+    </linearGradient>
+    <radialGradient id="accent-glow" cx="30%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#4ECCA3" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#0E0E1A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="500" fill="url(#bg)"/>
+  <rect width="1024" height="500" fill="url(#accent-glow)"/>
+
+  <!-- Decorative grid dots -->
+  <g opacity="0.08" fill="#4ECCA3">
+    <circle cx="50" cy="50" r="2"/><circle cx="100" cy="50" r="2"/><circle cx="150" cy="50" r="2"/>
+    <circle cx="200" cy="50" r="2"/><circle cx="250" cy="50" r="2"/><circle cx="300" cy="50" r="2"/>
+    <circle cx="50" cy="100" r="2"/><circle cx="100" cy="100" r="2"/><circle cx="150" cy="100" r="2"/>
+    <circle cx="200" cy="100" r="2"/><circle cx="250" cy="100" r="2"/><circle cx="300" cy="100" r="2"/>
+    <circle cx="50" cy="150" r="2"/><circle cx="100" cy="150" r="2"/><circle cx="150" cy="150" r="2"/>
+    <circle cx="200" cy="150" r="2"/><circle cx="250" cy="150" r="2"/><circle cx="300" cy="150" r="2"/>
+  </g>
+
+  <!-- Left side: App name and tagline -->
+  <g transform="translate(80, 140)">
+    <!-- App name -->
+    <text font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="bold" fill="#FFFFFF">
+      AccBot
+    </text>
+    <text font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="bold" fill="#4ECCA3" x="280">
+      DCA
+    </text>
+
+    <!-- Tagline -->
+    <text y="60" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#A0A0A0">
+      Stack crypto on autopilot
+    </text>
+
+    <!-- Feature pills -->
+    <g transform="translate(0, 110)">
+      <rect x="0" y="0" width="140" height="36" rx="18" fill="#4ECCA3" fill-opacity="0.15" stroke="#4ECCA3" stroke-width="1.5"/>
+      <text x="70" y="24" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4ECCA3">Self-Custody</text>
+
+      <rect x="155" y="0" width="140" height="36" rx="18" fill="#4ECCA3" fill-opacity="0.15" stroke="#4ECCA3" stroke-width="1.5"/>
+      <text x="225" y="24" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4ECCA3">7 Exchanges</text>
+
+      <rect x="310" y="0" width="150" height="36" rx="18" fill="#4ECCA3" fill-opacity="0.15" stroke="#4ECCA3" stroke-width="1.5"/>
+      <text x="385" y="24" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4ECCA3">Open Source</text>
+    </g>
+  </g>
+
+  <!-- Right side: Stylized phone mockup -->
+  <g transform="translate(650, 40)">
+    <!-- Phone frame -->
+    <rect x="0" y="0" width="240" height="420" rx="24" fill="#1A1A2E" stroke="#333" stroke-width="2"/>
+
+    <!-- Screen area -->
+    <rect x="10" y="40" width="220" height="340" rx="4" fill="#0E0E1A"/>
+
+    <!-- Notch -->
+    <rect x="80" y="8" width="80" height="24" rx="12" fill="#0E0E1A"/>
+
+    <!-- Screen content: mini chart -->
+    <g transform="translate(25, 65)">
+      <text font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#A0A0A0">Portfolio</text>
+      <text y="28" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">0.0847 BTC</text>
+      <text y="48" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#4ECCA3">+12.4%</text>
+
+      <!-- Mini chart area -->
+      <polyline points="0,130 20,125 40,120 60,115 80,108 100,100 120,88 140,82 160,70 180,55"
+                fill="none" stroke="#4ECCA3" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Chart fill -->
+      <polygon points="0,130 20,125 40,120 60,115 80,108 100,100 120,88 140,82 160,70 180,55 180,140 0,140"
+               fill="#4ECCA3" fill-opacity="0.1"/>
+
+      <!-- Bars below chart -->
+      <g transform="translate(0, 170)">
+        <rect x="0" y="35" width="18" height="25" rx="3" fill="#4ECCA3" opacity="0.4"/>
+        <rect x="22" y="25" width="18" height="35" rx="3" fill="#4ECCA3" opacity="0.5"/>
+        <rect x="44" y="20" width="18" height="40" rx="3" fill="#4ECCA3" opacity="0.6"/>
+        <rect x="66" y="15" width="18" height="45" rx="3" fill="#4ECCA3" opacity="0.7"/>
+        <rect x="88" y="8" width="18" height="52" rx="3" fill="#4ECCA3" opacity="0.8"/>
+        <rect x="110" y="0" width="18" height="60" rx="3" fill="#4ECCA3"/>
+      </g>
+    </g>
+
+    <!-- Home bar -->
+    <rect x="85" y="398" width="70" height="5" rx="2.5" fill="#666"/>
+  </g>
+
+  <!-- Bottom accent line -->
+  <rect x="0" y="494" width="1024" height="6" fill="#4ECCA3" opacity="0.6"/>
+</svg>
