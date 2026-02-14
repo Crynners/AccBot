@@ -15,8 +15,6 @@ List of supported exchanges:
  - [Huobi](https://www.huobi.com/en-us/)
  - [Kraken](https://www.kraken.com/)
  - [Binance](https://www.binance.com/)
- - [FTX](https://ftx.com/)
- - [Bittrex](https://global.bittrex.com/)
  - [Bitfinex](https://www.bitfinex.com/)
  - [Coinbase](https://www.coinbase.com/)
  - [KuCoin](https://www.kucoin.com/)
@@ -69,7 +67,7 @@ Our solution is fully decentralized in that everyone installs their own bot in t
 ### GENERAL USER-DEFINED VARIABLES ###
 ######################################
 # Exchange you want to link the bot to
-# (POSSIBLE VALUES: coinmate, huobi, binance, kraken, ftx, coinbase, kucoin, bitfinex, bittrex)
+# (POSSIBLE VALUES: coinmate, huobi, binance, kraken, coinbase, kucoin, bitfinex)
 $ExchangeName='coinmate'
 
 #Name that appears in Telegram notifications
@@ -224,23 +222,6 @@ $CreateAzureLog = 'false'
   # API Secret from Binance API
   $BinanceCredentials_Secret='XXX'
   ```
-   - For **FTX**, fill in the following values:
-  ```powershell
-  # Crypto you want to buy on Binance (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH, ...)
-  $Currency='BTC'
-
-  # Fiat currency you want to buy crypto with on Binance (POSSIBLE VALUES: USDT, BUSD, USDC, DAI)
-  $Fiat='USDT'
-
-  # The size of the USDT (or $Fiat) chunk you want to buy regularly (MINIMUM: by exchange)
-  $ChunkSize='5'
-
-  # API Key from Binance API
-  $FTXCredentials_Key='XXX'
-
-  # API Secret from Binance API
-  $FTXCredentials_Secret='XXX'
-  ``` 
    - For **Bitfinex**, fill in the following values:
   ```powershell
   # Crypto you want to buy on Kraken (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH)
@@ -301,26 +282,6 @@ $CreateAzureLog = 'false'
   # API Secret from Coinbase API
   $CoinbaseCredentials_Secret='XXX'
   ```
-   - For **Bittrex**, fill in the following values:
-  ```powershell
-  # Crypto you want to buy on Kraken (POSSIBLE VALUES: BTC, LTC, ETH, XRP, DASH)
-  $Currency='BTC'
-
-  # Fiat currency you want to buy crypto with on Kraken (POSSIBLE VALUES: USDT)
-  $Fiat='USDT'
-
-  # The size of the USDT (or $Fiat) chunk you want to buy regularly (MINIMUM: by exchange)
-  $ChunkSize='5'
-
-  # Name of the wallet you want to send the accumulated crypto to
-  $WithdrawalKeyName = ''
-
-  # API Key from Bittrex API
-  $BittrexCredentials_Key='XXX'
-
-  # API Secret from Bittrex API
-  $BittrexCredentials_Secret='XXX'
-  ``` 
 <a name="installscript"></a>
 9. 
   - <img src="https://user-images.githubusercontent.com/87997650/128522417-9bd02e68-a4d6-48bd-8661-81ec43ee3a47.png" width="25" height="25" />: Double-click to run **run.bat** file _(For Windows OS)._

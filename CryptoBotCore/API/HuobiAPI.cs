@@ -1,7 +1,7 @@
-﻿using CryptoBotCore.Models;
+using CryptoBotCore.Models;
 using CryptoExchange.Net.Authentication;
-using Huobi.Net.Clients;
-using Huobi.Net.Objects;
+using HTX.Net.Clients;
+using HTX.Net.Objects.Options;
 using Microsoft.Extensions.Logging;
 
 
@@ -9,7 +9,7 @@ namespace CryptoBotCore.API
 {
     public class HuobiAPI : ICryptoExchangeAPI
     {
-        private HuobiClient client { get; set; }
+        private HTXRestClient client { get; set; }
         public string pair_quote { get; set; }
         public string pair_base { get; set; }
 
@@ -23,16 +23,15 @@ namespace CryptoBotCore.API
 
             this.Log = log;
 
-            client = new HuobiClient(new HuobiClientOptions()
+            client = new HTXRestClient(options =>
             {
-                // Specify options for the client
-                ApiCredentials = new ApiCredentials(credentials[ExchangeCredentialType.Huobi_Key], credentials[ExchangeCredentialType.Huobi_Secret])
+                options.ApiCredentials = new ApiCredentials(credentials[ExchangeCredentialType.Huobi_Key], credentials[ExchangeCredentialType.Huobi_Secret]);
             });
         }
 
         private async Task<decimal> getCurrentPrice()
         {
-            var callResult = await client.SpotApi.ExchangeData.GetOrderBookAsync($"{pair_base}{pair_quote}", 0);
+            var callResult = await client.SpotApi.ExchangeData.GetOrderBookAsync($"{pair_base}{pair_quote}".ToLower(), 0);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -57,10 +56,10 @@ namespace CryptoBotCore.API
                 throw new Exception(accountResult.Error?.Message);
             }
 
-            var callResult = await client.SpotApi.Trading.PlaceOrderAsync(accountResult.Data.First().Id, 
-                                                                          $"{this.pair_base}{this.pair_quote}", 
-                                                                          Huobi.Net.Enums.OrderSide.Buy,
-                                                                          Huobi.Net.Enums.OrderType.Market,
+            var callResult = await client.SpotApi.Trading.PlaceOrderAsync(accountResult.Data.First().Id,
+                                                                          $"{this.pair_base}{this.pair_quote}".ToLower(),
+                                                                          HTX.Net.Enums.OrderSide.Buy,
+                                                                          HTX.Net.Enums.OrderType.Market,
                                                                           baseAmount);
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -94,7 +93,7 @@ namespace CryptoBotCore.API
             }
             else
             {
-                var balances = callResult.Data.Where(x => x.Type == Huobi.Net.Enums.BalanceType.Trade);
+                var balances = callResult.Data.Where(x => x.Type == HTX.Net.Enums.BalanceType.Trade);
 
                 var wallets = new List<WalletBalances>();
 
@@ -108,8 +107,8 @@ namespace CryptoBotCore.API
         }
 
         public Task<decimal> getTakerFee()
-        { 
-            // TODO: find an API call to get this value dynamically as one could have rebates due to referrals or holding/staking HT (Huobi Token)
+        {
+            // TODO: find an API call to get this value dynamically as one could have rebates due to referrals or holding/staking HT (HTX Token)
             return Task.FromResult(0.002m); // HARDCODED: value seems up to date on 24/11/2021 as a base default value
         }
 

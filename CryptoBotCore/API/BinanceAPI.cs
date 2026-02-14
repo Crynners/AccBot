@@ -1,5 +1,4 @@
-﻿using Binance.Net.Clients;
-using Binance.Net.Objects;
+using Binance.Net.Clients;
 using CryptoBotCore.Models;
 using CryptoExchange.Net.Authentication;
 using Microsoft.Extensions.Logging;
@@ -14,31 +13,30 @@ namespace CryptoBotCore.API
         public string pair_quote { get; set; }
         public string pair_base { get; set; }
 
-        public BinanceClient client { get; set; }
+        public BinanceRestClient client { get; set; }
 
         public BinanceAPI(string pair, Dictionary<ExchangeCredentialType, string> credentials, ILogger log)
         {
             this.pair_base = pair.Split('_')[0].ToUpper();
             this.pair_quote = pair.Split('_')[1].ToUpper();
-            
+
 
             this.Log = log;
 
             var key = credentials[ExchangeCredentialType.Binance_Key];
             var secret = credentials[ExchangeCredentialType.Binance_Secret];
 
-            client = new BinanceClient(new BinanceClientOptions()
+            client = new BinanceRestClient(options =>
             {
-                // Specify options for the client
-                ApiCredentials = new ApiCredentials(key, secret)
+                options.ApiCredentials = new ApiCredentials(key, secret);
             });
         }
 
         public async Task<string> buyOrderAsync(decimal amount)
         {
-            var callResult = await client.SpotApi.Trading.PlaceOrderAsync($"{pair_base}{pair_quote}", 
-                                                                        Binance.Net.Enums.OrderSide.Buy, 
-                                                                        Binance.Net.Enums.SpotOrderType.Market, 
+            var callResult = await client.SpotApi.Trading.PlaceOrderAsync($"{pair_base}{pair_quote}",
+                                                                        Binance.Net.Enums.OrderSide.Buy,
+                                                                        Binance.Net.Enums.SpotOrderType.Market,
                                                                         quoteQuantity: (decimal?)amount);
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -80,7 +78,7 @@ namespace CryptoBotCore.API
 
         public async Task<decimal> getTakerFee()
         {
-            var callResult = await client.SpotApi.ExchangeData.GetTradeFeeAsync($"{pair_base}{pair_quote}");
+            var callResult = await client.SpotApi.Account.GetTradeFeeAsync($"{pair_base}{pair_quote}");
 
             // Make sure to check if the call was successful
             if (!callResult.Success)

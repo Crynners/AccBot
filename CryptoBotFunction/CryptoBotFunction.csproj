@@ -1,11 +1,18 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <AzureFunctionsVersion>v4</AzureFunctionsVersion>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Test</Configurations>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.1.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.5" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.3.1" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CryptoBotCore\CryptoBotCore.csproj" />
@@ -17,16 +24,10 @@
     <None Update="bitfinex_variables.ps1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="bittrex_variables.ps1">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="coinbase_variables.ps1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="coinmate_variables.ps1">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="ftx_variables.ps1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="host.json">

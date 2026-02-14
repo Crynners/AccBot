@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AccBotWizard.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="AccBotWizard.Views.DeploymentSelectionView"
+             x:DataType="vm:DeploymentSelectionViewModel">
+
+    <StackPanel Spacing="20">
+        <TextBlock Text="Deployment Target" Classes="header"/>
+        <TextBlock Text="Choose where you want to run your AccBot instance."
+                   Classes="description"/>
+
+        <ListBox ItemsSource="{Binding DeploymentOptions}"
+                 SelectedItem="{Binding SelectedDeployment}"
+                 Margin="0,10,0,0">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:DeploymentOption">
+                    <Border Padding="15" Margin="0,5"
+                            IsEnabled="{Binding IsAvailable}">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <RadioButton IsChecked="{Binding $parent[ListBoxItem].IsSelected}"
+                                         IsEnabled="{Binding IsAvailable}"
+                                         GroupName="Deployments"
+                                         VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Margin="15,0,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16"/>
+                                    <Border IsVisible="{Binding !IsAvailable}"
+                                            Background="Gray"
+                                            CornerRadius="3"
+                                            Padding="6,2">
+                                        <TextBlock Text="Coming Soon" FontSize="10" Foreground="White"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Description}"
+                                           Classes="description"
+                                           Margin="0,5,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- Azure-specific options -->
+        <Border IsVisible="{Binding ShowAzureOptions}"
+                Padding="15"
+                CornerRadius="8"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                Margin="0,10,0,0">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Azure Region" FontWeight="SemiBold"/>
+                <ComboBox ItemsSource="{Binding AzureLocations}"
+                          SelectedItem="{Binding AzureLocation}"
+                          HorizontalAlignment="Stretch"
+                          MaxWidth="300"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

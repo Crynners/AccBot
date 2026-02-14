@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AccBotWizard.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="550"
+             x:Class="AccBotWizard.Views.TelegramSetupView"
+             x:DataType="vm:TelegramSetupViewModel">
+
+    <ScrollViewer>
+        <StackPanel Spacing="20" MaxWidth="600">
+            <TextBlock Text="Telegram Notifications" Classes="header"/>
+
+            <Border Padding="15" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                <TextBlock Text="{Binding SetupInstructions}"
+                           Classes="description"
+                           LineHeight="22"/>
+            </Border>
+
+            <Button Content="Open BotFather in Telegram"
+                    Command="{Binding OpenBotFatherCommand}"
+                    HorizontalAlignment="Left"/>
+
+            <StackPanel Spacing="15" Margin="0,10,0,0">
+                <StackPanel>
+                    <TextBlock Text="Bot Token" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding BotToken}"
+                             Watermark="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+                             PasswordChar="*"/>
+                </StackPanel>
+
+                <StackPanel>
+                    <TextBlock Text="Channel Name or ID" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding ChannelName}"
+                             Watermark="@MyAccBotChannel or -100123456789"/>
+                </StackPanel>
+            </StackPanel>
+
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="Red"
+                       IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

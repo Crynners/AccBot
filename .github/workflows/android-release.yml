@@ -1,0 +1,101 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x accbot-android/gradlew
+
+      - name: Build Debug APK
+        run: |
+          cd accbot-android
+          ./gradlew assembleDebug
+
+      - name: Build Release APK
+        run: |
+          cd accbot-android
+          ./gradlew assembleRelease
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Rename APKs with version
+        run: |
+          cd accbot-android/app/build/outputs/apk
+          if [ -f debug/app-debug.apk ]; then
+            mv debug/app-debug.apk debug/accbot-${{ steps.version.outputs.VERSION }}-debug.apk
+          fi
+          if [ -f release/app-release-unsigned.apk ]; then
+            mv release/app-release-unsigned.apk release/accbot-${{ steps.version.outputs.VERSION }}-release.apk
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: AccBot Android v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## AccBot Android v${{ steps.version.outputs.VERSION }}
+
+            Self-custody Bitcoin DCA app for Android.
+
+            ### Installation
+            1. Download the APK file below
+            2. Enable "Install from unknown sources" in Android settings
+            3. Open the APK file to install
+
+            ### What's New
+            See the [commit history](https://github.com/${{ github.repository }}/commits/v${{ steps.version.outputs.VERSION }}) for changes.
+          files: |
+            accbot-android/app/build/outputs/apk/debug/accbot-${{ steps.version.outputs.VERSION }}-debug.apk
+            accbot-android/app/build/outputs/apk/release/accbot-${{ steps.version.outputs.VERSION }}-release.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Optional: Build and test on PRs
+  test:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x accbot-android/gradlew
+
+      - name: Run unit tests
+        run: |
+          cd accbot-android
+          ./gradlew test
+
+      - name: Build Debug APK
+        run: |
+          cd accbot-android
+          ./gradlew assembleDebug

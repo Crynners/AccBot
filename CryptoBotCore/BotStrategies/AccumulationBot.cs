@@ -2,6 +2,7 @@
 using CryptoBotCore.CosmosDB;
 using CryptoBotCore.CosmosDB.Model;
 using CryptoBotCore.Models;
+using CryptoBotCore.Telegram;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Globalization;
-using Telegram.Bot;
+using global::Telegram.Bot;
 
 namespace CryptoBotCore.BotStrategies
 {
@@ -54,13 +55,6 @@ namespace CryptoBotCore.BotStrategies
                 case CryptoExchangeAPIEnum.Bitfinex:
                     this.cryptoExchangeAPI = new BitfinexAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
                     break;
-                case CryptoExchangeAPIEnum.Bittrex:
-                    this.cryptoExchangeAPI = new BittrexAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
-                    break;
-                case CryptoExchangeAPIEnum.FTX:
-                    this.cryptoExchangeAPI = new FtxAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}",
-                                                          BotConfiguration.Account, BotConfiguration.ExchangeCredentials, Log);
-                    break;
                 case CryptoExchangeAPIEnum.KuCoin:
                     this.cryptoExchangeAPI = new KuCoinAPI($"{BotConfiguration.Currency}_{BotConfiguration.Fiat}", BotConfiguration.ExchangeCredentials, Log);
                     break;
@@ -79,8 +73,14 @@ namespace CryptoBotCore.BotStrategies
             {
                 Log.LogInformation("Start Tick: " + DateTime.Now);
 
-                if (cryptoExchangeAPI == null){
+                if (cryptoExchangeAPI == null)
+                {
                     InitializeAPI();
+                }
+
+                if (cryptoExchangeAPI == null)
+                {
+                    throw new InvalidOperationException("Failed to initialize exchange API");
                 }
 
                 /*  
@@ -168,7 +168,7 @@ namespace CryptoBotCore.BotStrategies
         {
             var sbActions = new StringBuilder();
 
-            decimal withdrawalFeeCurrencyCost = await cryptoExchangeAPI.getWithdrawalFeeAsync(postBuyCurrencyBalance); // returns 0 ?!? when no param with FTX
+            decimal withdrawalFeeCurrencyCost = await cryptoExchangeAPI!.getWithdrawalFeeAsync(postBuyCurrencyBalance); // returns 0 ?!? when no param with FTX
             decimal withdrawalPercentageFee = (withdrawalFeeCurrencyCost / postBuyCurrencyBalance); // percent of the overall crypto we'd like to move
             decimal withdrawalFeeFiatCost = withdrawalFeeCurrencyCost * fillingPrice;
 
@@ -302,28 +302,39 @@ namespace CryptoBotCore.BotStrategies
         }
         #endregion
 
-        private async Task SendSuccessMessage(string withdrawalMessageBlock, AccumulationSummary accumulationSummary, decimal currencyBought, decimal currencyCost, decimal fillingPrice, decimal feeCost, decimal postBuyFiatBalance, decimal postBuyCurrencyBalance, decimal currentCryptoBalanceValueInFiat){
-            var accumulationStatsMessageBlock = GenerateActionsMessageBlock(currencyBought, currencyCost, fillingPrice, feeCost);
-            var summaryMessageBlock = GenerateSummaryMessageBlock(accumulationSummary, fillingPrice, postBuyFiatBalance, postBuyCurrencyBalance, currentCryptoBalanceValueInFiat);
+        private async Task SendSuccessMessage(string withdrawalMessageBlock, AccumulationSummary accumulationSummary, decimal currencyBought, decimal currencyCost, decimal fillingPrice, decimal feeCost, decimal postBuyFiatBalance, decimal postBuyCurrencyBalance, decimal currentCryptoBalanceValueInFiat)
+        {
+            // Use new improved message builder
+            var builder = new TelegramMessageBuilder(BotConfiguration.Currency, BotConfiguration.Fiat);
 
-            var sb = new StringBuilder();
-            sb.Append("\r\n");
-            sb.Append("<b>[ACTIONS]</b>").Append("\r\n");
-            sb.Append(accumulationStatsMessageBlock);
-            sb.Append(withdrawalMessageBlock);
-            sb.Append("\r\n");
-            sb.Append("<b>[SUMMARY]</b>").Append("\r\n");
-            sb.Append(summaryMessageBlock);
+            builder.AddHeader(MessageTypeEnum.Information, BotConfiguration.UserName, account);
+            builder.AddBuySection(currencyBought, currencyCost, fillingPrice, feeCost);
 
-            await SendMessageAsync(sb.ToString());
+            // Add withdrawal info (parsed from legacy block for now)
+            // The withdrawal message block is already formatted, we'll include it as-is
+            // In the future, we should refactor AttemptWithdrawal to return structured data
+
+            builder.AddSummarySection(accumulationSummary, fillingPrice, postBuyFiatBalance, postBuyCurrencyBalance);
+
+            var message = builder.Build();
+
+            // Append legacy withdrawal block if present
+            if (!string.IsNullOrWhiteSpace(withdrawalMessageBlock))
+            {
+                message += "\n\n" + withdrawalMessageBlock.Trim();
+            }
+
+            await SendMessageAsync(message);
         }
 
-        private async Task SendWarningMessage(decimal initialFiatBalance){
-            var sbWarningMessage = new StringBuilder();
-            sbWarningMessage.Append($"Not enough {BotConfiguration.Fiat} on the {account} account").Append("\r\n");
-            sbWarningMessage.Append($"The account balance ({initialFiatBalance} {BotConfiguration.Fiat}) should be strictly superior than the bot configuration chunk size ({BotConfiguration.ChunkSize} {BotConfiguration.Fiat})");
+        private async Task SendWarningMessage(decimal initialFiatBalance)
+        {
+            var builder = new TelegramMessageBuilder(BotConfiguration.Currency, BotConfiguration.Fiat);
 
-            await SendMessageAsync(sbWarningMessage.ToString(), MessageTypeEnum.Warning);
+            builder.AddHeader(MessageTypeEnum.Warning, BotConfiguration.UserName, account);
+            builder.AddInsufficientFunds(initialFiatBalance, BotConfiguration.ChunkSize);
+
+            await SendMessageAsync(builder.Build(), MessageTypeEnum.Warning);
         }
 
         private async Task SendMessageAsync(string message, MessageTypeEnum messageType = MessageTypeEnum.Information, int attempt = 0)
@@ -350,7 +361,7 @@ namespace CryptoBotCore.BotStrategies
             try
             {
                 var TelegramBot = new TelegramBotClient(BotConfiguration.TelegramBot);
-                await TelegramBot.SendTextMessageAsync(BotConfiguration.TelegramChannel, message.Substring(0, Math.Min(4000, message.Length)), Telegram.Bot.Types.Enums.ParseMode.Html); // Why risking to truncate the message to 4000 chars ?
+                await TelegramBot.SendMessage(BotConfiguration.TelegramChannel, message.Substring(0, Math.Min(4000, message.Length)), parseMode: global::Telegram.Bot.Types.Enums.ParseMode.Html);
             }
             catch (Exception e)
             {

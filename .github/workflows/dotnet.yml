@@ -14,7 +14,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'ci skip')"
     steps:
     - name: Download AccBot content
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: accbot-content
     - name: Archive AccBot content
@@ -41,10 +41,16 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v1.0.${{ github.run_number }}
-        release_name: Release v1.0.${{ github.run_number }}
+        tag_name: v2.0.${{ github.run_number }}
+        release_name: Release v2.0.${{ github.run_number }}
         body: |
-            The current version of the AccBot running on Azure. 
+            AccBot v2.0 - .NET 10 with Isolated Azure Functions
+
+            Changes:
+            - Upgraded to .NET 10 LTS
+            - Converted to Azure Functions Isolated Worker Model
+            - Removed defunct exchanges (FTX, Bittrex)
+            - Updated all NuGet packages to latest versions
 
             Installation instructions can be found in [README](https://github.com/Crynners/AccBot).
     - name: Upload asset to GitHub Release
@@ -56,22 +62,23 @@ jobs:
         asset_path: ./ZIPFile/AccBot_Installation.zip
         asset_name: AccBot_Installation.zip
         asset_content_type: application/zip
-    
-      
+
+
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Setup .NET
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: 10.0.x
+        dotnet-quality: 'preview'
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore -c release
     - name: Upload AccBot content
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: accbot-content
-        path: CryptoBotFunction/bin/Release/net6.0
+        path: CryptoBotFunction/bin/Release/net10.0

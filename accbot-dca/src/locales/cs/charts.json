@@ -1,0 +1,134 @@
+{
+  "title": "Grafy",
+  "loading": "Načítání grafů...",
+  "no_data": "Žádná data k zobrazení",
+  "error_loading": "Chyba při načítání dat",
+  
+  "chart_types": {
+    "portfolio_value": {
+      "title": "Hodnota portfolia",
+      "description": "Vývoj hodnoty portfolia v čase",
+      "y_axis": "Hodnota (CZK)"
+    },
+    "cumulative_investment": {
+      "title": "Kumulativní investice",
+      "description": "Celková částka investovaná v čase",
+      "y_axis": "Investováno (CZK)"
+    },
+    "average_price": {
+      "title": "Průměrná nákupní cena",
+      "description": "Vývoj průměrné nákupní ceny v čase",
+      "y_axis": "Cena (CZK)"
+    },
+    "performance": {
+      "title": "Výkonnost portfolia",
+      "description": "ROI (návratnost investice) v čase",
+      "y_axis": "ROI (%)"
+    }
+  },
+  
+  "filters": {
+    "time_range": "Časový rozsah",
+    "custom_range": "Vlastní rozsah",
+    "date_from": "Od",
+    "date_to": "Do",
+    "reset_filters": "Resetovat filtry",
+    "apply_filters": "Použít filtry",
+    
+    "presets": {
+      "7D": "7 dní",
+      "1M": "1 měsíc", 
+      "3M": "3 měsíce",
+      "6M": "6 měsíců",
+      "1Y": "1 rok",
+      "ALL": "Vše"
+    }
+  },
+  
+  "drill_down": {
+    "all_data": "Všechna data",
+    "year_label": "Rok {{year}}",
+    "quarter_label": "Q{{quarter}} {{year}}",
+    "month_label": "{{month}} {{year}}",
+    "week_label": "Týden {{week}}, {{month}}",
+    "day_label": "{{day}}",
+    
+    "breadcrumb": {
+      "home": "Přehled",
+      "back": "Zpět",
+      "reset": "Reset"
+    },
+    
+    "click_to_drill": "Klikněte pro detail",
+    "double_click_hint": "Dvojklik pro drill-down",
+    "no_drill_down": "Maximální detail",
+    
+    "levels": {
+      "year": "roky",
+      "quarter": "kvartály", 
+      "month": "měsíce",
+      "week": "týdny",
+      "day": "dny"
+    },
+    
+    "aggregation": {
+      "showing_by": "Zobrazuje po: {{level}}",
+      "data_points": "{{count}} datových bodů",
+      "aggregated_from": "Agregováno z {{count}} záznamů"
+    }
+  },
+  
+  "interactions": {
+    "zoom": {
+      "title": "Přiblížení",
+      "reset": "Resetovat zoom",
+      "instruction": "Táhněte pro přiblížení"
+    },
+    "tooltip": {
+      "value": "Hodnota",
+      "date": "Datum",
+      "total": "Celkem",
+      "average": "Průměr",
+      "count": "Počet"
+    }
+  },
+  
+  "export": {
+    "title": "Export grafu",
+    "as_image": "Uložit jako obrázek",
+    "as_pdf": "Uložit jako PDF",
+    "as_csv": "Export dat (CSV)",
+    "success": "Graf byl úspěšně exportován",
+    "error": "Chyba při exportu grafu"
+  },
+  
+  "performance_metrics": {
+    "total_invested": "Celkem investováno",
+    "current_value": "Aktuální hodnota",
+    "profit_loss": "Zisk/Ztráta",
+    "roi": "ROI",
+    "transaction_count": "Počet transakcí",
+    "avg_price": "Průměrná cena",
+    "first_purchase": "První nákup",
+    "last_purchase": "Poslední nákup",
+    "days_investing": "Dní investování"
+  },
+
+  "chart_navigation": {
+    "portfolio_overview": "Přehled portfolia",
+    "performance_analysis": "Analýza výkonnosti", 
+    "dca_comparison": "Porovnání DCA plánů",
+    "market_analysis": "Tržní analýza"
+  },
+
+  "empty_states": {
+    "no_transactions": "Žádné transakce k zobrazení",
+    "no_data_for_period": "Žádná data pro vybrané období",
+    "filter_too_restrictive": "Příliš omezující filtry"
+  },
+  
+  "portfolio_comparison_description": "Porovnání investované částky s aktuální hodnotou portfolia. Zelená čára nad modrou znamená zisk, pod modrou ztrátu.",
+  "go_back": "Zpět",
+  "reset": "Resetovat",
+  "tap_to_drill_down": "Klikněte pro detail"
+} 

@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AccBot</string>
+
+    <!-- Common -->
+    <string name="common_back">Back</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_save">Save</string>
+    <string name="common_retry">Retry</string>
+    <string name="common_skip">Skip</string>
+    <string name="common_clear">Clear</string>
+    <string name="common_apply">Apply</string>
+    <string name="common_done">Done</string>
+    <string name="common_remove">Remove</string>
+    <string name="common_loading">Loading…</string>
+    <string name="common_error_title">Something went wrong</string>
+    <string name="common_connected">Connected</string>
+    <string name="common_not_connected">Not connected</string>
+    <string name="common_all">All</string>
+    <string name="common_amount">Amount</string>
+    <string name="common_settings">Settings</string>
+    <string name="common_copy">Copy</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_portfolio">Portfolio</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- DCA Strategy -->
+    <string name="strategy_classic_name">Classic DCA</string>
+    <string name="strategy_classic_description">Buy a fixed amount at regular intervals</string>
+    <string name="strategy_ath_name">ATH-based DCA</string>
+    <string name="strategy_ath_description">Buy more when price is far below All-Time High</string>
+    <string name="strategy_fear_greed_name">Fear &amp; Greed DCA</string>
+    <string name="strategy_fear_greed_description">Buy more when market sentiment is fearful</string>
+
+    <!-- DCA Frequency -->
+    <string name="frequency_every_15_min">Every 15 minutes</string>
+    <string name="frequency_hourly">Every hour</string>
+    <string name="frequency_every_4_hours">Every 4 hours</string>
+    <string name="frequency_every_8_hours">Every 8 hours</string>
+    <string name="frequency_daily">Daily</string>
+    <string name="frequency_weekly">Weekly</string>
+
+    <!-- Dashboard Screen -->
+    <string name="dashboard_add_plan">Add Plan</string>
+    <string name="dashboard_sandbox_banner">SANDBOX MODE - Test trades only</string>
+    <string name="dashboard_total_accumulated">Total Accumulated</string>
+    <string name="dashboard_no_transactions">No transactions yet</string>
+    <string name="dashboard_start_plan_hint">Start a DCA plan to see your holdings</string>
+    <string name="dashboard_refresh_prices">Refresh prices</string>
+    <string name="dashboard_transactions_total">%1$d transactions total</string>
+    <string name="dashboard_invested">Invested</string>
+    <string name="dashboard_avg_price">Avg Price</string>
+    <string name="dashboard_current_price">Current Price</string>
+    <string name="dashboard_active_plans">Active DCA Plans</string>
+    <string name="dashboard_next_prefix">Next: %1$s</string>
+    <string name="dashboard_remaining_suffix">~%1$s remaining</string>
+    <string name="dashboard_remaining_with_exec">~%1$s remaining (%2$d exec)</string>
+    <string name="dashboard_no_plans_title">No DCA Plans Yet</string>
+    <string name="dashboard_no_plans_description">Create your first DCA plan to start stacking</string>
+    <string name="dashboard_create_plan">Create Plan</string>
+    <string name="dashboard_history">History</string>
+    <string name="dashboard_run_now">Run Now</string>
+    <string name="dashboard_dca_triggered">DCA execution triggered</string>
+    <string name="dashboard_roi">ROI %1$s</string>
+    <string name="dashboard_less_than_1_hour">&lt; 1 hour</string>
+    <plurals name="dashboard_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <plurals name="dashboard_days">
+        <item quantity="one">1 day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_exchange_accounts">EXCHANGE ACCOUNTS</string>
+    <string name="settings_manage_exchanges">Manage Exchanges</string>
+    <string name="settings_exchanges_connected">%1$d exchange(s) connected</string>
+    <string name="settings_system">SYSTEM SETTINGS</string>
+    <string name="settings_battery_optimization">Battery Optimization</string>
+    <string name="settings_battery_disabled">Disabled - tap to enable unrestricted background</string>
+    <string name="settings_battery_unrestricted">Unrestricted - DCA runs reliably in background</string>
+    <string name="settings_battery_already_disabled">Battery optimization already disabled</string>
+    <string name="settings_battery_open_failed">Could not open battery settings</string>
+    <string name="settings_low_balance_warning">Low Balance Warning</string>
+    <string name="settings_low_balance_subtitle">Warn when balance covers &lt; %1$d days</string>
+    <string name="settings_low_balance_dialog_title">Low Balance Warning</string>
+    <string name="settings_low_balance_dialog_text">Warn when exchange balance can cover fewer than this many days of DCA executions.</string>
+    <string name="settings_low_balance_days">%1$d days</string>
+    <string name="settings_decrease">Decrease</string>
+    <string name="settings_increase">Increase</string>
+    <string name="settings_about">ABOUT</string>
+    <string name="settings_documentation">Documentation</string>
+    <string name="settings_documentation_subtitle">View setup guides and API docs</string>
+    <string name="settings_report_issue">Report Issue</string>
+    <string name="settings_report_issue_subtitle">Found a bug? Let us know</string>
+    <string name="settings_developer">DEVELOPER OPTIONS</string>
+    <string name="settings_sandbox_mode">Sandbox Mode</string>
+    <string name="settings_sandbox_enabled">Using test networks - no real trades</string>
+    <string name="settings_sandbox_disabled">Switch to testnet for risk-free testing</string>
+    <string name="settings_danger_zone">DANGER ZONE</string>
+    <string name="settings_delete_all_data">Delete All Data</string>
+    <string name="settings_delete_all_subtitle">Remove all plans, history, and credentials</string>
+    <string name="settings_delete_dialog_title">Delete All Data?</string>
+    <string name="settings_delete_dialog_text">This will remove all DCA plans, transaction history, and stored credentials. This action cannot be undone.</string>
+    <string name="settings_restart_required">Restart Required</string>
+    <string name="settings_restart_sandbox_on">Switching to sandbox mode requires app restart. Your production data will remain safe in a separate database.</string>
+    <string name="settings_restart_sandbox_off">Switching to production mode requires app restart. Your sandbox data will remain safe in a separate database.</string>
+    <string name="settings_restart_now">Restart Now</string>
+    <string name="settings_accbot_dca">AccBot DCA</string>
+    <string name="settings_version">Version %1$s (%2$d)</string>
+    <string name="settings_built">Built: %1$s</string>
+    <string name="settings_made_with_love">Made with love by Crynners</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_subtitle">Choose app language</string>
+    <string name="settings_language_system_default">System default</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_czech">Čeština</string>
+
+    <!-- History Screen -->
+    <string name="history_title">Transaction History</string>
+    <string name="history_filter">Filter</string>
+    <string name="history_export_csv">Export CSV</string>
+    <string name="history_export_transactions">Export Transactions</string>
+    <string name="history_export_started">Export started</string>
+    <string name="history_export_failed">Failed to export</string>
+    <string name="history_clear_all">Clear all</string>
+    <string name="history_filter_title">Filter Transactions</string>
+    <string name="history_filter_crypto">Cryptocurrency</string>
+    <string name="history_filter_exchange">Exchange</string>
+    <string name="history_filter_status">Status</string>
+    <string name="history_transactions_count">%1$d transaction(s)</string>
+    <string name="history_empty_title">No Transactions Yet</string>
+    <string name="history_empty_description">Your DCA purchase history will appear here</string>
+    <string name="history_empty_filtered_title">No Matching Transactions</string>
+    <string name="history_empty_filtered_description">Try adjusting your filters</string>
+    <string name="history_delete_transaction">Transaction deleted</string>
+    <string name="history_undo">Undo</string>
+    <string name="history_sort">Sort</string>
+    <string name="history_sort_date_newest">Date (newest first)</string>
+    <string name="history_sort_date_oldest">Date (oldest first)</string>
+    <string name="history_sort_amount_highest">Amount (highest first)</string>
+    <string name="history_sort_amount_lowest">Amount (lowest first)</string>
+    <string name="history_sort_price_highest">Price (highest first)</string>
+    <string name="history_sort_price_lowest">Price (lowest first)</string>
+    <string name="history_filter_date_range">Date Range</string>
+    <string name="history_filter_date_from">From</string>
+    <string name="history_filter_date_to">To</string>
+    <string name="history_filter_date_select">Select date</string>
+
+    <!-- Add Plan Screen -->
+    <string name="add_plan_title">Create DCA Plan</string>
+    <string name="add_plan_select_exchange">Select Exchange</string>
+    <string name="add_plan_api_credentials">API Credentials</string>
+    <string name="add_plan_cryptocurrency">Cryptocurrency</string>
+    <string name="add_plan_fiat_currency">Fiat Currency</string>
+    <string name="add_plan_amount_per_purchase">Amount per Purchase</string>
+    <string name="add_plan_purchase_frequency">Purchase Frequency</string>
+    <string name="add_plan_dca_strategy">DCA Strategy</string>
+    <string name="add_plan_strategy_info">Strategy info</string>
+    <string name="add_plan_auto_withdrawal">Auto-Withdrawal</string>
+    <string name="add_plan_auto_withdrawal_desc">Automatically send to your wallet</string>
+    <string name="add_plan_wallet_address">%1$s Wallet Address</string>
+    <string name="add_plan_create">Create DCA Plan</string>
+    <string name="add_plan_monthly_estimate">Monthly Estimate</string>
+    <string name="add_plan_monthly_approx">~%1$s %2$s/month</string>
+    <string name="add_plan_monthly_range">%1$s - %2$s %3$s/month</string>
+    <string name="add_plan_monthly_current">Current: ~%1$s %2$s/month</string>
+
+    <!-- Plan Details Screen -->
+    <string name="plan_details_title">Plan Details</string>
+    <string name="plan_details_edit">Edit</string>
+    <string name="plan_details_delete_title">Delete Plan</string>
+    <string name="plan_details_delete_text">Are you sure you want to delete this DCA plan? This action cannot be undone.</string>
+    <string name="plan_details_loading">Loading plan…</string>
+    <string name="plan_details_active">Active</string>
+    <string name="plan_details_paused">Paused</string>
+    <string name="plan_details_configuration">Configuration</string>
+    <string name="plan_details_amount">Amount per purchase</string>
+    <string name="plan_details_frequency">Frequency</string>
+    <string name="plan_details_next_execution">Next execution</string>
+    <string name="plan_details_auto_withdrawal">Auto-withdrawal</string>
+    <string name="plan_details_invested">Invested</string>
+    <string name="plan_details_accumulated">Accumulated</string>
+    <string name="plan_details_avg_price">Avg. Price</string>
+    <string name="plan_details_transactions">Transactions</string>
+    <string name="plan_details_recent_transactions">Recent Transactions</string>
+    <string name="plan_details_view_all">View all %1$d transactions</string>
+    <string name="plan_details_no_transactions_title">No Transactions Yet</string>
+    <string name="plan_details_no_transactions_desc">Transactions will appear here after your first DCA execution</string>
+    <string name="plan_details_performance">Performance</string>
+    <string name="plan_details_current_price">Current Price</string>
+    <string name="plan_details_current_value">Current Value</string>
+    <string name="plan_details_roi">ROI</string>
+    <string name="plan_details_balance">Exchange Balance</string>
+    <string name="plan_details_estimated_duration">Estimated Duration</string>
+    <string name="plan_details_days_remaining">~%1$d days (%2$d executions)</string>
+
+    <!-- Edit Plan Screen -->
+    <string name="edit_plan_title">Edit Plan</string>
+    <string name="edit_plan_details">Plan Details</string>
+    <string name="edit_plan_pair_info">%1$s/%2$s on %3$s</string>
+    <string name="edit_plan_cannot_change">Exchange and crypto pair cannot be changed</string>
+    <string name="edit_plan_save">Save Changes</string>
+    <string name="edit_plan_enter_wallet">Enter your %1$s wallet address</string>
+
+    <!-- Portfolio Screen -->
+    <string name="portfolio_title">Portfolio</string>
+    <string name="portfolio_transactions">Transactions</string>
+    <string name="portfolio_loading">Loading portfolio…</string>
+
+    <!-- Performance Chart -->
+    <string name="chart_all_pairs">All Pairs</string>
+    <string name="chart_all_fiat">All %1$s</string>
+    <string name="chart_syncing_prices">Syncing prices…</string>
+    <string name="chart_no_data_title">No Chart Data</string>
+    <string name="chart_no_data_desc">Complete at least one DCA purchase to see performance charts</string>
+    <string name="chart_zoom_all_time">All Time</string>
+    <string name="chart_filter_all_exchanges">All</string>
+    <string name="chart_current_value">Current Value</string>
+    <string name="chart_total_roi">ROI</string>
+    <string name="chart_invested">Invested</string>
+    <string name="chart_portfolio_value">Portfolio Value</string>
+    <string name="chart_cost_basis">Cost Basis</string>
+    <string name="chart_legend_crypto_held">Crypto Held</string>
+    <string name="chart_legend_invested_equiv">Invested Equiv.</string>
+    <string name="chart_avg_price">Avg. Price</string>
+    <string name="chart_transactions">Transactions</string>
+    <string name="chart_period_roi">%1$s in %2$s</string>
+    <string name="chart_explore">Explore:</string>
+
+    <!-- Exchange Management Screen -->
+    <string name="exchanges_title">Exchanges</string>
+    <string name="exchanges_add">Add Exchange</string>
+    <string name="exchanges_connected">Connected Exchanges</string>
+    <string name="exchanges_available">Available Exchanges</string>
+    <string name="exchanges_remove_title">Remove Exchange</string>
+    <string name="exchanges_remove_text">Are you sure you want to remove %1$s? This will delete your API credentials from this device.</string>
+    <string name="exchanges_none_title">No Exchanges Available</string>
+    <string name="exchanges_none_desc">There are no exchanges to display</string>
+
+    <!-- Add Exchange Screen -->
+    <string name="add_exchange_select">Select Exchange</string>
+    <string name="add_exchange_instructions">API Instructions</string>
+    <string name="add_exchange_credentials">Enter Credentials</string>
+    <string name="add_exchange_success">Success</string>
+    <string name="add_exchange_choose">Choose an exchange to connect</string>
+    <string name="add_exchange_all_connected">All exchanges connected</string>
+    <string name="add_exchange_all_connected_desc">You\'ve connected all available exchanges</string>
+    <string name="add_exchange_cryptos">%1$d cryptos</string>
+    <string name="add_exchange_sandbox_testnet">Sandbox Mode - Using testnet environment</string>
+    <string name="add_exchange_api_setup">API Setup Instructions</string>
+    <string name="add_exchange_testnet_setup">Testnet API Setup</string>
+    <string name="add_exchange_open_testnet">Open %1$s Testnet</string>
+    <string name="add_exchange_open_api_page">Open %1$s API Page</string>
+    <string name="add_exchange_testnet_info">Testnet credentials are separate from your real exchange account. Test funds are provided for free.</string>
+    <string name="add_exchange_security_tip">Security tip: Only enable trading permissions. Never enable withdrawal permissions for DCA bots.</string>
+    <string name="add_exchange_i_have_keys">I have my API keys</string>
+    <string name="add_exchange_enter_credentials">Enter your %1$s API credentials</string>
+    <string name="add_exchange_connect">Connect Exchange</string>
+    <string name="add_exchange_connected">%1$s Connected!</string>
+    <string name="add_exchange_connected_desc">You can now create DCA plans using this exchange</string>
+
+    <!-- Transaction Details Screen -->
+    <string name="transaction_details_title">Transaction Details</string>
+    <string name="transaction_details_loading">Loading transaction…</string>
+    <string name="transaction_details_amount_received">Amount Received</string>
+    <string name="transaction_details_section">Details</string>
+    <string name="transaction_details_exchange">Exchange</string>
+    <string name="transaction_details_price">Price</string>
+    <string name="transaction_details_fee">Fee</string>
+    <string name="transaction_details_date_time">Date &amp; Time</string>
+    <string name="transaction_details_order_id">Order ID</string>
+    <string name="transaction_details_error_message">Error Message</string>
+    <string name="transaction_details_copied">Copied to clipboard</string>
+    <string name="transaction_status_completed">Completed</string>
+    <string name="transaction_status_failed">Failed</string>
+    <string name="transaction_status_pending">Pending</string>
+    <string name="transaction_status_partial">Partially Filled</string>
+    <string name="transaction_details_at">at</string>
+
+    <!-- Credentials Input -->
+    <string name="credentials_client_id">Client ID</string>
+    <string name="credentials_public_key">Public Key</string>
+    <string name="credentials_api_key">API Key</string>
+    <string name="credentials_private_key">Private Key</string>
+    <string name="credentials_api_secret">API Secret</string>
+    <string name="credentials_passphrase">Passphrase</string>
+    <string name="credentials_toggle_visibility">Toggle visibility</string>
+    <string name="credentials_required_for">Required for %1$s</string>
+    <string name="credentials_stored_locally">Credentials stored locally with encryption</string>
+    <string name="credentials_encrypted_aes">Encrypted locally with AES-256</string>
+
+    <!-- Strategy Info Bottom Sheet -->
+    <string name="strategy_how_it_works">How it works</string>
+    <string name="strategy_got_it">Got it</string>
+    <string name="strategy_classic_explanation">Classic DCA buys the same fixed amount at every scheduled interval, regardless of market conditions. This is the simplest and most straightforward approach to dollar-cost averaging.</string>
+    <string name="strategy_classic_consistent">Consistent</string>
+    <string name="strategy_classic_consistent_desc">Same amount every time</string>
+    <string name="strategy_classic_simple">Simple</string>
+    <string name="strategy_classic_simple_desc">No market timing</string>
+    <string name="strategy_current_multiplier">Current Multiplier</string>
+    <string name="strategy_multiplier_percent">%1$d%% of base amount</string>
+    <string name="strategy_ath_explanation">This strategy adjusts your purchase amount based on how far the current price is from the All-Time High. Buy less when price is near ATH, buy more during dips.</string>
+    <string name="strategy_purchase_tiers">Purchase Tiers</string>
+    <string name="strategy_distance_from_ath">Distance from ATH</string>
+    <string name="strategy_multiplier">Multiplier</string>
+    <string name="strategy_ath_tier_0_10">0-10% below</string>
+    <string name="strategy_ath_tier_10_30">10-30% below</string>
+    <string name="strategy_ath_tier_30_50">30-50% below</string>
+    <string name="strategy_ath_tier_50_70">50-70% below</string>
+    <string name="strategy_ath_tier_70_plus">70%+ below</string>
+    <string name="strategy_ath_mult_50">0.5x (50%)</string>
+    <string name="strategy_ath_mult_100">1.0x (100%)</string>
+    <string name="strategy_ath_mult_150">1.5x (150%)</string>
+    <string name="strategy_ath_mult_200">2.0x (200%)</string>
+    <string name="strategy_ath_mult_300">3.0x (300%)</string>
+    <string name="strategy_ath_example">Example: With a base amount of 100 EUR, if BTC is 40% below ATH, you\'ll buy 150 EUR worth.</string>
+    <string name="strategy_fg_explanation">This strategy uses the Fear &amp; Greed Index to adjust purchases. Buy more when the market is fearful (often a good opportunity), buy less during extreme greed.</string>
+    <string name="strategy_sentiment_tiers">Sentiment Tiers</string>
+    <string name="strategy_market_sentiment">Market Sentiment</string>
+    <string name="strategy_fg_extreme_fear">Extreme Fear (0-24)</string>
+    <string name="strategy_fg_fear">Fear (25-44)</string>
+    <string name="strategy_fg_neutral">Neutral (45-54)</string>
+    <string name="strategy_fg_greed">Greed (55-74)</string>
+    <string name="strategy_fg_extreme_greed">Extreme Greed (75-100)</string>
+    <string name="strategy_fg_mult_250">2.5x (250%)</string>
+    <string name="strategy_fg_mult_150">1.5x (150%)</string>
+    <string name="strategy_fg_mult_100">1.0x (100%)</string>
+    <string name="strategy_fg_mult_50">0.5x (50%)</string>
+    <string name="strategy_fg_mult_25">0.25x (25%)</string>
+    <string name="strategy_fg_example">Example: With a base amount of 100 EUR, during Extreme Fear you\'ll buy 250 EUR worth.</string>
+
+    <!-- Sandbox Components -->
+    <string name="sandbox_mode_indicator">Sandbox Mode - Only testnet exchanges available</string>
+    <string name="sandbox_testnet_required">Sandbox Mode - Testnet Credentials Required</string>
+    <string name="sandbox_testnet_credentials_desc">You need testnet API credentials for %1$s:</string>
+
+    <!-- Onboarding - Welcome -->
+    <string name="welcome_tagline">Automated DCA for your crypto</string>
+    <string name="welcome_auto_dca_title">Automatic DCA</string>
+    <string name="welcome_auto_dca_desc">Set it and forget it. AccBot buys crypto on your schedule.</string>
+    <string name="welcome_self_custody_title">Self-Custody</string>
+    <string name="welcome_self_custody_desc">Your keys stay on your device. No cloud, no tracking.</string>
+    <string name="welcome_stack_sats_title">Stack Sats</string>
+    <string name="welcome_stack_sats_desc">Build wealth gradually with dollar-cost averaging.</string>
+    <string name="welcome_get_started">Get Started</string>
+
+    <!-- Onboarding - Security -->
+    <string name="security_title">Your Keys, Your Crypto</string>
+    <string name="security_subtitle">AccBot is designed with security-first principles. Your API keys never leave your device.</string>
+    <string name="security_local_title">Local Storage Only</string>
+    <string name="security_local_desc">Credentials encrypted with AES-256 and stored only on your device</string>
+    <string name="security_no_cloud_title">No Cloud Sync</string>
+    <string name="security_no_cloud_desc">Your data is never uploaded to any server</string>
+    <string name="security_keystore_title">Android Keystore</string>
+    <string name="security_keystore_desc">Encryption keys protected by hardware security</string>
+    <string name="security_direct_title">Direct API Calls</string>
+    <string name="security_direct_desc">Communication goes directly to exchanges via HTTPS</string>
+    <string name="security_tip">Tip: Create API keys with only trading permissions. Never enable withdrawal permissions.</string>
+    <string name="security_i_understand">I Understand</string>
+
+    <!-- Onboarding - Exchange Setup -->
+    <string name="exchange_setup_title">Connect Exchange</string>
+    <string name="exchange_setup_choose">Choose your exchange</string>
+    <string name="exchange_setup_choose_desc">Select an exchange where you want to run your DCA strategy</string>
+    <string name="exchange_setup_api_credentials">API Credentials</string>
+    <string name="exchange_setup_connect">Connect Exchange</string>
+
+    <!-- Onboarding - First Plan -->
+    <string name="first_plan_title">First DCA Plan</string>
+    <string name="first_plan_setup">Set up your first DCA</string>
+    <string name="first_plan_setup_desc">Start stacking sats automatically. You can always adjust this later.</string>
+    <string name="first_plan_what_to_buy">What to buy</string>
+    <string name="first_plan_currency">Currency</string>
+    <string name="first_plan_custom_amount">Custom amount</string>
+    <string name="first_plan_minimum">Minimum: %1$s %2$s</string>
+    <string name="first_plan_how_often">How often</string>
+    <string name="first_plan_recommended">Recommended for beginners</string>
+    <string name="first_plan_lower_frequency">Lower frequency, larger purchases</string>
+    <string name="first_plan_your_plan">Your DCA Plan</string>
+    <string name="first_plan_summary">Buy %1$s %2$s of %3$s %4$s</string>
+    <string name="first_plan_no_exchange">No exchange connected</string>
+    <string name="first_plan_no_exchange_desc">Go back to connect an exchange first</string>
+    <string name="first_plan_create">Create Plan</string>
+
+    <!-- Onboarding - Completion -->
+    <string name="completion_title">You\'re All Set!</string>
+    <string name="completion_subtitle">AccBot is ready to start stacking for you</string>
+    <string name="completion_whats_next">What\'s Next</string>
+    <string name="completion_start_service_title">Start the DCA service</string>
+    <string name="completion_start_service_desc">Toggle the service on from the dashboard</string>
+    <string name="completion_fine_tune_title">Fine-tune your plan</string>
+    <string name="completion_fine_tune_desc">Adjust amounts, add more cryptos, or change frequency</string>
+    <string name="completion_stay_informed_title">Stay informed</string>
+    <string name="completion_stay_informed_desc">Get notified after each purchase</string>
+    <string name="completion_pro_tip">Pro tip: For uninterrupted DCA, disable battery optimization for AccBot in your device settings.</string>
+    <string name="completion_start_stacking">Start Stacking</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_service">DCA Service</string>
+    <string name="notification_channel_service_desc">AccBot DCA background service</string>
+    <string name="notification_channel_purchase">Purchase Notifications</string>
+    <string name="notification_channel_purchase_desc">Notifications for completed DCA purchases</string>
+    <string name="notification_channel_error">Error Notifications</string>
+    <string name="notification_channel_error_desc">Notifications for DCA errors</string>
+    <string name="notification_channel_low_balance">Low Balance Warnings</string>
+    <string name="notification_channel_low_balance_desc">Warnings when exchange balance is running low</string>
+    <string name="notification_service_title">AccBot DCA Active</string>
+    <string name="notification_service_text">Monitoring your DCA plans</string>
+    <string name="notification_purchase_title">DCA Purchase Completed ✓</string>
+    <string name="notification_purchase_text">Bought %1$s %2$s for %3$s %4$s</string>
+    <string name="notification_dca_failed">DCA Failed</string>
+    <string name="notification_dca_failed_text">Failed to buy %1$s: %2$s</string>
+    <string name="notification_dca_error">DCA Error</string>
+    <string name="notification_low_balance_title">Low balance on %1$s</string>
+    <string name="notification_low_balance_text">%1$s of %2$s remaining for DCA</string>
+    <string name="notification_low_balance_less_1_day">&lt; 1 day</string>
+    <string name="notification_low_balance_days">~%1$d day(s)</string>
+
+    <!-- TimeUtils -->
+    <string name="time_not_scheduled">Not scheduled</string>
+    <string name="time_due_now">Due now</string>
+    <string name="time_in_days">in %1$d days</string>
+    <string name="time_in_1_day">in 1 day</string>
+    <string name="time_in_hours">in %1$d hours</string>
+    <string name="time_in_1_hour">in 1 hour</string>
+    <string name="time_in_minutes">in %1$d min</string>
+    <string name="time_in_less_1_min">in &lt; 1 min</string>
+
+    <!-- Content with Loading and Error -->
+    <string name="content_loading">Loading…</string>
+
+    <!-- QR Scanner -->
+    <string name="qr_camera_permission_text">Please grant camera permission to scan QR codes</string>
+    <string name="qr_grant_permission">Grant Permission</string>
+    <string name="qr_close">Close</string>
+    <string name="qr_scan_code">Scan QR code</string>
+    <string name="qr_close_scanner">Close scanner</string>
+    <string name="qr_camera_permission_title">Camera Permission Required</string>
+    <string name="qr_point_camera">Point camera at QR code</string>
+    <string name="qr_scanning_auto">Scanning will happen automatically</string>
+
+    <!-- Biometric Lock -->
+    <string name="biometric_lock_title">App Lock</string>
+    <string name="biometric_lock_subtitle">Require biometric authentication to open AccBot</string>
+    <string name="biometric_lock_enabled">Enabled</string>
+    <string name="biometric_lock_disabled">Disabled</string>
+    <string name="biometric_prompt_title">Unlock AccBot</string>
+    <string name="biometric_prompt_subtitle">Verify your identity</string>
+    <string name="biometric_prompt_negative">Cancel</string>
+    <string name="biometric_not_available">Biometric authentication not available on this device</string>
+    <string name="biometric_lock_unlock">Tap to unlock</string>
+    <string name="biometric_onboarding_title">Protect Your App</string>
+    <string name="biometric_onboarding_desc">Use fingerprint or face recognition to secure AccBot</string>
+    <string name="biometric_onboarding_enable">Enable App Lock</string>
+    <string name="biometric_lock_recommend">(Recommended)</string>
+    <string name="settings_security">SECURITY</string>
+
+    <!-- Splash Screen -->
+    <string name="splash_tagline">Stack Sats. Stay Humble.</string>
+
+    <!-- Import CSV -->
+    <string name="import_csv_title">Import History</string>
+    <string name="import_csv_subtitle">Import transactions from Coinmate CSV export</string>
+    <string name="import_csv_select_file">Select CSV File</string>
+    <string name="import_csv_select_file_desc">Choose your Coinmate transaction history export</string>
+    <string name="import_csv_new_transactions">%1$d new transactions</string>
+    <string name="import_csv_skipped">%1$d already imported (skipped)</string>
+    <string name="import_csv_import_button">Import</string>
+    <string name="import_csv_importing">Importing…</string>
+    <string name="import_csv_success">%1$d transactions imported successfully</string>
+    <string name="import_csv_no_buy_transactions">No matching buy transactions found in CSV</string>
+    <string name="import_csv_parse_error">Failed to parse CSV file</string>
+    <string name="import_csv_view_history">View History</string>
+    <string name="import_csv_file_loaded">File loaded</string>
+    <string name="import_csv_plan_info">%1$s/%2$s on %3$s</string>
+    <string name="import_csv_instructions">Export your transaction history from Coinmate and select the CSV file below.</string>
+
+    <!-- Accessibility -->
+    <string name="a11y_retry">Retry</string>
+</resources>
