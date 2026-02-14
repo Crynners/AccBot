@@ -1,36 +1,25 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Test</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\..\..\..\.nuget\packages\microsoft.azure.cosmos\3.20.1\contentFiles\any\netstandard2.0\ThirdPartyNotice.txt" Link="ThirdPartyNotice.txt">
-      <Private>False</Private>
-      <NuGetPackageVersion>3.20.1</NuGetPackageVersion>
-      <NuGetItemType>Content</NuGetItemType>
-      <NuGetPackageId>Microsoft.Azure.Cosmos</NuGetPackageId>
-      <Pack>false</Pack>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Binance.Net" Version="8.0.9" />
-    <PackageReference Include="Bitfinex.Net" Version="5.0.6" />
-    <PackageReference Include="Bittrex.Net" Version="7.0.6" />
+    <PackageReference Include="Binance.Net" Version="10.6.0" />
+    <PackageReference Include="Bitfinex.Net" Version="9.0.0" />
     <PackageReference Include="Coinbase" Version="6.0.1" />
-    <PackageReference Include="FTX.Net" Version="1.0.6" />
-    <PackageReference Include="Huobi.Net" Version="4.0.7" />
-    <PackageReference Include="KrakenExchange.Net" Version="3.0.5" />
-    <PackageReference Include="Kucoin.Net" Version="4.0.5" />
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.26.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
-    <PackageReference Include="Telegram.Bot" Version="17.0.0" />
+    <PackageReference Include="HTX.Net" Version="6.0.0" />
+    <PackageReference Include="KrakenExchange.Net" Version="5.3.0" />
+    <PackageReference Include="Kucoin.Net" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.46.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Telegram.Bot" Version="22.0.0" />
   </ItemGroup>
 
 </Project>

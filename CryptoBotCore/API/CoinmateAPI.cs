@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -20,7 +20,7 @@ namespace CryptoBotCore.API
         private string publicKey { get; set; }
         private string privateKey { get; set; }
 
-        //private static long nonce { get; set; }
+        private static readonly HttpClient httpClient = new HttpClient();
         static object nonceLock = new object();
         public ILogger Log { get; set; }
 
@@ -32,13 +32,11 @@ namespace CryptoBotCore.API
             this.pair_base = pair.Split('_')[0].ToUpper();
             this.pair_quote = pair.Split('_')[1].ToUpper();
 
-
             this.Log = log;
 
             clientId = Convert.ToInt32(credentials[ExchangeCredentialType.Coinmate_ClientId]);
             publicKey = credentials[ExchangeCredentialType.Coinmate_PublicKey];
             privateKey = credentials[ExchangeCredentialType.Coinmate_PrivateKey];
-
         }
 
         private string getSignature(Double time)
@@ -85,23 +83,20 @@ namespace CryptoBotCore.API
             {
                 try
                 {
-                    WebClient client = new WebClient();
-                    client.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded");
-
-                    //amount = Math.Floor(amount);
-
                     string body = "total=" + amount + "&currencyPair=" + $"{this.pair_base}_{this.pair_quote}" + "&" + getSecuredHeaderPart();
-                    var response = await client.UploadStringTaskAsync(new Uri("https://coinmate.io/api/buyInstant"), body);
+                    var content = new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded");
+                    var httpResponse = await httpClient.PostAsync("https://coinmate.io/api/buyInstant", content);
+                    var response = await httpResponse.Content.ReadAsStringAsync();
 
-                    Response<string> result = JsonConvert.DeserializeObject<Response<string>>(response);
+                    Response<string>? result = JsonConvert.DeserializeObject<Response<string>>(response);
 
-                    if (result.error)
+                    if (result == null || result.error)
                     {
-                        Log.LogError(result.errorMessage?.ToString());
-                        throw new Exception(result.errorMessage?.ToString());
+                        Log.LogError(result?.errorMessage?.ToString());
+                        throw new Exception(result?.errorMessage?.ToString());
                     }
 
-                    return result.data;
+                    return result.data ?? string.Empty;
                 }
                 catch (Exception ex)
                 {
@@ -136,15 +131,15 @@ namespace CryptoBotCore.API
             {
                 try
                 {
-                    WebClient client = new WebClient();
-                    client.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded");
                     string body = getSecuredHeaderPart();
-                    string response = await client.UploadStringTaskAsync("https://coinmate.io/api/bitcoinWithdrawalFees", body);
-                    BTCWithdrawalFee_RootObject result = JsonConvert.DeserializeObject<BTCWithdrawalFee_RootObject>(response);
+                    var content = new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded");
+                    var httpResponse = await httpClient.PostAsync("https://coinmate.io/api/bitcoinWithdrawalFees", content);
+                    string response = await httpResponse.Content.ReadAsStringAsync();
+                    BTCWithdrawalFee_RootObject? result = JsonConvert.DeserializeObject<BTCWithdrawalFee_RootObject>(response);
 
-                    if (result.error)
+                    if (result == null || result.error)
                     {
-                        throw new Exception(result.errorMessage?.ToString());
+                        throw new Exception(result?.errorMessage?.ToString());
                     }
 
                     return result.data.low;
@@ -172,9 +167,6 @@ namespace CryptoBotCore.API
             {
                 try
                 {
-                    WebClient client = new WebClient();
-                    client.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded");
-
                     string? keypair = pair_base == "BTC" ? "bitcoinWithdrawal" :
                                      pair_base == "LTC" ? "litecoinWithdrawal" :
                                      pair_base == "ETH" ? "ethereumWithdrawal" :
@@ -184,12 +176,14 @@ namespace CryptoBotCore.API
                     string fee_priority = pair_base == "BTC" ? "&feePriority=LOW" : "";
 
                     string body = "amount=" + amount + "&address=" + destinationAddress + fee_priority + "&" + getSecuredHeaderPart();
-                    string response = await client.UploadStringTaskAsync("https://coinmate.io/api/" + keypair, body);
-                    Response<string> result = JsonConvert.DeserializeObject<Response<string>>(response);
+                    var content = new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded");
+                    var httpResponse = await httpClient.PostAsync("https://coinmate.io/api/" + keypair, content);
+                    string response = await httpResponse.Content.ReadAsStringAsync();
+                    Response<string>? result = JsonConvert.DeserializeObject<Response<string>>(response);
 
-                    if (result.error)
+                    if (result == null || result.error)
                     {
-                        throw new Exception(result.errorMessage?.ToString());
+                        throw new Exception(result?.errorMessage?.ToString());
                     }
 
                     return WithdrawalStateEnum.OK;
@@ -204,7 +198,7 @@ namespace CryptoBotCore.API
                     Log.LogError(JsonConvert.SerializeObject(ex));
                     attempt++;
 
-                    if(attempt >= 3)
+                    if (attempt >= 3)
                     {
                         throw new Exception(JsonConvert.SerializeObject(ex));
                     }
@@ -230,21 +224,22 @@ namespace CryptoBotCore.API
             {
                 try
                 {
-                    WebClient client = new WebClient();
-                    client.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded");
                     string body = getSecuredHeaderPart();
-                    var response = await client.UploadStringTaskAsync("https://coinmate.io/api/balances", body);
-                    Response<BalanceData> result = JsonConvert.DeserializeObject<Response<BalanceData>>(response);
+                    var content = new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded");
+                    var httpResponse = await httpClient.PostAsync("https://coinmate.io/api/balances", content);
+                    var response = await httpResponse.Content.ReadAsStringAsync();
+                    Response<BalanceData>? result = JsonConvert.DeserializeObject<Response<BalanceData>>(response);
 
-                    if (result.error)
+                    if (result == null || result.error)
                     {
-                        Log.LogError(result.errorMessage?.ToString());
-                        throw new Exception(result.errorMessage?.ToString());
+                        Log.LogError(result?.errorMessage?.ToString());
+                        throw new Exception(result?.errorMessage?.ToString());
                     }
 
                     var wallets = new List<WalletBalances>();
 
-                    if(result.data == null){
+                    if (result.data == null)
+                    {
                         Log.LogError("No data found");
                         throw new Exception("No data found");
                     }
@@ -270,8 +265,6 @@ namespace CryptoBotCore.API
                     await Task.Delay(wait);
                 }
             } while (true);
-
-            throw new Exception("Coinmate API is currently not available.");
         }
 
         private class Response<T>

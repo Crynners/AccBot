@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AccBot - Self-Custody Bitcoin DCA</title>
+  <meta name="description" content="Automated Dollar Cost Averaging for Bitcoin and crypto. Self-custody, open source, 7 exchanges supported.">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="AccBot - Self-Custody Bitcoin DCA">
+  <meta property="og:description" content="Automated Dollar Cost Averaging for Bitcoin and crypto. Self-custody, open source, 7 exchanges supported.">
+  <meta property="og:url" content="https://crynners.github.io/AccBot/">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AccBot - Self-Custody Bitcoin DCA">
+  <meta name="twitter:description" content="Automated Dollar Cost Averaging for Bitcoin and crypto. Self-custody, open source, 7 exchanges supported.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="#" class="logo">
+        <svg width="32" height="32" viewBox="0 0 54 54" fill="none">
+          <circle cx="27" cy="27" r="27" fill="#4ECCA3"/>
+          <path d="M29.38,47.95v4.73h-4.05v-4.67c-1.7,-0.19 -3.43,-0.59 -5.16,-1.22l1,-4c1.57,0.57 3.19,1.05 4.84,1.05 2.03,0 3.08,-0.73 3.08,-1.95 0,-1.14 -0.89,-1.84 -3.08,-2.57 -3.43,-1.16 -5.56,-2.78 -5.56,-5.97 0,-2.86 2,-5.13 5.43,-5.84v-4.38h4.05v4.4c1.4,0.19 2.54,0.49 3.67,0.86l-0.84,3.86c-1.22,-0.43 -2.51,-0.86 -4.08,-0.86 -2.19,0 -2.86,0.92 -2.86,1.76 0,1 0.97,1.65 3.4,2.57 3.65,1.3 5.24,3.05 5.24,6.02 0,2.95 -2.08,5.32 -5.89,5.97z" fill="#1A1A2E" transform="translate(0,-13)"/>
+        </svg>
+        AccBot
+      </a>
+
+      <nav>
+        <ul class="nav-links">
+          <li><a href="#features" data-i18n="nav_features">Features</a></li>
+          <li><a href="#security" data-i18n="nav_security">Security</a></li>
+          <li><a href="#exchanges" data-i18n="nav_exchanges">Exchanges</a></li>
+          <li><a href="#download" data-i18n="nav_download">Download</a></li>
+          <li>
+            <div class="lang-switcher">
+              <button class="lang-btn active" data-lang="en">EN</button>
+              <button class="lang-btn" data-lang="cs">CS</button>
+            </div>
+          </li>
+        </ul>
+      </nav>
+
+      <button class="burger" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ==================== Hero ==================== -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-content">
+          <h1><span class="accent" data-i18n="hero_tagline">Stack Sats on Autopilot</span></h1>
+          <p class="subtitle" data-i18n="hero_subtitle">Self-custody Bitcoin DCA that runs on your phone. No cloud, no tracking, no middlemen. Just you and your exchanges.</p>
+          <div class="hero-ctas">
+            <a href="#download" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span data-i18n="hero_cta_play">Google Play</span>
+            </a>
+            <a href="https://github.com/crynners/AccBot" class="btn btn-outline" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              <span data-i18n="hero_cta_github">View on GitHub</span>
+            </a>
+            <span class="btn btn-ghost">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+              <span data-i18n="hero_ios_soon">iOS Coming Soon</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Phone Mockup -->
+        <div class="hero-mockup">
+          <div class="phone-frame">
+            <div class="phone-screen">
+              <div class="mock-header">
+                <span class="mock-title">AccBot</span>
+                <span class="mock-badge">ACTIVE</span>
+              </div>
+              <div class="mock-card">
+                <div class="mock-card-label">Total Accumulated</div>
+                <div class="mock-card-value">0.04218 BTC</div>
+                <div class="mock-card-sub">+12.4% ROI</div>
+              </div>
+              <div class="mock-chart">
+                <svg viewBox="0 0 240 60" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#4ECCA3" stop-opacity="0.3"/>
+                      <stop offset="100%" stop-color="#4ECCA3" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M0,45 L20,42 L40,38 L60,40 L80,35 L100,30 L120,32 L140,25 L160,20 L180,22 L200,15 L220,12 L240,8" fill="none" stroke="#4ECCA3" stroke-width="2"/>
+                  <path d="M0,45 L20,42 L40,38 L60,40 L80,35 L100,30 L120,32 L140,25 L160,20 L180,22 L200,15 L220,12 L240,8 L240,60 L0,60 Z" fill="url(#cg)"/>
+                </svg>
+              </div>
+              <div class="mock-plan">
+                <div class="mock-plan-icon">B</div>
+                <div class="mock-plan-info">
+                  <div class="mock-plan-name">BTC/EUR - Coinmate</div>
+                  <div class="mock-plan-detail">50 EUR daily - ATH DCA</div>
+                </div>
+                <div class="mock-plan-status">Active</div>
+              </div>
+              <div class="mock-plan">
+                <div class="mock-plan-icon" style="color:#5B8DEF">E</div>
+                <div class="mock-plan-info">
+                  <div class="mock-plan-name">ETH/EUR - Kraken</div>
+                  <div class="mock-plan-detail">25 EUR weekly - Classic</div>
+                </div>
+                <div class="mock-plan-status">Active</div>
+              </div>
+              <div class="mock-nav">
+                <div class="mock-nav-item active">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  Dashboard
+                </div>
+                <div class="mock-nav-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                  Portfolio
+                </div>
+                <div class="mock-nav-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                  Settings
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== Value Proposition ==================== -->
+    <section class="section-alt">
+      <div class="container">
+        <div class="value-grid">
+          <div class="value-card reveal">
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            </div>
+            <h3 data-i18n="value_custody_title">Self-Custody</h3>
+            <p data-i18n="value_custody_desc">Your API keys never leave your device. Encrypted with AES-256-GCM via Android Keystore. No cloud, no tracking.</p>
+          </div>
+          <div class="value-card reveal">
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            </div>
+            <h3 data-i18n="value_auto_title">Set & Forget</h3>
+            <p data-i18n="value_auto_desc">Configure once, accumulate forever. AccBot executes purchases on your schedule, even when your phone is in your pocket.</p>
+          </div>
+          <div class="value-card reveal">
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            </div>
+            <h3 data-i18n="value_open_title">Open Source</h3>
+            <p data-i18n="value_open_desc">Fully auditable code under MIT license. No hidden fees, no premium tiers, no data collection. Free forever.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== Features Deep Dive ==================== -->
+    <section id="features">
+      <div class="container">
+        <div class="section-header reveal">
+          <h2 data-i18n="features_title">Features</h2>
+        </div>
+
+        <!-- Smart DCA Strategies -->
+        <div class="feature-block reveal">
+          <div class="feature-text">
+            <h3 data-i18n="features_strategies_title">Smart DCA Strategies</h3>
+            <p data-i18n="features_strategies_desc">Choose from three strategies to optimize your accumulation. Classic DCA buys a fixed amount every time. ATH-based increases purchases when price drops below all-time high. Fear & Greed adjusts based on market sentiment.</p>
+            <div class="strategy-cards">
+              <div class="strategy-card">
+                <span class="dot green"></span>
+                <div class="strategy-card-info">
+                  <strong data-i18n="features_strategies_classic">Classic DCA</strong>
+                  <span data-i18n="features_strategies_classic_desc">Fixed amount at regular intervals</span>
+                </div>
+              </div>
+              <div class="strategy-card">
+                <span class="dot blue"></span>
+                <div class="strategy-card-info">
+                  <strong data-i18n="features_strategies_ath">ATH-based DCA</strong>
+                  <span data-i18n="features_strategies_ath_desc">0.5x near ATH, up to 3x at 70%+ below</span>
+                </div>
+              </div>
+              <div class="strategy-card">
+                <span class="dot orange"></span>
+                <div class="strategy-card-info">
+                  <strong data-i18n="features_strategies_fg">Fear & Greed DCA</strong>
+                  <span data-i18n="features_strategies_fg_desc">0.25x at extreme greed, 2.5x at extreme fear</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="feature-visual">
+            <div class="mock-card" style="margin-bottom:8px">
+              <div class="mock-card-label">ATH-based DCA</div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+                <div>
+                  <div style="font-size:0.625rem;color:var(--text-muted)">Current price</div>
+                  <div style="font-size:0.875rem;font-weight:700">$67,420</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:0.625rem;color:var(--text-muted)">Distance from ATH</div>
+                  <div style="font-size:0.875rem;font-weight:700;color:var(--accent)">-38%</div>
+                </div>
+              </div>
+            </div>
+            <div class="mock-card">
+              <div class="mock-card-label">Current multiplier</div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+                <div style="flex:1;height:6px;background:var(--surface-alt);border-radius:3px;overflow:hidden">
+                  <div style="width:60%;height:100%;background:var(--accent);border-radius:3px"></div>
+                </div>
+                <span style="font-size:1rem;font-weight:700;color:var(--accent)">1.5x</span>
+              </div>
+              <div style="font-size:0.6875rem;color:var(--text-muted);margin-top:6px">Buying 75 EUR instead of 50 EUR</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio Analytics -->
+        <div class="feature-block reverse reveal">
+          <div class="feature-text">
+            <h3 data-i18n="features_portfolio_title">Portfolio Analytics</h3>
+            <p data-i18n="features_portfolio_desc">Track your holdings, ROI, and performance with interactive charts. See your cost basis, current value, and returns across all exchanges and trading pairs.</p>
+          </div>
+          <div class="feature-visual">
+            <div class="mock-tabs">
+              <div class="mock-tab active">Holdings</div>
+              <div class="mock-tab">By Exchange</div>
+              <div class="mock-tab">Performance</div>
+            </div>
+            <div class="mock-stat-row">
+              <div class="mock-stat">
+                <div class="mock-stat-label">Current Value</div>
+                <div class="mock-stat-value">$4,218</div>
+              </div>
+              <div class="mock-stat">
+                <div class="mock-stat-label">Invested</div>
+                <div class="mock-stat-value">$3,750</div>
+              </div>
+              <div class="mock-stat">
+                <div class="mock-stat-label">ROI</div>
+                <div class="mock-stat-value green">+12.48%</div>
+              </div>
+            </div>
+            <div class="mock-chart" style="height:80px">
+              <svg viewBox="0 0 240 80" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="cg2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#4ECCA3" stop-opacity="0.2"/>
+                    <stop offset="100%" stop-color="#4ECCA3" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0,70 L30,65 L60,60 L90,55 L120,50 L150,45 L180,40 L210,30 L240,25" fill="none" stroke="#4ECCA3" stroke-width="2"/>
+                <path d="M0,70 L30,65 L60,60 L90,55 L120,50 L150,45 L180,40 L210,30 L240,25 L240,80 L0,80 Z" fill="url(#cg2)"/>
+                <path d="M0,72 L30,70 L60,68 L90,66 L120,64 L150,62 L180,60 L210,58 L240,56" fill="none" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4 4" opacity="0.4"/>
+              </svg>
+            </div>
+            <div style="display:flex;gap:16px;font-size:0.625rem;color:var(--text-muted)">
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:2px;background:var(--accent);display:inline-block"></span> Portfolio Value</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:2px;background:var(--text-muted);display:inline-block;opacity:0.4"></span> Cost Basis</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transaction History -->
+        <div class="feature-block reveal">
+          <div class="feature-text">
+            <h3 data-i18n="features_history_title">Transaction History & CSV Export</h3>
+            <p data-i18n="features_history_desc">Complete history of every DCA purchase with filtering by crypto, exchange, and status. Export to CSV for tax reporting or your own analysis.</p>
+          </div>
+          <div class="feature-visual">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <span style="font-size:0.75rem;font-weight:600">Transaction History</span>
+              <span style="font-size:0.625rem;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:2px 8px">Export CSV</span>
+            </div>
+            <div class="mock-tx-row">
+              <div class="mock-tx-left">
+                <div class="mock-tx-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg></div>
+                <div>
+                  <div class="mock-tx-pair">BTC/EUR</div>
+                  <div class="mock-tx-date">Feb 14, 2026 - Coinmate</div>
+                </div>
+              </div>
+              <div>
+                <div class="mock-tx-amount" style="color:var(--accent)">+0.00082 BTC</div>
+                <div class="mock-tx-fiat">50.00 EUR</div>
+              </div>
+            </div>
+            <div class="mock-tx-row">
+              <div class="mock-tx-left">
+                <div class="mock-tx-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg></div>
+                <div>
+                  <div class="mock-tx-pair">ETH/EUR</div>
+                  <div class="mock-tx-date">Feb 10, 2026 - Kraken</div>
+                </div>
+              </div>
+              <div>
+                <div class="mock-tx-amount" style="color:var(--accent)">+0.0125 ETH</div>
+                <div class="mock-tx-fiat">25.00 EUR</div>
+              </div>
+            </div>
+            <div class="mock-tx-row">
+              <div class="mock-tx-left">
+                <div class="mock-tx-icon" style="background:rgba(233,69,96,0.1)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
+                <div>
+                  <div class="mock-tx-pair">BTC/EUR</div>
+                  <div class="mock-tx-date">Feb 7, 2026 - Coinmate</div>
+                </div>
+              </div>
+              <div>
+                <div class="mock-tx-amount" style="color:var(--error)">Failed</div>
+                <div class="mock-tx-fiat">Insufficient balance</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sandbox Mode -->
+        <div class="feature-block reverse reveal">
+          <div class="feature-text">
+            <h3 data-i18n="features_sandbox_title">Sandbox Mode</h3>
+            <p data-i18n="features_sandbox_desc">Test your strategies risk-free with exchange testnet environments. Sandbox uses a separate database so your production data stays safe.</p>
+          </div>
+          <div class="feature-visual">
+            <div class="mock-sandbox-banner">SANDBOX MODE - Test trades only</div>
+            <div class="mock-toggle-row">
+              <div>
+                <div class="mock-toggle-label">Sandbox Mode</div>
+                <div class="mock-toggle-desc">Using test networks - no real trades</div>
+              </div>
+              <div class="mock-toggle"></div>
+            </div>
+            <div class="mock-card" style="margin-top:16px;border-color:rgba(255,167,38,0.2)">
+              <div class="mock-card-label" style="color:var(--warning)">Testnet Environment</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px">Separate database from production. Your real data is safe.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Auto-Withdrawal -->
+        <div class="feature-block reveal">
+          <div class="feature-text">
+            <h3 data-i18n="features_withdrawal_title">Auto-Withdrawal</h3>
+            <p data-i18n="features_withdrawal_desc">Automatically send purchased crypto to your own wallet address after each purchase. True self-custody.</p>
+          </div>
+          <div class="feature-visual">
+            <div class="mock-card">
+              <div class="mock-card-label">Auto-Withdrawal</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                <span style="font-size:0.8125rem;font-weight:500">Enabled</span>
+              </div>
+              <div class="mock-address-box">bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</div>
+              <div style="font-size:0.625rem;color:var(--text-muted);margin-top:8px">BTC will be sent to this address after each purchase</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- QR Code Setup -->
+        <div class="feature-block reverse reveal">
+          <div class="feature-text">
+            <h3 data-i18n="features_qr_title">QR Code Setup</h3>
+            <p data-i18n="features_qr_desc">Scan your API keys and wallet addresses with your camera. No more error-prone manual entry of long alphanumeric strings.</p>
+          </div>
+          <div class="feature-visual" style="align-items:center">
+            <div class="mock-qr-box">
+              <svg viewBox="0 0 96 96" width="96" height="96">
+                <!-- QR code simplified pattern -->
+                <rect x="0" y="0" width="28" height="28" rx="2" fill="#000"/>
+                <rect x="4" y="4" width="20" height="20" rx="1" fill="#fff"/>
+                <rect x="8" y="8" width="12" height="12" rx="1" fill="#000"/>
+                <rect x="68" y="0" width="28" height="28" rx="2" fill="#000"/>
+                <rect x="72" y="4" width="20" height="20" rx="1" fill="#fff"/>
+                <rect x="76" y="8" width="12" height="12" rx="1" fill="#000"/>
+                <rect x="0" y="68" width="28" height="28" rx="2" fill="#000"/>
+                <rect x="4" y="72" width="20" height="20" rx="1" fill="#fff"/>
+                <rect x="8" y="76" width="12" height="12" rx="1" fill="#000"/>
+                <rect x="36" y="0" width="6" height="6" fill="#000"/>
+                <rect x="48" y="0" width="6" height="6" fill="#000"/>
+                <rect x="36" y="12" width="6" height="6" fill="#000"/>
+                <rect x="42" y="18" width="6" height="6" fill="#000"/>
+                <rect x="36" y="36" width="6" height="6" fill="#000"/>
+                <rect x="42" y="42" width="6" height="6" fill="#000"/>
+                <rect x="48" y="36" width="6" height="6" fill="#000"/>
+                <rect x="54" y="42" width="6" height="6" fill="#000"/>
+                <rect x="0" y="36" width="6" height="6" fill="#000"/>
+                <rect x="12" y="42" width="6" height="6" fill="#000"/>
+                <rect x="18" y="36" width="6" height="6" fill="#000"/>
+                <rect x="60" y="36" width="6" height="6" fill="#000"/>
+                <rect x="72" y="36" width="6" height="6" fill="#000"/>
+                <rect x="84" y="36" width="6" height="6" fill="#000"/>
+                <rect x="36" y="54" width="6" height="6" fill="#000"/>
+                <rect x="48" y="60" width="6" height="6" fill="#000"/>
+                <rect x="60" y="54" width="6" height="6" fill="#000"/>
+                <rect x="72" y="60" width="6" height="6" fill="#000"/>
+                <rect x="84" y="54" width="6" height="6" fill="#000"/>
+                <rect x="60" y="72" width="6" height="6" fill="#000"/>
+                <rect x="72" y="78" width="6" height="6" fill="#000"/>
+                <rect x="84" y="84" width="6" height="6" fill="#000"/>
+                <rect x="42" y="72" width="6" height="6" fill="#000"/>
+              </svg>
+            </div>
+            <div style="text-align:center;font-size:0.75rem;color:var(--text-muted);margin-top:12px">Point camera at QR code<br>Scanning will happen automatically</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== Supported Exchanges ==================== -->
+    <section id="exchanges" class="section-alt">
+      <div class="container">
+        <div class="section-header reveal">
+          <h2 data-i18n="exchanges_title">Supported Exchanges</h2>
+          <p data-i18n="exchanges_subtitle">Connect to any of 7 major exchanges. Create multiple DCA plans across different exchanges and trading pairs.</p>
+        </div>
+        <div class="exchange-logos reveal">
+          <div class="exchange-logo">
+            <div class="exchange-icon">CM</div>
+            <span class="exchange-name">Coinmate</span>
+          </div>
+          <div class="exchange-logo">
+            <div class="exchange-icon">BN</div>
+            <span class="exchange-name">Binance</span>
+          </div>
+          <div class="exchange-logo">
+            <div class="exchange-icon">KR</div>
+            <span class="exchange-name">Kraken</span>
+          </div>
+          <div class="exchange-logo">
+            <div class="exchange-icon">KC</div>
+            <span class="exchange-name">KuCoin</span>
+          </div>
+          <div class="exchange-logo">
+            <div class="exchange-icon">BF</div>
+            <span class="exchange-name">Bitfinex</span>
+          </div>
+          <div class="exchange-logo">
+            <div class="exchange-icon">HB</div>
+            <span class="exchange-name">Huobi</span>
+          </div>
+          <div class="exchange-logo">
+            <div class="exchange-icon">CB</div>
+            <span class="exchange-name">Coinbase</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== Security ==================== -->
+    <section id="security">
+      <div class="container">
+        <div class="section-header reveal">
+          <h2 data-i18n="security_title">Security First</h2>
+          <p data-i18n="security_subtitle">AccBot is built on a decentralized, security-first architecture. Your data stays on your device.</p>
+        </div>
+        <div class="security-grid">
+          <div class="security-item reveal">
+            <div class="security-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <strong data-i18n="security_aes">AES-256-GCM Encryption</strong>
+              <span data-i18n="security_aes_desc">API credentials encrypted with hardware-backed Android Keystore</span>
+            </div>
+          </div>
+          <div class="security-item reveal">
+            <div class="security-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <strong data-i18n="security_local">Local Storage Only</strong>
+              <span data-i18n="security_local_desc">No data is ever uploaded to any server</span>
+            </div>
+          </div>
+          <div class="security-item reveal">
+            <div class="security-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <strong data-i18n="security_direct">Direct API Calls</strong>
+              <span data-i18n="security_direct_desc">Communication goes directly to exchanges via HTTPS</span>
+            </div>
+          </div>
+          <div class="security-item reveal">
+            <div class="security-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <strong data-i18n="security_biometric">Biometric Lock</strong>
+              <span data-i18n="security_biometric_desc">Optional fingerprint or face recognition to open the app</span>
+            </div>
+          </div>
+          <div class="security-item reveal">
+            <div class="security-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <strong data-i18n="security_opensource">Open Source</strong>
+              <span data-i18n="security_opensource_desc">Fully auditable codebase under MIT license</span>
+            </div>
+          </div>
+          <div class="security-item reveal">
+            <div class="security-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <strong data-i18n="security_nocloud">No Cloud Sync</strong>
+              <span data-i18n="security_nocloud_desc">No analytics, no tracking, no ads, no telemetry</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== How It Works ==================== -->
+    <section class="section-alt">
+      <div class="container">
+        <div class="section-header reveal">
+          <h2 data-i18n="howto_title">How It Works</h2>
+        </div>
+        <div class="steps">
+          <div class="step reveal">
+            <div class="step-number">1</div>
+            <h3 data-i18n="howto_step1_title">Connect</h3>
+            <p data-i18n="howto_step1_desc">Add your exchange API keys with trading-only permissions. Scan QR codes or enter manually.</p>
+          </div>
+          <div class="step reveal">
+            <div class="step-number">2</div>
+            <h3 data-i18n="howto_step2_title">Configure</h3>
+            <p data-i18n="howto_step2_desc">Set your crypto, amount, frequency, and strategy. Choose from Classic, ATH-based, or Fear & Greed DCA.</p>
+          </div>
+          <div class="step reveal">
+            <div class="step-number">3</div>
+            <h3 data-i18n="howto_step3_title">Accumulate</h3>
+            <p data-i18n="howto_step3_desc">AccBot runs in the background and executes purchases on your schedule. Track performance in the portfolio view.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== Download CTA ==================== -->
+    <section id="download" class="download-section">
+      <div class="container">
+        <div class="section-header reveal">
+          <h2 data-i18n="download_title">Start Stacking Today</h2>
+          <p data-i18n="download_subtitle">Available for Android. Free and open source.</p>
+        </div>
+        <div class="download-buttons reveal">
+          <a href="#" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span data-i18n="download_play">Google Play</span>
+          </a>
+          <a href="https://github.com/crynners/AccBot/releases" class="btn btn-outline" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            <span data-i18n="download_github">GitHub Releases</span>
+          </a>
+          <span class="btn btn-ghost">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            <span data-i18n="download_ios">iOS Coming Soon</span>
+          </span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-left" data-i18n="footer_made">Made with love by Crynners</div>
+        <div class="footer-links">
+          <a href="https://github.com/crynners/AccBot/blob/main/LICENSE" target="_blank" rel="noopener" data-i18n="footer_license">MIT License</a>
+          <a href="https://github.com/crynners/AccBot" target="_blank" rel="noopener" data-i18n="footer_source">Source Code</a>
+          <a href="privacy.html" data-i18n="footer_privacy">Privacy Policy</a>
+          <a href="https://github.com/crynners/AccBot/issues" target="_blank" rel="noopener" data-i18n="footer_issues">Report Issue</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

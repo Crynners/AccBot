@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AccBotWizard.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="550"
+             x:Class="AccBotWizard.Views.ReviewDeployView"
+             x:DataType="vm:ReviewDeployViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <StackPanel Grid.Row="0" Spacing="10">
+            <TextBlock Text="Review and Deploy" Classes="header"/>
+            <TextBlock Text="Review your configuration and click Deploy to set up AccBot."
+                       Classes="description"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,*" Margin="0,20,0,0">
+            <!-- Summary -->
+            <Border Grid.Column="0" Padding="15" CornerRadius="8"
+                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                    Margin="0,0,10,0">
+                <ScrollViewer>
+                    <TextBlock Text="{Binding Summary}"
+                               FontFamily="Consolas, Courier New"
+                               FontSize="13"
+                               LineHeight="20"/>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Deployment Log -->
+            <Border Grid.Column="1" Padding="15" CornerRadius="8"
+                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                    Margin="10,0,0,0">
+                <Grid RowDefinitions="Auto,*">
+                    <TextBlock Text="Deployment Log" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <ScrollViewer Grid.Row="1">
+                        <TextBlock Text="{Binding DeploymentLog}"
+                                   FontFamily="Consolas, Courier New"
+                                   FontSize="12"
+                                   LineHeight="18"/>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Status -->
+        <StackPanel Grid.Row="2" Margin="0,20,0,0" Spacing="10">
+            <ProgressBar IsIndeterminate="True"
+                         IsVisible="{Binding IsDeploying}"
+                         Height="4"/>
+
+            <TextBlock Text="{Binding DeploymentStatus}"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Center"/>
+
+            <Border IsVisible="{Binding DeploymentComplete}"
+                    Padding="15"
+                    CornerRadius="8"
+                    Background="Green">
+                <TextBlock Text="Deployment completed successfully! Your AccBot is now running."
+                           Foreground="White"
+                           HorizontalAlignment="Center"/>
+            </Border>
+
+            <Border IsVisible="{Binding DeploymentFailed}"
+                    Padding="15"
+                    CornerRadius="8"
+                    Background="Red">
+                <TextBlock Text="Deployment failed. Please check the log for details."
+                           Foreground="White"
+                           HorizontalAlignment="Center"/>
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>

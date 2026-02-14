@@ -1,18 +1,7 @@
 ﻿
-using Bitfinex.Net;
-using Bitfinex.Net.Objects;
-using Bittrex.Net;
-using Bittrex.Net.Objects;
 using Coinbase;
 using CryptoBotCore.Models;
-using CryptoExchange.Net.Authentication;
-using Kucoin.Net.Objects;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CryptoBotCore.API
 {

@@ -1,7 +1,6 @@
-﻿
 using CryptoBotCore.Models;
+using CryptoExchange.Net.Authentication;
 using Kucoin.Net.Clients;
-using Kucoin.Net.Objects;
 using Microsoft.Extensions.Logging;
 
 namespace CryptoBotCore.API
@@ -14,7 +13,7 @@ namespace CryptoBotCore.API
         public string pair_quote { get; set; }
         public string pair_base { get; set; }
 
-        public KucoinClient client { get; set; }
+        public KucoinRestClient client { get; set; }
 
         public KuCoinAPI(string pair, Dictionary<ExchangeCredentialType, string> credentials, ILogger log)
         {
@@ -27,19 +26,18 @@ namespace CryptoBotCore.API
             var secret = credentials[ExchangeCredentialType.KuCoin_Secret];
             var passPhrase = credentials[ExchangeCredentialType.KuCoin_PassPhrase];
 
-            client = new KucoinClient(new KucoinClientOptions()
+            client = new KucoinRestClient(options =>
             {
-                // Specify options for the client
-                ApiCredentials = new KucoinApiCredentials(key, secret, passPhrase)
+                options.ApiCredentials = new ApiCredentials(key, secret, passPhrase);
             });
 
         }
 
         public async Task<string> buyOrderAsync(decimal amount)
         {
-            var callResult = await client.SpotApi.Trading.PlaceOrderAsync($"{pair_base}{pair_quote}", Kucoin.Net.Enums.OrderSide.Buy, 
+            var callResult = await client.SpotApi.Trading.PlaceOrderAsync($"{pair_base}-{pair_quote}", Kucoin.Net.Enums.OrderSide.Buy,
                                                                             Kucoin.Net.Enums.NewOrderType.Market,
-                                                                            
+
                                                                             quoteQuantity: (decimal)amount);
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -78,7 +76,7 @@ namespace CryptoBotCore.API
 
         public async Task<decimal> getTakerFee()
         {
-            var callResult = await client.SpotApi.Account.GetSymbolTradingFeesAsync(new List<string> { $"{pair_base}{pair_quote}" });
+            var callResult = await client.SpotApi.Account.GetSymbolTradingFeesAsync($"{pair_base}-{pair_quote}");
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -89,7 +87,7 @@ namespace CryptoBotCore.API
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                var takerFee = callResult.Data.Where(x => x.Symbol == $"{pair_base}{pair_quote}").First().TakerFeeRate;
+                var takerFee = callResult.Data.First().TakerFeeRate;
                 return takerFee;
             }
         }
@@ -114,7 +112,11 @@ namespace CryptoBotCore.API
 
         public async Task<WithdrawalStateEnum> withdrawAsync(decimal amount, string destinationAddress)
         {
-            var callResult = await client.SpotApi.Account.WithdrawAsync(this.pair_base, destinationAddress, amount);
+            var callResult = await client.SpotApi.Account.WithdrawAsync(
+                Kucoin.Net.Enums.WithdrawType.Address,
+                this.pair_base,
+                destinationAddress,
+                amount);
 
             // Make sure to check if the call was successful
             if (!callResult.Success)

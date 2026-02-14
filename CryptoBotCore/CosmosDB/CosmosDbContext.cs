@@ -15,9 +15,9 @@ namespace CryptoBotCore.CosmosDB
         // The Cosmos client instance
         private CosmosClient cosmosClient;
 
-        private Database database;
+        private Database database = null!;
 
-        private Container container;
+        private Container container = null!;
 
         private string databaseId = "AccBotDatabase";
         private string containerId = "AccBotContainer";
@@ -92,7 +92,7 @@ namespace CryptoBotCore.CosmosDB
             return results;
         }
 
-        private async Task<AccumulationSummary> GetAccumulationSummaryQuery(string CryptoName)
+        private async Task<AccumulationSummary?> GetAccumulationSummaryQuery(string CryptoName)
         {
             var query = this.container.GetItemQueryIterator<AccumulationSummary>(new QueryDefinition($"select top 1 * from c where c.CryptoName = '{CryptoName}'"));
             List<AccumulationSummary> results = new List<AccumulationSummary>();
@@ -125,7 +125,7 @@ namespace CryptoBotCore.CosmosDB
                 summary = await GetAccumulationSummaryQuery(CryptoName);
             }
 
-            return summary;
+            return summary ?? throw new InvalidOperationException($"Failed to create or retrieve accumulation summary for {CryptoName}");
         }
 
         public async Task UpdateItemAsync(AccumulationSummary item)

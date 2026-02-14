@@ -1,8 +1,6 @@
-﻿
 using CryptoBotCore.Models;
 using CryptoExchange.Net.Authentication;
 using Kraken.Net.Clients;
-using Kraken.Net.Objects;
 using Microsoft.Extensions.Logging;
 
 
@@ -16,7 +14,7 @@ namespace CryptoBotCore.API
         public string pair_quote { get; set; }
         public string pair_base { get; set; }
 
-        public KrakenClient client { get; set; }
+        public KrakenRestClient client { get; set; }
 
         public string withdrawal_keyname { get; set; }
 
@@ -33,17 +31,16 @@ namespace CryptoBotCore.API
             var key = credentials[ExchangeCredentialType.Kraken_Key];
             var secret = credentials[ExchangeCredentialType.Kraken_Secret];
 
-            client = new KrakenClient(new KrakenClientOptions()
+            client = new KrakenRestClient(options =>
             {
-                // Specify options for the client
-                ApiCredentials = new ApiCredentials(key, secret)
+                options.ApiCredentials = new ApiCredentials(key, secret);
             });
 
         }
 
         private async Task<decimal> getCurrentPrice()
         {
-            var callResult = await client.SpotApi.ExchangeData.GetOrderBookAsync($"{pair_base}{pair_quote}", 0);
+            var callResult = await client.SpotApi.ExchangeData.GetOrderBookAsync($"{pair_base}{pair_quote}", 1);
             // Make sure to check if the call was successful
             if (!callResult.Success)
             {
@@ -61,9 +58,9 @@ namespace CryptoBotCore.API
         {
             var baseAmount = amount / (await getCurrentPrice());
 
-            var callResult = await client.SpotApi.Trading.PlaceOrderAsync($"{pair_base}{pair_quote}", 
-                                                                            Kraken.Net.Enums.OrderSide.Buy, 
-                                                                            Kraken.Net.Enums.OrderType.Market, 
+            var callResult = await client.SpotApi.Trading.PlaceOrderAsync($"{pair_base}{pair_quote}",
+                                                                            Kraken.Net.Enums.OrderSide.Buy,
+                                                                            Kraken.Net.Enums.OrderType.Market,
                                                                             quantity: baseAmount);
             // Make sure to check if the call was successful
             if (!callResult.Success)
@@ -92,11 +89,14 @@ namespace CryptoBotCore.API
 
                 var wallets = new List<WalletBalances>();
                 // Call succeeded, callResult.Data will have the resulting data
-                var balancesQuote = callResult.Data[this.pair_quote];
-                var balancesBase = callResult.Data[this.pair_base];
-
-                wallets.Add(new WalletBalances(this.pair_quote, balancesQuote.Available));
-                wallets.Add(new WalletBalances(this.pair_base, balancesBase.Available));
+                if (callResult.Data.TryGetValue(this.pair_quote, out var balancesQuote))
+                {
+                    wallets.Add(new WalletBalances(this.pair_quote, balancesQuote.Available));
+                }
+                if (callResult.Data.TryGetValue(this.pair_base, out var balancesBase))
+                {
+                    wallets.Add(new WalletBalances(this.pair_base, balancesBase.Available));
+                }
 
                 return wallets;
             }
@@ -115,14 +115,15 @@ namespace CryptoBotCore.API
             else
             {
                 // Call succeeded, callResult.Data will have the resulting data
-                var takerFee = callResult.Data[$"{pair_base}{pair_quote}"].Fees.Where(x => x.Volume == 0).First().FeePercentage;
+                var symbol = callResult.Data[$"{pair_base}{pair_quote}"];
+                var takerFee = symbol.Fees.Where(x => x.Volume == 0).First().FeePercentage;
                 return takerFee;
             }
         }
 
         public async Task<decimal> getWithdrawalFeeAsync(decimal? amount = null, string? destinationAddress = null)
         {
-            var callResult = await client.SpotApi.Account.GetWithdrawInfoAsync(this.pair_base, this.withdrawal_keyname, (amount??0m));
+            var callResult = await client.SpotApi.Account.GetWithdrawInfoAsync(this.pair_base, this.withdrawal_keyname, (amount ?? 0m));
 
             // Make sure to check if the call was successful
             if (!callResult.Success)
