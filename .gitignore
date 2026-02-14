@@ -351,3 +351,49 @@ MigrationBackup/
 
 # Visual Studio Code working folder
 .vscode/
+
+# ======================================
+# Android (Kotlin/Gradle)
+# ======================================
+*.apk
+*.aab
+*.ap_
+*.dex
+local.properties
+build/
+.gradle/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# ======================================
+# IntelliJ IDEA / Android Studio
+# ======================================
+.idea/
+*.iml
+
+# ======================================
+# Expo / React Native
+# ======================================
+.expo/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ======================================
+# Claude Code session data
+# ======================================
+.claude/
+
+# ======================================
+# Telegram converter output (large files)
+# ======================================
+telegram-accbot-converter/result*.json
+telegram-accbot-converter/output/
+
+# ======================================
+# Miscellaneous
+# ======================================
+nul
