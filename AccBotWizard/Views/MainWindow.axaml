@@ -1,0 +1,99 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AccBotWizard.ViewModels"
+        xmlns:views="using:AccBotWizard.Views"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+        x:Class="AccBotWizard.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="AccBot Setup Wizard"
+        Width="900" Height="650"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Styles>
+        <Style Selector="TextBlock.header">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,20"/>
+        </Style>
+        <Style Selector="TextBlock.description">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Opacity" Value="0.8"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header with steps -->
+        <Border Grid.Row="0" Background="{DynamicResource SystemAccentColor}" Padding="20,15">
+            <Grid ColumnDefinitions="Auto,*">
+                <TextBlock Text="AccBot Wizard" FontSize="20" FontWeight="Bold" Foreground="White"/>
+                <ItemsControl Grid.Column="1" ItemsSource="{Binding Steps}" HorizontalAlignment="Right">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="5"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="8,4" CornerRadius="3"
+                                    Background="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).CurrentStep,
+                                        Converter={x:Static views:MainWindow.StepBackgroundConverter},
+                                        ConverterParameter={Binding}}">
+                                <TextBlock Text="{Binding}" FontSize="11" Foreground="White"/>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </Border>
+
+        <!-- Content area -->
+        <Border Grid.Row="1" Padding="30">
+            <ContentControl Content="{Binding CurrentStepViewModel}">
+                <ContentControl.DataTemplates>
+                    <DataTemplate DataType="vm:WelcomeViewModel">
+                        <views:WelcomeView/>
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:ExchangeSelectionViewModel">
+                        <views:ExchangeSelectionView/>
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:CredentialsInputViewModel">
+                        <views:CredentialsInputView/>
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:AccumulationConfigViewModel">
+                        <views:AccumulationConfigView/>
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:TelegramSetupViewModel">
+                        <views:TelegramSetupView/>
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:DeploymentSelectionViewModel">
+                        <views:DeploymentSelectionView/>
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:ReviewDeployViewModel">
+                        <views:ReviewDeployView/>
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
+        </Border>
+
+        <!-- Navigation buttons -->
+        <Border Grid.Row="2" Padding="20,15" Background="{DynamicResource SystemRegionBrush}">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                <Button Grid.Column="1"
+                        Content="Back"
+                        Command="{Binding GoBackCommand}"
+                        IsVisible="{Binding CanGoBack}"
+                        Margin="0,0,10,0"
+                        Padding="20,10"/>
+                <Button Grid.Column="2"
+                        Content="{Binding NextButtonText}"
+                        Command="{Binding GoNextCommand}"
+                        IsEnabled="{Binding CanGoNext}"
+                        Classes="accent"
+                        Padding="20,10"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

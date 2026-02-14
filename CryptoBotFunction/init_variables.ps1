@@ -2,10 +2,10 @@
 ### GENERAL USER-DEFINED VARIABLES ###
 ######################################
 # Burza, na kterou chcete napojit bota
-# (MOŽNÉ HODNOTY: coinmate, huobi, binance, kraken, ftx, coinbase, kucoin, bitfinex, bittrex)
+# (MOŽNÉ HODNOTY: coinmate, huobi, binance, kraken, coinbase, kucoin, bitfinex)
 # -------------------------------------------------------
 # Exchange you want to connect the bot to
-# (POSSIBLE VALUES: coinmate, huobi, binance, kraken, ftx, coinbase, kucoin, bitfinex, bittrex)
+# (POSSIBLE VALUES: coinmate, huobi, binance, kraken, coinbase, kucoin, bitfinex)
 $ExchangeName='coinmate'
 
 # Jméno, které se zobrazuje v Telegram notifikacích

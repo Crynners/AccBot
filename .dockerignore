@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.vs
+.vscode
+.idea
+*.user
+*.suo
+
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# NuGet
+**/packages/
+
+# Test results
+**/TestResults/
+
+# Documentation
+*.md
+!Docker/README.md
+
+# Local settings
+**/local.settings.json
+**/.env
+**/appsettings.Development.json
+
+# Docker
+Docker/.env
+
+# Claude
+.claude/
+
+# Other projects not needed for Docker build
+accbot-dca/
+assignment/
+telegram-accbot-converter/
+AccBotWizard/

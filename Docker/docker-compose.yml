@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  accbot:
+    build:
+      context: ..
+      dockerfile: Docker/Dockerfile
+    container_name: accbot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - AzureWebJobsStorage=${AzureWebJobsStorage:-UseDevelopmentStorage=true}
+    volumes:
+      - accbot-data:/app/data
+    networks:
+      - accbot-network
+    depends_on:
+      - cosmosdb-emulator
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Azure CosmosDB Emulator (for local development/self-hosted)
+  cosmosdb-emulator:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+    container_name: accbot-cosmosdb
+    restart: unless-stopped
+    environment:
+      - AZURE_COSMOS_EMULATOR_PARTITION_COUNT=10
+      - AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE=true
+    ports:
+      - "8081:8081"
+      - "10251:10251"
+      - "10252:10252"
+      - "10253:10253"
+      - "10254:10254"
+    volumes:
+      - cosmosdb-data:/tmp/cosmos/appdata
+    networks:
+      - accbot-network
+
+  # Alternative: MongoDB for lighter resource usage
+  mongodb:
+    image: mongo:7
+    container_name: accbot-mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_DATABASE=accbot
+    volumes:
+      - mongodb-data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - accbot-network
+    profiles:
+      - mongodb
+
+networks:
+  accbot-network:
+    driver: bridge
+
+volumes:
+  accbot-data:
+  cosmosdb-data:
+  mongodb-data:

@@ -1,0 +1,209 @@
+package com.accbot.dca.presentation.components
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
+import com.accbot.dca.R
+import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.presentation.ui.theme.successColor
+
+/**
+ * Reusable credentials input card component.
+ * Used in AddPlanScreen and AddExchangeScreen to eliminate code duplication.
+ *
+ * Features:
+ * - Client ID field for Coinmate
+ * - API Key/Secret fields with visibility toggle
+ * - Passphrase field for KuCoin
+ * - QR scanner buttons for each field
+ * - Security note at the bottom
+ * - Optional error message display
+ *
+ * @param exchange The selected exchange (determines which fields to show)
+ * @param clientId Current client ID value
+ * @param apiKey Current API key value
+ * @param apiSecret Current API secret value
+ * @param passphrase Current passphrase value
+ * @param onClientIdChange Callback when client ID changes
+ * @param onApiKeyChange Callback when API key changes
+ * @param onApiSecretChange Callback when API secret changes
+ * @param onPassphraseChange Callback when passphrase changes
+ * @param errorMessage Optional error message to display
+ * @param isValidating Whether validation is in progress (shows loading indicator)
+ * @param modifier Modifier for the card
+ */
+@Composable
+fun CredentialsInputCard(
+    exchange: Exchange,
+    clientId: String,
+    apiKey: String,
+    apiSecret: String,
+    passphrase: String,
+    onClientIdChange: (String) -> Unit,
+    onApiKeyChange: (String) -> Unit,
+    onApiSecretChange: (String) -> Unit,
+    onPassphraseChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    errorMessage: String? = null,
+    isValidating: Boolean = false
+) {
+    var showSecret by remember { mutableStateOf(false) }
+
+    // Determine field requirements based on exchange
+    val needsClientId = exchange == Exchange.COINMATE
+    val needsPassphrase = exchange == Exchange.KUCOIN
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Coinmate requires separate Client ID
+            if (needsClientId) {
+                OutlinedTextField(
+                    value = clientId,
+                    onValueChange = onClientIdChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.credentials_client_id)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = errorMessage != null && clientId.isBlank(),
+                    enabled = !isValidating,
+                    supportingText = if (clientId.isBlank()) {
+                        { Text(stringResource(R.string.credentials_required_for, exchange.displayName)) }
+                    } else null,
+                    trailingIcon = {
+                        QrScannerButton(onScanResult = onClientIdChange)
+                    }
+                )
+            }
+
+            OutlinedTextField(
+                value = apiKey,
+                onValueChange = onApiKeyChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(if (needsClientId) R.string.credentials_public_key else R.string.credentials_api_key)) },
+                singleLine = true,
+                isError = errorMessage != null,
+                enabled = !isValidating,
+                trailingIcon = {
+                    QrScannerButton(onScanResult = onApiKeyChange)
+                }
+            )
+
+            OutlinedTextField(
+                value = apiSecret,
+                onValueChange = onApiSecretChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(if (needsClientId) R.string.credentials_private_key else R.string.credentials_api_secret)) },
+                singleLine = true,
+                visualTransformation = if (showSecret) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                isError = errorMessage != null,
+                enabled = !isValidating,
+                trailingIcon = {
+                    Row {
+                        QrScannerButton(onScanResult = onApiSecretChange)
+                        IconButton(onClick = { showSecret = !showSecret }) {
+                            Icon(
+                                imageVector = if (showSecret) {
+                                    Icons.Default.VisibilityOff
+                                } else {
+                                    Icons.Default.Visibility
+                                },
+                                contentDescription = stringResource(R.string.credentials_toggle_visibility)
+                            )
+                        }
+                    }
+                }
+            )
+
+            // KuCoin requires passphrase
+            if (needsPassphrase) {
+                OutlinedTextField(
+                    value = passphrase,
+                    onValueChange = onPassphraseChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.credentials_passphrase)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = errorMessage != null && passphrase.isBlank(),
+                    enabled = !isValidating,
+                    supportingText = if (passphrase.isBlank()) {
+                        { Text(stringResource(R.string.credentials_required_for, exchange.displayName)) }
+                    } else null,
+                    trailingIcon = {
+                        QrScannerButton(onScanResult = onPassphraseChange)
+                    }
+                )
+            }
+
+            // Error message
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            // Security note
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Security,
+                    contentDescription = null,
+                    tint = successColor(),
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.credentials_stored_locally),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Check if credentials are complete for the given exchange.
+ * Useful for enabling/disabling submit buttons.
+ */
+fun areCredentialsComplete(
+    exchange: Exchange,
+    clientId: String,
+    apiKey: String,
+    apiSecret: String,
+    passphrase: String
+): Boolean {
+    if (apiKey.isBlank() || apiSecret.isBlank()) return false
+    if (exchange == Exchange.COINMATE && clientId.isBlank()) return false
+    if (exchange == Exchange.KUCOIN && passphrase.isBlank()) return false
+    return true
+}

@@ -20,10 +20,6 @@ if("coinmate" -eq $ExchangeName){
     $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
     $VariableNameFile = join-path -path $scriptPath -childpath "kraken_variables.ps1"
     . $VariableNameFile
-}elseif("ftx" -eq $ExchangeName){
-    $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
-    $VariableNameFile = join-path -path $scriptPath -childpath "ftx_variables.ps1"
-    . $VariableNameFile
 }elseif("binance" -eq $ExchangeName){
     $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
     $VariableNameFile = join-path -path $scriptPath -childpath "binance_variables.ps1"
@@ -31,10 +27,6 @@ if("coinmate" -eq $ExchangeName){
 }elseif("bitfinex" -eq $ExchangeName){
     $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
     $VariableNameFile = join-path -path $scriptPath -childpath "bitfinex_variables.ps1"
-    . $VariableNameFile
-}elseif("bittrex" -eq $ExchangeName){
-    $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
-    $VariableNameFile = join-path -path $scriptPath -childpath "bittrex_variables.ps1"
     . $VariableNameFile
 }elseif("coinbase" -eq $ExchangeName){
     $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
@@ -420,16 +412,12 @@ $appsettingsResult = az functionapp config appsettings set --name $azFunctionNam
                     "CoinMateCredentials_PrivateKey=$CoinMateCredentials_PrivateKey" `
                     "KrakenCredentials_Key=$KrakenCredentials_Key" `
                     "KrakenCredentials_Secret=$KrakenCredentials_Secret" `
-                    "FTXCredentials_Key=$FTXCredentials_Key" `
-                    "FTXCredentials_Secret=$FTXCredentials_Secret" `
                     "BinanceCredentials_Key=$BinanceCredentials_Key" `
                     "BinanceCredentials_Secret=$BinanceCredentials_Secret" `
                     "CoinbaseCredentials_Key=$CoinbaseCredentials_Key" `
                     "CoinbaseCredentials_Secret=$CoinbaseCredentials_Secret" `
                     "BitfinexCredentials_Key=$BitfinexCredentials_Key" `
                     "BitfinexCredentials_Secret=$BitfinexCredentials_Secret" `
-                    "BittrexCredentials_Key=$BittrexCredentials_Key" `
-                    "BittrexCredentials_Secret=$BittrexCredentials_Secret" `
                     "KuCoinCredentials_Key=$KuCoinCredentials_Key" `
                     "KuCoinCredentials_Secret=$KuCoinCredentials_Secret" `
                     "KuCoinCredentials_PassPhrase=$KuCoinCredentials_PassPhrase" `

@@ -1,0 +1,43 @@
+{
+  "name": "accbot-dca",
+  "version": "1.0.0",
+  "description": "AccBot DCA Mobile App - Cryptocurrency accumulation management",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "test": "jest",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "expo": "~52.0.0",
+    "expo-router": "~4.0.0",
+    "expo-status-bar": "~2.0.0",
+    "expo-secure-store": "~14.0.0",
+    "expo-clipboard": "~7.0.0",
+    "expo-barcode-scanner": "~14.0.0",
+    "react": "18.3.1",
+    "react-native": "0.76.3",
+    "react-native-safe-area-context": "4.12.0",
+    "react-native-screens": "~4.1.0",
+    "react-native-svg": "15.8.0",
+    "@react-native-async-storage/async-storage": "2.1.0",
+    "zustand": "^5.0.0",
+    "i18next": "^24.0.0",
+    "react-i18next": "^15.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0",
+    "@types/react": "~18.3.0",
+    "typescript": "~5.3.0",
+    "jest": "^29.0.0",
+    "jest-expo": "~52.0.0",
+    "@testing-library/react-native": "^12.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-expo": "~8.0.0"
+  },
+  "private": true
+}

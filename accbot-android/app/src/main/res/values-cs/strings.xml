@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common -->
+    <string name="common_back">Zpět</string>
+    <string name="common_cancel">Zrušit</string>
+    <string name="common_delete">Smazat</string>
+    <string name="common_save">Uložit</string>
+    <string name="common_retry">Zkusit znovu</string>
+    <string name="common_skip">Přeskočit</string>
+    <string name="common_clear">Vymazat</string>
+    <string name="common_apply">Použít</string>
+    <string name="common_done">Hotovo</string>
+    <string name="common_remove">Odebrat</string>
+    <string name="common_loading">Načítání…</string>
+    <string name="common_error_title">Něco se pokazilo</string>
+    <string name="common_connected">Připojeno</string>
+    <string name="common_not_connected">Nepřipojeno</string>
+    <string name="common_all">Vše</string>
+    <string name="common_amount">Částka</string>
+    <string name="common_settings">Nastavení</string>
+    <string name="common_copy">Kopírovat</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">Přehled</string>
+    <string name="nav_portfolio">Portfolio</string>
+    <string name="nav_settings">Nastavení</string>
+
+    <!-- DCA Strategy -->
+    <string name="strategy_classic_name">Klasické DCA</string>
+    <string name="strategy_classic_description">Nákup pevné částky v pravidelných intervalech</string>
+    <string name="strategy_ath_name">DCA dle ATH</string>
+    <string name="strategy_ath_description">Kupuj více, když je cena daleko pod historickým maximem</string>
+    <string name="strategy_fear_greed_name">DCA dle Fear &amp; Greed</string>
+    <string name="strategy_fear_greed_description">Kupuj více, když na trhu panuje strach</string>
+
+    <!-- DCA Frequency -->
+    <string name="frequency_every_15_min">Každých 15 minut</string>
+    <string name="frequency_hourly">Každou hodinu</string>
+    <string name="frequency_every_4_hours">Každé 4 hodiny</string>
+    <string name="frequency_every_8_hours">Každých 8 hodin</string>
+    <string name="frequency_daily">Denně</string>
+    <string name="frequency_weekly">Týdně</string>
+
+    <!-- Dashboard Screen -->
+    <string name="dashboard_add_plan">Přidat plán</string>
+    <string name="dashboard_sandbox_banner">SANDBOX REŽIM – Pouze testovací obchody</string>
+    <string name="dashboard_total_accumulated">Celkem nakoupeno</string>
+    <string name="dashboard_no_transactions">Zatím žádné transakce</string>
+    <string name="dashboard_start_plan_hint">Spusťte DCA plán pro zobrazení portfolia</string>
+    <string name="dashboard_refresh_prices">Obnovit ceny</string>
+    <string name="dashboard_transactions_total">celkem %1$d transakcí</string>
+    <string name="dashboard_invested">Investováno</string>
+    <string name="dashboard_avg_price">Prům. cena</string>
+    <string name="dashboard_current_price">Aktuální cena</string>
+    <string name="dashboard_active_plans">Aktivní DCA plány</string>
+    <string name="dashboard_next_prefix">Další: %1$s</string>
+    <string name="dashboard_remaining_suffix">~%1$s zbývá</string>
+    <string name="dashboard_remaining_with_exec">~%1$s zbývá (%2$d nák.)</string>
+    <string name="dashboard_no_plans_title">Zatím žádné DCA plány</string>
+    <string name="dashboard_no_plans_description">Vytvořte si první DCA plán a začněte nakupovat</string>
+    <string name="dashboard_create_plan">Vytvořit plán</string>
+    <string name="dashboard_history">Historie</string>
+    <string name="dashboard_run_now">Spustit nyní</string>
+    <string name="dashboard_dca_triggered">DCA nákup spuštěn</string>
+    <string name="dashboard_roi">ROI %1$s</string>
+    <string name="dashboard_less_than_1_hour">&lt; 1 hodina</string>
+    <plurals name="dashboard_hours">
+        <item quantity="one">%1$d hodina</item>
+        <item quantity="few">%1$d hodiny</item>
+        <item quantity="other">%1$d hodin</item>
+    </plurals>
+    <plurals name="dashboard_days">
+        <item quantity="one">1 den</item>
+        <item quantity="few">%1$d dny</item>
+        <item quantity="other">%1$d dní</item>
+    </plurals>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Nastavení</string>
+    <string name="settings_exchange_accounts">ÚČTY NA BURZÁCH</string>
+    <string name="settings_manage_exchanges">Správa burz</string>
+    <string name="settings_exchanges_connected">%1$d burz(a) připojeno</string>
+    <string name="settings_system">NASTAVENÍ SYSTÉMU</string>
+    <string name="settings_battery_optimization">Optimalizace baterie</string>
+    <string name="settings_battery_disabled">Vypnuto – klepněte pro povolení neomezené aktivity na pozadí</string>
+    <string name="settings_battery_unrestricted">Neomezeno – DCA spolehlivě běží na pozadí</string>
+    <string name="settings_battery_already_disabled">Optimalizace baterie již vypnuta</string>
+    <string name="settings_battery_open_failed">Nepodařilo se otevřít nastavení baterie</string>
+    <string name="settings_low_balance_warning">Upozornění na nízký zůstatek</string>
+    <string name="settings_low_balance_subtitle">Upozornit, když zůstatek pokryje méně než %1$d dní</string>
+    <string name="settings_low_balance_dialog_title">Upozornění na nízký zůstatek</string>
+    <string name="settings_low_balance_dialog_text">Upozornit, když zůstatek na burze pokryje méně než tento počet dní DCA nákupů.</string>
+    <string name="settings_low_balance_days">%1$d dní</string>
+    <string name="settings_decrease">Snížit</string>
+    <string name="settings_increase">Zvýšit</string>
+    <string name="settings_about">O APLIKACI</string>
+    <string name="settings_documentation">Dokumentace</string>
+    <string name="settings_documentation_subtitle">Návody a API dokumentace</string>
+    <string name="settings_report_issue">Nahlásit problém</string>
+    <string name="settings_report_issue_subtitle">Našli jste chybu? Dejte nám vědět</string>
+    <string name="settings_developer">VÝVOJÁŘSKÉ MOŽNOSTI</string>
+    <string name="settings_sandbox_mode">Sandbox režim</string>
+    <string name="settings_sandbox_enabled">Používání testovacích sítí – žádné skutečné obchody</string>
+    <string name="settings_sandbox_disabled">Přepnout na testnet pro bezrizikové testování</string>
+    <string name="settings_danger_zone">NEBEZPEČNÁ ZÓNA</string>
+    <string name="settings_delete_all_data">Smazat všechna data</string>
+    <string name="settings_delete_all_subtitle">Odebrat všechny plány, historii a přihlašovací údaje</string>
+    <string name="settings_delete_dialog_title">Smazat všechna data?</string>
+    <string name="settings_delete_dialog_text">Tím se odstraní všechny DCA plány, historie transakcí a uložené přihlašovací údaje. Tuto akci nelze vrátit zpět.</string>
+    <string name="settings_restart_required">Vyžadován restart</string>
+    <string name="settings_restart_sandbox_on">Přepnutí do sandbox režimu vyžaduje restart aplikace. Vaše produkční data zůstanou bezpečně v oddělené databázi.</string>
+    <string name="settings_restart_sandbox_off">Přepnutí do produkčního režimu vyžaduje restart aplikace. Vaše sandbox data zůstanou bezpečně v oddělené databázi.</string>
+    <string name="settings_restart_now">Restartovat nyní</string>
+    <string name="settings_accbot_dca">AccBot DCA</string>
+    <string name="settings_version">Verze %1$s (%2$d)</string>
+    <string name="settings_built">Sestaveno: %1$s</string>
+    <string name="settings_made_with_love">Vytvořeno s láskou od Crynners</string>
+    <string name="settings_language">Jazyk</string>
+    <string name="settings_language_subtitle">Zvolte jazyk aplikace</string>
+    <string name="settings_language_system_default">Výchozí systémový</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_czech">Čeština</string>
+
+    <!-- History Screen -->
+    <string name="history_title">Historie transakcí</string>
+    <string name="history_filter">Filtr</string>
+    <string name="history_export_csv">Export CSV</string>
+    <string name="history_export_transactions">Export transakcí</string>
+    <string name="history_export_started">Export zahájen</string>
+    <string name="history_export_failed">Export se nezdařil</string>
+    <string name="history_clear_all">Vymazat vše</string>
+    <string name="history_filter_title">Filtrovat transakce</string>
+    <string name="history_filter_crypto">Kryptoměna</string>
+    <string name="history_filter_exchange">Burza</string>
+    <string name="history_filter_status">Stav</string>
+    <string name="history_transactions_count">%1$d transakcí</string>
+    <string name="history_empty_title">Zatím žádné transakce</string>
+    <string name="history_empty_description">Zde se zobrazí historie vašich DCA nákupů</string>
+    <string name="history_empty_filtered_title">Žádné odpovídající transakce</string>
+    <string name="history_empty_filtered_description">Zkuste upravit filtry</string>
+    <string name="history_delete_transaction">Transakce smazána</string>
+    <string name="history_undo">Zpět</string>
+    <string name="history_sort">Řadit</string>
+    <string name="history_sort_date_newest">Datum (nejnovější)</string>
+    <string name="history_sort_date_oldest">Datum (nejstarší)</string>
+    <string name="history_sort_amount_highest">Částka (nejvyšší)</string>
+    <string name="history_sort_amount_lowest">Částka (nejnižší)</string>
+    <string name="history_sort_price_highest">Cena (nejvyšší)</string>
+    <string name="history_sort_price_lowest">Cena (nejnižší)</string>
+    <string name="history_filter_date_range">Časové období</string>
+    <string name="history_filter_date_from">Od</string>
+    <string name="history_filter_date_to">Do</string>
+    <string name="history_filter_date_select">Vybrat datum</string>
+
+    <!-- Add Plan Screen -->
+    <string name="add_plan_title">Vytvořit DCA plán</string>
+    <string name="add_plan_select_exchange">Vybrat burzu</string>
+    <string name="add_plan_api_credentials">API přihlašovací údaje</string>
+    <string name="add_plan_cryptocurrency">Kryptoměna</string>
+    <string name="add_plan_fiat_currency">Fiat měna</string>
+    <string name="add_plan_amount_per_purchase">Částka za nákup</string>
+    <string name="add_plan_purchase_frequency">Frekvence nákupu</string>
+    <string name="add_plan_dca_strategy">DCA strategie</string>
+    <string name="add_plan_strategy_info">Info o strategii</string>
+    <string name="add_plan_auto_withdrawal">Automatický výběr</string>
+    <string name="add_plan_auto_withdrawal_desc">Automaticky odeslat do vaší peněženky</string>
+    <string name="add_plan_wallet_address">Adresa %1$s peněženky</string>
+    <string name="add_plan_create">Vytvořit DCA plán</string>
+    <string name="add_plan_monthly_estimate">Měsíční odhad</string>
+    <string name="add_plan_monthly_approx">~%1$s %2$s/měsíc</string>
+    <string name="add_plan_monthly_range">%1$s – %2$s %3$s/měsíc</string>
+    <string name="add_plan_monthly_current">Aktuálně: ~%1$s %2$s/měsíc</string>
+
+    <!-- Plan Details Screen -->
+    <string name="plan_details_title">Detail plánu</string>
+    <string name="plan_details_edit">Upravit</string>
+    <string name="plan_details_delete_title">Smazat plán</string>
+    <string name="plan_details_delete_text">Opravdu chcete smazat tento DCA plán? Tuto akci nelze vrátit zpět.</string>
+    <string name="plan_details_loading">Načítání plánu…</string>
+    <string name="plan_details_active">Aktivní</string>
+    <string name="plan_details_paused">Pozastaveno</string>
+    <string name="plan_details_configuration">Konfigurace</string>
+    <string name="plan_details_amount">Částka za nákup</string>
+    <string name="plan_details_frequency">Frekvence</string>
+    <string name="plan_details_next_execution">Další provedení</string>
+    <string name="plan_details_auto_withdrawal">Automatický výběr</string>
+    <string name="plan_details_invested">Investováno</string>
+    <string name="plan_details_accumulated">Nakoupeno</string>
+    <string name="plan_details_avg_price">Prům. cena</string>
+    <string name="plan_details_transactions">Transakce</string>
+    <string name="plan_details_recent_transactions">Poslední transakce</string>
+    <string name="plan_details_view_all">Zobrazit všech %1$d transakcí</string>
+    <string name="plan_details_no_transactions_title">Zatím žádné transakce</string>
+    <string name="plan_details_no_transactions_desc">Transakce se zde zobrazí po prvním DCA nákupu</string>
+    <string name="plan_details_performance">Výkonnost</string>
+    <string name="plan_details_current_price">Aktuální cena</string>
+    <string name="plan_details_current_value">Aktuální hodnota</string>
+    <string name="plan_details_roi">ROI</string>
+    <string name="plan_details_balance">Zůstatek na burze</string>
+    <string name="plan_details_estimated_duration">Odhadovaná doba</string>
+    <string name="plan_details_days_remaining">~%1$d dní (%2$d nákupů)</string>
+
+    <!-- Edit Plan Screen -->
+    <string name="edit_plan_title">Upravit plán</string>
+    <string name="edit_plan_details">Detail plánu</string>
+    <string name="edit_plan_pair_info">%1$s/%2$s na %3$s</string>
+    <string name="edit_plan_cannot_change">Burzu a kryptoměnový pár nelze změnit</string>
+    <string name="edit_plan_save">Uložit změny</string>
+    <string name="edit_plan_enter_wallet">Zadejte adresu vaší %1$s peněženky</string>
+
+    <!-- Portfolio Screen -->
+    <string name="portfolio_title">Portfolio</string>
+    <string name="portfolio_transactions">Transakce</string>
+    <string name="portfolio_loading">Načítání portfolia…</string>
+
+    <!-- Performance Chart -->
+    <string name="chart_all_pairs">Všechny páry</string>
+    <string name="chart_all_fiat">Vše %1$s</string>
+    <string name="chart_syncing_prices">Synchronizace cen…</string>
+    <string name="chart_no_data_title">Žádná data grafu</string>
+    <string name="chart_no_data_desc">Proveďte alespoň jeden DCA nákup pro zobrazení grafů výkonnosti</string>
+    <string name="chart_zoom_all_time">Celková historie</string>
+    <string name="chart_filter_all_exchanges">Vše</string>
+    <string name="chart_current_value">Aktuální hodnota</string>
+    <string name="chart_total_roi">ROI</string>
+    <string name="chart_invested">Investováno</string>
+    <string name="chart_portfolio_value">Hodnota portfolia</string>
+    <string name="chart_cost_basis">Nákladová základna</string>
+    <string name="chart_legend_crypto_held">Držené krypto</string>
+    <string name="chart_legend_invested_equiv">Ekvivalent investice</string>
+    <string name="chart_avg_price">Prům. cena</string>
+    <string name="chart_transactions">Transakce</string>
+    <string name="chart_period_roi">%1$s za %2$s</string>
+    <string name="chart_explore">Prozkoumat:</string>
+
+    <!-- Exchange Management Screen -->
+    <string name="exchanges_title">Burzy</string>
+    <string name="exchanges_add">Přidat burzu</string>
+    <string name="exchanges_connected">Připojené burzy</string>
+    <string name="exchanges_available">Dostupné burzy</string>
+    <string name="exchanges_remove_title">Odebrat burzu</string>
+    <string name="exchanges_remove_text">Opravdu chcete odebrat %1$s? Tím se smažou vaše API přihlašovací údaje z tohoto zařízení.</string>
+    <string name="exchanges_none_title">Žádné dostupné burzy</string>
+    <string name="exchanges_none_desc">Nejsou k dispozici žádné burzy</string>
+
+    <!-- Add Exchange Screen -->
+    <string name="add_exchange_select">Vybrat burzu</string>
+    <string name="add_exchange_instructions">Instrukce API</string>
+    <string name="add_exchange_credentials">Zadat přihlašovací údaje</string>
+    <string name="add_exchange_success">Úspěch</string>
+    <string name="add_exchange_choose">Vyberte burzu k připojení</string>
+    <string name="add_exchange_all_connected">Všechny burzy připojeny</string>
+    <string name="add_exchange_all_connected_desc">Připojili jste všechny dostupné burzy</string>
+    <string name="add_exchange_cryptos">%1$d kryptoměn</string>
+    <string name="add_exchange_sandbox_testnet">Sandbox režim – Testovací prostředí</string>
+    <string name="add_exchange_api_setup">Instrukce pro nastavení API</string>
+    <string name="add_exchange_testnet_setup">Nastavení testovacího API</string>
+    <string name="add_exchange_open_testnet">Otevřít %1$s Testnet</string>
+    <string name="add_exchange_open_api_page">Otevřít %1$s API stránku</string>
+    <string name="add_exchange_testnet_info">Testovací přihlašovací údaje jsou oddělené od vašeho skutečného účtu na burze. Testovací prostředky jsou poskytovány zdarma.</string>
+    <string name="add_exchange_security_tip">Bezpečnostní tip: Povolte pouze obchodní oprávnění. Nikdy nepovolujte oprávnění k výběru pro DCA roboty.</string>
+    <string name="add_exchange_i_have_keys">Mám své API klíče</string>
+    <string name="add_exchange_enter_credentials">Zadejte přihlašovací údaje pro %1$s API</string>
+    <string name="add_exchange_connect">Připojit burzu</string>
+    <string name="add_exchange_connected">%1$s připojeno!</string>
+    <string name="add_exchange_connected_desc">Nyní můžete vytvářet DCA plány s touto burzou</string>
+
+    <!-- Transaction Details Screen -->
+    <string name="transaction_details_title">Detail transakce</string>
+    <string name="transaction_details_loading">Načítání transakce…</string>
+    <string name="transaction_details_amount_received">Přijatá částka</string>
+    <string name="transaction_details_section">Podrobnosti</string>
+    <string name="transaction_details_exchange">Burza</string>
+    <string name="transaction_details_price">Cena</string>
+    <string name="transaction_details_fee">Poplatek</string>
+    <string name="transaction_details_date_time">Datum a čas</string>
+    <string name="transaction_details_order_id">ID objednávky</string>
+    <string name="transaction_details_error_message">Chybová zpráva</string>
+    <string name="transaction_details_copied">Zkopírováno do schránky</string>
+    <string name="transaction_status_completed">Dokončeno</string>
+    <string name="transaction_status_failed">Selhalo</string>
+    <string name="transaction_status_pending">Čekající</string>
+    <string name="transaction_status_partial">Částečně vyplněno</string>
+    <string name="transaction_details_at">v</string>
+
+    <!-- Credentials Input -->
+    <string name="credentials_client_id">Client ID</string>
+    <string name="credentials_public_key">Veřejný klíč</string>
+    <string name="credentials_api_key">API klíč</string>
+    <string name="credentials_private_key">Soukromý klíč</string>
+    <string name="credentials_api_secret">API tajný klíč</string>
+    <string name="credentials_passphrase">Heslo</string>
+    <string name="credentials_toggle_visibility">Přepnout viditelnost</string>
+    <string name="credentials_required_for">Vyžadováno pro %1$s</string>
+    <string name="credentials_stored_locally">Přihlašovací údaje uloženy lokálně se šifrováním</string>
+    <string name="credentials_encrypted_aes">Šifrováno lokálně pomocí AES-256</string>
+
+    <!-- Strategy Info Bottom Sheet -->
+    <string name="strategy_how_it_works">Jak to funguje</string>
+    <string name="strategy_got_it">Rozumím</string>
+    <string name="strategy_classic_explanation">Klasické DCA nakupuje stejnou pevnou částku v každém naplánovaném intervalu bez ohledu na tržní podmínky. Jedná se o nejjednodušší a nejpřímější přístup k průměrování nákladů.</string>
+    <string name="strategy_classic_consistent">Konzistentní</string>
+    <string name="strategy_classic_consistent_desc">Stejná částka pokaždé</string>
+    <string name="strategy_classic_simple">Jednoduché</string>
+    <string name="strategy_classic_simple_desc">Žádné časování trhu</string>
+    <string name="strategy_current_multiplier">Aktuální násobitel</string>
+    <string name="strategy_multiplier_percent">%1$d %% základní částky</string>
+    <string name="strategy_ath_explanation">Tato strategie upravuje výši nákupu podle toho, jak daleko je aktuální cena od historického maxima (ATH). Kupujte méně, když je cena blízko ATH, kupujte více během propadů.</string>
+    <string name="strategy_purchase_tiers">Nákupní úrovně</string>
+    <string name="strategy_distance_from_ath">Vzdálenost od ATH</string>
+    <string name="strategy_multiplier">Násobitel</string>
+    <string name="strategy_ath_tier_0_10">0–10 % pod</string>
+    <string name="strategy_ath_tier_10_30">10–30 % pod</string>
+    <string name="strategy_ath_tier_30_50">30–50 % pod</string>
+    <string name="strategy_ath_tier_50_70">50–70 % pod</string>
+    <string name="strategy_ath_tier_70_plus">70 %+ pod</string>
+    <string name="strategy_ath_mult_50">0,5× (50 %)</string>
+    <string name="strategy_ath_mult_100">1,0× (100 %)</string>
+    <string name="strategy_ath_mult_150">1,5× (150 %)</string>
+    <string name="strategy_ath_mult_200">2,0× (200 %)</string>
+    <string name="strategy_ath_mult_300">3,0× (300 %)</string>
+    <string name="strategy_ath_example">Příklad: Se základní částkou 100 EUR, pokud je BTC 40 % pod ATH, nakoupíte za 150 EUR.</string>
+    <string name="strategy_fg_explanation">Tato strategie využívá index Fear &amp; Greed k úpravě nákupů. Kupujte více, když na trhu panuje strach (často dobrá příležitost), kupujte méně při extrémní chamtivosti.</string>
+    <string name="strategy_sentiment_tiers">Úrovně sentimentu</string>
+    <string name="strategy_market_sentiment">Tržní sentiment</string>
+    <string name="strategy_fg_extreme_fear">Extrémní strach (0–24)</string>
+    <string name="strategy_fg_fear">Strach (25–44)</string>
+    <string name="strategy_fg_neutral">Neutrální (45–54)</string>
+    <string name="strategy_fg_greed">Chamtivost (55–74)</string>
+    <string name="strategy_fg_extreme_greed">Extrémní chamtivost (75–100)</string>
+    <string name="strategy_fg_mult_250">2,5× (250 %)</string>
+    <string name="strategy_fg_mult_150">1,5× (150 %)</string>
+    <string name="strategy_fg_mult_100">1,0× (100 %)</string>
+    <string name="strategy_fg_mult_50">0,5× (50 %)</string>
+    <string name="strategy_fg_mult_25">0,25× (25 %)</string>
+    <string name="strategy_fg_example">Příklad: Se základní částkou 100 EUR, při extrémním strachu nakoupíte za 250 EUR.</string>
+
+    <!-- Sandbox Components -->
+    <string name="sandbox_mode_indicator">Sandbox režim – K dispozici pouze testovací burzy</string>
+    <string name="sandbox_testnet_required">Sandbox režim – Vyžadovány testovací přihlašovací údaje</string>
+    <string name="sandbox_testnet_credentials_desc">Potřebujete testovací API přihlašovací údaje pro %1$s:</string>
+
+    <!-- Onboarding - Welcome -->
+    <string name="welcome_tagline">Automatické DCA pro vaše kryptoměny</string>
+    <string name="welcome_auto_dca_title">Automatické DCA</string>
+    <string name="welcome_auto_dca_desc">Nastavte a zapomeňte. AccBot nakupuje krypto podle vašeho plánu.</string>
+    <string name="welcome_self_custody_title">Vlastní správa</string>
+    <string name="welcome_self_custody_desc">Vaše klíče zůstávají na vašem zařízení. Žádný cloud, žádné sledování.</string>
+    <string name="welcome_stack_sats_title">Hromaďte satoshi</string>
+    <string name="welcome_stack_sats_desc">Budujte bohatství postupně pomocí průměrování nákladů.</string>
+    <string name="welcome_get_started">Začít</string>
+
+    <!-- Onboarding - Security -->
+    <string name="security_title">Vaše klíče, vaše krypto</string>
+    <string name="security_subtitle">AccBot je navržen s důrazem na bezpečnost. Vaše API klíče nikdy neopustí vaše zařízení.</string>
+    <string name="security_local_title">Pouze lokální úložiště</string>
+    <string name="security_local_desc">Přihlašovací údaje šifrovány AES-256 a uloženy pouze na vašem zařízení</string>
+    <string name="security_no_cloud_title">Žádná synchronizace s cloudem</string>
+    <string name="security_no_cloud_desc">Vaše data nejsou nikdy nahrávána na žádný server</string>
+    <string name="security_keystore_title">Android Keystore</string>
+    <string name="security_keystore_desc">Šifrovací klíče chráněny hardwarovým zabezpečením</string>
+    <string name="security_direct_title">Přímá API volání</string>
+    <string name="security_direct_desc">Komunikace probíhá přímo s burzami přes HTTPS</string>
+    <string name="security_tip">Tip: Vytvořte API klíče pouze s oprávněním k obchodování. Nikdy nepovolujte oprávnění k výběru.</string>
+    <string name="security_i_understand">Rozumím</string>
+
+    <!-- Onboarding - Exchange Setup -->
+    <string name="exchange_setup_title">Připojit burzu</string>
+    <string name="exchange_setup_choose">Vyberte si burzu</string>
+    <string name="exchange_setup_choose_desc">Vyberte burzu, na které chcete spustit svou DCA strategii</string>
+    <string name="exchange_setup_api_credentials">API přihlašovací údaje</string>
+    <string name="exchange_setup_connect">Připojit burzu</string>
+
+    <!-- Onboarding - First Plan -->
+    <string name="first_plan_title">První DCA plán</string>
+    <string name="first_plan_setup">Nastavte si první DCA</string>
+    <string name="first_plan_setup_desc">Začněte automaticky hromadit satoshi. Vždy můžete později upravit.</string>
+    <string name="first_plan_what_to_buy">Co nakoupit</string>
+    <string name="first_plan_currency">Měna</string>
+    <string name="first_plan_custom_amount">Vlastní částka</string>
+    <string name="first_plan_minimum">Minimum: %1$s %2$s</string>
+    <string name="first_plan_how_often">Jak často</string>
+    <string name="first_plan_recommended">Doporučeno pro začátečníky</string>
+    <string name="first_plan_lower_frequency">Nižší frekvence, větší nákupy</string>
+    <string name="first_plan_your_plan">Váš DCA plán</string>
+    <string name="first_plan_summary">Nakoupit %1$s %2$s za %3$s %4$s</string>
+    <string name="first_plan_no_exchange">Žádná burza nepřipojena</string>
+    <string name="first_plan_no_exchange_desc">Vraťte se zpět a nejprve připojte burzu</string>
+    <string name="first_plan_create">Vytvořit plán</string>
+
+    <!-- Onboarding - Completion -->
+    <string name="completion_title">Vše je připraveno!</string>
+    <string name="completion_subtitle">AccBot je připraven začít nakupovat za vás</string>
+    <string name="completion_whats_next">Co dál</string>
+    <string name="completion_start_service_title">Spustit DCA službu</string>
+    <string name="completion_start_service_desc">Zapněte službu z přehledu</string>
+    <string name="completion_fine_tune_title">Doladit plán</string>
+    <string name="completion_fine_tune_desc">Upravte částky, přidejte další kryptoměny nebo změňte frekvenci</string>
+    <string name="completion_stay_informed_title">Buďte informováni</string>
+    <string name="completion_stay_informed_desc">Dostávejte upozornění po každém nákupu</string>
+    <string name="completion_pro_tip">Pro tip: Pro nepřerušované DCA vypněte optimalizaci baterie pro AccBot v nastavení zařízení.</string>
+    <string name="completion_start_stacking">Začít nakupovat</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_service">DCA služba</string>
+    <string name="notification_channel_service_desc">Služba AccBot DCA na pozadí</string>
+    <string name="notification_channel_purchase">Oznámení o nákupech</string>
+    <string name="notification_channel_purchase_desc">Oznámení o dokončených DCA nákupech</string>
+    <string name="notification_channel_error">Oznámení o chybách</string>
+    <string name="notification_channel_error_desc">Oznámení o chybách DCA</string>
+    <string name="notification_channel_low_balance">Upozornění na nízký zůstatek</string>
+    <string name="notification_channel_low_balance_desc">Upozornění při nízkém zůstatku na burze</string>
+    <string name="notification_service_title">AccBot DCA aktivní</string>
+    <string name="notification_service_text">Sledování vašich DCA plánů</string>
+    <string name="notification_purchase_title">DCA nákup dokončen ✓</string>
+    <string name="notification_purchase_text">Nakoupeno %1$s %2$s za %3$s %4$s</string>
+    <string name="notification_dca_failed">DCA selhalo</string>
+    <string name="notification_dca_failed_text">Nepodařilo se nakoupit %1$s: %2$s</string>
+    <string name="notification_dca_error">DCA chyba</string>
+    <string name="notification_low_balance_title">Nízký zůstatek na %1$s</string>
+    <string name="notification_low_balance_text">%1$s %2$s zbývá pro DCA</string>
+    <string name="notification_low_balance_less_1_day">&lt; 1 den</string>
+    <string name="notification_low_balance_days">~%1$d dní</string>
+
+    <!-- TimeUtils -->
+    <string name="time_not_scheduled">Nenaplánováno</string>
+    <string name="time_due_now">Právě teď</string>
+    <string name="time_in_days">za %1$d dní</string>
+    <string name="time_in_1_day">za 1 den</string>
+    <string name="time_in_hours">za %1$d hodin</string>
+    <string name="time_in_1_hour">za 1 hodinu</string>
+    <string name="time_in_minutes">za %1$d min</string>
+    <string name="time_in_less_1_min">za &lt; 1 min</string>
+
+    <!-- Content with Loading and Error -->
+    <string name="content_loading">Načítání…</string>
+
+    <!-- QR Scanner -->
+    <string name="qr_camera_permission_text">Prosím udělte oprávnění k fotoaparátu pro skenování QR kódů</string>
+    <string name="qr_grant_permission">Udělit oprávnění</string>
+    <string name="qr_close">Zavřít</string>
+    <string name="qr_scan_code">Skenovat QR kód</string>
+    <string name="qr_close_scanner">Zavřít skener</string>
+    <string name="qr_camera_permission_title">Vyžadováno oprávnění k fotoaparátu</string>
+    <string name="qr_point_camera">Namiřte fotoaparát na QR kód</string>
+    <string name="qr_scanning_auto">Skenování proběhne automaticky</string>
+
+    <!-- Biometric Lock -->
+    <string name="biometric_lock_title">Zámek aplikace</string>
+    <string name="biometric_lock_subtitle">Vyžadovat biometrické ověření pro otevření AccBot</string>
+    <string name="biometric_lock_enabled">Zapnuto</string>
+    <string name="biometric_lock_disabled">Vypnuto</string>
+    <string name="biometric_prompt_title">Odemknout AccBot</string>
+    <string name="biometric_prompt_subtitle">Ověřte svou identitu</string>
+    <string name="biometric_prompt_negative">Zrušit</string>
+    <string name="biometric_not_available">Biometrické ověření není na tomto zařízení dostupné</string>
+    <string name="biometric_lock_unlock">Klepněte pro odemčení</string>
+    <string name="biometric_onboarding_title">Chraňte svou aplikaci</string>
+    <string name="biometric_onboarding_desc">Použijte otisk prstu nebo rozpoznání obličeje k zabezpečení AccBot</string>
+    <string name="biometric_onboarding_enable">Zapnout zámek aplikace</string>
+    <string name="biometric_lock_recommend">(Doporučeno)</string>
+    <string name="settings_security">ZABEZPEČENÍ</string>
+
+    <!-- Splash Screen -->
+    <string name="splash_tagline">Stackuj saty. Zůstaň pokorný.</string>
+
+    <!-- Import CSV -->
+    <string name="import_csv_title">Importovat historii</string>
+    <string name="import_csv_subtitle">Importovat transakce z exportu Coinmate CSV</string>
+    <string name="import_csv_select_file">Vybrat CSV soubor</string>
+    <string name="import_csv_select_file_desc">Vyberte exportovanou historii transakcí z Coinmate</string>
+    <string name="import_csv_new_transactions">%1$d nových transakcí</string>
+    <string name="import_csv_skipped">%1$d již importováno (přeskočeno)</string>
+    <string name="import_csv_import_button">Importovat</string>
+    <string name="import_csv_importing">Importování…</string>
+    <string name="import_csv_success">%1$d transakcí úspěšně importováno</string>
+    <string name="import_csv_no_buy_transactions">V CSV nebyly nalezeny odpovídající nákupní transakce</string>
+    <string name="import_csv_parse_error">Nepodařilo se zpracovat CSV soubor</string>
+    <string name="import_csv_view_history">Zobrazit historii</string>
+    <string name="import_csv_file_loaded">Soubor načten</string>
+    <string name="import_csv_plan_info">%1$s/%2$s na %3$s</string>
+    <string name="import_csv_instructions">Exportujte historii transakcí z Coinmate a vyberte CSV soubor níže.</string>
+
+    <!-- Accessibility -->
+    <string name="a11y_retry">Opakovat</string>
+</resources>

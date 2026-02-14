@@ -1,0 +1,24 @@
+{
+  "exportDate": "2025-06-10T21:41:19.235Z",
+  "version": "1.0.0",
+  "transactions": [
+    {
+      "id": "qm8w6jmxwwjrdgtl5u",
+      "dcaPlanId": "one-time-purchase",
+      "timestamp": "2025-06-10T22:00:05",
+      "amountCrypto": 0.0000348,
+      "pricePerUnit": 2376208,
+      "totalCost": 82.69,
+      "fee": 0.29043512,
+      "status": "completed",
+      "orderId": null,
+      "exchangeOrderId": "7395",
+      "clientOrderId": null,
+      "currencyPair": "BTC_CZK",
+      "errorMessage": null,
+      "errorCode": null,
+      "retryCount": 0,
+      "createdAt": "2025-06-10T22:00:05"
+    }
+  ]
+}
