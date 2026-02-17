@@ -14,10 +14,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
+import com.accbot.dca.presentation.components.ScheduleBuilder
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.LoadingState
 import com.accbot.dca.presentation.components.ErrorState
@@ -130,7 +131,16 @@ fun EditPlanScreen(
                             suffix = { Text(uiState.fiat) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             singleLine = true,
-                            isError = uiState.error != null && uiState.isSaving
+                            isError = uiState.amountBelowMinimum || (uiState.error != null && uiState.isSaving),
+                            supportingText = uiState.minOrderSize?.let { min ->
+                                {
+                                    Text(
+                                        text = stringResource(R.string.min_order_size, min.toPlainString(), uiState.fiat),
+                                        color = if (uiState.amountBelowMinimum) MaterialTheme.colorScheme.error
+                                                else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         )
                     }
 
@@ -150,6 +160,17 @@ fun EditPlanScreen(
                                     onClick = { viewModel.selectFrequency(frequency) }
                                 )
                             }
+                        }
+
+                        // Schedule Builder (when Custom frequency is selected)
+                        if (uiState.selectedFrequency == DcaFrequency.CUSTOM) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            ScheduleBuilder(
+                                cronExpression = uiState.cronExpression,
+                                cronDescription = uiState.cronDescription,
+                                cronError = uiState.cronError,
+                                onCronExpressionChange = viewModel::setCronExpression
+                            )
                         }
                     }
 

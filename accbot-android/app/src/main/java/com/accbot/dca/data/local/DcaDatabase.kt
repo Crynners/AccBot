@@ -17,7 +17,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         MonthlySummaryEntity::class,
         DailyPriceEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -136,6 +136,13 @@ abstract class DcaDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 7 to 8: Add cronExpression column to dca_plans
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE dca_plans ADD COLUMN cronExpression TEXT DEFAULT NULL")
+            }
+        }
+
         /**
          * Get the database instance for the specified mode.
          * Production and sandbox use separate database files to prevent data mixing.
@@ -192,7 +199,7 @@ abstract class DcaDatabase : RoomDatabase() {
                 DcaDatabase::class.java,
                 databaseName
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                 // Only allow destructive migration on app downgrade, never on failed upgrade
                 // This protects user's transaction history from accidental deletion
                 .fallbackToDestructiveMigrationOnDowngrade()

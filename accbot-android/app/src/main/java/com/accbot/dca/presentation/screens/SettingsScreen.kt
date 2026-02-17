@@ -21,10 +21,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.accbot.dca.BuildConfig
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.Exchange
@@ -282,20 +282,22 @@ fun SettingsScreen(
                     icon = Icons.Default.BatteryChargingFull,
                     showWarning = uiState.isBatteryOptimized,
                     onClick = {
-                        if (!uiState.isBatteryOptimized) {
-                            scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.settings_battery_already_disabled)) }
-                        } else {
-                            try {
+                        try {
+                            if (uiState.isBatteryOptimized) {
+                                // Not yet whitelisted -> show system exemption dialog
                                 val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                                     data = Uri.parse("package:${context.packageName}")
                                 }
                                 context.startActivity(intent)
+                            } else {
+                                // Already whitelisted -> open general battery settings so user can review
+                                context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                            }
+                        } catch (_: Exception) {
+                            try {
+                                context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                             } catch (_: Exception) {
-                                try {
-                                    context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                                } catch (_: Exception) {
-                                    scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.settings_battery_open_failed)) }
-                                }
+                                scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.settings_battery_open_failed)) }
                             }
                         }
                     }
@@ -324,6 +326,20 @@ fun SettingsScreen(
                     subtitle = languageLabel,
                     icon = Icons.Default.Language,
                     onClick = { showLanguageDialog = true }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.settings_notifications),
+                    subtitle = stringResource(R.string.settings_notifications_subtitle),
+                    icon = Icons.Default.Notifications,
+                    onClick = {
+                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        }
+                        context.startActivity(intent)
+                    }
                 )
             }
 

@@ -20,9 +20,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.DcaStrategy
+import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.domain.model.supportsImport
 import com.accbot.dca.presentation.components.*
 import com.accbot.dca.presentation.ui.theme.Error
@@ -69,6 +70,40 @@ fun PlanDetailsScreen(
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
                     Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+
+    // API import result dialog
+    uiState.apiImportResult?.let { result ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissImportResult() },
+            title = {
+                Text(
+                    when (result) {
+                        is ApiImportResultState.Success -> stringResource(R.string.import_api_success_title)
+                        is ApiImportResultState.Error -> stringResource(R.string.import_api_error_title)
+                    }
+                )
+            },
+            text = {
+                Text(
+                    when (result) {
+                        is ApiImportResultState.Success -> {
+                            if (result.imported == 0) {
+                                stringResource(R.string.import_api_no_new)
+                            } else {
+                                stringResource(R.string.import_api_success_message, result.imported, result.skipped)
+                            }
+                        }
+                        is ApiImportResultState.Error -> result.message
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissImportResult() }) {
+                    Text(stringResource(R.string.common_done))
                 }
             }
         )
@@ -206,10 +241,15 @@ fun PlanDetailsScreen(
                                     value = "${plan.amount} ${plan.fiat}"
                                 )
 
+                                val frequencyDisplayText = if (plan.frequency == com.accbot.dca.domain.model.DcaFrequency.CUSTOM && plan.cronExpression != null) {
+                                    com.accbot.dca.domain.util.CronUtils.describeCron(plan.cronExpression) ?: stringResource(plan.frequency.displayNameRes)
+                                } else {
+                                    stringResource(plan.frequency.displayNameRes)
+                                }
                                 PlanConfigRow(
                                     icon = Icons.Default.Schedule,
                                     label = stringResource(R.string.plan_details_frequency),
-                                    value = stringResource(plan.frequency.displayNameRes)
+                                    value = frequencyDisplayText
                                 )
 
                                 PlanConfigRow(
@@ -509,6 +549,65 @@ fun PlanDetailsScreen(
                                 title = stringResource(R.string.plan_details_no_transactions_title),
                                 description = stringResource(R.string.plan_details_no_transactions_desc)
                             )
+                        }
+                    }
+
+                    // Import via API card
+                    if (plan.exchange.supportsApiImport) {
+                        item {
+                            Card(
+                                onClick = { viewModel.importViaApi() },
+                                enabled = !uiState.isApiImporting,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudDownload,
+                                        contentDescription = null,
+                                        tint = accentColor(),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = stringResource(R.string.import_api_title),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        if (uiState.isApiImporting) {
+                                            Text(
+                                                text = uiState.apiImportProgress,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = accentColor()
+                                            )
+                                        } else {
+                                            Text(
+                                                text = stringResource(R.string.import_api_subtitle),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                    if (uiState.isApiImporting) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 

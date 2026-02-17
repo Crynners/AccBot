@@ -42,6 +42,7 @@
     <string name="frequency_every_8_hours">Every 8 hours</string>
     <string name="frequency_daily">Daily</string>
     <string name="frequency_weekly">Weekly</string>
+    <string name="frequency_custom">Custom Schedule</string>
 
     <!-- Dashboard Screen -->
     <string name="dashboard_add_plan">Add Plan</string>
@@ -64,6 +65,9 @@
     <string name="dashboard_history">History</string>
     <string name="dashboard_run_now">Run Now</string>
     <string name="dashboard_dca_triggered">DCA execution triggered</string>
+    <string name="run_now_title">Run Now</string>
+    <string name="run_now_all_plans">All plans</string>
+    <string name="run_now_confirm">Run %1$d plan(s)</string>
     <string name="dashboard_roi">ROI %1$s</string>
     <string name="dashboard_less_than_1_hour">&lt; 1 hour</string>
     <plurals name="dashboard_hours">
@@ -120,6 +124,8 @@
     <string name="settings_language_system_default">System default</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_czech">Čeština</string>
+    <string name="settings_notifications">Manage Notifications</string>
+    <string name="settings_notifications_subtitle">Configure notification channels and sounds</string>
 
     <!-- History Screen -->
     <string name="history_title">Transaction History</string>
@@ -378,7 +384,7 @@
     <string name="first_plan_what_to_buy">What to buy</string>
     <string name="first_plan_currency">Currency</string>
     <string name="first_plan_custom_amount">Custom amount</string>
-    <string name="first_plan_minimum">Minimum: %1$s %2$s</string>
+    <string name="min_order_size">Minimum: %1$s %2$s</string>
     <string name="first_plan_how_often">How often</string>
     <string name="first_plan_recommended">Recommended for beginners</string>
     <string name="first_plan_lower_frequency">Lower frequency, larger purchases</string>
@@ -443,7 +449,17 @@
     <string name="qr_close_scanner">Close scanner</string>
     <string name="qr_camera_permission_title">Camera Permission Required</string>
     <string name="qr_point_camera">Point camera at QR code</string>
+    <string name="qr_point_camera_text">Point camera at text</string>
     <string name="qr_scanning_auto">Scanning will happen automatically</string>
+    <string name="qr_tap_to_select">Tap text to select</string>
+    <string name="qr_mode_qr">QR Code</string>
+    <string name="qr_mode_text">Text (OCR)</string>
+    <string name="qr_no_text_detected">No text detected</string>
+    <string name="credentials_scan_all">Scan All Credentials</string>
+    <string name="credentials_scan_all_desc">Scan multiple credentials at once</string>
+    <string name="qr_assign_to_fields">Assign text to fields</string>
+    <string name="qr_tap_field_then_text">Select a field, then tap detected text</string>
+    <string name="qr_done_count">Done (%1$d/%2$d)</string>
 
     <!-- Biometric Lock -->
     <string name="biometric_lock_title">App Lock</string>
@@ -480,6 +496,39 @@
     <string name="import_csv_file_loaded">File loaded</string>
     <string name="import_csv_plan_info">%1$s/%2$s on %3$s</string>
     <string name="import_csv_instructions">Export your transaction history from Coinmate and select the CSV file below.</string>
+
+    <!-- Schedule Builder -->
+    <string name="schedule_type_label">Schedule Type</string>
+    <string name="schedule_type_daily">Every Day</string>
+    <string name="schedule_type_days_of_week">Days of Week</string>
+    <string name="schedule_type_days_of_month">Days of Month</string>
+    <string name="schedule_time_label">Time</string>
+    <string name="schedule_minute_label">Minute</string>
+    <string name="schedule_hour_label">Hour (tap to select multiple)</string>
+    <string name="schedule_select_days">Select Days</string>
+    <string name="schedule_preview_label">Schedule Preview</string>
+    <string name="schedule_advanced_label">Advanced: Edit CRON directly</string>
+
+    <!-- CRON Frequency -->
+    <string name="cron_input_label">CRON Expression</string>
+    <string name="cron_input_hint">e.g. 0 9 * * 1 (Mon 9:00)</string>
+    <string name="cron_invalid">Invalid CRON expression</string>
+    <string name="cron_examples_title">Examples:</string>
+    <string name="cron_example_daily">0 9 * * * = Every day at 9:00</string>
+    <string name="cron_example_weekly">0 9 * * 1 = Every Monday at 9:00</string>
+    <string name="cron_example_monthly">0 9 1 * * = 1st of every month at 9:00</string>
+    <string name="cron_example_twice_daily">0 9,21 * * * = Every day at 9:00 and 21:00</string>
+
+    <!-- Import via API -->
+    <string name="import_api_title">Import via API</string>
+    <string name="import_api_subtitle">One-click incremental import from exchange</string>
+    <string name="import_api_fetching">Fetching trades (page %1$d)…</string>
+    <string name="import_api_deduplicating">Checking for duplicates…</string>
+    <string name="import_api_importing">Importing %1$d transactions…</string>
+    <string name="import_api_success_title">Import Complete</string>
+    <string name="import_api_error_title">Import Failed</string>
+    <string name="import_api_success_message">%1$d transactions imported, %2$d skipped (already existed)</string>
+    <string name="import_api_no_new">No new transactions to import</string>
 
     <!-- Accessibility -->
     <string name="a11y_retry">Retry</string>

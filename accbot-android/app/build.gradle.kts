@@ -126,11 +126,15 @@ dependencies {
     // Vico - Compose charting library for portfolio performance
     implementation("com.patrykandpatrick.vico:compose-m3:2.4.3")
 
-    // QR Code scanning with ML Kit and CameraX
+    // QR Code scanning and OCR with ML Kit and CameraX
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("androidx.camera:camera-camera2:1.5.1")
     implementation("androidx.camera:camera-lifecycle:1.5.1")
     implementation("androidx.camera:camera-view:1.5.1")
+
+    // CRON expression parsing for custom DCA schedules
+    implementation("com.cronutils:cron-utils:9.2.1")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

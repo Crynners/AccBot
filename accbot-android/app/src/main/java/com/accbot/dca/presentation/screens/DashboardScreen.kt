@@ -22,9 +22,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
+import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
+import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.accentColor
@@ -54,6 +56,14 @@ fun DashboardScreen(
         }
     }
 
+    if (uiState.showRunNowSheet) {
+        RunNowBottomSheet(
+            plans = uiState.activePlans,
+            onDismiss = { viewModel.hideRunNowSheet() },
+            onConfirm = { viewModel.runSelectedPlans(it) }
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
@@ -63,11 +73,6 @@ fun DashboardScreen(
                         stringResource(R.string.app_name),
                         fontWeight = FontWeight.Bold
                     )
-                },
-                actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.common_settings))
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
@@ -150,7 +155,7 @@ fun DashboardScreen(
             item {
                 QuickActionsRow(
                     onViewHistory = onNavigateToHistory,
-                    onRunNow = { viewModel.runDcaNow() }
+                    onRunNow = { viewModel.showRunNowSheet() }
                 )
             }
 
@@ -467,8 +472,13 @@ private fun DcaPlanCard(
                         text = "${plan.crypto}/${plan.fiat}",
                         fontWeight = FontWeight.SemiBold
                     )
+                    val frequencyText = if (plan.frequency == DcaFrequency.CUSTOM && plan.cronExpression != null) {
+                        CronUtils.describeCron(plan.cronExpression) ?: stringResource(plan.frequency.displayNameRes)
+                    } else {
+                        stringResource(plan.frequency.displayNameRes)
+                    }
                     Text(
-                        text = "${plan.amount} ${plan.fiat} • ${stringResource(plan.frequency.displayNameRes)}",
+                        text = "${plan.amount} ${plan.fiat} • $frequencyText",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -628,6 +638,110 @@ private fun QuickActionsRow(
             Icon(Icons.Default.Bolt, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringResource(R.string.dashboard_run_now))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RunNowBottomSheet(
+    plans: List<DcaPlanWithBalance>,
+    onDismiss: () -> Unit,
+    onConfirm: (List<Long>) -> Unit
+) {
+    val enabledPlans = plans.filter { it.plan.isEnabled }
+    var selectedIds by remember { mutableStateOf(enabledPlans.map { it.plan.id }.toSet()) }
+    val allSelected = selectedIds.size == enabledPlans.size && enabledPlans.isNotEmpty()
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.run_now_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Select All row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        selectedIds = if (allSelected) emptySet()
+                        else enabledPlans.map { it.plan.id }.toSet()
+                    }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = allSelected,
+                    onCheckedChange = {
+                        selectedIds = if (it) enabledPlans.map { p -> p.plan.id }.toSet()
+                        else emptySet()
+                    }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.run_now_all_plans),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            HorizontalDivider()
+
+            // Plan list
+            enabledPlans.forEach { planWithBalance ->
+                val plan = planWithBalance.plan
+                val isSelected = plan.id in selectedIds
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            selectedIds = if (isSelected) selectedIds - plan.id
+                            else selectedIds + plan.id
+                        }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = {
+                            selectedIds = if (it) selectedIds + plan.id
+                            else selectedIds - plan.id
+                        }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "${plan.crypto}/${plan.fiat}",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "${plan.amount} ${plan.fiat} • ${plan.exchange.displayName}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { onConfirm(selectedIds.toList()) },
+                enabled = selectedIds.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Bolt, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.run_now_confirm, selectedIds.size))
+            }
         }
     }
 }

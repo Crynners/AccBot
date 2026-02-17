@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.sp
 import android.content.res.Configuration
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.usecase.ChartZoomLevel
 import com.accbot.dca.presentation.components.*

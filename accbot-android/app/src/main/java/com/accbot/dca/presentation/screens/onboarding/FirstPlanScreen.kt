@@ -21,7 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.presentation.components.SelectableChip
 import com.accbot.dca.R
@@ -183,12 +183,6 @@ fun FirstPlanScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Get minimum order size for validation
-                val minOrderSize = uiState.selectedExchange?.minOrderSize?.get(uiState.selectedFiat)
-                    ?: BigDecimal.ONE
-                val enteredAmount = uiState.amount.toBigDecimalOrNull()
-                val isBelowMinimum = enteredAmount != null && enteredAmount < minOrderSize
-
                 OutlinedTextField(
                     value = uiState.amount,
                     onValueChange = viewModel::setAmount,
@@ -197,16 +191,18 @@ fun FirstPlanScreen(
                     suffix = { Text(uiState.selectedFiat) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
-                    isError = isBelowMinimum,
-                    supportingText = {
-                        Text(
-                            text = stringResource(R.string.first_plan_minimum, minOrderSize.toPlainString(), uiState.selectedFiat),
-                            color = if (isBelowMinimum) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
+                    isError = uiState.amountBelowMinimum,
+                    supportingText = uiState.minOrderSize?.let { min ->
+                        {
+                            Text(
+                                text = stringResource(R.string.min_order_size, min.toPlainString(), uiState.selectedFiat),
+                                color = if (uiState.amountBelowMinimum) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                        }
                     }
                 )
 
@@ -348,12 +344,6 @@ fun FirstPlanScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Create button - validate amount against minimum order size
-            val createButtonMinOrder = uiState.selectedExchange?.minOrderSize?.get(uiState.selectedFiat)
-                ?: BigDecimal.ONE
-            val createButtonAmount = uiState.amount.toBigDecimalOrNull()
-            val isAmountValid = createButtonAmount != null && createButtonAmount >= createButtonMinOrder
-
             Button(
                 onClick = {
                     viewModel.createFirstPlan(onSuccess = onContinue)
@@ -362,7 +352,8 @@ fun FirstPlanScreen(
                     .fillMaxWidth()
                     .height(56.dp),
                 enabled = uiState.selectedExchange != null &&
-                        isAmountValid &&
+                        uiState.amount.toBigDecimalOrNull()?.let { it > BigDecimal.ZERO } == true &&
+                        !uiState.amountBelowMinimum &&
                         !uiState.isLoading,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = accentColor()

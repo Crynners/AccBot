@@ -10,12 +10,14 @@ import com.accbot.dca.data.remote.MarketDataService
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.presentation.model.MonthlyCostEstimate
 import com.accbot.dca.domain.model.ExchangeFilter
 import com.accbot.dca.domain.model.ExchangeInstructions
 import com.accbot.dca.domain.model.ExchangeInstructionsProvider
 import com.accbot.dca.domain.usecase.CredentialValidationResult
 import com.accbot.dca.domain.usecase.ValidateAndSaveCredentialsUseCase
+import com.accbot.dca.exchange.MinOrderSizeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -44,14 +46,25 @@ data class AddPlanUiState(
     val selectedFiat: String = "EUR",
     val amount: String = "100",
     val selectedFrequency: DcaFrequency = DcaFrequency.DAILY,
+    val cronExpression: String = "",
+    val cronDescription: String? = null,
+    val cronError: String? = null,
     val selectedStrategy: DcaStrategy = DcaStrategy.Classic,
     val withdrawalEnabled: Boolean = false,
     val withdrawalAddress: String = "",
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
     val errorMessage: String? = null,
-    val monthlyCostEstimate: MonthlyCostEstimate? = null
+    val monthlyCostEstimate: MonthlyCostEstimate? = null,
+    val minOrderSize: BigDecimal? = null
 ) {
+    val amountBelowMinimum: Boolean
+        get() {
+            val min = minOrderSize ?: return false
+            val amt = amount.toBigDecimalOrNull() ?: return false
+            return amt < min
+        }
+
     val isValid: Boolean
         get() {
             if (selectedExchange == null) return false
@@ -62,7 +75,9 @@ data class AddPlanUiState(
             }
             val amountValue = amount.toBigDecimalOrNull() ?: return false
             if (amountValue <= BigDecimal.ZERO) return false
+            if (amountBelowMinimum) return false
             if (withdrawalEnabled && withdrawalAddress.isBlank()) return false
+            if (selectedFrequency == DcaFrequency.CUSTOM && !CronUtils.isValidCron(cronExpression)) return false
             return true
         }
 }
@@ -73,7 +88,8 @@ class AddPlanViewModel @Inject constructor(
     private val credentialsStore: CredentialsStore,
     private val validateAndSaveCredentialsUseCase: ValidateAndSaveCredentialsUseCase,
     private val userPreferences: UserPreferences,
-    private val marketDataService: MarketDataService
+    private val marketDataService: MarketDataService,
+    private val minOrderSizeRepository: MinOrderSizeRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddPlanUiState())
@@ -107,9 +123,11 @@ class AddPlanViewModel @Inject constructor(
                 apiKey = "",
                 apiSecret = "",
                 passphrase = "",
-                errorMessage = null
+                errorMessage = null,
+                minOrderSize = null
             )
         }
+        updateMinOrderSize()
     }
 
     fun setClientId(value: String) {
@@ -131,11 +149,13 @@ class AddPlanViewModel @Inject constructor(
     fun selectCrypto(crypto: String) {
         _uiState.update { it.copy(selectedCrypto = crypto) }
         updateMonthlyCostEstimate()
+        updateMinOrderSize()
     }
 
     fun selectFiat(fiat: String) {
         _uiState.update { it.copy(selectedFiat = fiat) }
         updateMonthlyCostEstimate()
+        updateMinOrderSize()
     }
 
     fun setAmount(amount: String) {
@@ -144,8 +164,31 @@ class AddPlanViewModel @Inject constructor(
     }
 
     fun selectFrequency(frequency: DcaFrequency) {
-        _uiState.update { it.copy(selectedFrequency = frequency) }
+        _uiState.update {
+            it.copy(
+                selectedFrequency = frequency,
+                cronExpression = if (frequency != DcaFrequency.CUSTOM) "" else it.cronExpression,
+                cronDescription = if (frequency != DcaFrequency.CUSTOM) null else it.cronDescription,
+                cronError = if (frequency != DcaFrequency.CUSTOM) null else it.cronError
+            )
+        }
         updateMonthlyCostEstimate()
+    }
+
+    fun setCronExpression(cron: String) {
+        val isValid = CronUtils.isValidCron(cron)
+        val description = if (isValid) CronUtils.describeCron(cron) else null
+        val error = if (cron.isNotBlank() && !isValid) "Invalid CRON expression" else null
+        _uiState.update {
+            it.copy(
+                cronExpression = cron,
+                cronDescription = description,
+                cronError = error
+            )
+        }
+        if (isValid) {
+            updateMonthlyCostEstimate()
+        }
     }
 
     fun selectStrategy(strategy: DcaStrategy) {
@@ -161,12 +204,30 @@ class AddPlanViewModel @Inject constructor(
         _uiState.update { it.copy(withdrawalAddress = address) }
     }
 
+    private fun updateMinOrderSize() {
+        viewModelScope.launch {
+            val exchange = _uiState.value.selectedExchange ?: return@launch
+            val min = minOrderSizeRepository.getMinOrderSize(
+                exchange, _uiState.value.selectedCrypto, _uiState.value.selectedFiat
+            )
+            _uiState.update { it.copy(minOrderSize = min) }
+        }
+    }
+
     private fun updateMonthlyCostEstimate() {
         estimateJob?.cancel()
         estimateJob = viewModelScope.launch {
             // Debounce to avoid API spam on rapid input changes
             delay(300)
             computeEstimate()
+        }
+    }
+
+    private fun getEffectiveIntervalMinutes(state: AddPlanUiState): Long {
+        return if (state.selectedFrequency == DcaFrequency.CUSTOM) {
+            CronUtils.getIntervalMinutesEstimate(state.cronExpression) ?: 1440L
+        } else {
+            state.selectedFrequency.intervalMinutes
         }
     }
 
@@ -178,8 +239,14 @@ class AddPlanViewModel @Inject constructor(
             return
         }
 
+        val intervalMinutes = getEffectiveIntervalMinutes(state)
+        if (intervalMinutes <= 0) {
+            _uiState.update { it.copy(monthlyCostEstimate = null) }
+            return
+        }
+
         val runsPerMonth = BigDecimal(30 * 24 * 60).divide(
-            BigDecimal(state.selectedFrequency.intervalMinutes),
+            BigDecimal(intervalMinutes),
             2, RoundingMode.HALF_UP
         )
 
@@ -253,8 +320,10 @@ class AddPlanViewModel @Inject constructor(
         val result = fetchCurrentMultiplier()
         val freshState = _uiState.value
         val freshAmount = freshState.amount.toBigDecimalOrNull() ?: return
+        val freshIntervalMinutes = getEffectiveIntervalMinutes(freshState)
+        if (freshIntervalMinutes <= 0) return
         val freshRunsPerMonth = BigDecimal(30 * 24 * 60).divide(
-            BigDecimal(freshState.selectedFrequency.intervalMinutes),
+            BigDecimal(freshIntervalMinutes),
             2, RoundingMode.HALF_UP
         )
         val freshMinMonthly = freshAmount.multiply(BigDecimal(minMult.toString())).multiply(freshRunsPerMonth)
@@ -314,7 +383,12 @@ class AddPlanViewModel @Inject constructor(
                 // Create plan
                 val amount = state.amount.toBigDecimal()
                 val now = Instant.now()
-                val nextExecution = now.plus(Duration.ofMinutes(state.selectedFrequency.intervalMinutes))
+                val nextExecution = if (state.selectedFrequency == DcaFrequency.CUSTOM) {
+                    CronUtils.getNextExecution(state.cronExpression, now)
+                        ?: now.plus(Duration.ofMinutes(1440))
+                } else {
+                    now.plus(Duration.ofMinutes(state.selectedFrequency.intervalMinutes))
+                }
 
                 val plan = DcaPlanEntity(
                     exchange = exchange,
@@ -322,6 +396,7 @@ class AddPlanViewModel @Inject constructor(
                     fiat = state.selectedFiat,
                     amount = amount,
                     frequency = state.selectedFrequency,
+                    cronExpression = if (state.selectedFrequency == DcaFrequency.CUSTOM) state.cronExpression else null,
                     strategy = state.selectedStrategy,
                     isEnabled = true,
                     withdrawalEnabled = state.withdrawalEnabled,

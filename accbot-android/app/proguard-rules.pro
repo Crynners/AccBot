@@ -36,3 +36,7 @@
 
 # Vico charting library
 -keep class com.patrykandpatrick.vico.** { *; }
+
+# cron-utils
+-keep class com.cronutils.** { *; }
+-dontwarn com.cronutils.**

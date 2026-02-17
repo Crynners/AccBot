@@ -20,7 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
@@ -30,6 +30,7 @@ import com.accbot.dca.presentation.components.MonthlyCostEstimateCard
 import com.accbot.dca.presentation.components.QrScannerButton
 import com.accbot.dca.presentation.components.SandboxCredentialsInfoCard
 import com.accbot.dca.presentation.components.SandboxModeIndicator
+import com.accbot.dca.presentation.components.ScheduleBuilder
 import com.accbot.dca.presentation.components.SelectableChip
 import com.accbot.dca.presentation.components.StrategyInfoBottomSheet
 import com.accbot.dca.presentation.ui.theme.accentColor
@@ -149,7 +150,17 @@ fun AddPlanScreen(
                     label = { Text(stringResource(R.string.common_amount)) },
                     suffix = { Text(uiState.selectedFiat) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true
+                    singleLine = true,
+                    isError = uiState.amountBelowMinimum,
+                    supportingText = uiState.minOrderSize?.let { min ->
+                        {
+                            Text(
+                                text = stringResource(R.string.min_order_size, min.toPlainString(), uiState.selectedFiat),
+                                color = if (uiState.amountBelowMinimum) MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 )
 
                 // Frequency Selection - Dropdown
@@ -158,6 +169,16 @@ fun AddPlanScreen(
                     selectedFrequency = uiState.selectedFrequency,
                     onFrequencySelected = viewModel::selectFrequency
                 )
+
+                // Schedule Builder (when Custom frequency is selected)
+                if (uiState.selectedFrequency == DcaFrequency.CUSTOM) {
+                    ScheduleBuilder(
+                        cronExpression = uiState.cronExpression,
+                        cronDescription = uiState.cronDescription,
+                        cronError = uiState.cronError,
+                        onCronExpressionChange = viewModel::setCronExpression
+                    )
+                }
 
                 // Strategy Selection
                 SectionTitle(stringResource(R.string.add_plan_dca_strategy))
@@ -448,4 +469,5 @@ private fun StrategyOption(
         }
     }
 }
+
 
