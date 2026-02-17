@@ -300,6 +300,78 @@ class CoinmateApi(
         }
     }
 
+    override suspend fun getTradeHistory(
+        crypto: String,
+        fiat: String,
+        sinceTimestamp: Instant?,
+        limit: Int
+    ): TradeHistoryPage = withContext(Dispatchers.IO) {
+        val pair = "${crypto}_${fiat}"
+        val nonce = System.currentTimeMillis()
+        val signature = createSignature(nonce)
+
+        val formBuilder = FormBody.Builder()
+            .add("clientId", clientId)
+            .add("publicKey", credentials.apiKey)
+            .add("nonce", nonce.toString())
+            .add("signature", signature)
+            .add("currencyPair", pair)
+            .add("limit", limit.toString())
+            .add("sort", "ASC")
+
+        if (sinceTimestamp != null) {
+            // Add 1ms to avoid re-fetching the exact same trade
+            formBuilder.add("timestampFrom", (sinceTimestamp.toEpochMilli() + 1).toString())
+        }
+
+        val request = Request.Builder()
+            .url("$baseUrl/tradeHistory")
+            .post(formBuilder.build())
+            .build()
+
+        val response = client.newCall(request).execute()
+        val body = response.body?.string() ?: throw Exception("Empty response")
+        val json = JSONObject(body)
+
+        if (json.optBoolean("error", true)) {
+            throw Exception(json.optString("errorMessage", "Failed to fetch trade history"))
+        }
+
+        val dataArray = json.optJSONArray("data") ?: throw Exception("No data in response")
+        val trades = mutableListOf<HistoricalTrade>()
+
+        for (i in 0 until dataArray.length()) {
+            val trade = dataArray.getJSONObject(i)
+            val tradeType = trade.optString("type", "")
+            val side = if (tradeType == "BUY") "BUY" else "SELL"
+
+            val amount = BigDecimal(trade.getString("amount"))
+            val price = BigDecimal(trade.getString("price"))
+            val fee = BigDecimal(trade.getString("fee"))
+            val timestamp = Instant.ofEpochMilli(trade.getLong("createdTimestamp"))
+
+            trades.add(
+                HistoricalTrade(
+                    orderId = trade.optString("orderId", trade.optString("transactionId", "")),
+                    timestamp = timestamp,
+                    crypto = crypto,
+                    fiat = fiat,
+                    cryptoAmount = amount,
+                    fiatAmount = amount.multiply(price).setScale(2, RoundingMode.HALF_UP),
+                    price = price,
+                    fee = fee,
+                    feeAsset = fiat,
+                    side = side
+                )
+            )
+        }
+
+        TradeHistoryPage(
+            trades = trades,
+            hasMore = trades.size >= limit
+        )
+    }
+
     override suspend fun validateCredentials(): Boolean = withContext(Dispatchers.IO) {
         try {
             getBalance("BTC") != null

@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -274,6 +275,82 @@ class BinanceApi(
         } catch (e: Exception) {
             null
         }
+    }
+
+    override suspend fun getTradeHistory(
+        crypto: String,
+        fiat: String,
+        sinceTimestamp: Instant?,
+        limit: Int
+    ): TradeHistoryPage = withContext(Dispatchers.IO) {
+        ensureTimeSynced()
+        val symbol = "$crypto$fiat"
+        val timestamp = serverTimestamp()
+
+        val params = buildString {
+            append("symbol=$symbol")
+            append("&limit=$limit")
+            if (sinceTimestamp != null) {
+                // Add 1ms to avoid re-fetching the exact same trade
+                append("&startTime=${sinceTimestamp.toEpochMilli() + 1}")
+            }
+            append("&timestamp=$timestamp")
+            append("&recvWindow=60000")
+        }
+
+        val signature = CryptoUtils.hmacSha256Hex(params, credentials.apiSecret)
+
+        val request = Request.Builder()
+            .url("$baseUrl/api/v3/myTrades?$params&signature=$signature")
+            .header("X-MBX-APIKEY", credentials.apiKey)
+            .get()
+            .build()
+
+        val response = client.newCall(request).execute()
+        val body = response.body?.string() ?: throw Exception("Empty response")
+
+        // Check for error response (JSON object with "code" field)
+        if (body.trimStart().startsWith("{")) {
+            val json = JSONObject(body)
+            if (json.has("code")) {
+                throw Exception(json.optString("msg", "Failed to fetch trade history"))
+            }
+        }
+
+        val jsonArray = org.json.JSONArray(body)
+        val trades = mutableListOf<HistoricalTrade>()
+
+        for (i in 0 until jsonArray.length()) {
+            val trade = jsonArray.getJSONObject(i)
+            val isBuyer = trade.optBoolean("isBuyer", false)
+            val qty = BigDecimal(trade.getString("qty"))
+            val price = BigDecimal(trade.getString("price"))
+            val quoteQty = BigDecimal(trade.getString("quoteQty"))
+            val commission = BigDecimal(trade.getString("commission"))
+            val commissionAsset = trade.optString("commissionAsset", "")
+            val tradeTime = trade.getLong("time")
+
+            trades.add(
+                HistoricalTrade(
+                    // Use trade id for dedup since one market order can produce multiple fills
+                    orderId = trade.get("id").toString(),
+                    timestamp = Instant.ofEpochMilli(tradeTime),
+                    crypto = crypto,
+                    fiat = fiat,
+                    cryptoAmount = qty,
+                    fiatAmount = quoteQty,
+                    price = price,
+                    fee = commission,
+                    feeAsset = commissionAsset,
+                    side = if (isBuyer) "BUY" else "SELL"
+                )
+            )
+        }
+
+        TradeHistoryPage(
+            trades = trades,
+            hasMore = trades.size >= limit
+        )
     }
 
     override suspend fun validateCredentials(): Boolean = withContext(Dispatchers.IO) {

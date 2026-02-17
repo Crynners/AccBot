@@ -41,6 +41,8 @@
     <string name="frequency_daily">Denně</string>
     <string name="frequency_weekly">Týdně</string>
 
+    <string name="frequency_custom">Vlastní plán</string>
+
     <!-- Dashboard Screen -->
     <string name="dashboard_add_plan">Přidat plán</string>
     <string name="dashboard_sandbox_banner">SANDBOX REŽIM – Pouze testovací obchody</string>
@@ -62,6 +64,9 @@
     <string name="dashboard_history">Historie</string>
     <string name="dashboard_run_now">Spustit nyní</string>
     <string name="dashboard_dca_triggered">DCA nákup spuštěn</string>
+    <string name="run_now_title">Spustit nyní</string>
+    <string name="run_now_all_plans">Všechny plány</string>
+    <string name="run_now_confirm">Spustit %1$d plán(ů)</string>
     <string name="dashboard_roi">ROI %1$s</string>
     <string name="dashboard_less_than_1_hour">&lt; 1 hodina</string>
     <plurals name="dashboard_hours">
@@ -120,6 +125,8 @@
     <string name="settings_language_system_default">Výchozí systémový</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_czech">Čeština</string>
+    <string name="settings_notifications">Spravovat oznámení</string>
+    <string name="settings_notifications_subtitle">Nastavení kanálů oznámení a zvuků</string>
 
     <!-- History Screen -->
     <string name="history_title">Historie transakcí</string>
@@ -378,7 +385,7 @@
     <string name="first_plan_what_to_buy">Co nakoupit</string>
     <string name="first_plan_currency">Měna</string>
     <string name="first_plan_custom_amount">Vlastní částka</string>
-    <string name="first_plan_minimum">Minimum: %1$s %2$s</string>
+    <string name="min_order_size">Minimum: %1$s %2$s</string>
     <string name="first_plan_how_often">Jak často</string>
     <string name="first_plan_recommended">Doporučeno pro začátečníky</string>
     <string name="first_plan_lower_frequency">Nižší frekvence, větší nákupy</string>
@@ -445,6 +452,17 @@
     <string name="qr_point_camera">Namiřte fotoaparát na QR kód</string>
     <string name="qr_scanning_auto">Skenování proběhne automaticky</string>
 
+    <string name="qr_point_camera_text">Namiřte fotoaparát na text</string>
+    <string name="qr_tap_to_select">Klepněte na text pro výběr</string>
+    <string name="qr_mode_qr">QR kód</string>
+    <string name="qr_mode_text">Text (OCR)</string>
+    <string name="qr_no_text_detected">Žádný text nedetekován</string>
+    <string name="credentials_scan_all">Skenovat všechny údaje</string>
+    <string name="credentials_scan_all_desc">Skenovat více údajů najednou</string>
+    <string name="qr_assign_to_fields">Přiřaďte text k polím</string>
+    <string name="qr_tap_field_then_text">Vyberte pole a klepněte na text</string>
+    <string name="qr_done_count">Hotovo (%1$d/%2$d)</string>
+
     <!-- Biometric Lock -->
     <string name="biometric_lock_title">Zámek aplikace</string>
     <string name="biometric_lock_subtitle">Vyžadovat biometrické ověření pro otevření AccBot</string>
@@ -480,6 +498,39 @@
     <string name="import_csv_file_loaded">Soubor načten</string>
     <string name="import_csv_plan_info">%1$s/%2$s na %3$s</string>
     <string name="import_csv_instructions">Exportujte historii transakcí z Coinmate a vyberte CSV soubor níže.</string>
+
+    <!-- Import via API -->
+    <string name="import_api_title">Import přes API</string>
+    <string name="import_api_subtitle">Import transakcí jedním kliknutím z burzy</string>
+    <string name="import_api_fetching">Stahování obchodů (stránka %1$d)…</string>
+    <string name="import_api_deduplicating">Kontrola duplicit…</string>
+    <string name="import_api_importing">Importování %1$d transakcí…</string>
+    <string name="import_api_success_title">Import dokončen</string>
+    <string name="import_api_error_title">Import selhal</string>
+    <string name="import_api_success_message">%1$d transakcí importováno, %2$d přeskočeno (již existovaly)</string>
+    <string name="import_api_no_new">Žádné nové transakce k importu</string>
+
+    <!-- Schedule Builder -->
+    <string name="schedule_type_label">Typ rozvrhu</string>
+    <string name="schedule_type_daily">Každý den</string>
+    <string name="schedule_type_days_of_week">Dny v týdnu</string>
+    <string name="schedule_type_days_of_month">Dny v měsíci</string>
+    <string name="schedule_time_label">Čas</string>
+    <string name="schedule_minute_label">Minuta</string>
+    <string name="schedule_hour_label">Hodina (klepněte pro výběr více)</string>
+    <string name="schedule_select_days">Vyberte dny</string>
+    <string name="schedule_preview_label">Náhled rozvrhu</string>
+    <string name="schedule_advanced_label">Pokročilé: Upravit CRON přímo</string>
+
+    <!-- CRON Frequency -->
+    <string name="cron_input_label">CRON výraz</string>
+    <string name="cron_input_hint">např. 0 9 * * 1 (Po 9:00)</string>
+    <string name="cron_invalid">Neplatný CRON výraz</string>
+    <string name="cron_examples_title">Příklady:</string>
+    <string name="cron_example_daily">0 9 * * * = Každý den v 9:00</string>
+    <string name="cron_example_weekly">0 9 * * 1 = Každé pondělí v 9:00</string>
+    <string name="cron_example_monthly">0 9 1 * * = 1. každého měsíce v 9:00</string>
+    <string name="cron_example_twice_daily">0 9,21 * * * = Každý den v 9:00 a 21:00</string>
 
     <!-- Accessibility -->
     <string name="a11y_retry">Opakovat</string>

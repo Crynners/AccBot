@@ -29,7 +29,7 @@ enum class Exchange(
         displayName = "Coinmate",
         supportedFiats = listOf("EUR", "CZK"),
         supportedCryptos = listOf("BTC", "ETH", "LTC"),
-        minOrderSize = mapOf("EUR" to BigDecimal("10"), "CZK" to BigDecimal("250")),
+        minOrderSize = mapOf("EUR" to BigDecimal("10"), "CZK" to BigDecimal("50")),
         sandboxSupport = SandboxSupport.NONE
     ),
     BINANCE(
@@ -87,6 +87,11 @@ fun Exchange.supportsSandbox(): Boolean = sandboxSupport == SandboxSupport.FULL
 val Exchange.supportsImport: Boolean get() = this == Exchange.COINMATE
 
 /**
+ * Check if exchange supports API-based transaction history import
+ */
+val Exchange.supportsApiImport: Boolean get() = this in setOf(Exchange.COINMATE, Exchange.BINANCE)
+
+/**
  * Get list of available exchanges based on sandbox mode.
  * In sandbox mode, only exchanges with full sandbox support are returned.
  * This is a cached list to avoid recreating on each call.
@@ -116,7 +121,8 @@ enum class DcaFrequency(
     EVERY_4_HOURS(R.string.frequency_every_4_hours, 240),
     EVERY_8_HOURS(R.string.frequency_every_8_hours, 480),
     DAILY(R.string.frequency_daily, 1440),
-    WEEKLY(R.string.frequency_weekly, 10080)
+    WEEKLY(R.string.frequency_weekly, 10080),
+    CUSTOM(R.string.frequency_custom, 0)
 }
 
 /**
@@ -129,6 +135,7 @@ data class DcaPlan(
     val fiat: String,
     val amount: BigDecimal,           // Base amount (strategy may modify)
     val frequency: DcaFrequency,
+    val cronExpression: String? = null,
     val strategy: DcaStrategy = DcaStrategy.Classic,
     val isEnabled: Boolean = true,
     val withdrawalEnabled: Boolean = false,
@@ -224,3 +231,27 @@ sealed class DcaResult {
         val retryable: Boolean = true
     ) : DcaResult()
 }
+
+/**
+ * A single historical trade from an exchange API
+ */
+data class HistoricalTrade(
+    val orderId: String,
+    val timestamp: Instant,
+    val crypto: String,
+    val fiat: String,
+    val cryptoAmount: BigDecimal,
+    val fiatAmount: BigDecimal,
+    val price: BigDecimal,
+    val fee: BigDecimal,
+    val feeAsset: String,
+    val side: String  // "BUY" or "SELL"
+)
+
+/**
+ * A page of trade history results
+ */
+data class TradeHistoryPage(
+    val trades: List<HistoricalTrade>,
+    val hasMore: Boolean
+)

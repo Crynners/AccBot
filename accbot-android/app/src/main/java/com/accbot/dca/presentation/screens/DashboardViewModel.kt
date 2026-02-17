@@ -49,11 +49,12 @@ data class DcaPlanWithBalance(
 
 data class DashboardUiState(
     val holdings: List<CryptoHoldingWithPrice> = emptyList(),
-val activePlans: List<DcaPlanWithBalance> = emptyList(),
+    val activePlans: List<DcaPlanWithBalance> = emptyList(),
     val isLoading: Boolean = false,
     val isPriceLoading: Boolean = false,
     val isSandboxMode: Boolean = false,
-    val runNowTriggered: Boolean = false
+    val runNowTriggered: Boolean = false,
+    val showRunNowSheet: Boolean = false
 )
 
 @HiltViewModel
@@ -97,6 +98,7 @@ class DashboardViewModel @Inject constructor(
                         fiat = entity.fiat,
                         amount = entity.amount,
                         frequency = entity.frequency,
+                        cronExpression = entity.cronExpression,
                         strategy = entity.strategy,
                         isEnabled = entity.isEnabled,
                         withdrawalEnabled = entity.withdrawalEnabled,
@@ -239,7 +241,12 @@ class DashboardViewModel @Inject constructor(
 
                 if (balance != null && plan.amount > BigDecimal.ZERO) {
                     val remainingExec = balance.divide(plan.amount, 0, RoundingMode.DOWN).toInt()
-                    val remainingMinutes = remainingExec.toLong() * plan.frequency.intervalMinutes
+                    val effectiveInterval = if (plan.cronExpression != null) {
+                        com.accbot.dca.domain.util.CronUtils.getIntervalMinutesEstimate(plan.cronExpression) ?: 1440L
+                    } else {
+                        plan.frequency.intervalMinutes
+                    }
+                    val remainingMinutes = remainingExec.toLong() * effectiveInterval
                     val remainingDaysVal = remainingMinutes / 1440.0
                     DcaPlanWithBalance(
                         plan = plan,
@@ -286,6 +293,28 @@ class DashboardViewModel @Inject constructor(
 
     fun runDcaNow() {
         DcaWorker.runNow(application)
+        _uiState.update { it.copy(runNowTriggered = true) }
+    }
+
+    fun showRunNowSheet() {
+        _uiState.update { it.copy(showRunNowSheet = true) }
+    }
+
+    fun hideRunNowSheet() {
+        _uiState.update { it.copy(showRunNowSheet = false) }
+    }
+
+    fun runSelectedPlans(planIds: List<Long>) {
+        hideRunNowSheet()
+        if (planIds.isEmpty()) return
+        val allEnabled = _uiState.value.activePlans
+            .filter { it.plan.isEnabled }
+            .map { it.plan.id }
+        if (planIds.toSet() == allEnabled.toSet()) {
+            DcaWorker.runNow(application)
+        } else {
+            planIds.forEach { DcaWorker.runPlan(application, it) }
+        }
         _uiState.update { it.copy(runNowTriggered = true) }
     }
 

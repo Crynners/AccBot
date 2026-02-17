@@ -12,6 +12,7 @@ import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.ExchangeFilter
 import com.accbot.dca.domain.usecase.CredentialValidationResult
 import com.accbot.dca.domain.usecase.ValidateAndSaveCredentialsUseCase
+import com.accbot.dca.exchange.MinOrderSizeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -41,10 +42,20 @@ data class OnboardingUiState(
     val amount: String = "100",
     val selectedFrequency: DcaFrequency = DcaFrequency.DAILY,
 
+    // Min order size (fetched from API)
+    val minOrderSize: BigDecimal? = null,
+
     // General state
     val isLoading: Boolean = false,
     val error: String? = null
-)
+) {
+    val amountBelowMinimum: Boolean
+        get() {
+            val min = minOrderSize ?: return false
+            val amt = amount.toBigDecimalOrNull() ?: return false
+            return amt < min
+        }
+}
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
@@ -52,7 +63,8 @@ class OnboardingViewModel @Inject constructor(
     private val onboardingPreferences: OnboardingPreferences,
     private val validateAndSaveCredentialsUseCase: ValidateAndSaveCredentialsUseCase,
     private val dcaPlanDao: DcaPlanDao,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val minOrderSizeRepository: MinOrderSizeRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
@@ -81,9 +93,11 @@ class OnboardingViewModel @Inject constructor(
                 apiSecret = "",
                 passphrase = "",
                 credentialsValid = false,
-                credentialsError = null
+                credentialsError = null,
+                minOrderSize = null
             )
         }
+        updateMinOrderSize()
     }
 
     fun setClientId(value: String) {
@@ -143,13 +157,25 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
+    private fun updateMinOrderSize() {
+        viewModelScope.launch {
+            val exchange = _uiState.value.selectedExchange ?: return@launch
+            val min = minOrderSizeRepository.getMinOrderSize(
+                exchange, _uiState.value.selectedCrypto, _uiState.value.selectedFiat
+            )
+            _uiState.update { it.copy(minOrderSize = min) }
+        }
+    }
+
     // First plan functions
     fun selectCrypto(crypto: String) {
         _uiState.update { it.copy(selectedCrypto = crypto) }
+        updateMinOrderSize()
     }
 
     fun selectFiat(fiat: String) {
         _uiState.update { it.copy(selectedFiat = fiat) }
+        updateMinOrderSize()
     }
 
     fun setAmount(amount: String) {

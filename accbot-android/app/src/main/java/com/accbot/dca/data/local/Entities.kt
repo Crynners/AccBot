@@ -120,6 +120,7 @@ data class DcaPlanEntity(
     val fiat: String,
     val amount: BigDecimal,
     val frequency: DcaFrequency,
+    val cronExpression: String? = null,
     val strategy: DcaStrategy = DcaStrategy.Classic,
     val isEnabled: Boolean = true,
     val withdrawalEnabled: Boolean = false,

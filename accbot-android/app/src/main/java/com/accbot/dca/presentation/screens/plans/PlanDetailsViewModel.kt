@@ -9,6 +9,8 @@ import com.accbot.dca.data.remote.MarketDataService
 import com.accbot.dca.domain.model.DcaPlan
 import com.accbot.dca.domain.model.Transaction
 import com.accbot.dca.domain.model.TransactionStatus
+import com.accbot.dca.domain.usecase.ApiImportProgress
+import com.accbot.dca.domain.usecase.ImportTradeHistoryUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.presentation.utils.TimeUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,6 +22,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
 import java.math.RoundingMode
 import javax.inject.Inject
+
+sealed class ApiImportResultState {
+    data class Success(val imported: Int, val skipped: Int) : ApiImportResultState()
+    data class Error(val message: String) : ApiImportResultState()
+}
 
 data class PlanDetailsUiState(
     val plan: DcaPlan? = null,
@@ -39,7 +46,10 @@ data class PlanDetailsUiState(
     val remainingExecutions: Int? = null,
     val remainingDays: Int? = null,
     val isPriceLoading: Boolean = false,
-    val isBalanceLoading: Boolean = false
+    val isBalanceLoading: Boolean = false,
+    val isApiImporting: Boolean = false,
+    val apiImportProgress: String = "",
+    val apiImportResult: ApiImportResultState? = null
 )
 
 @HiltViewModel
@@ -50,7 +60,8 @@ class PlanDetailsViewModel @Inject constructor(
     private val marketDataService: MarketDataService,
     private val exchangeApiFactory: ExchangeApiFactory,
     private val credentialsStore: CredentialsStore,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val importTradeHistoryUseCase: ImportTradeHistoryUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlanDetailsUiState())
@@ -169,7 +180,12 @@ class PlanDetailsViewModel @Inject constructor(
                     val balance = withTimeoutOrNull(10_000) { api.getBalance(plan.fiat) }
                     if (balance != null && plan.amount > BigDecimal.ZERO) {
                         val remainingExec = balance.divide(plan.amount, 0, RoundingMode.DOWN).toInt()
-                        val remainingDays = (remainingExec.toLong() * plan.frequency.intervalMinutes / 1440.0).toInt()
+                        val effectiveInterval = if (plan.cronExpression != null) {
+                            com.accbot.dca.domain.util.CronUtils.getIntervalMinutesEstimate(plan.cronExpression) ?: 1440L
+                        } else {
+                            plan.frequency.intervalMinutes
+                        }
+                        val remainingDays = (remainingExec.toLong() * effectiveInterval / 1440.0).toInt()
                         _uiState.update { it.copy(
                             fiatBalance = balance,
                             remainingExecutions = remainingExec,
@@ -211,6 +227,84 @@ class PlanDetailsViewModel @Inject constructor(
         }
     }
 
+    fun importViaApi() {
+        val plan = _uiState.value.plan ?: return
+        if (_uiState.value.isApiImporting) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isApiImporting = true, apiImportProgress = "", apiImportResult = null) }
+
+            try {
+                val isSandbox = userPreferences.isSandboxMode()
+                val credentials = credentialsStore.getCredentials(plan.exchange, isSandbox)
+                if (credentials == null) {
+                    _uiState.update { it.copy(
+                        isApiImporting = false,
+                        apiImportResult = ApiImportResultState.Error("No credentials found for ${plan.exchange.displayName}")
+                    ) }
+                    return@launch
+                }
+
+                val api = exchangeApiFactory.create(credentials)
+
+                importTradeHistoryUseCase.importFromApi(
+                    api = api,
+                    planId = plan.id,
+                    crypto = plan.crypto,
+                    fiat = plan.fiat,
+                    exchange = plan.exchange
+                ).collect { progress ->
+                    when (progress) {
+                        is ApiImportProgress.Fetching -> {
+                            _uiState.update { it.copy(
+                                apiImportProgress = context.getString(
+                                    com.accbot.dca.R.string.import_api_fetching, progress.page
+                                )
+                            ) }
+                        }
+                        is ApiImportProgress.Deduplicating -> {
+                            _uiState.update { it.copy(
+                                apiImportProgress = context.getString(com.accbot.dca.R.string.import_api_deduplicating)
+                            ) }
+                        }
+                        is ApiImportProgress.Importing -> {
+                            _uiState.update { it.copy(
+                                apiImportProgress = context.getString(
+                                    com.accbot.dca.R.string.import_api_importing, progress.newCount
+                                )
+                            ) }
+                        }
+                        is ApiImportProgress.Complete -> {
+                            _uiState.update { it.copy(
+                                isApiImporting = false,
+                                apiImportProgress = "",
+                                apiImportResult = ApiImportResultState.Success(progress.imported, progress.skipped)
+                            ) }
+                        }
+                        is ApiImportProgress.Error -> {
+                            _uiState.update { it.copy(
+                                isApiImporting = false,
+                                apiImportProgress = "",
+                                apiImportResult = ApiImportResultState.Error(progress.message)
+                            ) }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "API import failed", e)
+                _uiState.update { it.copy(
+                    isApiImporting = false,
+                    apiImportProgress = "",
+                    apiImportResult = ApiImportResultState.Error(e.message ?: "Import failed")
+                ) }
+            }
+        }
+    }
+
+    fun dismissImportResult() {
+        _uiState.update { it.copy(apiImportResult = null) }
+    }
+
     private fun DcaPlanEntity.toDomain() = DcaPlan(
         id = id,
         exchange = exchange,
@@ -218,6 +312,7 @@ class PlanDetailsViewModel @Inject constructor(
         fiat = fiat,
         amount = amount,
         frequency = frequency,
+        cronExpression = cronExpression,
         strategy = strategy,
         isEnabled = isEnabled,
         withdrawalEnabled = withdrawalEnabled,

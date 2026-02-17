@@ -1,8 +1,10 @@
 package com.accbot.dca.presentation.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -17,6 +19,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 
 /**
@@ -60,10 +63,47 @@ fun CredentialsInputCard(
     isValidating: Boolean = false
 ) {
     var showSecret by remember { mutableStateOf(false) }
+    var showMultiScanner by remember { mutableStateOf(false) }
 
     // Determine field requirements based on exchange
     val needsClientId = exchange == Exchange.COINMATE
     val needsPassphrase = exchange == Exchange.KUCOIN
+
+    // Build target fields for multi-field scanner
+    val targetFields = remember(exchange) {
+        buildList {
+            when {
+                needsClientId -> {
+                    add(ScanTargetField(label = "Client ID", key = "clientId"))
+                    add(ScanTargetField(label = "Public Key", key = "apiKey"))
+                    add(ScanTargetField(label = "Private Key", key = "apiSecret"))
+                }
+                needsPassphrase -> {
+                    add(ScanTargetField(label = "API Key", key = "apiKey"))
+                    add(ScanTargetField(label = "API Secret", key = "apiSecret"))
+                    add(ScanTargetField(label = "Passphrase", key = "passphrase"))
+                }
+                else -> {
+                    add(ScanTargetField(label = "API Key", key = "apiKey"))
+                    add(ScanTargetField(label = "API Secret", key = "apiSecret"))
+                }
+            }
+        }
+    }
+
+    if (showMultiScanner) {
+        MultiFieldScannerDialog(
+            targetFields = targetFields,
+            onDismiss = { showMultiScanner = false },
+            onResult = { results ->
+                results["clientId"]?.let { onClientIdChange(it) }
+                results["apiKey"]?.let { onApiKeyChange(it) }
+                results["apiSecret"]?.let { onApiSecretChange(it) }
+                results["passphrase"]?.let { onPassphraseChange(it) }
+                showMultiScanner = false
+            }
+        )
+    }
 
     Card(
         colors = CardDefaults.cardColors(
@@ -77,6 +117,26 @@ fun CredentialsInputCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Scan All Credentials button
+            OutlinedButton(
+                onClick = { showMultiScanner = true },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isValidating,
+                border = BorderStroke(1.dp, accentColor()),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.QrCodeScanner,
+                    contentDescription = null,
+                    tint = accentColor(),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.credentials_scan_all),
+                    color = accentColor()
+                )
+            }
+
             // Coinmate requires separate Client ID
             if (needsClientId) {
                 OutlinedTextField(

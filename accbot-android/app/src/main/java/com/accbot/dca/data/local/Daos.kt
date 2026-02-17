@@ -175,6 +175,9 @@ interface TransactionDao {
     @Query("SELECT exchangeOrderId FROM transactions WHERE planId = :planId AND exchangeOrderId IS NOT NULL")
     suspend fun getExchangeOrderIdsByPlan(planId: Long): List<String>
 
+    @Query("SELECT MAX(executedAt) FROM transactions WHERE planId = :planId AND status = 'COMPLETED'")
+    suspend fun getLatestTransactionTimestamp(planId: Long): Long?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransaction(transaction: TransactionEntity): Long
 

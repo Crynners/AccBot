@@ -11,9 +11,11 @@ import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.DcaResult
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.TransactionStatus
+import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.domain.usecase.CalculateStrategyMultiplierUseCase
 import com.accbot.dca.exchange.ExchangeApi
 import com.accbot.dca.exchange.ExchangeApiFactory
+import com.accbot.dca.exchange.MinOrderSizeRepository
 import com.accbot.dca.R
 import com.accbot.dca.service.NotificationService
 import java.math.BigDecimal
@@ -38,15 +40,21 @@ class DcaWorker @AssistedInject constructor(
     private val notificationService: NotificationService,
     private val calculateStrategyMultiplier: CalculateStrategyMultiplierUseCase,
     private val userPreferences: UserPreferences,
-    private val exchangeApiFactory: ExchangeApiFactory
+    private val exchangeApiFactory: ExchangeApiFactory,
+    private val minOrderSizeRepository: MinOrderSizeRepository
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
         val forceRun = inputData.getBoolean(KEY_FORCE_RUN, false)
-        Log.d(TAG, "DcaWorker started (forceRun=$forceRun)")
+        val forcePlanId = inputData.getLong(KEY_PLAN_ID, -1L)
+        Log.d(TAG, "DcaWorker started (forceRun=$forceRun, forcePlanId=$forcePlanId)")
 
         try {
-            val enabledPlans = database.dcaPlanDao().getEnabledPlans()
+            val enabledPlans = if (forcePlanId > 0) {
+                listOfNotNull(database.dcaPlanDao().getPlanById(forcePlanId))
+            } else {
+                database.dcaPlanDao().getEnabledPlans()
+            }
 
             if (enabledPlans.isEmpty()) {
                 Log.d(TAG, "No enabled DCA plans")
@@ -86,6 +94,45 @@ class DcaWorker @AssistedInject constructor(
                         "Base: ${plan.amount}, Multiplier: ${strategyResult.multiplier}, " +
                         "Final: $purchaseAmount (${strategyResult.reason})")
 
+                // Check minimum order size
+                val minOrderSize = minOrderSizeRepository.getMinOrderSize(plan.exchange, plan.crypto, plan.fiat)
+                if (purchaseAmount < minOrderSize) {
+                    Log.w(TAG, "Plan ${plan.id}: purchaseAmount $purchaseAmount < minimum $minOrderSize, skipping")
+                    try {
+                        val transaction = TransactionEntity(
+                            planId = plan.id,
+                            exchange = plan.exchange,
+                            crypto = plan.crypto,
+                            fiat = plan.fiat,
+                            fiatAmount = purchaseAmount,
+                            cryptoAmount = BigDecimal.ZERO,
+                            price = BigDecimal.ZERO,
+                            fee = BigDecimal.ZERO,
+                            status = TransactionStatus.FAILED,
+                            errorMessage = "Amount $purchaseAmount ${plan.fiat} below minimum $minOrderSize ${plan.fiat}",
+                            executedAt = Instant.now()
+                        )
+                        database.transactionDao().insertTransaction(transaction)
+
+                        val nextExecutionTime = if (plan.cronExpression != null) {
+                            CronUtils.getNextExecution(plan.cronExpression, now)
+                                ?: now.plus(Duration.ofMinutes(plan.frequency.intervalMinutes.takeIf { it > 0 } ?: 1440))
+                        } else {
+                            now.plus(Duration.ofMinutes(plan.frequency.intervalMinutes))
+                        }
+                        database.dcaPlanDao().updateExecutionTime(plan.id, now, nextExecutionTime)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to save below-minimum transaction for plan ${plan.id}", e)
+                    }
+
+                    notificationService.showErrorNotification(
+                        context.getString(R.string.notification_dca_failed),
+                        context.getString(R.string.notification_dca_failed_text, plan.crypto,
+                            "Amount $purchaseAmount ${plan.fiat} below exchange minimum $minOrderSize ${plan.fiat}")
+                    )
+                    continue
+                }
+
                 // Execute DCA purchase
                 val api = exchangeApiFactory.create(credentials)
                 val result = api.marketBuy(plan.crypto, plan.fiat, purchaseAmount)
@@ -115,7 +162,12 @@ class DcaWorker @AssistedInject constructor(
 
                         // Update plan execution time
                         try {
-                            val nextExecutionTime = now.plus(Duration.ofMinutes(plan.frequency.intervalMinutes))
+                            val nextExecutionTime = if (plan.cronExpression != null) {
+                                CronUtils.getNextExecution(plan.cronExpression, now)
+                                    ?: now.plus(Duration.ofMinutes(plan.frequency.intervalMinutes.takeIf { it > 0 } ?: 1440))
+                            } else {
+                                now.plus(Duration.ofMinutes(plan.frequency.intervalMinutes))
+                            }
                             database.dcaPlanDao().updateExecutionTime(plan.id, now, nextExecutionTime)
                         } catch (e: Exception) {
                             Log.e(TAG, "Failed to update execution time for plan ${plan.id}", e)
@@ -132,7 +184,12 @@ class DcaWorker @AssistedInject constructor(
                         Log.d(TAG, "DCA purchase successful: ${result.transaction.cryptoAmount} ${plan.crypto}")
 
                         // Check remaining balance for low-balance warning
-                        checkLowBalance(api, plan.exchange.displayName, plan.fiat, plan.amount, plan.frequency.intervalMinutes)
+                        val effectiveInterval = if (plan.cronExpression != null) {
+                            CronUtils.getIntervalMinutesEstimate(plan.cronExpression) ?: 1440L
+                        } else {
+                            plan.frequency.intervalMinutes
+                        }
+                        checkLowBalance(api, plan.exchange.displayName, plan.fiat, plan.amount, effectiveInterval)
                     }
 
                     is DcaResult.Error -> {
@@ -163,7 +220,12 @@ class DcaWorker @AssistedInject constructor(
                                 )
                                 database.transactionDao().insertTransaction(transaction)
 
-                                val nextExecutionTime = now.plus(Duration.ofMinutes(plan.frequency.intervalMinutes))
+                                val nextExecutionTime = if (plan.cronExpression != null) {
+                                    CronUtils.getNextExecution(plan.cronExpression, now)
+                                        ?: now.plus(Duration.ofMinutes(plan.frequency.intervalMinutes.takeIf { it > 0 } ?: 1440))
+                                } else {
+                                    now.plus(Duration.ofMinutes(plan.frequency.intervalMinutes))
+                                }
                                 database.dcaPlanDao().updateExecutionTime(plan.id, now, nextExecutionTime)
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to save failed transaction for plan ${plan.id}", e)
@@ -216,6 +278,7 @@ class DcaWorker @AssistedInject constructor(
     companion object {
         private const val TAG = "DcaWorker"
         private const val KEY_FORCE_RUN = "forceRun"
+        private const val KEY_PLAN_ID = "planId"
         const val WORK_NAME = "dca_periodic_work"
 
         /**
@@ -271,6 +334,30 @@ class DcaWorker @AssistedInject constructor(
                 .enqueue(oneTimeWorkRequest)
 
             Log.d(TAG, "DCA one-time work enqueued (forceRun=true)")
+        }
+
+        /**
+         * Run a single DCA plan immediately (one-time), bypassing nextExecutionAt check
+         */
+        fun runPlan(context: Context, planId: Long) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val inputData = Data.Builder()
+                .putBoolean(KEY_FORCE_RUN, true)
+                .putLong(KEY_PLAN_ID, planId)
+                .build()
+
+            val oneTimeWorkRequest = OneTimeWorkRequestBuilder<DcaWorker>()
+                .setConstraints(constraints)
+                .setInputData(inputData)
+                .build()
+
+            WorkManager.getInstance(context)
+                .enqueue(oneTimeWorkRequest)
+
+            Log.d(TAG, "DCA one-time work enqueued for plan $planId (forceRun=true)")
         }
 
         /**
