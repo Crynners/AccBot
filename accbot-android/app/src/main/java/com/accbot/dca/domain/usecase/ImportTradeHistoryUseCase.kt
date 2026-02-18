@@ -38,7 +38,7 @@ class ImportTradeHistoryUseCase @Inject constructor(
             val allTrades = mutableListOf<com.accbot.dca.domain.model.HistoricalTrade>()
             var cursor = sinceInstant
             var page = 0
-            val maxPages = 50
+            val maxPages = 10_000  // Safety cap only; pagination stops naturally via hasMore
 
             do {
                 page++

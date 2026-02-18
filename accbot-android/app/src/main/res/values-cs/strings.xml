@@ -147,6 +147,8 @@
     <string name="history_empty_filtered_description">Zkuste upravit filtry</string>
     <string name="history_delete_transaction">Transakce smazána</string>
     <string name="history_undo">Zpět</string>
+    <string name="history_delete_confirm_title">Smazat transakci</string>
+    <string name="history_delete_confirm_text">Opravdu chcete smazat tuto transakci?</string>
     <string name="history_sort">Řadit</string>
     <string name="history_sort_date_newest">Datum (nejnovější)</string>
     <string name="history_sort_date_oldest">Datum (nejstarší)</string>
@@ -206,6 +208,11 @@
     <string name="plan_details_balance">Zůstatek na burze</string>
     <string name="plan_details_estimated_duration">Odhadovaná doba</string>
     <string name="plan_details_days_remaining">~%1$d dní (%2$d nákupů)</string>
+    <string name="plan_details_delete_transactions_title">Smazat všechny transakce</string>
+    <string name="plan_details_delete_transactions_text">Trvale se smaže všech %1$d transakcí tohoto plánu. Tuto akci nelze vrátit zpět.\n\nPro potvrzení zadejte počet transakcí:</string>
+    <string name="plan_details_delete_transactions_hint">Zadejte %1$d pro potvrzení</string>
+    <string name="plan_details_delete_transactions_button">Smazat všechny transakce</string>
+    <string name="plan_details_delete_transactions_success">%1$d transakcí smazáno</string>
 
     <!-- Edit Plan Screen -->
     <string name="edit_plan_title">Upravit plán</string>
@@ -462,6 +469,10 @@
     <string name="qr_assign_to_fields">Přiřaďte text k polím</string>
     <string name="qr_tap_field_then_text">Vyberte pole a klepněte na text</string>
     <string name="qr_done_count">Hotovo (%1$d/%2$d)</string>
+    <string name="qr_now_assign">Nyní přiřaďte: %1$s</string>
+    <string name="qr_tap_to_capture">Klepněte ● pro zachycení textu</string>
+    <string name="qr_frozen_hint">Text zachycen — vyberte níže</string>
+    <string name="qr_all_fields_assigned">Všechna pole přiřazena! Klepněte na Hotovo.</string>
 
     <!-- Biometric Lock -->
     <string name="biometric_lock_title">Zámek aplikace</string>

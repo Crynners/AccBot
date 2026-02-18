@@ -216,6 +216,14 @@ class PlanDetailsViewModel @Inject constructor(
         }
     }
 
+    fun deleteAllTransactions(onDeleted: (Int) -> Unit) {
+        viewModelScope.launch {
+            val count = _uiState.value.transactions.size
+            transactionDao.deleteTransactionsByPlanId(planId)
+            onDeleted(count)
+        }
+    }
+
     fun deletePlan(onDeleted: () -> Unit) {
         viewModelScope.launch {
             try {

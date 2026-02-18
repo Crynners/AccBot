@@ -190,6 +190,9 @@ interface TransactionDao {
     @Delete
     suspend fun deleteTransaction(transaction: TransactionEntity)
 
+    @Query("DELETE FROM transactions WHERE planId = :planId")
+    suspend fun deleteTransactionsByPlanId(planId: Long)
+
     @Query("""
         SELECT crypto || '/' || fiat as pair, crypto, fiat,
                CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) as totalCrypto,
@@ -200,6 +203,17 @@ interface TransactionDao {
         ORDER BY SUM(CAST(fiatAmount AS REAL)) DESC
     """)
     suspend fun getHoldingsByPair(): List<CryptoFiatHolding>
+
+    @Query("""
+        SELECT crypto || '/' || fiat as pair, crypto, fiat,
+               CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) as totalCrypto,
+               CAST(COALESCE(SUM(CAST(fiatAmount AS REAL)), 0) AS TEXT) as totalFiat,
+               COUNT(*) as transactionCount
+        FROM transactions WHERE status = 'COMPLETED'
+        GROUP BY crypto, fiat
+        ORDER BY SUM(CAST(fiatAmount AS REAL)) DESC
+    """)
+    fun getHoldingsByPairFlow(): Flow<List<CryptoFiatHolding>>
 
     @Query("SELECT MIN(executedAt) FROM transactions WHERE status = 'COMPLETED' AND crypto = :crypto AND fiat = :fiat")
     suspend fun getEarliestTransactionDate(crypto: String, fiat: String): Long?

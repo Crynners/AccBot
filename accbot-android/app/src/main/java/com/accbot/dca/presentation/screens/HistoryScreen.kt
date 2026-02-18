@@ -31,7 +31,6 @@ import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.NumberFormatters
-import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileWriter
 import java.time.Instant
@@ -47,11 +46,8 @@ fun HistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
     var showSortMenu by remember { mutableStateOf(false) }
-
-    val deleteMessage = stringResource(R.string.history_delete_transaction)
-    val undoLabel = stringResource(R.string.history_undo)
+    var transactionToDelete by remember { mutableStateOf<TransactionEntity?>(null) }
 
     // Handle export data - write to file and share (UI layer handles Context)
     LaunchedEffect(uiState.exportData) {
@@ -109,6 +105,30 @@ fun HistoryScreen(
         )
     }
 
+    // Delete transaction confirmation dialog
+    transactionToDelete?.let { transaction ->
+        AlertDialog(
+            onDismissRequest = { transactionToDelete = null },
+            title = { Text(stringResource(R.string.history_delete_confirm_title)) },
+            text = { Text(stringResource(R.string.history_delete_confirm_text)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteTransaction(transaction)
+                        transactionToDelete = null
+                    }
+                ) {
+                    Text(stringResource(R.string.common_delete), color = Error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { transactionToDelete = null }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+
     val hasActiveFilter = uiState.filter.crypto != null ||
             uiState.filter.exchange != null ||
             uiState.filter.status != null ||
@@ -116,7 +136,6 @@ fun HistoryScreen(
             uiState.filter.dateTo != null
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.history_title)) },
@@ -212,12 +231,8 @@ fun HistoryScreen(
                                 onNavigateToTransactionDetails?.invoke(transaction.id)
                             },
                             onDelete = {
-                                viewModel.deleteTransaction(transaction)
-                            },
-                            snackbarHostState = snackbarHostState,
-                            deleteMessage = deleteMessage,
-                            undoLabel = undoLabel,
-                            onUndo = { viewModel.undoDelete() }
+                                transactionToDelete = transaction
+                            }
                         )
                     }
 
@@ -359,28 +374,13 @@ private fun ActiveFilterChips(
 private fun SwipeableTransactionCard(
     transaction: TransactionEntity,
     onClick: () -> Unit,
-    onDelete: () -> Unit,
-    snackbarHostState: SnackbarHostState,
-    deleteMessage: String,
-    undoLabel: String,
-    onUndo: () -> Unit
+    onDelete: () -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             if (value == SwipeToDismissBoxValue.EndToStart) {
                 onDelete()
-                coroutineScope.launch {
-                    val result = snackbarHostState.showSnackbar(
-                        message = deleteMessage,
-                        actionLabel = undoLabel,
-                        duration = SnackbarDuration.Short
-                    )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        onUndo()
-                    }
-                }
-                true
+                false // Return false to snap the card back; dialog handles confirmation
             } else {
                 false
             }

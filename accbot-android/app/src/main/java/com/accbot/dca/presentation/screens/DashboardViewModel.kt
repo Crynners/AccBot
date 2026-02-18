@@ -8,6 +8,7 @@ import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.ExchangeBalanceDao
 import com.accbot.dca.data.local.ExchangeBalanceEntity
+import com.accbot.dca.data.local.CryptoFiatHolding
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.data.remote.MarketDataService
@@ -89,7 +90,12 @@ class DashboardViewModel @Inject constructor(
             val isSandbox = userPreferences.isSandboxMode()
             _uiState.update { it.copy(isLoading = true, isSandboxMode = isSandbox) }
 
-            dcaPlanDao.getAllPlans().collect { planEntities ->
+            combine(
+                dcaPlanDao.getAllPlans(),
+                transactionDao.getHoldingsByPairFlow()
+            ) { planEntities, dbHoldings ->
+                Pair(planEntities, dbHoldings)
+            }.collect { (planEntities, dbHoldings) ->
                 val plans = planEntities.map { entity ->
                     DcaPlan(
                         id = entity.id,
@@ -109,13 +115,11 @@ class DashboardViewModel @Inject constructor(
                     )
                 }
 
-                // Load holdings by pair
-                val holdings = loadHoldings()
-                // Auto-manage service based on enabled plans
+                val holdings = mapHoldings(dbHoldings)
+
                 val hasEnabledPlans = plans.any { it.isEnabled }
                 ensureServiceState(hasEnabledPlans)
 
-                // Wrap plans with balance info (initially without balance)
                 val plansWithBalance = plans.map { DcaPlanWithBalance(plan = it) }
 
                 _uiState.update { state ->
@@ -126,7 +130,6 @@ class DashboardViewModel @Inject constructor(
                     )
                 }
 
-                // Fetch prices and balances in background (cancel previous jobs)
                 priceJob?.cancel()
                 priceJob = fetchPricesForHoldings(holdings)
                 balanceJob?.cancel()
@@ -135,9 +138,8 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    private suspend fun loadHoldings(): List<CryptoHoldingWithPrice> {
+    private fun mapHoldings(dbHoldings: List<CryptoFiatHolding>): List<CryptoHoldingWithPrice> {
         return try {
-            val dbHoldings = transactionDao.getHoldingsByPair()
             dbHoldings.map { holding ->
                 val totalCrypto = try { BigDecimal(holding.totalCrypto) } catch (_: Exception) { BigDecimal.ZERO }
                 val totalFiat = try { BigDecimal(holding.totalFiat) } catch (_: Exception) { BigDecimal.ZERO }
@@ -159,7 +161,7 @@ class DashboardViewModel @Inject constructor(
                 )
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading holdings", e)
+            Log.e(TAG, "Error mapping holdings", e)
             emptyList()
         }
     }

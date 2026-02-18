@@ -146,6 +146,8 @@
     <string name="history_empty_filtered_description">Try adjusting your filters</string>
     <string name="history_delete_transaction">Transaction deleted</string>
     <string name="history_undo">Undo</string>
+    <string name="history_delete_confirm_title">Delete Transaction</string>
+    <string name="history_delete_confirm_text">Are you sure you want to delete this transaction?</string>
     <string name="history_sort">Sort</string>
     <string name="history_sort_date_newest">Date (newest first)</string>
     <string name="history_sort_date_oldest">Date (oldest first)</string>
@@ -205,6 +207,11 @@
     <string name="plan_details_balance">Exchange Balance</string>
     <string name="plan_details_estimated_duration">Estimated Duration</string>
     <string name="plan_details_days_remaining">~%1$d days (%2$d executions)</string>
+    <string name="plan_details_delete_transactions_title">Delete All Transactions</string>
+    <string name="plan_details_delete_transactions_text">This will permanently delete all %1$d transactions for this plan. This action cannot be undone.\n\nTo confirm, type the number of transactions below:</string>
+    <string name="plan_details_delete_transactions_hint">Type %1$d to confirm</string>
+    <string name="plan_details_delete_transactions_button">Delete All Transactions</string>
+    <string name="plan_details_delete_transactions_success">%1$d transactions deleted</string>
 
     <!-- Edit Plan Screen -->
     <string name="edit_plan_title">Edit Plan</string>
@@ -460,6 +467,10 @@
     <string name="qr_assign_to_fields">Assign text to fields</string>
     <string name="qr_tap_field_then_text">Select a field, then tap detected text</string>
     <string name="qr_done_count">Done (%1$d/%2$d)</string>
+    <string name="qr_now_assign">Now assign: %1$s</string>
+    <string name="qr_tap_to_capture">Tap ● to capture text</string>
+    <string name="qr_frozen_hint">Text captured — select below</string>
+    <string name="qr_all_fields_assigned">All fields assigned! Tap Done to confirm.</string>
 
     <!-- Biometric Lock -->
     <string name="biometric_lock_title">App Lock</string>
