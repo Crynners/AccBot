@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,6 +27,9 @@ import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.domain.model.supportsImport
 import com.accbot.dca.presentation.components.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -42,8 +46,13 @@ fun PlanDetailsScreen(
     viewModel: PlanDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showStrategyInfo by remember { mutableStateOf(false) }
+    var showDeleteTransactionsDialog by remember { mutableStateOf(false) }
+    var deleteTransactionsConfirmText by remember { mutableStateOf("") }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(planId) {
         viewModel.loadPlan(planId)
@@ -69,6 +78,62 @@ fun PlanDetailsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+
+    // Delete all transactions confirmation dialog
+    if (showDeleteTransactionsDialog) {
+        val txCount = uiState.transactions.size
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteTransactionsDialog = false
+                deleteTransactionsConfirmText = ""
+            },
+            title = { Text(stringResource(R.string.plan_details_delete_transactions_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.plan_details_delete_transactions_text, txCount))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = deleteTransactionsConfirmText,
+                        onValueChange = { deleteTransactionsConfirmText = it },
+                        label = { Text(stringResource(R.string.plan_details_delete_transactions_hint, txCount)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAllTransactions { count ->
+                            showDeleteTransactionsDialog = false
+                            deleteTransactionsConfirmText = ""
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = context.getString(R.string.plan_details_delete_transactions_success, count)
+                                )
+                            }
+                        }
+                    },
+                    enabled = deleteTransactionsConfirmText == txCount.toString()
+                ) {
+                    Text(
+                        stringResource(R.string.plan_details_delete_transactions_button),
+                        color = if (deleteTransactionsConfirmText == txCount.toString()) Error
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteTransactionsDialog = false
+                    deleteTransactionsConfirmText = ""
+                }) {
                     Text(stringResource(R.string.common_cancel))
                 }
             }
@@ -110,6 +175,7 @@ fun PlanDetailsScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             AccBotTopAppBar(
                 title = stringResource(R.string.plan_details_title),
@@ -549,6 +615,28 @@ fun PlanDetailsScreen(
                                 title = stringResource(R.string.plan_details_no_transactions_title),
                                 description = stringResource(R.string.plan_details_no_transactions_desc)
                             )
+                        }
+                    }
+
+                    // Delete all transactions button
+                    if (uiState.transactions.isNotEmpty()) {
+                        item {
+                            OutlinedButton(
+                                onClick = { showDeleteTransactionsDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Error
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Error.copy(alpha = 0.5f))
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteSweep,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.plan_details_delete_transactions_button))
+                            }
                         }
                     }
 

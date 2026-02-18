@@ -9,8 +9,6 @@ import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.usecase.CsvExportResult
 import com.accbot.dca.domain.usecase.ExportTransactionsToCsvUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -73,9 +71,6 @@ class HistoryViewModel @Inject constructor(
 
     private val allTransactions = MutableStateFlow<List<TransactionEntity>>(emptyList())
 
-    private var recentlyDeletedTransaction: TransactionEntity? = null
-    private var deleteJob: Job? = null
-
     init {
         loadTransactions()
         loadFilterOptions()
@@ -128,36 +123,9 @@ class HistoryViewModel @Inject constructor(
     }
 
     fun deleteTransaction(transaction: TransactionEntity) {
-        // Cancel any pending deletion
-        deleteJob?.cancel()
-        recentlyDeletedTransaction = transaction
-
-        // Remove from local list immediately
-        allTransactions.value = allTransactions.value.filter { it.id != transaction.id }
-        applyFilter()
-
-        // Schedule actual DB deletion after delay
-        deleteJob = viewModelScope.launch {
-            delay(5000)
+        viewModelScope.launch {
             transactionDao.deleteTransaction(transaction)
-            recentlyDeletedTransaction = null
         }
-    }
-
-    fun undoDelete() {
-        deleteJob?.cancel()
-        deleteJob = null
-        val transaction = recentlyDeletedTransaction ?: return
-        recentlyDeletedTransaction = null
-
-        // Re-insert into local list
-        allTransactions.value = (allTransactions.value + transaction)
-            .sortedByDescending { it.executedAt }
-        applyFilter()
-    }
-
-    fun clearSnackbarMessage() {
-        _uiState.update { it.copy(snackbarMessage = null) }
     }
 
     private fun applyFilter() {
