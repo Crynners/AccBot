@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- Solana - Purple circle with S -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#9945FF"/>
+    <!-- S letter -->
+    <path
+        android:pathData="M78,48C78,41 72,36 64,36C56,36 50,41 50,48C50,55 56,58 64,60C72,62 78,65 78,72C78,79 72,84 64,84C56,84 50,79 50,72"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+</vector>

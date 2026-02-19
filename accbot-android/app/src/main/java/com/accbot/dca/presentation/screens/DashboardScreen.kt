@@ -27,6 +27,7 @@ import com.accbot.dca.R
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.util.CronUtils
+import com.accbot.dca.presentation.components.CryptoIcon
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.accentColor
@@ -160,7 +161,7 @@ fun DashboardScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(80.dp))
+                Spacer(modifier = Modifier.height(56.dp))
             }
         }
     }
@@ -452,20 +453,7 @@ private fun DcaPlanCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = plan.crypto.take(1),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = successCol
-                    )
-                }
+                CryptoIcon(crypto = plan.crypto)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(

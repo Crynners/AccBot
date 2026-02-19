@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- Euro - EU blue circle with euro sign -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#003399"/>
+    <!-- Euro C shape -->
+    <path
+        android:pathData="M82,44C77,37 70,34 62,34C50,34 40,44 40,58C40,72 50,82 62,82C70,82 77,79 82,72"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- Euro horizontal bars -->
+    <path
+        android:pathData="M36,54L68,54"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M36,66L68,66"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+</vector>

@@ -1,0 +1,29 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- Kraken - Purple circle with K -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#5741D9"/>
+    <!-- K letter stylized -->
+    <path
+        android:pathData="M48,40 L48,88"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M48,64 L72,40"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M56,56 L80,88"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+</vector>

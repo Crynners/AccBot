@@ -1,5 +1,7 @@
 package com.accbot.dca.presentation.components
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -128,11 +132,33 @@ fun PlanCard(
     }
 }
 
+@DrawableRes
+fun getCryptoIconRes(crypto: String): Int? = when (crypto.uppercase()) {
+    "BTC" -> R.drawable.ic_crypto_btc
+    "ETH" -> R.drawable.ic_crypto_eth
+    "SOL" -> R.drawable.ic_crypto_sol
+    "LTC" -> R.drawable.ic_crypto_ltc
+    "ADA" -> R.drawable.ic_crypto_ada
+    "DOT" -> R.drawable.ic_crypto_dot
+    else -> null
+}
+
+@DrawableRes
+fun getFiatIconRes(fiat: String): Int? = when (fiat.uppercase()) {
+    "EUR" -> R.drawable.ic_fiat_eur
+    "USD" -> R.drawable.ic_fiat_usd
+    "CZK" -> R.drawable.ic_fiat_czk
+    "GBP" -> R.drawable.ic_fiat_gbp
+    "USDT" -> R.drawable.ic_fiat_usdt
+    else -> null
+}
+
 @Composable
 fun CryptoIcon(
     crypto: String,
     size: Int = 48
 ) {
+    val iconRes = getCryptoIconRes(crypto)
     Box(
         modifier = Modifier
             .size(size.dp)
@@ -140,12 +166,21 @@ fun CryptoIcon(
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = crypto.take(1),
-            fontWeight = FontWeight.Bold,
-            fontSize = (size / 2.4).sp,
-            color = successColor()
-        )
+        if (iconRes != null) {
+            Image(
+                painter = painterResource(iconRes),
+                contentDescription = crypto,
+                modifier = Modifier.size((size * 0.75f).dp),
+                contentScale = ContentScale.Fit
+            )
+        } else {
+            Text(
+                text = crypto.take(1),
+                fontWeight = FontWeight.Bold,
+                fontSize = (size / 2.4).sp,
+                color = successColor()
+            )
+        }
     }
 }
 
@@ -262,23 +297,11 @@ fun ExchangeCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            if (isConnected) successCol.copy(alpha = 0.15f)
-                            else MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = exchange.displayName.first().toString(),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = if (isConnected) successCol else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                ExchangeAvatar(
+                    exchange = exchange,
+                    size = 48.dp,
+                    isConnected = isConnected
+                )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(

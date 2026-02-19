@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- Coinmate - Blue circle with "CM" text style -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#1A73E8"/>
+    <!-- C letter -->
+    <path
+        android:pathData="M55,45 C48,45 43,50 43,58 C43,66 48,71 55,71 C59,71 62,69 64,66"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- M letter -->
+    <path
+        android:pathData="M68,71 L68,45 L76,58 L84,45 L84,71"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+</vector>

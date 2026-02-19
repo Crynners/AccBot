@@ -1,0 +1,36 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- Czech Koruna - Blue circle with Kc -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#11457E"/>
+    <!-- K letter -->
+    <path
+        android:pathData="M42,36L42,86"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M42,62L62,36"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M42,62L62,86"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- c letter (smaller, lowercase) -->
+    <path
+        android:pathData="M84,58C81,55 78,54 74,54C68,54 64,59 64,66C64,73 68,78 74,78C78,78 81,77 84,74"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+</vector>

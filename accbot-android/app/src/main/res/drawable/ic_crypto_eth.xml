@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- Ethereum - Blue-purple circle with diamond shape -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#627EEA"/>
+    <!-- Diamond top -->
+    <path
+        android:pathData="M64,28L42,64L64,54L86,64Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.9"/>
+    <!-- Diamond bottom -->
+    <path
+        android:pathData="M64,100L42,64L64,74L86,64Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.6"/>
+</vector>

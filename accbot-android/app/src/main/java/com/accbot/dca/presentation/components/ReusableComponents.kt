@@ -1,5 +1,6 @@
 package com.accbot.dca.presentation.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -44,6 +47,7 @@ fun SelectableChip(
     modifier: Modifier = Modifier,
     selectedColor: Color = successColor(),
     unselectedColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null
 ) {
     val backgroundColor = if (selected) selectedColor else unselectedColor
@@ -67,6 +71,7 @@ fun SelectableChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            leadingIcon?.invoke()
             Text(
                 text = text,
                 color = contentColor,
@@ -100,7 +105,7 @@ fun IconBadge(
 }
 
 /**
- * Exchange avatar component displaying the first letter of the exchange name.
+ * Exchange avatar component displaying the exchange logo.
  * Reusable across exchange selection, exchange cards, and instructions screens.
  */
 @Composable
@@ -121,11 +126,11 @@ fun ExchangeAvatar(
             accentCol.copy(alpha = 0.15f)
         }
     ) {
-        Text(
-            text = exchange.displayName.first().toString(),
-            fontWeight = FontWeight.Bold,
-            fontSize = (size.value / 2.4).sp,
-            color = if (isConnected) successCol else accentCol
+        Image(
+            painter = painterResource(exchange.logoRes),
+            contentDescription = exchange.displayName,
+            modifier = Modifier.size(size * 0.6f),
+            contentScale = ContentScale.Fit
         )
     }
 }

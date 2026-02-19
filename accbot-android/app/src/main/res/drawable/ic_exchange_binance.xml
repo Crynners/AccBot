@@ -1,0 +1,60 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- Binance - Yellow/gold diamond logo on dark background -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#F3BA2F"/>
+    <!-- Central diamond -->
+    <path
+        android:pathData="M64,44 L74,54 L64,64 L54,54 Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Top diamond -->
+    <path
+        android:pathData="M64,30 L70,36 L64,42 L58,36 Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Bottom diamond -->
+    <path
+        android:pathData="M64,86 L70,92 L64,98 L58,92 Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Left diamond -->
+    <path
+        android:pathData="M36,58 L42,64 L36,70 L30,64 Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Right diamond -->
+    <path
+        android:pathData="M92,58 L98,64 L92,70 L86,64 Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Top-left connector -->
+    <path
+        android:pathData="M48,48 L54,42 L58,46 L52,52 Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Top-right connector -->
+    <path
+        android:pathData="M80,48 L74,42 L70,46 L76,52 Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Bottom-left connector -->
+    <path
+        android:pathData="M48,80 L54,86 L58,82 L52,76 Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Bottom-right connector -->
+    <path
+        android:pathData="M80,80 L74,86 L70,82 L76,76 Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Left connectors -->
+    <path
+        android:pathData="M42,54 L48,48 L52,52 L46,58 Z"
+        android:fillColor="#FFFFFF"/>
+    <path
+        android:pathData="M42,74 L48,80 L52,76 L46,70 Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Right connectors -->
+    <path
+        android:pathData="M86,54 L80,48 L76,52 L82,58 Z"
+        android:fillColor="#FFFFFF"/>
+    <path
+        android:pathData="M86,74 L80,80 L76,76 L82,70 Z"
+        android:fillColor="#FFFFFF"/>
+</vector>

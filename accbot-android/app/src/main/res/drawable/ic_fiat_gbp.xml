@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- British Pound - Purple circle with pound sign -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#4A235A"/>
+    <!-- Pound curve top -->
+    <path
+        android:pathData="M78,40C74,34 68,32 62,34C56,36 52,42 52,50L52,72C52,78 50,82 46,86L82,86"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+    <!-- Horizontal bar -->
+    <path
+        android:pathData="M42,62L72,62"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+</vector>
