@@ -543,6 +543,74 @@
     <string name="cron_example_monthly">0 9 1 * * = 1. každého měsíce v 9:00</string>
     <string name="cron_example_twice_daily">0 9,21 * * * = Každý den v 9:00 a 21:00</string>
 
+    <!-- Exchange Instructions - Coinmate -->
+    <string name="exchange_instructions_coinmate_1">Přejděte na coinmate.io a přihlaste se</string>
+    <string name="exchange_instructions_coinmate_2">Přejděte do Nastavení > API</string>
+    <string name="exchange_instructions_coinmate_3">Poznamenejte si Client ID (zobrazeno nahoře)</string>
+    <string name="exchange_instructions_coinmate_4">Klikněte na \'Vytvořit nový API klíč\'</string>
+    <string name="exchange_instructions_coinmate_5">Povolte pouze oprávnění \'Obchodování\'</string>
+    <string name="exchange_instructions_coinmate_6">Zkopírujte Client ID, veřejný klíč a soukromý klíč</string>
+
+    <!-- Exchange Instructions - Binance -->
+    <string name="exchange_instructions_binance_1">Přejděte na binance.com a přihlaste se</string>
+    <string name="exchange_instructions_binance_2">Přejděte do Správy API</string>
+    <string name="exchange_instructions_binance_3">Vytvořte nový API klíč</string>
+    <string name="exchange_instructions_binance_4">Povolte pouze \'Spot &amp; Margin obchodování\'</string>
+    <string name="exchange_instructions_binance_5">Pokud možno, omezte na vaši IP adresu</string>
+    <string name="exchange_instructions_binance_6">Zkopírujte API klíč a tajný klíč</string>
+    <string name="exchange_instructions_binance_sandbox_1">Otevřete testnet.binance.vision</string>
+    <string name="exchange_instructions_binance_sandbox_2">Přihlaste se pomocí GitHub účtu</string>
+    <string name="exchange_instructions_binance_sandbox_3">Klikněte na \'Generate HMAC_SHA256 Key\'</string>
+    <string name="exchange_instructions_binance_sandbox_4">Zkopírujte API klíč a tajný klíč</string>
+    <string name="exchange_instructions_binance_sandbox_5">Testovací prostředky jsou poskytovány automaticky</string>
+
+    <!-- Exchange Instructions - Kraken -->
+    <string name="exchange_instructions_kraken_1">Přejděte na kraken.com a přihlaste se</string>
+    <string name="exchange_instructions_kraken_2">Přejděte do Nastavení > API</string>
+    <string name="exchange_instructions_kraken_3">Vytvořte nový API klíč</string>
+    <string name="exchange_instructions_kraken_4">Povolte pouze \'Vytvářet a upravovat objednávky\'</string>
+    <string name="exchange_instructions_kraken_5">Zkopírujte API klíč a soukromý klíč</string>
+
+    <!-- Exchange Instructions - KuCoin -->
+    <string name="exchange_instructions_kucoin_1">Přejděte na kucoin.com a přihlaste se</string>
+    <string name="exchange_instructions_kucoin_2">Přejděte do Správy API</string>
+    <string name="exchange_instructions_kucoin_3">Vytvořte nový API klíč s heslem</string>
+    <string name="exchange_instructions_kucoin_4">Povolte pouze oprávnění \'Obchodování\'</string>
+    <string name="exchange_instructions_kucoin_5">Zkopírujte API klíč, tajný klíč a heslo</string>
+    <string name="exchange_instructions_kucoin_sandbox_1">Otevřete sandbox.kucoin.com</string>
+    <string name="exchange_instructions_kucoin_sandbox_2">Zaregistrujte nový účet (oddělený od produkčního)</string>
+    <string name="exchange_instructions_kucoin_sandbox_3">Přejděte do Správy API</string>
+    <string name="exchange_instructions_kucoin_sandbox_4">Vytvořte nový API klíč s heslem</string>
+    <string name="exchange_instructions_kucoin_sandbox_5">Povolte oprávnění \'Obchodování\'</string>
+    <string name="exchange_instructions_kucoin_sandbox_6">Zkopírujte API klíč, tajný klíč a heslo</string>
+
+    <!-- Exchange Instructions - Bitfinex -->
+    <string name="exchange_instructions_bitfinex_1">Přejděte na bitfinex.com a přihlaste se</string>
+    <string name="exchange_instructions_bitfinex_2">Přejděte do Účet > API klíče</string>
+    <string name="exchange_instructions_bitfinex_3">Vytvořte nový API klíč</string>
+    <string name="exchange_instructions_bitfinex_4">Povolte pouze oprávnění \'Objednávky\'</string>
+    <string name="exchange_instructions_bitfinex_5">Zkopírujte API klíč a tajný klíč</string>
+
+    <!-- Exchange Instructions - Huobi -->
+    <string name="exchange_instructions_huobi_1">Přejděte na huobi.com a přihlaste se</string>
+    <string name="exchange_instructions_huobi_2">Přejděte do Správy API</string>
+    <string name="exchange_instructions_huobi_3">Vytvořte nový API klíč</string>
+    <string name="exchange_instructions_huobi_4">Povolte pouze oprávnění \'Obchodování\'</string>
+    <string name="exchange_instructions_huobi_5">Zkopírujte přístupový klíč a tajný klíč</string>
+
+    <!-- Exchange Instructions - Coinbase -->
+    <string name="exchange_instructions_coinbase_1">Přejděte na coinbase.com a přihlaste se</string>
+    <string name="exchange_instructions_coinbase_2">Přejděte do Nastavení > API</string>
+    <string name="exchange_instructions_coinbase_3">Vytvořte nový API klíč</string>
+    <string name="exchange_instructions_coinbase_4">Povolte pouze oprávnění \'Obchodování\'</string>
+    <string name="exchange_instructions_coinbase_5">Zkopírujte API klíč a tajný klíč</string>
+    <string name="exchange_instructions_coinbase_sandbox_1">Otevřete Coinbase Exchange Sandbox</string>
+    <string name="exchange_instructions_coinbase_sandbox_2">Zaregistrujte sandbox účet</string>
+    <string name="exchange_instructions_coinbase_sandbox_3">Přejděte do Nastavení > API</string>
+    <string name="exchange_instructions_coinbase_sandbox_4">Vytvořte nový API klíč</string>
+    <string name="exchange_instructions_coinbase_sandbox_5">Vyberte oprávnění \'Zobrazení\' a \'Obchodování\'</string>
+    <string name="exchange_instructions_coinbase_sandbox_6">Zkopírujte API klíč a tajný klíč</string>
+
     <!-- Accessibility -->
     <string name="a11y_retry">Opakovat</string>
 </resources>

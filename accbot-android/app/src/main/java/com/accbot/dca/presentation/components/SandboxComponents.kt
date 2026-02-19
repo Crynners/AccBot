@@ -94,14 +94,14 @@ fun SandboxCredentialsInfoCard(
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            instructions.steps.forEachIndexed { index, step ->
+            instructions.steps.forEachIndexed { index, stepResId ->
                 Row {
                     Text(
                         "${index + 1}.",
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.width(24.dp)
                     )
-                    Text(step, style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(stepResId), style = MaterialTheme.typography.bodySmall)
                 }
             }
 

@@ -1,6 +1,7 @@
 package com.accbot.dca.presentation.screens.exchanges
 
 import androidx.annotation.StringRes
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.accbot.dca.R
@@ -32,6 +33,7 @@ enum class ExchangeSetupStep(@StringRes val titleRes: Int) {
 data class AddExchangeUiState(
     val currentStep: ExchangeSetupStep = ExchangeSetupStep.SELECTION,
     val selectedExchange: Exchange? = null,
+    val preSelectedExchange: Boolean = false,
     val clientId: String = "",
     val apiKey: String = "",
     val apiSecret: String = "",
@@ -46,7 +48,8 @@ data class AddExchangeUiState(
 class AddExchangeViewModel @Inject constructor(
     private val credentialsStore: CredentialsStore,
     private val validateAndSaveCredentialsUseCase: ValidateAndSaveCredentialsUseCase,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddExchangeUiState())
@@ -54,6 +57,16 @@ class AddExchangeViewModel @Inject constructor(
 
     init {
         _uiState.update { it.copy(isSandboxMode = userPreferences.isSandboxMode()) }
+
+        // If exchange was passed via navigation, auto-select it
+        val exchangeName = savedStateHandle.get<String>("exchange")
+        if (exchangeName != null) {
+            val exchange = Exchange.entries.find { it.name == exchangeName }
+            if (exchange != null) {
+                selectExchange(exchange)
+                _uiState.update { it.copy(preSelectedExchange = true) }
+            }
+        }
     }
 
     fun selectExchange(exchange: Exchange) {
@@ -127,17 +140,23 @@ class AddExchangeViewModel @Inject constructor(
         }
     }
 
-    fun goBack() {
-        val currentStep = _uiState.value.currentStep
-        val previousStep = when (currentStep) {
+    /**
+     * Returns true if the caller should pop back (navigate away from this screen).
+     */
+    fun goBack(): Boolean {
+        val state = _uiState.value
+        // If pre-selected and on INSTRUCTIONS, go back to previous screen entirely
+        if (state.preSelectedExchange && state.currentStep == ExchangeSetupStep.INSTRUCTIONS) {
+            return true
+        }
+        val previousStep = when (state.currentStep) {
             ExchangeSetupStep.INSTRUCTIONS -> ExchangeSetupStep.SELECTION
             ExchangeSetupStep.CREDENTIALS -> ExchangeSetupStep.INSTRUCTIONS
             ExchangeSetupStep.SUCCESS -> ExchangeSetupStep.CREDENTIALS
-            ExchangeSetupStep.SELECTION -> ExchangeSetupStep.SELECTION
+            ExchangeSetupStep.SELECTION -> return true
         }
-        if (currentStep != ExchangeSetupStep.SELECTION) {
-            _uiState.update { it.copy(currentStep = previousStep, error = null) }
-        }
+        _uiState.update { it.copy(currentStep = previousStep, error = null) }
+        return false
     }
 
     fun getAvailableExchanges(): List<Exchange> {

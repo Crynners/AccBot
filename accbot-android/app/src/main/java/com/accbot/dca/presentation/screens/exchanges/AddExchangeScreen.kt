@@ -2,6 +2,7 @@ package com.accbot.dca.presentation.screens.exchanges
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,7 +19,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -51,10 +54,8 @@ fun AddExchangeScreen(
                 AccBotTopAppBar(
                     title = stringResource(uiState.currentStep.titleRes),
                     onNavigateBack = {
-                        if (uiState.currentStep == ExchangeSetupStep.SELECTION) {
+                        if (viewModel.goBack()) {
                             onNavigateBack()
-                        } else {
-                            viewModel.goBack()
                         }
                     }
                 )
@@ -194,20 +195,14 @@ private fun ExchangeSelectionCard(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
+            Image(
+                painter = painterResource(exchange.logoRes),
+                contentDescription = exchange.displayName,
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = exchange.displayName.first().toString(),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = accentColor()
-                )
-            }
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Fit
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -276,20 +271,14 @@ private fun InstructionsStep(
 
         // Exchange header
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
+            Image(
+                painter = painterResource(exchange.logoRes),
+                contentDescription = exchange.displayName,
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(accentCol.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = exchange.displayName.first().toString(),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = accentCol
-                )
-            }
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Fit
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
@@ -318,7 +307,7 @@ private fun InstructionsStep(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                instructions.steps.forEachIndexed { index, step ->
+                instructions.steps.forEachIndexed { index, stepResId ->
                     Row(
                         modifier = Modifier.padding(vertical = 8.dp)
                     ) {
@@ -338,7 +327,7 @@ private fun InstructionsStep(
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = step,
+                            text = stringResource(stepResId),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f)
                         )

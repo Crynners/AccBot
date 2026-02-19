@@ -334,11 +334,20 @@ fun AccBotApp(
             composable(Screen.ExchangeManagement.route) {
                 ExchangeManagementScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToAddExchange = { navController.navigate(Screen.AddExchange.route) }
+                    onNavigateToAddExchange = { exchangeName ->
+                        navController.navigate(Screen.AddExchange.createRoute(exchangeName))
+                    }
                 )
             }
 
-            composable(Screen.AddExchange.route) {
+            composable(
+                route = Screen.AddExchange.route,
+                arguments = listOf(
+                    navArgument(Screen.EXCHANGE_ARG) {
+                        type = NavType.StringType; nullable = true; defaultValue = null
+                    }
+                )
+            ) {
                 AddExchangeScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onExchangeAdded = { navController.popBackStack() }

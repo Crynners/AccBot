@@ -1,16 +1,19 @@
 package com.accbot.dca.domain.model
 
+import androidx.annotation.StringRes
+import com.accbot.dca.R
+
 /**
  * Instructions for setting up API keys on an exchange.
- * Contains step-by-step guide, URL, and whether passphrase/clientId is needed.
+ * Contains step-by-step guide (as string resource IDs), URL, and whether passphrase/clientId is needed.
  * For sandbox mode, separate instructions and URLs are provided.
  */
 data class ExchangeInstructions(
-    val steps: List<String>,
+    val steps: List<Int>,
     val url: String,
     val needsPassphrase: Boolean,
     val needsClientId: Boolean = false,
-    val sandboxSteps: List<String>? = null,
+    val sandboxSteps: List<Int>? = null,
     val sandboxUrl: String? = null
 )
 
@@ -48,12 +51,12 @@ object ExchangeInstructionsProvider {
         return when (exchange) {
             Exchange.COINMATE -> ExchangeInstructions(
                 steps = listOf(
-                    "Go to coinmate.io and log in",
-                    "Navigate to Settings > API",
-                    "Note your Client ID (shown at the top)",
-                    "Click 'Create new API key'",
-                    "Enable 'Trade' permission only",
-                    "Copy Client ID, Public Key, and Private Key"
+                    R.string.exchange_instructions_coinmate_1,
+                    R.string.exchange_instructions_coinmate_2,
+                    R.string.exchange_instructions_coinmate_3,
+                    R.string.exchange_instructions_coinmate_4,
+                    R.string.exchange_instructions_coinmate_5,
+                    R.string.exchange_instructions_coinmate_6
                 ),
                 url = "https://coinmate.io/apikeys",
                 needsPassphrase = false,
@@ -61,94 +64,94 @@ object ExchangeInstructionsProvider {
             )
             Exchange.BINANCE -> ExchangeInstructions(
                 steps = listOf(
-                    "Go to binance.com and log in",
-                    "Navigate to API Management",
-                    "Create a new API key",
-                    "Enable 'Spot & Margin Trading' only",
-                    "Restrict to your IP if possible",
-                    "Copy the API Key and Secret"
+                    R.string.exchange_instructions_binance_1,
+                    R.string.exchange_instructions_binance_2,
+                    R.string.exchange_instructions_binance_3,
+                    R.string.exchange_instructions_binance_4,
+                    R.string.exchange_instructions_binance_5,
+                    R.string.exchange_instructions_binance_6
                 ),
                 url = "https://www.binance.com/en/my/settings/api-management",
                 needsPassphrase = false,
                 sandboxSteps = listOf(
-                    "Open testnet.binance.vision",
-                    "Log in with your GitHub account",
-                    "Click 'Generate HMAC_SHA256 Key'",
-                    "Copy the API Key and Secret Key",
-                    "Test funds are provided automatically"
+                    R.string.exchange_instructions_binance_sandbox_1,
+                    R.string.exchange_instructions_binance_sandbox_2,
+                    R.string.exchange_instructions_binance_sandbox_3,
+                    R.string.exchange_instructions_binance_sandbox_4,
+                    R.string.exchange_instructions_binance_sandbox_5
                 ),
                 sandboxUrl = "https://testnet.binance.vision/"
             )
             Exchange.KRAKEN -> ExchangeInstructions(
                 steps = listOf(
-                    "Go to kraken.com and log in",
-                    "Navigate to Settings > API",
-                    "Create a new API key",
-                    "Enable 'Create & Modify Orders' only",
-                    "Copy the API Key and Private Key"
+                    R.string.exchange_instructions_kraken_1,
+                    R.string.exchange_instructions_kraken_2,
+                    R.string.exchange_instructions_kraken_3,
+                    R.string.exchange_instructions_kraken_4,
+                    R.string.exchange_instructions_kraken_5
                 ),
                 url = "https://www.kraken.com/u/security/api",
                 needsPassphrase = false
             )
             Exchange.KUCOIN -> ExchangeInstructions(
                 steps = listOf(
-                    "Go to kucoin.com and log in",
-                    "Navigate to API Management",
-                    "Create a new API key with passphrase",
-                    "Enable 'Trade' permission only",
-                    "Copy the API Key, Secret, and Passphrase"
+                    R.string.exchange_instructions_kucoin_1,
+                    R.string.exchange_instructions_kucoin_2,
+                    R.string.exchange_instructions_kucoin_3,
+                    R.string.exchange_instructions_kucoin_4,
+                    R.string.exchange_instructions_kucoin_5
                 ),
                 url = "https://www.kucoin.com/account/api",
                 needsPassphrase = true,
                 sandboxSteps = listOf(
-                    "Open sandbox.kucoin.com",
-                    "Register a new account (separate from production)",
-                    "Go to API Management",
-                    "Create a new API key with passphrase",
-                    "Enable 'Trade' permission",
-                    "Copy API Key, Secret, and Passphrase"
+                    R.string.exchange_instructions_kucoin_sandbox_1,
+                    R.string.exchange_instructions_kucoin_sandbox_2,
+                    R.string.exchange_instructions_kucoin_sandbox_3,
+                    R.string.exchange_instructions_kucoin_sandbox_4,
+                    R.string.exchange_instructions_kucoin_sandbox_5,
+                    R.string.exchange_instructions_kucoin_sandbox_6
                 ),
                 sandboxUrl = "https://sandbox.kucoin.com/"
             )
             Exchange.BITFINEX -> ExchangeInstructions(
                 steps = listOf(
-                    "Go to bitfinex.com and log in",
-                    "Navigate to Account > API Keys",
-                    "Create a new API key",
-                    "Enable 'Orders' permission only",
-                    "Copy the API Key and Secret"
+                    R.string.exchange_instructions_bitfinex_1,
+                    R.string.exchange_instructions_bitfinex_2,
+                    R.string.exchange_instructions_bitfinex_3,
+                    R.string.exchange_instructions_bitfinex_4,
+                    R.string.exchange_instructions_bitfinex_5
                 ),
                 url = "https://setting.bitfinex.com/api",
                 needsPassphrase = false
             )
             Exchange.HUOBI -> ExchangeInstructions(
                 steps = listOf(
-                    "Go to huobi.com and log in",
-                    "Navigate to API Management",
-                    "Create a new API key",
-                    "Enable 'Trade' permission only",
-                    "Copy the Access Key and Secret Key"
+                    R.string.exchange_instructions_huobi_1,
+                    R.string.exchange_instructions_huobi_2,
+                    R.string.exchange_instructions_huobi_3,
+                    R.string.exchange_instructions_huobi_4,
+                    R.string.exchange_instructions_huobi_5
                 ),
                 url = "https://www.huobi.com/en-us/apikey/",
                 needsPassphrase = false
             )
             Exchange.COINBASE -> ExchangeInstructions(
                 steps = listOf(
-                    "Go to coinbase.com and log in",
-                    "Navigate to Settings > API",
-                    "Create a new API key",
-                    "Enable 'Trade' permission only",
-                    "Copy the API Key and Secret"
+                    R.string.exchange_instructions_coinbase_1,
+                    R.string.exchange_instructions_coinbase_2,
+                    R.string.exchange_instructions_coinbase_3,
+                    R.string.exchange_instructions_coinbase_4,
+                    R.string.exchange_instructions_coinbase_5
                 ),
                 url = "https://www.coinbase.com/settings/api",
                 needsPassphrase = false,
                 sandboxSteps = listOf(
-                    "Open the Coinbase Exchange Sandbox",
-                    "Register a sandbox account",
-                    "Go to Settings > API",
-                    "Create a new API key",
-                    "Select 'View' and 'Trade' permissions",
-                    "Copy the API Key and Secret"
+                    R.string.exchange_instructions_coinbase_sandbox_1,
+                    R.string.exchange_instructions_coinbase_sandbox_2,
+                    R.string.exchange_instructions_coinbase_sandbox_3,
+                    R.string.exchange_instructions_coinbase_sandbox_4,
+                    R.string.exchange_instructions_coinbase_sandbox_5,
+                    R.string.exchange_instructions_coinbase_sandbox_6
                 ),
                 sandboxUrl = "https://public.sandbox.exchange.coinbase.com/"
             )

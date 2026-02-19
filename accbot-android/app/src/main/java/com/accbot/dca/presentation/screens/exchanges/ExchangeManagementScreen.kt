@@ -23,7 +23,7 @@ import com.accbot.dca.presentation.ui.theme.accentColor
 @Composable
 fun ExchangeManagementScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToAddExchange: () -> Unit,
+    onNavigateToAddExchange: (String?) -> Unit,
     viewModel: ExchangeManagementViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -69,7 +69,7 @@ fun ExchangeManagementScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onNavigateToAddExchange,
+                onClick = { onNavigateToAddExchange(null) },
                 containerColor = accentColor()
             ) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.exchanges_add))
@@ -115,7 +115,7 @@ fun ExchangeManagementScreen(
                     ExchangeCard(
                         exchange = exchange,
                         isConnected = false,
-                        onClick = onNavigateToAddExchange
+                        onClick = { onNavigateToAddExchange(exchange.name) }
                     )
                 }
             }
