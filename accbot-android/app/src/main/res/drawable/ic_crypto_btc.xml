@@ -1,0 +1,32 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- Bitcoin - Orange circle with B symbol -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#F7931A"/>
+    <!-- Vertical bars -->
+    <path
+        android:pathData="M56,36L56,42M72,36L72,42M56,86L56,92M72,86L72,92"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- B shape -->
+    <path
+        android:pathData="M50,42L66,42C74,42 80,47 80,54C80,61 74,64 68,64L50,64L50,42Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+    <path
+        android:pathData="M50,64L70,64C78,64 84,69 84,76C84,83 78,86 70,86L50,86L50,64Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+</vector>

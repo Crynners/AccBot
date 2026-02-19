@@ -1,6 +1,6 @@
 package com.accbot.dca.presentation.screens.onboarding
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -327,25 +329,12 @@ private fun ExchangeGridItem(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Exchange initial as icon placeholder
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        if (isSelected) successColor().copy(alpha = 0.2f)
-                        else MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                val successCol = successColor()
-                Text(
-                    text = exchange.displayName.first().toString(),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = if (isSelected) successCol else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Image(
+                painter = painterResource(exchange.logoRes),
+                contentDescription = exchange.displayName,
+                modifier = Modifier.size(40.dp),
+                contentScale = ContentScale.Fit
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 

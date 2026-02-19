@@ -1,5 +1,6 @@
 package com.accbot.dca.domain.model
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.accbot.dca.R
 import java.math.BigDecimal
@@ -20,6 +21,7 @@ enum class SandboxSupport {
  */
 enum class Exchange(
     val displayName: String,
+    @DrawableRes val logoRes: Int,
     val supportedFiats: List<String>,
     val supportedCryptos: List<String>,
     val minOrderSize: Map<String, BigDecimal>,
@@ -27,6 +29,7 @@ enum class Exchange(
 ) {
     COINMATE(
         displayName = "Coinmate",
+        logoRes = R.drawable.ic_exchange_coinmate,
         supportedFiats = listOf("EUR", "CZK"),
         supportedCryptos = listOf("BTC", "ETH", "LTC"),
         minOrderSize = mapOf("EUR" to BigDecimal("10"), "CZK" to BigDecimal("50")),
@@ -34,6 +37,7 @@ enum class Exchange(
     ),
     BINANCE(
         displayName = "Binance",
+        logoRes = R.drawable.ic_exchange_binance,
         supportedFiats = listOf("EUR", "USDT"),
         supportedCryptos = listOf("BTC", "ETH", "SOL", "ADA", "DOT"),
         minOrderSize = mapOf("EUR" to BigDecimal("10"), "USDT" to BigDecimal("10")),
@@ -41,6 +45,7 @@ enum class Exchange(
     ),
     KRAKEN(
         displayName = "Kraken",
+        logoRes = R.drawable.ic_exchange_kraken,
         supportedFiats = listOf("EUR", "USD", "GBP"),
         supportedCryptos = listOf("BTC", "ETH", "SOL", "DOT"),
         minOrderSize = mapOf("EUR" to BigDecimal("10"), "USD" to BigDecimal("10")),
@@ -48,6 +53,7 @@ enum class Exchange(
     ),
     KUCOIN(
         displayName = "KuCoin",
+        logoRes = R.drawable.ic_exchange_kucoin,
         supportedFiats = listOf("USDT"),
         supportedCryptos = listOf("BTC", "ETH", "SOL", "ADA"),
         minOrderSize = mapOf("USDT" to BigDecimal("10")),
@@ -55,6 +61,7 @@ enum class Exchange(
     ),
     BITFINEX(
         displayName = "Bitfinex",
+        logoRes = R.drawable.ic_exchange_bitfinex,
         supportedFiats = listOf("USD", "EUR"),
         supportedCryptos = listOf("BTC", "ETH"),
         minOrderSize = mapOf("USD" to BigDecimal("25"), "EUR" to BigDecimal("25")),
@@ -62,6 +69,7 @@ enum class Exchange(
     ),
     HUOBI(
         displayName = "Huobi",
+        logoRes = R.drawable.ic_exchange_huobi,
         supportedFiats = listOf("USDT"),
         supportedCryptos = listOf("BTC", "ETH", "SOL"),
         minOrderSize = mapOf("USDT" to BigDecimal("10")),
@@ -69,6 +77,7 @@ enum class Exchange(
     ),
     COINBASE(
         displayName = "Coinbase",
+        logoRes = R.drawable.ic_exchange_coinbase,
         supportedFiats = listOf("EUR", "USD", "GBP"),
         supportedCryptos = listOf("BTC", "ETH", "SOL", "ADA"),
         minOrderSize = mapOf("EUR" to BigDecimal("1"), "USD" to BigDecimal("1")),

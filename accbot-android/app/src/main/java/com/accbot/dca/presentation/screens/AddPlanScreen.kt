@@ -1,6 +1,6 @@
 package com.accbot.dca.presentation.screens
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
@@ -15,7 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,6 +34,8 @@ import com.accbot.dca.presentation.components.SandboxModeIndicator
 import com.accbot.dca.presentation.components.ScheduleBuilder
 import com.accbot.dca.presentation.components.SelectableChip
 import com.accbot.dca.presentation.components.StrategyInfoBottomSheet
+import com.accbot.dca.presentation.components.getCryptoIconRes
+import com.accbot.dca.presentation.components.getFiatIconRes
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 
@@ -84,16 +87,27 @@ fun AddPlanScreen(
                 SandboxModeIndicator()
             }
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.horizontalScroll(rememberScrollState())
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                uiState.availableExchanges.forEach { exchange ->
-                    ExchangeCard(
-                        exchange = exchange,
-                        isSelected = uiState.selectedExchange == exchange,
-                        onClick = { viewModel.selectExchange(exchange) }
-                    )
+                uiState.availableExchanges.chunked(3).forEach { row ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        row.forEach { exchange ->
+                            ExchangeCard(
+                                exchange = exchange,
+                                isSelected = uiState.selectedExchange == exchange,
+                                onClick = { viewModel.selectExchange(exchange) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        // Fill remaining slots for incomplete rows
+                        repeat(3 - row.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
                 }
             }
 
@@ -130,7 +144,8 @@ fun AddPlanScreen(
                 ChipGroup(
                     options = uiState.selectedExchange!!.supportedCryptos,
                     selectedOption = uiState.selectedCrypto,
-                    onOptionSelected = viewModel::selectCrypto
+                    onOptionSelected = viewModel::selectCrypto,
+                    iconResolver = { getCryptoIconRes(it) }
                 )
 
                 // Fiat Currency Selection
@@ -138,7 +153,8 @@ fun AddPlanScreen(
                 ChipGroup(
                     options = uiState.selectedExchange!!.supportedFiats,
                     selectedOption = uiState.selectedFiat,
-                    onOptionSelected = viewModel::selectFiat
+                    onOptionSelected = viewModel::selectFiat,
+                    iconResolver = { getFiatIconRes(it) }
                 )
 
                 // Amount Input
@@ -307,12 +323,12 @@ private fun SectionTitle(text: String) {
 private fun ExchangeCard(
     exchange: Exchange,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val successCol = successColor()
     Card(
-        modifier = Modifier
-            .width(120.dp)
+        modifier = modifier
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
@@ -330,12 +346,20 @@ private fun ExchangeCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Image(
+                painter = painterResource(exchange.logoRes),
+                contentDescription = exchange.displayName,
+                modifier = Modifier.size(28.dp),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = exchange.displayName,
                 fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.bodySmall,
                 color = if (isSelected) successCol else MaterialTheme.colorScheme.onSurface
             )
         }
@@ -346,17 +370,29 @@ private fun ExchangeCard(
 private fun ChipGroup(
     options: List<String>,
     selectedOption: String,
-    onOptionSelected: (String) -> Unit
+    onOptionSelected: (String) -> Unit,
+    iconResolver: ((String) -> Int?)? = null
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.horizontalScroll(rememberScrollState())
     ) {
         options.forEach { option ->
+            val iconRes = iconResolver?.invoke(option)
             SelectableChip(
                 text = option,
                 selected = option == selectedOption,
-                onClick = { onOptionSelected(option) }
+                onClick = { onOptionSelected(option) },
+                leadingIcon = if (iconRes != null) {
+                    {
+                        Image(
+                            painter = painterResource(iconRes),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                } else null
             )
         }
     }

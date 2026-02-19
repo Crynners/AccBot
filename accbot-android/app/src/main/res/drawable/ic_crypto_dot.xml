@@ -1,0 +1,44 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- Polkadot - Pink circle with dot pattern -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#E6007A"/>
+    <!-- Center dot -->
+    <path
+        android:pathData="M64,56A8,8 0,1 1,64,72A8,8 0,1 1,64,56z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Top dot -->
+    <path
+        android:pathData="M64,28A7,7 0,1 1,64,42A7,7 0,1 1,64,28z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"/>
+    <!-- Bottom dot -->
+    <path
+        android:pathData="M64,86A7,7 0,1 1,64,100A7,7 0,1 1,64,86z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"/>
+    <!-- Left dot -->
+    <path
+        android:pathData="M36,50A6,6 0,1 1,36,62A6,6 0,1 1,36,50z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.6"/>
+    <!-- Right dot -->
+    <path
+        android:pathData="M92,50A6,6 0,1 1,92,62A6,6 0,1 1,92,50z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.6"/>
+    <!-- Bottom-left dot -->
+    <path
+        android:pathData="M42,74A6,6 0,1 1,42,86A6,6 0,1 1,42,74z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.6"/>
+    <!-- Bottom-right dot -->
+    <path
+        android:pathData="M86,74A6,6 0,1 1,86,86A6,6 0,1 1,86,74z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.6"/>
+</vector>

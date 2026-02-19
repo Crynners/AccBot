@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- US Dollar - Green circle with $ -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#2E7D32"/>
+    <!-- S shape -->
+    <path
+        android:pathData="M78,46C78,39 72,34 64,34C56,34 50,39 50,46C50,53 56,56 64,58C72,60 78,63 78,70C78,77 72,82 64,82C56,82 50,77 50,70"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- Vertical bar through $ -->
+    <path
+        android:pathData="M64,28L64,88"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+</vector>

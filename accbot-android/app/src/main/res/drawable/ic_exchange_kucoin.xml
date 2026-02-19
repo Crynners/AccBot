@@ -1,0 +1,35 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- KuCoin - Teal/green circle with geometric K shape -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#23AF91"/>
+    <!-- Vertical bar -->
+    <path
+        android:pathData="M46,40 L46,88"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- Center diamond -->
+    <path
+        android:pathData="M64,52 L76,64 L64,76 L52,64 Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Top-right arrow -->
+    <path
+        android:pathData="M68,56 L84,40"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- Bottom-right arrow -->
+    <path
+        android:pathData="M68,72 L84,88"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+</vector>

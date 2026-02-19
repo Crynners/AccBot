@@ -138,7 +138,7 @@ fun AccBotApp(
     val currentRoute = navBackStackEntry?.destination?.route
 
     // Determine if bottom nav should be shown
-    val showBottomNav = currentRoute in bottomNavItems.map { it.route }
+    val showBottomNav = bottomNavItems.any { currentRoute?.startsWith(it.route) == true }
 
     // Determine start destination
     val startDestination = if (isOnboardingCompleted) {
