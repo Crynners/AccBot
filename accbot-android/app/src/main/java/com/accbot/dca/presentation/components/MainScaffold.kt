@@ -1,7 +1,6 @@
 package com.accbot.dca.presentation.components
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -91,7 +90,6 @@ fun AccBotBottomNav(
 ) {
     val successCol = successColor()
     NavigationBar(
-        modifier = Modifier.height(56.dp),
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface
     ) {
@@ -118,7 +116,13 @@ fun AccBotBottomNav(
                     Icon(
                         imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                         contentDescription = stringResource(item.labelRes),
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                label = {
+                    Text(
+                        text = stringResource(item.labelRes),
+                        style = MaterialTheme.typography.labelSmall
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(

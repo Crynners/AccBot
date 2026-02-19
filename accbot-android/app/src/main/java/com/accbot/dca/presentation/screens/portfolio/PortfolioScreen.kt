@@ -186,10 +186,10 @@ fun PortfolioScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
         topBar = {
             AccBotTopAppBar(
                 title = stringResource(R.string.portfolio_title),
-                onNavigateBack = onNavigateBack,
                 actions = {
                     IconButton(onClick = {
                         onNavigateToHistory(uiState.currentPairCrypto, uiState.currentPairFiat)
