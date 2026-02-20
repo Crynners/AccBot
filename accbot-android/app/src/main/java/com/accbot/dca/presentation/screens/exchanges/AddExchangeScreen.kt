@@ -2,6 +2,7 @@ package com.accbot.dca.presentation.screens.exchanges
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,7 +19,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -26,8 +29,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
+import com.accbot.dca.data.local.DcaPlanEntity
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.ExchangeInstructions
+import com.accbot.dca.domain.model.supportsApiImport
+import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.CredentialsInputCard
 import com.accbot.dca.presentation.components.areCredentialsComplete
@@ -51,10 +57,8 @@ fun AddExchangeScreen(
                 AccBotTopAppBar(
                     title = stringResource(uiState.currentStep.titleRes),
                     onNavigateBack = {
-                        if (uiState.currentStep == ExchangeSetupStep.SELECTION) {
+                        if (viewModel.goBack()) {
                             onNavigateBack()
-                        } else {
-                            viewModel.goBack()
                         }
                     }
                 )
@@ -109,6 +113,12 @@ fun AddExchangeScreen(
             ExchangeSetupStep.SUCCESS -> SuccessStep(
                 exchange = uiState.selectedExchange!!,
                 onFinish = onExchangeAdded,
+                plansForExchange = uiState.plansForExchange,
+                isApiImporting = uiState.isApiImporting,
+                apiImportProgress = uiState.apiImportProgress,
+                apiImportResult = uiState.apiImportResult,
+                onImportViaApi = { viewModel.importViaApi() },
+                onDismissImportResult = { viewModel.dismissImportResult() },
                 modifier = Modifier.padding(paddingValues)
             )
         }
@@ -194,20 +204,14 @@ private fun ExchangeSelectionCard(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
+            Image(
+                painter = painterResource(exchange.logoRes),
+                contentDescription = exchange.displayName,
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = exchange.displayName.first().toString(),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = accentColor()
-                )
-            }
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Fit
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -276,20 +280,14 @@ private fun InstructionsStep(
 
         // Exchange header
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
+            Image(
+                painter = painterResource(exchange.logoRes),
+                contentDescription = exchange.displayName,
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(accentCol.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = exchange.displayName.first().toString(),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = accentCol
-                )
-            }
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Fit
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
@@ -318,7 +316,7 @@ private fun InstructionsStep(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                instructions.steps.forEachIndexed { index, step ->
+                instructions.steps.forEachIndexed { index, stepResId ->
                     Row(
                         modifier = Modifier.padding(vertical = 8.dp)
                     ) {
@@ -338,7 +336,7 @@ private fun InstructionsStep(
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = step,
+                            text = stringResource(stepResId),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f)
                         )
@@ -485,10 +483,51 @@ private fun CredentialsStep(
 private fun SuccessStep(
     exchange: Exchange,
     onFinish: () -> Unit,
+    plansForExchange: List<DcaPlanEntity>,
+    isApiImporting: Boolean,
+    apiImportProgress: String,
+    apiImportResult: ApiImportResultState?,
+    onImportViaApi: () -> Unit,
+    onDismissImportResult: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val successCol = successColor()
     val accentCol = accentColor()
+
+    // Import result dialog
+    apiImportResult?.let { result ->
+        AlertDialog(
+            onDismissRequest = onDismissImportResult,
+            title = {
+                Text(
+                    when (result) {
+                        is ApiImportResultState.Success -> stringResource(R.string.import_api_success_title)
+                        is ApiImportResultState.Error -> stringResource(R.string.import_api_error_title)
+                    }
+                )
+            },
+            text = {
+                Text(
+                    when (result) {
+                        is ApiImportResultState.Success -> {
+                            if (result.imported == 0) {
+                                stringResource(R.string.import_api_no_new)
+                            } else {
+                                stringResource(R.string.import_api_success_message, result.imported, result.skipped)
+                            }
+                        }
+                        is ApiImportResultState.Error -> result.message
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = onDismissImportResult) {
+                    Text(stringResource(R.string.common_done))
+                }
+            }
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -542,6 +581,55 @@ private fun SuccessStep(
                 text = stringResource(R.string.common_done),
                 fontWeight = FontWeight.SemiBold
             )
+        }
+
+        // Import via API section
+        if (exchange.supportsApiImport) {
+            if (plansForExchange.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedButton(
+                    onClick = onImportViaApi,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    enabled = !isApiImporting && apiImportResult == null,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = accentCol)
+                ) {
+                    if (isApiImporting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = accentCol
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = apiImportProgress,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.CloudDownload,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.import_api_title),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = stringResource(R.string.add_exchange_import_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

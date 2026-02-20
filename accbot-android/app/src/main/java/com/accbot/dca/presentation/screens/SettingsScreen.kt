@@ -5,6 +5,9 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,7 +30,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.accbot.dca.BuildConfig
 import com.accbot.dca.R
-import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -47,6 +49,7 @@ fun SettingsScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showLowBalanceDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var dangerZoneExpanded by remember { mutableStateOf(false) }
 
     // Refresh battery status when returning from system settings
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -209,17 +212,23 @@ fun SettingsScreen(
         contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
+                title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
+        ) {
+        LazyColumn(
+            modifier = Modifier
+                .widthIn(max = 600.dp)
+                .fillMaxSize()
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -242,17 +251,6 @@ fun SettingsScreen(
                     icon = Icons.Default.AccountBalance,
                     onClick = { onNavigateToExchanges?.invoke() }
                 )
-            }
-
-            if (uiState.configuredExchanges.isNotEmpty()) {
-                uiState.configuredExchanges.forEach { exchange ->
-                    item {
-                        ExchangeSettingsCard(
-                            exchange = exchange,
-                            onRemove = { viewModel.removeExchangeCredentials(exchange) }
-                        )
-                    }
-                }
             }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -459,51 +457,71 @@ fun SettingsScreen(
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
-            // Danger Zone
+            // Danger Zone (collapsible)
             item {
-                Text(
-                    text = stringResource(R.string.settings_danger_zone),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Error,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { dangerZoneExpanded = !dangerZoneExpanded }
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_danger_zone),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Error
+                    )
+                    Icon(
+                        imageVector = if (dangerZoneExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = Error,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             item {
-                OutlinedCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showDeleteDialog = true },
-                    colors = CardDefaults.outlinedCardColors(
-                        containerColor = Error.copy(alpha = 0.1f)
-                    ),
-                    border = CardDefaults.outlinedCardBorder().copy(
-                        brush = androidx.compose.ui.graphics.SolidColor(Error)
-                    )
+                AnimatedVisibility(
+                    visible = dangerZoneExpanded,
+                    enter = expandVertically(),
+                    exit = shrinkVertically()
                 ) {
-                    Row(
+                    OutlinedCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = null,
-                            tint = Error
+                            .clickable { showDeleteDialog = true },
+                        colors = CardDefaults.outlinedCardColors(
+                            containerColor = Error.copy(alpha = 0.1f)
+                        ),
+                        border = CardDefaults.outlinedCardBorder().copy(
+                            brush = androidx.compose.ui.graphics.SolidColor(Error)
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = stringResource(R.string.settings_delete_all_data),
-                                fontWeight = FontWeight.SemiBold,
-                                color = Error
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = Error
                             )
-                            Text(
-                                text = stringResource(R.string.settings_delete_all_subtitle),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.settings_delete_all_data),
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Error
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_delete_all_subtitle),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
@@ -541,47 +559,7 @@ fun SettingsScreen(
 
             item { Spacer(modifier = Modifier.height(8.dp)) }
         }
-    }
-}
-
-@Composable
-private fun ExchangeSettingsCard(
-    exchange: Exchange,
-    onRemove: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = successColor(),
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = exchange.displayName,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.common_remove),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+        } // Box
     }
 }
 

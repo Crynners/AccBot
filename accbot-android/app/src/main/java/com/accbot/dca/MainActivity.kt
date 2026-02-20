@@ -11,9 +11,14 @@ import android.provider.Settings
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import android.content.res.Configuration
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -31,6 +36,7 @@ import androidx.navigation.navArgument
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.presentation.components.AccBotBottomNav
+import com.accbot.dca.presentation.components.AccBotNavRail
 import com.accbot.dca.presentation.components.bottomNavItems
 import com.accbot.dca.presentation.navigation.Screen
 import com.accbot.dca.presentation.screens.BiometricLockScreen
@@ -39,6 +45,7 @@ import com.accbot.dca.presentation.screens.DashboardScreen
 import com.accbot.dca.presentation.screens.HistoryScreen
 import com.accbot.dca.presentation.screens.SettingsScreen
 import com.accbot.dca.presentation.screens.exchanges.AddExchangeScreen
+import com.accbot.dca.presentation.screens.exchanges.ExchangeDetailScreen
 import com.accbot.dca.presentation.screens.exchanges.ExchangeManagementScreen
 import com.accbot.dca.presentation.screens.onboarding.*
 import com.accbot.dca.presentation.screens.history.TransactionDetailsScreen
@@ -77,7 +84,7 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val isSandboxMode = userPreferences.isSandboxMode()
-            var isUnlocked by remember { mutableStateOf(false) }
+            var isUnlocked by rememberSaveable { mutableStateOf(false) }
             val biometricEnabled = userPreferences.isBiometricLockEnabled()
 
             AccBotTheme(isSandboxMode = isSandboxMode) {
@@ -139,8 +146,12 @@ fun AccBotApp(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Determine if bottom nav should be shown
-    val showBottomNav = bottomNavItems.any { currentRoute?.startsWith(it.route) == true }
+    // Determine if navigation should be shown
+    val showNav = bottomNavItems.any { currentRoute?.startsWith(it.route) == true }
+
+    // Detect orientation
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // Determine start destination
     val startDestination = if (isOnboardingCompleted) {
@@ -149,21 +160,11 @@ fun AccBotApp(
         Screen.Splash.route
     }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
-        bottomBar = {
-            if (showBottomNav) {
-                AccBotBottomNav(
-                    navController = navController,
-                    currentRoute = currentRoute
-                )
-            }
-        }
-    ) { paddingValues ->
+    val navHost: @Composable (Modifier) -> Unit = { modifier ->
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            modifier = Modifier.padding(paddingValues)
+            modifier = modifier
         ) {
             // Splash screen
             composable(Screen.Splash.route) {
@@ -334,11 +335,34 @@ fun AccBotApp(
             composable(Screen.ExchangeManagement.route) {
                 ExchangeManagementScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToAddExchange = { navController.navigate(Screen.AddExchange.route) }
+                    onNavigateToAddExchange = { exchangeName ->
+                        navController.navigate(Screen.AddExchange.createRoute(exchangeName))
+                    },
+                    onNavigateToExchangeDetail = { exchangeName ->
+                        navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName))
+                    }
                 )
             }
 
-            composable(Screen.AddExchange.route) {
+            composable(
+                route = Screen.ExchangeDetail.route,
+                arguments = listOf(
+                    navArgument(Screen.EXCHANGE_ARG) { type = NavType.StringType }
+                )
+            ) {
+                ExchangeDetailScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.AddExchange.route,
+                arguments = listOf(
+                    navArgument(Screen.EXCHANGE_ARG) {
+                        type = NavType.StringType; nullable = true; defaultValue = null
+                    }
+                )
+            ) {
                 AddExchangeScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onExchangeAdded = { navController.popBackStack() }
@@ -373,6 +397,37 @@ fun AccBotApp(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
+        }
+    }
+
+    if (isLandscape && showNav) {
+        // Landscape with NavigationRail on the left
+        Row(modifier = Modifier.fillMaxSize()) {
+            AccBotNavRail(
+                navController = navController,
+                currentRoute = currentRoute
+            )
+            navHost(
+                Modifier
+                    .weight(1f)
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+            )
+        }
+    } else {
+        // Portrait or non-nav screens: standard Scaffold with bottom bar
+        Scaffold(
+            contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
+            bottomBar = {
+                if (showNav) {
+                    AccBotBottomNav(
+                        navController = navController,
+                        currentRoute = currentRoute
+                    )
+                }
+            }
+        ) { paddingValues ->
+            navHost(Modifier.padding(paddingValues))
         }
     }
 }

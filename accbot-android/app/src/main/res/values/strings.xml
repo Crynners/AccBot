@@ -55,7 +55,7 @@
     <string name="dashboard_invested">Invested</string>
     <string name="dashboard_avg_price">Avg Price</string>
     <string name="dashboard_current_price">Current Price</string>
-    <string name="dashboard_active_plans">Active DCA Plans</string>
+    <string name="dashboard_active_plans">My DCA Plans</string>
     <string name="dashboard_next_prefix">Next: %1$s</string>
     <string name="dashboard_remaining_suffix">~%1$s remaining</string>
     <string name="dashboard_remaining_with_exec">~%1$s remaining (%2$d exec)</string>
@@ -238,13 +238,15 @@
     <string name="chart_total_roi">ROI</string>
     <string name="chart_invested">Invested</string>
     <string name="chart_portfolio_value">Portfolio Value</string>
-    <string name="chart_cost_basis">Cost Basis</string>
+    <string name="chart_cost_basis">Invested</string>
     <string name="chart_legend_crypto_held">Crypto Held</string>
     <string name="chart_legend_invested_equiv">Invested Equiv.</string>
     <string name="chart_avg_price">Avg. Price</string>
     <string name="chart_transactions">Transactions</string>
     <string name="chart_period_roi">%1$s in %2$s</string>
-    <string name="chart_explore">Explore:</string>
+    <string name="chart_crypto_price">%1$s Price</string>
+    <string name="chart_accumulated_crypto">Accum. %1$s</string>
+    <string name="chart_explore">Explore history:</string>
 
     <!-- Exchange Management Screen -->
     <string name="exchanges_title">Exchanges</string>
@@ -255,6 +257,16 @@
     <string name="exchanges_remove_text">Are you sure you want to remove %1$s? This will delete your API credentials from this device.</string>
     <string name="exchanges_none_title">No Exchanges Available</string>
     <string name="exchanges_none_desc">There are no exchanges to display</string>
+    <string name="exchanges_detail_cryptos">Cryptocurrencies</string>
+    <string name="exchanges_detail_fiats">Fiat currencies</string>
+    <string name="exchanges_remove_exchange">Remove Exchange</string>
+    <string name="exchange_detail_title">Exchange Details</string>
+    <string name="exchange_detail_save">Save Credentials</string>
+    <string name="exchange_detail_saved">Credentials saved successfully</string>
+    <string name="exchange_detail_edit_credentials">API Credentials</string>
+    <string name="exchange_detail_credentials_title">API Credentials</string>
+    <string name="exchange_detail_import_subtitle_plans">Import for %1$d plan(s)</string>
+    <string name="exchange_detail_import_no_plans">No DCA plans using this exchange</string>
 
     <!-- Add Exchange Screen -->
     <string name="add_exchange_select">Select Exchange</string>
@@ -277,6 +289,7 @@
     <string name="add_exchange_connect">Connect Exchange</string>
     <string name="add_exchange_connected">%1$s Connected!</string>
     <string name="add_exchange_connected_desc">You can now create DCA plans using this exchange</string>
+    <string name="add_exchange_import_hint">Create a DCA plan first, then you can import trade history via API</string>
 
     <!-- Transaction Details Screen -->
     <string name="transaction_details_title">Transaction Details</string>
@@ -540,6 +553,74 @@
     <string name="import_api_error_title">Import Failed</string>
     <string name="import_api_success_message">%1$d transactions imported, %2$d skipped (already existed)</string>
     <string name="import_api_no_new">No new transactions to import</string>
+
+    <!-- Exchange Instructions - Coinmate -->
+    <string name="exchange_instructions_coinmate_1">Go to coinmate.io and log in</string>
+    <string name="exchange_instructions_coinmate_2">Navigate to Settings > API</string>
+    <string name="exchange_instructions_coinmate_3">Note your Client ID (shown at the top)</string>
+    <string name="exchange_instructions_coinmate_4">Click \'Create new API key\'</string>
+    <string name="exchange_instructions_coinmate_5">Enable \'Trade\' permission only</string>
+    <string name="exchange_instructions_coinmate_6">Copy Client ID, Public Key, and Private Key</string>
+
+    <!-- Exchange Instructions - Binance -->
+    <string name="exchange_instructions_binance_1">Go to binance.com and log in</string>
+    <string name="exchange_instructions_binance_2">Navigate to API Management</string>
+    <string name="exchange_instructions_binance_3">Create a new API key</string>
+    <string name="exchange_instructions_binance_4">Enable \'Spot &amp; Margin Trading\' only</string>
+    <string name="exchange_instructions_binance_5">Restrict to your IP if possible</string>
+    <string name="exchange_instructions_binance_6">Copy the API Key and Secret</string>
+    <string name="exchange_instructions_binance_sandbox_1">Open testnet.binance.vision</string>
+    <string name="exchange_instructions_binance_sandbox_2">Log in with your GitHub account</string>
+    <string name="exchange_instructions_binance_sandbox_3">Click \'Generate HMAC_SHA256 Key\'</string>
+    <string name="exchange_instructions_binance_sandbox_4">Copy the API Key and Secret Key</string>
+    <string name="exchange_instructions_binance_sandbox_5">Test funds are provided automatically</string>
+
+    <!-- Exchange Instructions - Kraken -->
+    <string name="exchange_instructions_kraken_1">Go to kraken.com and log in</string>
+    <string name="exchange_instructions_kraken_2">Navigate to Settings > API</string>
+    <string name="exchange_instructions_kraken_3">Create a new API key</string>
+    <string name="exchange_instructions_kraken_4">Enable \'Create &amp; Modify Orders\' only</string>
+    <string name="exchange_instructions_kraken_5">Copy the API Key and Private Key</string>
+
+    <!-- Exchange Instructions - KuCoin -->
+    <string name="exchange_instructions_kucoin_1">Go to kucoin.com and log in</string>
+    <string name="exchange_instructions_kucoin_2">Navigate to API Management</string>
+    <string name="exchange_instructions_kucoin_3">Create a new API key with passphrase</string>
+    <string name="exchange_instructions_kucoin_4">Enable \'Trade\' permission only</string>
+    <string name="exchange_instructions_kucoin_5">Copy the API Key, Secret, and Passphrase</string>
+    <string name="exchange_instructions_kucoin_sandbox_1">Open sandbox.kucoin.com</string>
+    <string name="exchange_instructions_kucoin_sandbox_2">Register a new account (separate from production)</string>
+    <string name="exchange_instructions_kucoin_sandbox_3">Go to API Management</string>
+    <string name="exchange_instructions_kucoin_sandbox_4">Create a new API key with passphrase</string>
+    <string name="exchange_instructions_kucoin_sandbox_5">Enable \'Trade\' permission</string>
+    <string name="exchange_instructions_kucoin_sandbox_6">Copy API Key, Secret, and Passphrase</string>
+
+    <!-- Exchange Instructions - Bitfinex -->
+    <string name="exchange_instructions_bitfinex_1">Go to bitfinex.com and log in</string>
+    <string name="exchange_instructions_bitfinex_2">Navigate to Account > API Keys</string>
+    <string name="exchange_instructions_bitfinex_3">Create a new API key</string>
+    <string name="exchange_instructions_bitfinex_4">Enable \'Orders\' permission only</string>
+    <string name="exchange_instructions_bitfinex_5">Copy the API Key and Secret</string>
+
+    <!-- Exchange Instructions - Huobi -->
+    <string name="exchange_instructions_huobi_1">Go to huobi.com and log in</string>
+    <string name="exchange_instructions_huobi_2">Navigate to API Management</string>
+    <string name="exchange_instructions_huobi_3">Create a new API key</string>
+    <string name="exchange_instructions_huobi_4">Enable \'Trade\' permission only</string>
+    <string name="exchange_instructions_huobi_5">Copy the Access Key and Secret Key</string>
+
+    <!-- Exchange Instructions - Coinbase -->
+    <string name="exchange_instructions_coinbase_1">Go to coinbase.com and log in</string>
+    <string name="exchange_instructions_coinbase_2">Navigate to Settings > API</string>
+    <string name="exchange_instructions_coinbase_3">Create a new API key</string>
+    <string name="exchange_instructions_coinbase_4">Enable \'Trade\' permission only</string>
+    <string name="exchange_instructions_coinbase_5">Copy the API Key and Secret</string>
+    <string name="exchange_instructions_coinbase_sandbox_1">Open the Coinbase Exchange Sandbox</string>
+    <string name="exchange_instructions_coinbase_sandbox_2">Register a sandbox account</string>
+    <string name="exchange_instructions_coinbase_sandbox_3">Go to Settings > API</string>
+    <string name="exchange_instructions_coinbase_sandbox_4">Create a new API key</string>
+    <string name="exchange_instructions_coinbase_sandbox_5">Select \'View\' and \'Trade\' permissions</string>
+    <string name="exchange_instructions_coinbase_sandbox_6">Copy the API Key and Secret</string>
 
     <!-- Accessibility -->
     <string name="a11y_retry">Retry</string>

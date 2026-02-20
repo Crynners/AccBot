@@ -10,6 +10,7 @@ import com.accbot.dca.domain.model.DcaPlan
 import com.accbot.dca.domain.model.Transaction
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.usecase.ApiImportProgress
+import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.domain.usecase.ImportTradeHistoryUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.presentation.utils.TimeUtils
@@ -22,11 +23,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
 import java.math.RoundingMode
 import javax.inject.Inject
-
-sealed class ApiImportResultState {
-    data class Success(val imported: Int, val skipped: Int) : ApiImportResultState()
-    data class Error(val message: String) : ApiImportResultState()
-}
 
 data class PlanDetailsUiState(
     val plan: DcaPlan? = null,

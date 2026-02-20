@@ -25,6 +25,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.supportsApiImport
+import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.domain.model.supportsImport
 import com.accbot.dca.presentation.components.*
 import androidx.compose.foundation.text.KeyboardOptions

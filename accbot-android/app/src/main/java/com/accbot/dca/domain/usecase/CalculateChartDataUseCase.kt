@@ -22,7 +22,8 @@ data class ChartDataPoint(
     val roiPercent: BigDecimal,
     val cumulativeCrypto: BigDecimal = BigDecimal.ZERO,
     val investedEquivCrypto: BigDecimal = BigDecimal.ZERO,
-    val avgBuyPrice: BigDecimal = BigDecimal.ZERO
+    val avgBuyPrice: BigDecimal = BigDecimal.ZERO,
+    val price: BigDecimal = BigDecimal.ZERO
 )
 
 /**
@@ -308,7 +309,8 @@ class CalculateChartDataUseCase @Inject constructor(
             roiPercent = roiPercent.setScale(2, RoundingMode.HALF_UP),
             cumulativeCrypto = cumulativeCrypto,
             investedEquivCrypto = investedEquiv,
-            avgBuyPrice = avgBuy
+            avgBuyPrice = avgBuy,
+            price = price
         )
     }
 
