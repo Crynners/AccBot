@@ -13,9 +13,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
-import androidx.navigation.NavController
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.accbot.dca.R
 import com.accbot.dca.presentation.navigation.Screen
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -51,66 +48,23 @@ val bottomNavItems = listOf(
     )
 )
 
-// Pre-computed set of bottom nav routes for efficient lookup (avoids creating new list on each recomposition)
-private val bottomNavRoutes = bottomNavItems.map { it.route }.toSet()
-
-/**
- * Main scaffold with bottom navigation
- * Used for the main app screens after onboarding
- */
-@Composable
-fun MainScaffold(
-    navController: NavController,
-    content: @Composable (Modifier) -> Unit
-) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    // Only show bottom nav on main screens (startsWith handles query params)
-    val showBottomNav = bottomNavRoutes.any { currentRoute?.startsWith(it) == true }
-
-    Scaffold(
-        bottomBar = {
-            if (showBottomNav) {
-                AccBotBottomNav(
-                    navController = navController,
-                    currentRoute = currentRoute
-                )
-            }
-        }
-    ) { paddingValues ->
-        content(Modifier.padding(paddingValues))
-    }
-}
-
 @Composable
 fun AccBotBottomNav(
-    navController: NavController,
-    currentRoute: String?
+    selectedIndex: Int,
+    onItemSelected: (Int) -> Unit
 ) {
     val successCol = successColor()
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface
     ) {
-        bottomNavItems.forEach { item ->
-            val isSelected = currentRoute?.startsWith(item.route) == true
-
+        bottomNavItems.forEachIndexed { index, item ->
             NavigationBarItem(
-                selected = isSelected,
-                onClick = {
-                    if (!isSelected) {
-                        navController.navigate(item.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                inclusive = false
-                            }
-                            launchSingleTop = true
-                        }
-                    }
-                },
+                selected = index == selectedIndex,
+                onClick = { onItemSelected(index) },
                 icon = {
                     Icon(
-                        imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                        imageVector = if (index == selectedIndex) item.selectedIcon else item.unselectedIcon,
                         contentDescription = stringResource(item.labelRes),
                         modifier = Modifier.size(24.dp)
                     )
@@ -135,32 +89,21 @@ fun AccBotBottomNav(
 
 @Composable
 fun AccBotNavRail(
-    navController: NavController,
-    currentRoute: String?
+    selectedIndex: Int,
+    onItemSelected: (Int) -> Unit
 ) {
     val successCol = successColor()
     NavigationRail(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface
     ) {
-        bottomNavItems.forEach { item ->
-            val isSelected = currentRoute?.startsWith(item.route) == true
-
+        bottomNavItems.forEachIndexed { index, item ->
             NavigationRailItem(
-                selected = isSelected,
-                onClick = {
-                    if (!isSelected) {
-                        navController.navigate(item.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                inclusive = false
-                            }
-                            launchSingleTop = true
-                        }
-                    }
-                },
+                selected = index == selectedIndex,
+                onClick = { onItemSelected(index) },
                 icon = {
                     Icon(
-                        imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                        imageVector = if (index == selectedIndex) item.selectedIcon else item.unselectedIcon,
                         contentDescription = stringResource(item.labelRes),
                         modifier = Modifier.size(24.dp)
                     )

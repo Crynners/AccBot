@@ -15,6 +15,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -53,6 +55,7 @@ import java.util.Locale
 fun PortfolioScreen(
     onNavigateBack: () -> Unit,
     onNavigateToHistory: (crypto: String?, fiat: String?) -> Unit,
+    onChartTouching: (Boolean) -> Unit = {},
     viewModel: PortfolioViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -72,6 +75,7 @@ fun PortfolioScreen(
 
         val haptic = LocalHapticFeedback.current
         LaunchedEffect(scrubbedIndex) {
+            onChartTouching(scrubbedIndex >= 0)
             if (scrubbedIndex >= 0) {
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             }
@@ -171,13 +175,46 @@ fun PortfolioScreen(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Pair label
-                    Text(
-                        text = pairLabel,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = accentColor()
-                    )
+                    // Pair label with navigation
+                    if (uiState.pages.size > 1) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    val prev = (uiState.selectedPageIndex - 1 + uiState.pages.size) % uiState.pages.size
+                                    viewModel.selectPairPage(prev)
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null, modifier = Modifier.size(20.dp))
+                            }
+                            Text(
+                                text = pairLabel,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = accentColor()
+                            )
+                            IconButton(
+                                onClick = {
+                                    val next = (uiState.selectedPageIndex + 1) % uiState.pages.size
+                                    viewModel.selectPairPage(next)
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = pairLabel,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = accentColor()
+                        )
+                    }
 
                     // KPI section (compact vertical layout for landscape)
                     if (hasData) {
@@ -253,6 +290,7 @@ fun PortfolioScreen(
                     onPairPageSelected = { viewModel.selectPairPage(it) },
                     onToggleSeriesVisibility = { viewModel.toggleSeriesVisibility(it) },
                     onRefresh = { viewModel.syncPricesAndLoadChart() },
+                    onChartTouching = onChartTouching,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -273,6 +311,7 @@ private fun PortfolioContent(
     onPairPageSelected: (Int) -> Unit,
     onToggleSeriesVisibility: (Int) -> Unit,
     onRefresh: () -> Unit,
+    onChartTouching: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val chartData = uiState.chartData
@@ -301,6 +340,7 @@ private fun PortfolioContent(
     // Haptic feedback on scrub position change
     val haptic = LocalHapticFeedback.current
     LaunchedEffect(scrubbedIndex) {
+        onChartTouching(scrubbedIndex >= 0)
         if (scrubbedIndex >= 0) {
             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }

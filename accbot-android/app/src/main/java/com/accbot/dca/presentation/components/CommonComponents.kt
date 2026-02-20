@@ -527,8 +527,19 @@ fun SectionHeader(
             fontWeight = FontWeight.SemiBold
         )
         if (action != null && onAction != null) {
-            TextButton(onClick = onAction) {
-                Text(action, color = accentColor())
+            FilledTonalIconButton(
+                onClick = onAction,
+                modifier = Modifier.size(32.dp),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = accentColor().copy(alpha = 0.15f),
+                    contentColor = accentColor()
+                )
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = action,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
