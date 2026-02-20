@@ -247,7 +247,7 @@
     <string name="chart_period_roi">%1$s za %2$s</string>
     <string name="chart_crypto_price">Cena %1$s</string>
     <string name="chart_accumulated_crypto">Akum. %1$s</string>
-    <string name="chart_explore">Prozkoumat:</string>
+    <string name="chart_explore">Prozkoumat historii:</string>
 
     <!-- Exchange Management Screen -->
     <string name="exchanges_title">Burzy</string>

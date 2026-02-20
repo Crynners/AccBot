@@ -75,10 +75,16 @@ fun EditPlanScreen(
                 }
             }
             else -> {
-                LazyColumn(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .widthIn(max = 600.dp)
+                        .fillMaxSize()
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
@@ -318,6 +324,7 @@ fun EditPlanScreen(
 
                     item { Spacer(modifier = Modifier.height(32.dp)) }
                 }
+                } // Box
             }
         }
     }

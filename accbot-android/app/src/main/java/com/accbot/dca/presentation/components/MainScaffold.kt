@@ -14,9 +14,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.accbot.dca.R
-import com.accbot.dca.presentation.navigation.BottomNavItem
 import com.accbot.dca.presentation.navigation.Screen
 import com.accbot.dca.presentation.ui.theme.successColor
 
@@ -99,16 +99,12 @@ fun AccBotBottomNav(
             NavigationBarItem(
                 selected = isSelected,
                 onClick = {
-                    if (currentRoute != item.route) {
+                    if (!isSelected) {
                         navController.navigate(item.route) {
-                            // Pop up to the start destination to avoid building a large back stack
-                            popUpTo(Screen.Dashboard.route) {
-                                saveState = true
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                inclusive = false
                             }
-                            // Avoid multiple copies of the same destination
                             launchSingleTop = true
-                            // Restore state when reselecting a previously selected item
-                            restoreState = true
                         }
                     }
                 },
@@ -126,6 +122,56 @@ fun AccBotBottomNav(
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = successCol,
+                    selectedTextColor = successCol,
+                    indicatorColor = successCol.copy(alpha = 0.15f),
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+        }
+    }
+}
+
+@Composable
+fun AccBotNavRail(
+    navController: NavController,
+    currentRoute: String?
+) {
+    val successCol = successColor()
+    NavigationRail(
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    ) {
+        bottomNavItems.forEach { item ->
+            val isSelected = currentRoute?.startsWith(item.route) == true
+
+            NavigationRailItem(
+                selected = isSelected,
+                onClick = {
+                    if (!isSelected) {
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                inclusive = false
+                            }
+                            launchSingleTop = true
+                        }
+                    }
+                },
+                icon = {
+                    Icon(
+                        imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                        contentDescription = stringResource(item.labelRes),
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                label = {
+                    Text(
+                        text = stringResource(item.labelRes),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                },
+                colors = NavigationRailItemDefaults.colors(
                     selectedIconColor = successCol,
                     selectedTextColor = successCol,
                     indicatorColor = successCol.copy(alpha = 0.15f),

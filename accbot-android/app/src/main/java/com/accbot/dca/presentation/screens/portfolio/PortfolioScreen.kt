@@ -1,20 +1,18 @@
 package com.accbot.dca.presentation.screens.portfolio
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -45,7 +43,6 @@ import com.accbot.dca.presentation.ui.theme.Primary
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.NumberFormatters
-import kotlinx.coroutines.delay
 import java.math.BigDecimal
 import java.time.Month
 import java.time.format.TextStyle
@@ -62,128 +59,143 @@ fun PortfolioScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    // Landscape: fullscreen chart with auto-hiding overlay
+    // Landscape: two-pane layout — chart left, controls right
     if (isLandscape) {
         val chartData = uiState.chartData
         val hasData = chartData.isNotEmpty()
-        var overlayVisible by remember { mutableStateOf(true) }
-        var overlayTrigger by remember { mutableIntStateOf(0) }
+        val currentPage = uiState.pages.getOrNull(uiState.selectedPageIndex)
+        val isSinglePair = currentPage is PairPage.SinglePair
 
-        // Auto-hide overlay after 3 seconds
-        LaunchedEffect(overlayTrigger) {
-            if (overlayVisible) {
-                delay(3000)
-                overlayVisible = false
+        // Scrub-to-inspect state
+        var scrubbedIndex by remember { mutableIntStateOf(-1) }
+        val scrubbedDataPoint = if (scrubbedIndex in chartData.indices) chartData[scrubbedIndex] else null
+
+        val haptic = LocalHapticFeedback.current
+        LaunchedEffect(scrubbedIndex) {
+            if (scrubbedIndex >= 0) {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             }
+        }
+
+        val pairLabel = when (currentPage) {
+            is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, currentPage.fiat)
+            is PairPage.SinglePair -> "${currentPage.crypto}/${currentPage.fiat}"
+            null -> ""
         }
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .clickable {
-                    overlayVisible = !overlayVisible
-                    if (overlayVisible) overlayTrigger++
-                }
+                .systemBarsPadding()
         ) {
-            if (hasData) {
-                val unitSuffix = when (uiState.denominationMode) {
-                    DenominationMode.FIAT -> uiState.currentPairFiat ?: "EUR"
-                    DenominationMode.CRYPTO -> uiState.currentPairCrypto ?: "BTC"
-                }
-                PortfolioLineChart(
-                    chartData = chartData,
-                    denominationMode = uiState.denominationMode,
-                    unitSuffix = unitSuffix,
-                    fiatSymbol = uiState.currentPairFiat ?: "EUR",
-                    cryptoSymbol = uiState.currentPairCrypto ?: "",
-                    visibleSeries = uiState.visibleSeries,
-                    zoomLevel = uiState.zoomLevel,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            // Semi-transparent overlay bar
-            AnimatedVisibility(
-                visible = overlayVisible,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.TopCenter)
-            ) {
-                Row(
+            Row(modifier = Modifier.fillMaxSize()) {
+                // Left pane: Chart + Legend below
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                            RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .weight(0.7f)
+                        .fillMaxHeight()
                 ) {
-                    // Back button
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back)
+                    if (hasData) {
+                        val unitSuffix = when (uiState.denominationMode) {
+                            DenominationMode.FIAT -> uiState.currentPairFiat ?: "EUR"
+                            DenominationMode.CRYPTO -> uiState.currentPairCrypto ?: "BTC"
+                        }
+                        PortfolioLineChart(
+                            chartData = chartData,
+                            denominationMode = uiState.denominationMode,
+                            unitSuffix = unitSuffix,
+                            fiatSymbol = uiState.currentPairFiat ?: "EUR",
+                            cryptoSymbol = uiState.currentPairCrypto ?: "",
+                            visibleSeries = uiState.visibleSeries,
+                            zoomLevel = uiState.zoomLevel,
+                            onScrub = { idx -> scrubbedIndex = idx ?: -1 },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
                         )
-                    }
 
-                    // Zoom level label
-                    val zoomLabel = when (val z = uiState.zoomLevel) {
-                        is ChartZoomLevel.Overview -> stringResource(R.string.chart_zoom_all_time)
-                        is ChartZoomLevel.Year -> "${z.year}"
-                        is ChartZoomLevel.Month -> {
-                            val mn = Month.of(z.month).getDisplayName(TextStyle.SHORT, Locale.getDefault())
-                            "$mn ${z.year}"
+                        // Legend below chart
+                        val (line1, line2) = when (uiState.denominationMode) {
+                            DenominationMode.FIAT -> stringResource(R.string.chart_portfolio_value) to stringResource(R.string.chart_cost_basis)
+                            DenominationMode.CRYPTO -> stringResource(R.string.chart_legend_crypto_held) to stringResource(R.string.chart_legend_invested_equiv)
+                        }
+                        val legendEntries = buildList {
+                            add(LegendEntry(0, line1, Primary))
+                            add(LegendEntry(1, line2, androidx.compose.ui.graphics.Color(0xFF888888)))
+                            if (isSinglePair && uiState.denominationMode == DenominationMode.FIAT) {
+                                val crypto = uiState.currentPairCrypto ?: "BTC"
+                                add(LegendEntry(2, stringResource(R.string.chart_crypto_price, crypto), btcPriceColor))
+                                add(LegendEntry(3, stringResource(R.string.chart_accumulated_crypto, crypto), accumulatedCryptoColor))
+                            }
+                        }
+                        InteractiveChartLegend(
+                            entries = legendEntries,
+                            visibleSeries = uiState.visibleSeries,
+                            onToggleSeries = { viewModel.toggleSeriesVisibility(it) },
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+
+                        // Zoom header + drill-down chips
+                        Column(
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Crossfade(targetState = uiState.zoomLevel, label = "zoom") { zoom ->
+                                ChartZoomHeader(
+                                    zoomLevel = zoom,
+                                    canNavigatePrev = uiState.canNavigatePrev,
+                                    canNavigateNext = uiState.canNavigateNext,
+                                    onZoomOut = { viewModel.zoomOut() },
+                                    onNavigatePrev = { viewModel.navigatePrev() },
+                                    onNavigateNext = { viewModel.navigateNext() }
+                                )
+                            }
+                            DrillDownChips(
+                                zoomLevel = uiState.zoomLevel,
+                                availableYears = uiState.availableYears,
+                                availableMonths = uiState.availableMonths,
+                                onDrillDownYear = { viewModel.drillDownToYear(it) },
+                                onDrillDownMonth = { year, month -> viewModel.drillDownToMonth(year, month) }
+                            )
                         }
                     }
+                }
+
+                // Right pane: Controls
+                Column(
+                    modifier = Modifier
+                        .weight(0.3f)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Pair label
                     Text(
-                        text = zoomLabel,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
+                        text = pairLabel,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = accentColor()
                     )
 
-                    // Prev/next navigation
-                    if (uiState.zoomLevel !is ChartZoomLevel.Overview) {
-                        IconButton(
-                            onClick = { viewModel.navigatePrev() },
-                            enabled = uiState.canNavigatePrev
-                        ) {
-                            Icon(Icons.Default.ChevronLeft, contentDescription = null)
-                        }
-                        IconButton(
-                            onClick = { viewModel.navigateNext() },
-                            enabled = uiState.canNavigateNext
-                        ) {
-                            Icon(Icons.Default.ChevronRight, contentDescription = null)
-                        }
-                    }
-
-                    Spacer(Modifier.weight(1f))
-
-                    // KPI summary
+                    // KPI section (compact vertical layout for landscape)
                     if (hasData) {
-                        val latest = chartData.last()
-                        val fiat = uiState.currentPairFiat ?: "EUR"
-                        val isPositive = latest.roiAbsolute >= BigDecimal.ZERO
-                        val roiSign = if (isPositive) "+" else ""
-                        val roiColor = if (isPositive) successColor() else MaterialTheme.colorScheme.error
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "${NumberFormatters.fiat(latest.portfolioValue)} $fiat",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "$roiSign${NumberFormatters.percent(latest.roiPercent)}%",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = roiColor
-                            )
-                        }
+                        LandscapeKpiContent(
+                            uiState = uiState,
+                            isSinglePair = isSinglePair,
+                            scrubbedDataPoint = scrubbedDataPoint
+                        )
                     }
 
-                    Spacer(Modifier.width(8.dp))
+                    // Exchange filter
+                    if (uiState.availableExchanges.size > 1) {
+                        ExchangeFilterRow(
+                            exchanges = uiState.availableExchanges,
+                            selectedExchange = uiState.selectedExchangeFilter,
+                            onExchangeSelected = { viewModel.selectExchangeFilter(it) }
+                        )
+                    }
                 }
             }
         }
@@ -546,17 +558,7 @@ private fun ChartZoomHeader(
 ) {
     when (zoomLevel) {
         is ChartZoomLevel.Overview -> {
-            // Centered "All Time" label
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.chart_zoom_all_time),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+            // No header needed — drill-down chips show "Explore history" label
         }
         is ChartZoomLevel.Year -> {
             Row(
@@ -928,6 +930,128 @@ private fun KpiCardContent(
                 fontWeight = FontWeight.SemiBold
             )
         }
+    }
+}
+
+@Composable
+private fun LandscapeKpiContent(
+    uiState: PortfolioUiState,
+    isSinglePair: Boolean,
+    scrubbedDataPoint: com.accbot.dca.domain.usecase.ChartDataPoint? = null
+) {
+    val displayPoint = scrubbedDataPoint ?: uiState.chartData.lastOrNull() ?: return
+    val isScrubbing = scrubbedDataPoint != null
+    val isPositive = displayPoint.roiAbsolute >= BigDecimal.ZERO
+    val roiColor = if (isPositive) successColor() else MaterialTheme.colorScheme.error
+    val sign = if (isPositive) "+" else ""
+    val fiatSymbol = uiState.currentPairFiat ?: "EUR"
+
+    // Period ROI
+    val periodLabel = when (val zoom = uiState.zoomLevel) {
+        is ChartZoomLevel.Year -> "${zoom.year}"
+        is ChartZoomLevel.Month -> {
+            val monthName = Month.of(zoom.month)
+                .getDisplayName(TextStyle.SHORT, Locale.getDefault())
+            "$monthName ${zoom.year}"
+        }
+        else -> null
+    }
+    val periodRoi = if (periodLabel != null && uiState.chartData.size >= 2) {
+        val first = uiState.chartData.first()
+        val last = uiState.chartData.last()
+        val startValue = first.portfolioValue
+        val endValue = last.portfolioValue
+        if (startValue > BigDecimal.ZERO) {
+            endValue.subtract(startValue)
+                .multiply(BigDecimal(100))
+                .divide(startValue, 2, java.math.RoundingMode.HALF_UP)
+        } else null
+    } else null
+
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        // Scrub date
+        if (isScrubbing) {
+            Text(
+                text = LocalDate.ofEpochDay(displayPoint.epochDay)
+                    .format(DateTimeFormatter.ofPattern("d MMM yyyy")),
+                style = MaterialTheme.typography.labelMedium,
+                color = accentColor(),
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        // Portfolio value
+        Text(
+            text = stringResource(R.string.chart_portfolio_value),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "${NumberFormatters.fiat(displayPoint.portfolioValue)} $fiatSymbol",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        // ROI
+        Text(
+            text = stringResource(R.string.chart_total_roi),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "$sign${NumberFormatters.percent(displayPoint.roiPercent)}%  ($sign${NumberFormatters.fiat(displayPoint.roiAbsolute)} $fiatSymbol)",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = roiColor
+        )
+
+        // Period ROI
+        if (periodRoi != null && periodLabel != null) {
+            val periodPositive = periodRoi >= BigDecimal.ZERO
+            val periodSign = if (periodPositive) "+" else ""
+            val periodColor = if (periodPositive) successColor() else MaterialTheme.colorScheme.error
+            Text(
+                text = stringResource(
+                    R.string.chart_period_roi,
+                    "$periodSign${NumberFormatters.percent(periodRoi)}%",
+                    periodLabel
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = periodColor
+            )
+        }
+
+        // Avg price or invested
+        if (isSinglePair) {
+            Text(
+                text = stringResource(R.string.chart_avg_price),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${NumberFormatters.fiat(displayPoint.avgBuyPrice)} $fiatSymbol",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.chart_invested),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${NumberFormatters.fiat(displayPoint.totalInvested)} $fiatSymbol",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        // Transactions
+        Text(
+            text = "${stringResource(R.string.chart_transactions)}: ${uiState.totalTransactions}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

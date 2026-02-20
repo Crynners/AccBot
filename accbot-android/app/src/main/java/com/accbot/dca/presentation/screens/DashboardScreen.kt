@@ -1,5 +1,6 @@
 package com.accbot.dca.presentation.screens
 
+import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -8,8 +9,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -17,9 +20,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -50,6 +55,8 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     LaunchedEffect(uiState.runNowTriggered) {
         if (uiState.runNowTriggered) {
@@ -83,78 +90,166 @@ fun DashboardScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-            }
+        if (isLandscape) {
+            // Landscape: two-column layout
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Left column: Holdings + Quick Actions
+                Column(
+                    modifier = Modifier
+                        .weight(0.5f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Spacer(modifier = Modifier.height(8.dp))
 
-            // Sandbox Mode Banner
-            if (uiState.isSandboxMode) {
-                item {
-                    SandboxBanner()
+                    if (uiState.isSandboxMode) {
+                        SandboxBanner()
+                    }
+
+                    HoldingsPager(
+                        holdings = uiState.holdings,
+                        isPriceLoading = uiState.isPriceLoading,
+                        onRefreshPrices = { viewModel.refreshPrices() },
+                        onHoldingClick = onNavigateToPortfolio,
+                        compact = true
+                    )
+
+                    QuickActionsRow(
+                        onViewHistory = onNavigateToHistory,
+                        onRunNow = { viewModel.showRunNowSheet() }
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-            }
 
-            // Holdings Pager (replaces old PortfolioSummaryCard)
-            item {
-                HoldingsPager(
-                    holdings = uiState.holdings,
-                    isPriceLoading = uiState.isPriceLoading,
-                    onRefreshPrices = { viewModel.refreshPrices() },
-                    onHoldingClick = onNavigateToPortfolio
-                )
-            }
+                // Right column: DCA Plans
+                LazyColumn(
+                    modifier = Modifier.weight(0.5f),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
 
-            // My DCA Plans
-            item {
-                SectionHeader(
-                    title = stringResource(R.string.dashboard_active_plans),
-                    action = "+",
-                    onAction = onNavigateToPlans
-                )
-            }
+                    item {
+                        SectionHeader(
+                            title = stringResource(R.string.dashboard_active_plans),
+                            action = "+",
+                            onAction = onNavigateToPlans
+                        )
+                    }
 
-            if (uiState.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+                    if (uiState.isLoading) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    } else if (uiState.activePlans.isEmpty()) {
+                        item {
+                            EmptyPlansCard(onAddPlan = onNavigateToPlans)
+                        }
+                    } else {
+                        items(uiState.activePlans, key = { it.plan.id }) { planWithBalance ->
+                            DcaPlanCard(
+                                planWithBalance = planWithBalance,
+                                onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
+                                onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) }
+                            )
+                        }
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
-            } else if (uiState.activePlans.isEmpty()) {
+            }
+        } else {
+            // Portrait: single column
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 item {
-                    EmptyPlansCard(onAddPlan = onNavigateToPlans)
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
-            } else {
-                items(uiState.activePlans, key = { it.plan.id }) { planWithBalance ->
-                    DcaPlanCard(
-                        planWithBalance = planWithBalance,
-                        onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
-                        onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) }
+
+                // Sandbox Mode Banner
+                if (uiState.isSandboxMode) {
+                    item {
+                        SandboxBanner()
+                    }
+                }
+
+                // Holdings Pager
+                item {
+                    HoldingsPager(
+                        holdings = uiState.holdings,
+                        isPriceLoading = uiState.isPriceLoading,
+                        onRefreshPrices = { viewModel.refreshPrices() },
+                        onHoldingClick = onNavigateToPortfolio
                     )
                 }
-            }
 
-            // Quick Actions
-            item {
-                QuickActionsRow(
-                    onViewHistory = onNavigateToHistory,
-                    onRunNow = { viewModel.showRunNowSheet() }
-                )
-            }
+                // My DCA Plans
+                item {
+                    SectionHeader(
+                        title = stringResource(R.string.dashboard_active_plans),
+                        action = "+",
+                        onAction = onNavigateToPlans
+                    )
+                }
 
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
+                if (uiState.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                } else if (uiState.activePlans.isEmpty()) {
+                    item {
+                        EmptyPlansCard(onAddPlan = onNavigateToPlans)
+                    }
+                } else {
+                    items(uiState.activePlans, key = { it.plan.id }) { planWithBalance ->
+                        DcaPlanCard(
+                            planWithBalance = planWithBalance,
+                            onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
+                            onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) }
+                        )
+                    }
+                }
+
+                // Quick Actions
+                item {
+                    QuickActionsRow(
+                        onViewHistory = onNavigateToHistory,
+                        onRunNow = { viewModel.showRunNowSheet() }
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
     }
@@ -198,7 +293,8 @@ private fun HoldingsPager(
     holdings: List<CryptoHoldingWithPrice>,
     isPriceLoading: Boolean,
     onRefreshPrices: () -> Unit,
-    onHoldingClick: ((String, String) -> Unit)? = null
+    onHoldingClick: ((String, String) -> Unit)? = null,
+    compact: Boolean = false
 ) {
     val successCol = successColor()
 
@@ -294,7 +390,7 @@ private fun HoldingsPager(
                 modifier = Modifier.fillMaxWidth()
             ) { page ->
                 val holding = holdings[page]
-                HoldingPage(holding = holding, successCol = successCol)
+                HoldingPage(holding = holding, successCol = successCol, compact = compact)
             }
 
             // Page indicator dots
@@ -334,7 +430,8 @@ private fun HoldingsPager(
 @Composable
 private fun HoldingPage(
     holding: CryptoHoldingWithPrice,
-    successCol: androidx.compose.ui.graphics.Color
+    successCol: androidx.compose.ui.graphics.Color,
+    compact: Boolean = false
 ) {
     Column(
         modifier = Modifier
@@ -345,47 +442,45 @@ private fun HoldingPage(
         // Crypto amount
         Text(
             text = "${NumberFormatters.crypto(holding.totalCryptoAmount)} ${holding.crypto}",
-            style = MaterialTheme.typography.headlineMedium,
+            style = if (compact) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = successCol
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(if (compact) 8.dp else 12.dp))
 
-        // Stats row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            StatItem(
-                label = stringResource(R.string.dashboard_invested),
-                value = "${NumberFormatters.fiat(holding.totalInvested)} ${holding.fiat}"
-            )
-            StatItem(
-                label = stringResource(R.string.dashboard_avg_price),
-                value = "${NumberFormatters.fiat(holding.averageBuyPrice)} ${holding.fiat}"
-            )
-        }
-
-        // Price and ROI row (only if price available)
-        if (holding.currentPrice != null) {
-            Spacer(modifier = Modifier.height(8.dp))
+        if (compact) {
+            // Compact: two columns, label: value stacked
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                StatItem(
-                    label = stringResource(R.string.dashboard_current_price),
-                    value = "${NumberFormatters.fiat(holding.currentPrice)} ${holding.fiat}"
-                )
+                Column {
+                    StatItemInline(
+                        label = stringResource(R.string.dashboard_invested),
+                        value = "${NumberFormatters.fiat(holding.totalInvested)} ${holding.fiat}"
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    StatItemInline(
+                        label = stringResource(R.string.dashboard_avg_price),
+                        value = "${NumberFormatters.fiat(holding.averageBuyPrice)} ${holding.fiat}"
+                    )
+                    if (holding.currentPrice != null) {
+                        Spacer(Modifier.height(4.dp))
+                        StatItemInline(
+                            label = stringResource(R.string.dashboard_current_price),
+                            value = "${NumberFormatters.fiat(holding.currentPrice)} ${holding.fiat}"
+                        )
+                    }
+                }
                 if (holding.roiAbsolute != null && holding.roiPercent != null) {
                     val isPositive = holding.roiAbsolute >= BigDecimal.ZERO
                     val roiColor = if (isPositive) successCol else Error
                     val sign = if (isPositive) "+" else ""
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(horizontalAlignment = Alignment.End) {
                         Text(
                             text = "$sign${NumberFormatters.fiat(holding.roiAbsolute)} ${holding.fiat}",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = roiColor
                         )
@@ -397,7 +492,69 @@ private fun HoldingPage(
                     }
                 }
             }
+        } else {
+            // Normal: centered rows
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatItem(
+                    label = stringResource(R.string.dashboard_invested),
+                    value = "${NumberFormatters.fiat(holding.totalInvested)} ${holding.fiat}"
+                )
+                StatItem(
+                    label = stringResource(R.string.dashboard_avg_price),
+                    value = "${NumberFormatters.fiat(holding.averageBuyPrice)} ${holding.fiat}"
+                )
+            }
+
+            if (holding.currentPrice != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    StatItem(
+                        label = stringResource(R.string.dashboard_current_price),
+                        value = "${NumberFormatters.fiat(holding.currentPrice)} ${holding.fiat}"
+                    )
+                    if (holding.roiAbsolute != null && holding.roiPercent != null) {
+                        val isPositive = holding.roiAbsolute >= BigDecimal.ZERO
+                        val roiColor = if (isPositive) successCol else Error
+                        val sign = if (isPositive) "+" else ""
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "$sign${NumberFormatters.fiat(holding.roiAbsolute)} ${holding.fiat}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = roiColor
+                            )
+                            Text(
+                                text = stringResource(R.string.dashboard_roi, "${sign}${NumberFormatters.percent(holding.roiPercent)}%"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = roiColor
+                            )
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun StatItemInline(label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = "$label: ",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -598,7 +755,8 @@ private fun EmptyPlansCard(onAddPlan: () -> Unit) {
 @Composable
 private fun QuickActionsRow(
     onViewHistory: () -> Unit,
-    onRunNow: () -> Unit
+    onRunNow: () -> Unit,
+    compact: Boolean = false
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -608,17 +766,27 @@ private fun QuickActionsRow(
             onClick = onViewHistory,
             modifier = Modifier.weight(1f)
         ) {
-            Icon(Icons.Default.History, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.dashboard_history))
+            Icon(Icons.Default.History, contentDescription = stringResource(R.string.dashboard_history))
+            if (!compact) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.dashboard_history),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
         Button(
             onClick = onRunNow,
             modifier = Modifier.weight(1f)
         ) {
-            Icon(Icons.Default.Bolt, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.dashboard_run_now))
+            Icon(Icons.Default.Bolt, contentDescription = stringResource(R.string.dashboard_run_now))
+            if (!compact) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.dashboard_run_now),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

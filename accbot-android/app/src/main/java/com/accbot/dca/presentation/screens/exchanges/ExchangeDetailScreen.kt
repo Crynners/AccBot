@@ -70,10 +70,16 @@ fun ExchangeDetailScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
+        ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 600.dp)
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -210,5 +216,6 @@ fun ExchangeDetailScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+        } // Box
     }
 }

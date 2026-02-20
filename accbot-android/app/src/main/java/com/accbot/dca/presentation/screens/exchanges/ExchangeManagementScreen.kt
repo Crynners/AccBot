@@ -65,7 +65,7 @@ fun ExchangeManagementScreen(
             }
         } else {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+                columns = GridCells.Adaptive(minSize = 150.dp),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
@@ -76,7 +76,7 @@ fun ExchangeManagementScreen(
             ) {
                 // Connected exchanges section
                 if (uiState.connectedExchanges.isNotEmpty()) {
-                    item(span = { GridItemSpan(2) }) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(title = stringResource(R.string.exchanges_connected))
                     }
 
@@ -88,14 +88,14 @@ fun ExchangeManagementScreen(
                         )
                     }
 
-                    item(span = { GridItemSpan(2) }) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
 
                 // Available exchanges section
                 if (availableExchanges.isNotEmpty()) {
-                    item(span = { GridItemSpan(2) }) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(title = stringResource(R.string.exchanges_available))
                     }
 
@@ -108,7 +108,7 @@ fun ExchangeManagementScreen(
                     }
                 }
 
-                item(span = { GridItemSpan(2) }) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }

@@ -246,7 +246,7 @@
     <string name="chart_period_roi">%1$s in %2$s</string>
     <string name="chart_crypto_price">%1$s Price</string>
     <string name="chart_accumulated_crypto">Accum. %1$s</string>
-    <string name="chart_explore">Explore:</string>
+    <string name="chart_explore">Explore history:</string>
 
     <!-- Exchange Management Screen -->
     <string name="exchanges_title">Exchanges</string>
