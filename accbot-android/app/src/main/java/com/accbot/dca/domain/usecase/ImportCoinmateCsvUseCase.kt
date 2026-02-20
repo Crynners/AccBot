@@ -45,8 +45,41 @@ class ImportCoinmateCsvUseCase @Inject constructor(
         }
     }
 
+    /**
+     * Parse a semicolon-delimited CSV line, respecting quoted fields.
+     * Handles fields that contain semicolons within double quotes.
+     */
+    private fun splitCsvLine(line: String, delimiter: Char = ';'): List<String> {
+        val fields = mutableListOf<String>()
+        val current = StringBuilder()
+        var inQuotes = false
+        var i = 0
+        while (i < line.length) {
+            val c = line[i]
+            when {
+                c == '"' && !inQuotes -> inQuotes = true
+                c == '"' && inQuotes -> {
+                    if (i + 1 < line.length && line[i + 1] == '"') {
+                        current.append('"')
+                        i++ // skip escaped quote
+                    } else {
+                        inQuotes = false
+                    }
+                }
+                c == delimiter && !inQuotes -> {
+                    fields.add(current.toString())
+                    current.clear()
+                }
+                else -> current.append(c)
+            }
+            i++
+        }
+        fields.add(current.toString())
+        return fields
+    }
+
     private fun parseLine(line: String, crypto: String, fiat: String): ParsedTransaction? {
-        val fields = line.split(";")
+        val fields = splitCsvLine(line)
         if (fields.size < 13) return null
 
         val orderId = fields[0].trim()

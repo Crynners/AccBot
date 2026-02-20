@@ -1,7 +1,6 @@
 package com.accbot.dca.presentation.screens.onboarding
 
 import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -22,13 +21,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.presentation.screens.SettingsViewModel
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
+import com.accbot.dca.presentation.utils.showBiometricPrompt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,7 +89,7 @@ fun SecurityScreen(
 
             Text(
                 text = stringResource(R.string.security_title),
-                fontSize = 28.sp,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
@@ -144,29 +143,20 @@ fun SecurityScreen(
             if (canUseBiometric) {
                 Spacer(modifier = Modifier.height(20.dp))
 
+                val biometricTitle = stringResource(R.string.biometric_prompt_title)
+                val biometricSubtitle = stringResource(R.string.biometric_prompt_subtitle)
                 OutlinedButton(
                     onClick = {
                         if (activity != null) {
-                            val executor = ContextCompat.getMainExecutor(activity)
-                            val biometricPrompt = BiometricPrompt(
-                                activity,
-                                executor,
-                                object : BiometricPrompt.AuthenticationCallback() {
-                                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                                        viewModel.setBiometricLockEnabled(true)
-                                        biometricEnabled = true
-                                    }
+                            showBiometricPrompt(
+                                activity = activity,
+                                title = biometricTitle,
+                                subtitle = biometricSubtitle,
+                                onSuccess = {
+                                    viewModel.setBiometricLockEnabled(true)
+                                    biometricEnabled = true
                                 }
                             )
-                            val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                                .setTitle(context.getString(R.string.biometric_prompt_title))
-                                .setSubtitle(context.getString(R.string.biometric_prompt_subtitle))
-                                .setAllowedAuthenticators(
-                                    BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                                            BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                                )
-                                .build()
-                            biometricPrompt.authenticate(promptInfo)
                         }
                     },
                     enabled = !biometricEnabled,
@@ -246,7 +236,7 @@ fun SecurityScreen(
 }
 
 @Composable
-private fun SecurityFeatureRow(
+internal fun SecurityFeatureRow(
     icon: ImageVector,
     title: String,
     description: String

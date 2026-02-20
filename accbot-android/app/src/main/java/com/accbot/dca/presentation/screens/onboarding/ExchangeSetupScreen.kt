@@ -7,27 +7,23 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.domain.model.Exchange
-import com.accbot.dca.presentation.components.QrScannerButton
+import com.accbot.dca.presentation.components.CredentialsInputCard
 import com.accbot.dca.presentation.components.SandboxModeIndicator
 import com.accbot.dca.R
 import com.accbot.dca.presentation.ui.theme.accentColor
@@ -41,8 +37,7 @@ fun ExchangeSetupScreen(
     onBack: () -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    var showSecretField by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -86,7 +81,7 @@ fun ExchangeSetupScreen(
 
             Text(
                 text = stringResource(R.string.exchange_setup_choose),
-                fontSize = 24.sp,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
@@ -137,129 +132,19 @@ fun ExchangeSetupScreen(
             if (uiState.selectedExchange != null) {
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.exchange_setup_api_credentials),
-                            fontWeight = FontWeight.SemiBold,
-                            style = MaterialTheme.typography.titleSmall
-                        )
-
-                        // Coinmate requires separate Client ID
-                        if (uiState.selectedExchange == Exchange.COINMATE) {
-                            OutlinedTextField(
-                                value = uiState.clientId,
-                                onValueChange = viewModel::setClientId,
-                                modifier = Modifier.fillMaxWidth(),
-                                label = { Text(stringResource(R.string.credentials_client_id)) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                isError = uiState.credentialsError != null,
-                                trailingIcon = {
-                                    QrScannerButton(onScanResult = viewModel::setClientId)
-                                }
-                            )
-                        }
-
-                        OutlinedTextField(
-                            value = uiState.apiKey,
-                            onValueChange = viewModel::setApiKey,
-                            modifier = Modifier.fillMaxWidth(),
-                            label = {
-                                Text(stringResource(if (uiState.selectedExchange == Exchange.COINMATE) R.string.credentials_public_key else R.string.credentials_api_key))
-                            },
-                            singleLine = true,
-                            isError = uiState.credentialsError != null,
-                            trailingIcon = {
-                                QrScannerButton(onScanResult = viewModel::setApiKey)
-                            }
-                        )
-
-                        OutlinedTextField(
-                            value = uiState.apiSecret,
-                            onValueChange = viewModel::setApiSecret,
-                            modifier = Modifier.fillMaxWidth(),
-                            label = {
-                                Text(stringResource(if (uiState.selectedExchange == Exchange.COINMATE) R.string.credentials_private_key else R.string.credentials_api_secret))
-                            },
-                            singleLine = true,
-                            visualTransformation = if (showSecretField) {
-                                VisualTransformation.None
-                            } else {
-                                PasswordVisualTransformation()
-                            },
-                            trailingIcon = {
-                                Row {
-                                    QrScannerButton(onScanResult = viewModel::setApiSecret)
-                                    IconButton(onClick = { showSecretField = !showSecretField }) {
-                                        Icon(
-                                            imageVector = if (showSecretField) {
-                                                Icons.Default.VisibilityOff
-                                            } else {
-                                                Icons.Default.Visibility
-                                            },
-                                            contentDescription = stringResource(R.string.credentials_toggle_visibility)
-                                        )
-                                    }
-                                }
-                            },
-                            isError = uiState.credentialsError != null
-                        )
-
-                        // Passphrase for exchanges that need it (only KuCoin)
-                        if (uiState.selectedExchange == Exchange.KUCOIN) {
-                            OutlinedTextField(
-                                value = uiState.passphrase,
-                                onValueChange = viewModel::setPassphrase,
-                                modifier = Modifier.fillMaxWidth(),
-                                label = { Text(stringResource(R.string.credentials_passphrase)) },
-                                singleLine = true,
-                                visualTransformation = PasswordVisualTransformation(),
-                                isError = uiState.credentialsError != null,
-                                trailingIcon = {
-                                    QrScannerButton(onScanResult = viewModel::setPassphrase)
-                                }
-                            )
-                        }
-
-                        // Error message
-                        if (uiState.credentialsError != null) {
-                            Text(
-                                text = uiState.credentialsError!!,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-
-                        // Security note
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Security,
-                                contentDescription = null,
-                                tint = successColor(),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(R.string.credentials_encrypted_aes),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
+                CredentialsInputCard(
+                    exchange = uiState.selectedExchange!!,
+                    clientId = uiState.clientId,
+                    apiKey = uiState.apiKey,
+                    apiSecret = uiState.apiSecret,
+                    passphrase = uiState.passphrase,
+                    onClientIdChange = viewModel::setClientId,
+                    onApiKeyChange = viewModel::setApiKey,
+                    onApiSecretChange = viewModel::setApiSecret,
+                    onPassphraseChange = viewModel::setPassphrase,
+                    errorMessage = uiState.credentialsError,
+                    isValidating = uiState.isValidatingCredentials
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -301,7 +186,7 @@ fun ExchangeSetupScreen(
 }
 
 @Composable
-private fun ExchangeGridItem(
+internal fun ExchangeGridItem(
     exchange: Exchange,
     isSelected: Boolean,
     onClick: () -> Unit,

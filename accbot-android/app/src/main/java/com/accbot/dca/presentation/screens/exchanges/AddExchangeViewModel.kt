@@ -24,8 +24,10 @@ import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.exchange.ExchangeConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.Immutable
 import javax.inject.Inject
 
 /**
@@ -39,6 +41,7 @@ enum class ExchangeSetupStep(@StringRes val titleRes: Int) {
     SUCCESS(R.string.add_exchange_success)
 }
 
+@Immutable
 data class AddExchangeUiState(
     val currentStep: ExchangeSetupStep = ExchangeSetupStep.SELECTION,
     val selectedExchange: Exchange? = null,
@@ -71,6 +74,7 @@ class AddExchangeViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(AddExchangeUiState())
     val uiState: StateFlow<AddExchangeUiState> = _uiState.asStateFlow()
+    private var plansCollectionJob: Job? = null
 
     init {
         _uiState.update { it.copy(isSandboxMode = userPreferences.isSandboxMode()) }
@@ -95,8 +99,9 @@ class AddExchangeViewModel @Inject constructor(
             )
         }
 
-        // Load plans for this exchange
-        viewModelScope.launch {
+        // Cancel previous collection and start new one for selected exchange
+        plansCollectionJob?.cancel()
+        plansCollectionJob = viewModelScope.launch {
             dcaPlanDao.getPlansByExchange(exchange).collect { plans ->
                 _uiState.update { it.copy(plansForExchange = plans) }
             }

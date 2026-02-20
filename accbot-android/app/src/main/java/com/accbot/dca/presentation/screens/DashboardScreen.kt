@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +34,7 @@ import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.presentation.components.CryptoIcon
+import com.accbot.dca.presentation.components.EmptyState
 import com.accbot.dca.presentation.components.SectionHeader
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
@@ -40,7 +42,6 @@ import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.TimeUtils
 import com.accbot.dca.presentation.utils.NumberFormatters
-import java.math.BigDecimal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +53,7 @@ fun DashboardScreen(
     onNavigateToPortfolio: ((String, String) -> Unit)? = null,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
@@ -256,7 +257,7 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun SandboxBanner() {
+internal fun SandboxBanner() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -289,7 +290,7 @@ private fun SandboxBanner() {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun HoldingsPager(
+internal fun HoldingsPager(
     holdings: List<CryptoHoldingWithPrice>,
     isPriceLoading: Boolean,
     onRefreshPrices: () -> Unit,
@@ -341,7 +342,7 @@ private fun HoldingsPager(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                val holding = holdings[pagerState.currentPage]
+                val holding = holdings.getOrNull(pagerState.currentPage) ?: return@clickable
                 onHoldingClick?.invoke(holding.crypto, holding.fiat)
             },
         colors = CardDefaults.cardColors(
@@ -387,6 +388,7 @@ private fun HoldingsPager(
 
             HorizontalPager(
                 state = pagerState,
+                userScrollEnabled = holdings.size > 1,
                 modifier = Modifier.fillMaxWidth()
             ) { page ->
                 val holding = holdings[page]
@@ -417,18 +419,21 @@ private fun HoldingsPager(
             }
 
             // Transaction count for current page
-            Text(
-                text = stringResource(R.string.dashboard_transactions_total, holdings[pagerState.currentPage].transactionCount),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+            val currentHolding = holdings.getOrNull(pagerState.currentPage)
+            if (currentHolding != null) {
+                Text(
+                    text = stringResource(R.string.dashboard_transactions_total, currentHolding.transactionCount),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun HoldingPage(
+internal fun HoldingPage(
     holding: CryptoHoldingWithPrice,
     successCol: androidx.compose.ui.graphics.Color,
     compact: Boolean = false
@@ -474,9 +479,9 @@ private fun HoldingPage(
                     }
                 }
                 if (holding.roiAbsolute != null && holding.roiPercent != null) {
-                    val isPositive = holding.roiAbsolute >= BigDecimal.ZERO
+                    val isPositive = NumberFormatters.isPositiveRoi(holding.roiAbsolute)
                     val roiColor = if (isPositive) successCol else Error
-                    val sign = if (isPositive) "+" else ""
+                    val sign = NumberFormatters.roiSign(holding.roiAbsolute)
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
                             text = "$sign${NumberFormatters.fiat(holding.roiAbsolute)} ${holding.fiat}",
@@ -519,9 +524,9 @@ private fun HoldingPage(
                         value = "${NumberFormatters.fiat(holding.currentPrice)} ${holding.fiat}"
                     )
                     if (holding.roiAbsolute != null && holding.roiPercent != null) {
-                        val isPositive = holding.roiAbsolute >= BigDecimal.ZERO
+                        val isPositive = NumberFormatters.isPositiveRoi(holding.roiAbsolute)
                         val roiColor = if (isPositive) successCol else Error
-                        val sign = if (isPositive) "+" else ""
+                        val sign = NumberFormatters.roiSign(holding.roiAbsolute)
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = "$sign${NumberFormatters.fiat(holding.roiAbsolute)} ${holding.fiat}",
@@ -559,7 +564,7 @@ private fun StatItemInline(label: String, value: String) {
 }
 
 @Composable
-private fun StatItem(label: String, value: String) {
+internal fun StatItem(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
@@ -575,7 +580,7 @@ private fun StatItem(label: String, value: String) {
 }
 
 @Composable
-private fun DcaPlanCard(
+internal fun DcaPlanCard(
     planWithBalance: DcaPlanWithBalance,
     onToggle: () -> Unit,
     onClick: (() -> Unit)? = null
@@ -714,46 +719,25 @@ private fun formatRemainingDays(days: Double, context: android.content.Context):
 }
 
 @Composable
-private fun EmptyPlansCard(onAddPlan: () -> Unit) {
+internal fun EmptyPlansCard(onAddPlan: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.dashboard_no_plans_title),
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.dashboard_no_plans_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onAddPlan) {
-                Text(stringResource(R.string.dashboard_create_plan))
-            }
-        }
+        EmptyState(
+            icon = Icons.Default.Add,
+            title = stringResource(R.string.dashboard_no_plans_title),
+            description = stringResource(R.string.dashboard_no_plans_description),
+            actionLabel = stringResource(R.string.dashboard_create_plan),
+            onAction = onAddPlan
+        )
     }
 }
 
 @Composable
-private fun QuickActionsRow(
+internal fun QuickActionsRow(
     onViewHistory: () -> Unit,
     onRunNow: () -> Unit,
     compact: Boolean = false

@@ -1,7 +1,5 @@
 package com.accbot.dca.presentation.screens
 
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,10 +16,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.accbot.dca.R
 import com.accbot.dca.presentation.ui.theme.accentColor
+import com.accbot.dca.presentation.utils.showBiometricPrompt
 
 @Composable
 fun BiometricLockScreen(
@@ -30,49 +28,19 @@ fun BiometricLockScreen(
 ) {
     val promptTitle = stringResource(R.string.biometric_prompt_title)
     val promptSubtitle = stringResource(R.string.biometric_prompt_subtitle)
-    val promptNegative = stringResource(R.string.biometric_prompt_negative)
 
-    fun showBiometricPrompt() {
-        val executor = ContextCompat.getMainExecutor(activity)
-        val biometricPrompt = BiometricPrompt(
-            activity,
-            executor,
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    onAuthenticated()
-                }
-            }
+    fun triggerBiometricPrompt() {
+        showBiometricPrompt(
+            activity = activity,
+            title = promptTitle,
+            subtitle = promptSubtitle,
+            onSuccess = onAuthenticated
         )
-
-        val canUseBiometricStrong = BiometricManager.from(activity)
-            .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
-
-        val promptInfo = if (canUseBiometricStrong) {
-            BiometricPrompt.PromptInfo.Builder()
-                .setTitle(promptTitle)
-                .setSubtitle(promptSubtitle)
-                .setAllowedAuthenticators(
-                    BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                            BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                )
-                .build()
-        } else {
-            BiometricPrompt.PromptInfo.Builder()
-                .setTitle(promptTitle)
-                .setSubtitle(promptSubtitle)
-                .setAllowedAuthenticators(
-                    BiometricManager.Authenticators.BIOMETRIC_WEAK or
-                            BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                )
-                .build()
-        }
-
-        biometricPrompt.authenticate(promptInfo)
     }
 
     // Auto-trigger on first composition
     LaunchedEffect(Unit) {
-        showBiometricPrompt()
+        triggerBiometricPrompt()
     }
 
     Surface(
@@ -122,7 +90,7 @@ fun BiometricLockScreen(
             Spacer(modifier = Modifier.height(48.dp))
 
             OutlinedButton(
-                onClick = { showBiometricPrompt() },
+                onClick = { triggerBiometricPrompt() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),

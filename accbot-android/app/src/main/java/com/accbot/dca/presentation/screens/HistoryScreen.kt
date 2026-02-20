@@ -14,22 +14,28 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.domain.model.TransactionStatus
+import com.accbot.dca.presentation.components.EmptyState
 import com.accbot.dca.presentation.components.SelectableChip
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
+import com.accbot.dca.presentation.utils.DateFormatters
 import com.accbot.dca.presentation.utils.NumberFormatters
 import java.io.File
 import java.io.FileWriter
@@ -44,7 +50,7 @@ fun HistoryScreen(
     onNavigateToTransactionDetails: ((Long) -> Unit)? = null,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showSortMenu by remember { mutableStateOf(false) }
     var transactionToDelete by remember { mutableStateOf<TransactionEntity?>(null) }
@@ -208,10 +214,16 @@ fun HistoryScreen(
             }
 
             if (uiState.transactions.isEmpty()) {
-                EmptyHistoryState(
+                Box(
                     modifier = Modifier.fillMaxSize(),
-                    hasFilter = hasActiveFilter
-                )
+                    contentAlignment = Alignment.Center
+                ) {
+                    EmptyState(
+                        icon = if (hasActiveFilter) Icons.Default.SearchOff else Icons.Default.History,
+                        title = if (hasActiveFilter) stringResource(R.string.history_empty_filtered_title) else stringResource(R.string.history_empty_title),
+                        description = if (hasActiveFilter) stringResource(R.string.history_empty_filtered_description) else stringResource(R.string.history_empty_description)
+                    )
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier
@@ -290,10 +302,7 @@ private fun ActiveFilterChips(
     onUpdateFilter: (HistoryFilter) -> Unit,
     onClearFilter: () -> Unit
 ) {
-    val dateFormatter = remember {
-        DateTimeFormatter.ofPattern("d MMM yyyy")
-            .withZone(ZoneId.systemDefault())
-    }
+    val dateFormatter = DateFormatters.shortDate
 
     LazyRow(
         modifier = Modifier
@@ -376,9 +385,11 @@ private fun SwipeableTransactionCard(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             if (value == SwipeToDismissBoxValue.EndToStart) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onDelete()
                 false // Return false to snap the card back; dialog handles confirmation
             } else {
@@ -431,18 +442,15 @@ private fun FilterBottomSheet(
     onClearFilter: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedCrypto by remember { mutableStateOf(currentFilter.crypto) }
-    var selectedExchange by remember { mutableStateOf(currentFilter.exchange) }
-    var selectedStatus by remember { mutableStateOf(currentFilter.status) }
-    var selectedDateFrom by remember { mutableStateOf(currentFilter.dateFrom) }
-    var selectedDateTo by remember { mutableStateOf(currentFilter.dateTo) }
-    var showDateFromPicker by remember { mutableStateOf(false) }
-    var showDateToPicker by remember { mutableStateOf(false) }
+    var selectedCrypto by rememberSaveable { mutableStateOf(currentFilter.crypto) }
+    var selectedExchange by rememberSaveable { mutableStateOf(currentFilter.exchange) }
+    var selectedStatus by rememberSaveable { mutableStateOf(currentFilter.status) }
+    var selectedDateFrom by rememberSaveable { mutableStateOf(currentFilter.dateFrom) }
+    var selectedDateTo by rememberSaveable { mutableStateOf(currentFilter.dateTo) }
+    var showDateFromPicker by rememberSaveable { mutableStateOf(false) }
+    var showDateToPicker by rememberSaveable { mutableStateOf(false) }
 
-    val dateFormatter = remember {
-        DateTimeFormatter.ofPattern("d MMM yyyy")
-            .withZone(ZoneId.systemDefault())
-    }
+    val dateFormatter = DateFormatters.shortDate
 
     // Date From picker dialog
     if (showDateFromPicker) {
@@ -661,46 +669,11 @@ private fun FilterBottomSheet(
 }
 
 @Composable
-private fun EmptyHistoryState(
-    modifier: Modifier = Modifier,
-    hasFilter: Boolean = false
-) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = if (hasFilter) Icons.Default.SearchOff else Icons.Default.History,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = if (hasFilter) stringResource(R.string.history_empty_filtered_title) else stringResource(R.string.history_empty_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = if (hasFilter) stringResource(R.string.history_empty_filtered_description) else stringResource(R.string.history_empty_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun TransactionCard(
+internal fun TransactionCard(
     transaction: TransactionEntity,
     onClick: () -> Unit
 ) {
-    val dateFormatter = remember {
-        DateTimeFormatter.ofPattern("MMM d, yyyy HH:mm")
-            .withZone(ZoneId.systemDefault())
-    }
+    val dateFormatter = DateFormatters.transactionDateTime
 
     Card(
         modifier = Modifier

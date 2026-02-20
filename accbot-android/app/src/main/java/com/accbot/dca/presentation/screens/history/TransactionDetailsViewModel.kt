@@ -3,13 +3,15 @@ package com.accbot.dca.presentation.screens.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.TransactionDao
-import com.accbot.dca.data.local.TransactionEntity
+import com.accbot.dca.data.local.toDomain
 import com.accbot.dca.domain.model.Transaction
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.Immutable
 import javax.inject.Inject
 
+@Immutable
 data class TransactionDetailsUiState(
     val transaction: Transaction? = null,
     val isLoading: Boolean = true,
@@ -51,21 +53,4 @@ class TransactionDetailsViewModel @Inject constructor(
             }
         }
     }
-
-    private fun TransactionEntity.toDomain() = Transaction(
-        id = id,
-        planId = planId,
-        exchange = exchange,
-        crypto = crypto,
-        fiat = fiat,
-        fiatAmount = fiatAmount,
-        cryptoAmount = cryptoAmount,
-        price = price,
-        fee = fee,
-        feeAsset = feeAsset,
-        status = status,
-        exchangeOrderId = exchangeOrderId,
-        errorMessage = errorMessage,
-        executedAt = executedAt
-    )
 }

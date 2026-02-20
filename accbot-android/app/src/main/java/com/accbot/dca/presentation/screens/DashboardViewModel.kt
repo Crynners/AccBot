@@ -11,12 +11,14 @@ import com.accbot.dca.data.local.ExchangeBalanceEntity
 import com.accbot.dca.data.local.CryptoFiatHolding
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.UserPreferences
+import com.accbot.dca.data.local.toDomain
 import com.accbot.dca.data.remote.MarketDataService
 import com.accbot.dca.domain.model.DcaPlan
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.service.DcaForegroundService
 import com.accbot.dca.worker.DcaWorker
+import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
@@ -27,6 +29,7 @@ import java.math.RoundingMode
 import java.time.Instant
 import javax.inject.Inject
 
+@Immutable
 data class CryptoHoldingWithPrice(
     val crypto: String,
     val fiat: String,
@@ -40,6 +43,7 @@ data class CryptoHoldingWithPrice(
     val transactionCount: Int
 )
 
+@Immutable
 data class DcaPlanWithBalance(
     val plan: DcaPlan,
     val fiatBalance: BigDecimal? = null,
@@ -48,6 +52,7 @@ data class DcaPlanWithBalance(
     val isLowBalance: Boolean = false
 )
 
+@Immutable
 data class DashboardUiState(
     val holdings: List<CryptoHoldingWithPrice> = emptyList(),
     val activePlans: List<DcaPlanWithBalance> = emptyList(),
@@ -78,15 +83,16 @@ class DashboardViewModel @Inject constructor(
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     private var lastServiceRunning: Boolean? = null
-    private var priceJob: Job? = null
-    private var balanceJob: Job? = null
+    private var loadDataJob: Job? = null
+    private var refreshPricesJob: Job? = null
 
     init {
         loadData()
     }
 
     private fun loadData() {
-        viewModelScope.launch {
+        loadDataJob?.cancel()
+        loadDataJob = viewModelScope.launch {
             val isSandbox = userPreferences.isSandboxMode()
             _uiState.update { it.copy(isLoading = true, isSandboxMode = isSandbox) }
 
@@ -95,25 +101,8 @@ class DashboardViewModel @Inject constructor(
                 transactionDao.getHoldingsByPairFlow()
             ) { planEntities, dbHoldings ->
                 Pair(planEntities, dbHoldings)
-            }.collect { (planEntities, dbHoldings) ->
-                val plans = planEntities.map { entity ->
-                    DcaPlan(
-                        id = entity.id,
-                        exchange = entity.exchange,
-                        crypto = entity.crypto,
-                        fiat = entity.fiat,
-                        amount = entity.amount,
-                        frequency = entity.frequency,
-                        cronExpression = entity.cronExpression,
-                        strategy = entity.strategy,
-                        isEnabled = entity.isEnabled,
-                        withdrawalEnabled = entity.withdrawalEnabled,
-                        withdrawalAddress = entity.withdrawalAddress,
-                        createdAt = entity.createdAt,
-                        lastExecutedAt = entity.lastExecutedAt,
-                        nextExecutionAt = entity.nextExecutionAt
-                    )
-                }
+            }.collectLatest { (planEntities, dbHoldings) ->
+                val plans = planEntities.map { it.toDomain() }
 
                 val holdings = mapHoldings(dbHoldings)
 
@@ -130,10 +119,10 @@ class DashboardViewModel @Inject constructor(
                     )
                 }
 
-                priceJob?.cancel()
-                priceJob = fetchPricesForHoldings(holdings)
-                balanceJob?.cancel()
-                balanceJob = fetchBalancesForPlans(plans, isSandbox)
+                // collectLatest cancels previous block on new emission,
+                // so these child coroutines are automatically cancelled
+                launch { fetchPricesForHoldings(holdings) }
+                launch { fetchBalancesForPlans(plans, isSandbox) }
             }
         }
     }
@@ -166,110 +155,108 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    private fun fetchPricesForHoldings(holdings: List<CryptoHoldingWithPrice>): Job? {
-        if (holdings.isEmpty()) return null
-        return viewModelScope.launch {
-            _uiState.update { it.copy(isPriceLoading = true) }
-            val updatedHoldings = holdings.map { holding ->
-                try {
-                    val price = marketDataService.getCachedPrice(holding.crypto, holding.fiat)
-                    if (price != null) {
-                        val currentValue = holding.totalCryptoAmount.multiply(price)
-                        val roiAbsolute = currentValue.subtract(holding.totalInvested)
-                        val roiPercent = if (holding.totalInvested > BigDecimal.ZERO) {
-                            roiAbsolute.divide(holding.totalInvested, 4, RoundingMode.HALF_UP)
-                                .multiply(BigDecimal(100))
-                                .setScale(2, RoundingMode.HALF_UP)
-                        } else null
-                        holding.copy(
-                            currentPrice = price,
-                            currentValue = currentValue.setScale(2, RoundingMode.HALF_UP),
-                            roiAbsolute = roiAbsolute.setScale(2, RoundingMode.HALF_UP),
-                            roiPercent = roiPercent
-                        )
-                    } else holding
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error fetching price for ${holding.crypto}/${holding.fiat}", e)
-                    holding
-                }
+    private suspend fun fetchPricesForHoldings(holdings: List<CryptoHoldingWithPrice>) {
+        if (holdings.isEmpty()) return
+        _uiState.update { it.copy(isPriceLoading = true) }
+        val updatedHoldings = holdings.map { holding ->
+            try {
+                val price = marketDataService.getCachedPrice(holding.crypto, holding.fiat)
+                if (price != null) {
+                    val currentValue = holding.totalCryptoAmount.multiply(price)
+                    val roiAbsolute = currentValue.subtract(holding.totalInvested)
+                    val roiPercent = if (holding.totalInvested > BigDecimal.ZERO) {
+                        roiAbsolute.divide(holding.totalInvested, 4, RoundingMode.HALF_UP)
+                            .multiply(BigDecimal(100))
+                            .setScale(2, RoundingMode.HALF_UP)
+                    } else null
+                    holding.copy(
+                        currentPrice = price,
+                        currentValue = currentValue.setScale(2, RoundingMode.HALF_UP),
+                        roiAbsolute = roiAbsolute.setScale(2, RoundingMode.HALF_UP),
+                        roiPercent = roiPercent
+                    )
+                } else holding
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching price for ${holding.crypto}/${holding.fiat}", e)
+                holding
             }
-            _uiState.update { it.copy(holdings = updatedHoldings, isPriceLoading = false) }
         }
+        _uiState.update { it.copy(holdings = updatedHoldings, isPriceLoading = false) }
     }
 
-    private fun fetchBalancesForPlans(plans: List<DcaPlan>, isSandbox: Boolean): Job? {
+    private suspend fun fetchBalancesForPlans(plans: List<DcaPlan>, isSandbox: Boolean) {
         val enabledPlans = plans.filter { it.isEnabled }
-        if (enabledPlans.isEmpty()) return null
+        if (enabledPlans.isEmpty()) return
 
         val thresholdDays = userPreferences.getLowBalanceThresholdDays()
 
-        return viewModelScope.launch {
-            // Group by exchange+fiat to avoid duplicate API calls
-            val balanceCache = mutableMapOf<String, BigDecimal?>()
+        // Group by exchange+fiat to avoid duplicate API calls
+        val balanceCache = mutableMapOf<String, BigDecimal?>()
 
-            val plansWithBalance = plans.map { plan ->
-                if (!plan.isEnabled) return@map DcaPlanWithBalance(plan = plan)
+        val plansWithBalance = plans.map { plan ->
+            if (!plan.isEnabled) return@map DcaPlanWithBalance(plan = plan)
 
-                val balanceKey = "${plan.exchange}_${plan.fiat}"
-                val balance = balanceCache.getOrPut(balanceKey) {
-                    try {
-                        val credentials = credentialsStore.getCredentials(plan.exchange, isSandbox)
-                            ?: return@getOrPut null
-                        val api = exchangeApiFactory.create(credentials)
-                        val fetchedBalance = withTimeoutOrNull(10_000) {
-                            api.getBalance(plan.fiat)
-                        }
-                        // Cache in DB
-                        if (fetchedBalance != null) {
-                            exchangeBalanceDao.insertBalance(
-                                ExchangeBalanceEntity(
-                                    id = balanceKey,
-                                    exchange = plan.exchange,
-                                    currency = plan.fiat,
-                                    balance = fetchedBalance,
-                                    lastUpdated = Instant.now()
-                                )
+            val balanceKey = "${plan.exchange}_${plan.fiat}"
+            val balance = balanceCache.getOrPut(balanceKey) {
+                try {
+                    val credentials = credentialsStore.getCredentials(plan.exchange, isSandbox)
+                        ?: return@getOrPut null
+                    val api = exchangeApiFactory.create(credentials)
+                    val fetchedBalance = withTimeoutOrNull(10_000) {
+                        api.getBalance(plan.fiat)
+                    }
+                    // Cache in DB
+                    if (fetchedBalance != null) {
+                        exchangeBalanceDao.insertBalance(
+                            ExchangeBalanceEntity(
+                                id = balanceKey,
+                                exchange = plan.exchange,
+                                currency = plan.fiat,
+                                balance = fetchedBalance,
+                                lastUpdated = Instant.now()
                             )
-                        }
-                        fetchedBalance
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error fetching balance for ${plan.exchange}/${plan.fiat}", e)
-                        // Try cached balance from DB
-                        try {
-                            exchangeBalanceDao.getBalance(balanceKey)?.balance
-                        } catch (_: Exception) { null }
+                        )
                     }
-                }
-
-                if (balance != null && plan.amount > BigDecimal.ZERO) {
-                    val remainingExec = balance.divide(plan.amount, 0, RoundingMode.DOWN).toInt()
-                    val effectiveInterval = if (plan.cronExpression != null) {
-                        com.accbot.dca.domain.util.CronUtils.getIntervalMinutesEstimate(plan.cronExpression) ?: 1440L
-                    } else {
-                        plan.frequency.intervalMinutes
-                    }
-                    val remainingMinutes = remainingExec.toLong() * effectiveInterval
-                    val remainingDaysVal = remainingMinutes / 1440.0
-                    DcaPlanWithBalance(
-                        plan = plan,
-                        fiatBalance = balance,
-                        remainingExecutions = remainingExec,
-                        remainingDays = remainingDaysVal,
-                        isLowBalance = remainingDaysVal < thresholdDays
-                    )
-                } else {
-                    DcaPlanWithBalance(plan = plan)
+                    fetchedBalance
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error fetching balance for ${plan.exchange}/${plan.fiat}", e)
+                    // Try cached balance from DB
+                    try {
+                        exchangeBalanceDao.getBalance(balanceKey)?.balance
+                    } catch (_: Exception) { null }
                 }
             }
 
-            _uiState.update { it.copy(activePlans = plansWithBalance) }
+            if (balance != null && plan.amount > BigDecimal.ZERO) {
+                val remainingExec = balance.divide(plan.amount, 0, RoundingMode.DOWN).toInt()
+                val effectiveInterval = if (plan.cronExpression != null) {
+                    com.accbot.dca.domain.util.CronUtils.getIntervalMinutesEstimate(plan.cronExpression) ?: 1440L
+                } else {
+                    plan.frequency.intervalMinutes
+                }
+                val remainingMinutes = remainingExec.toLong() * effectiveInterval
+                val remainingDaysVal = remainingMinutes / 1440.0
+                DcaPlanWithBalance(
+                    plan = plan,
+                    fiatBalance = balance,
+                    remainingExecutions = remainingExec,
+                    remainingDays = remainingDaysVal,
+                    isLowBalance = remainingDaysVal < thresholdDays
+                )
+            } else {
+                DcaPlanWithBalance(plan = plan)
+            }
         }
+
+        _uiState.update { it.copy(activePlans = plansWithBalance) }
     }
 
     fun refreshPrices() {
         marketDataService.invalidateCache()
-        priceJob?.cancel()
-        priceJob = fetchPricesForHoldings(_uiState.value.holdings)
+        refreshPricesJob?.cancel()
+        refreshPricesJob = viewModelScope.launch {
+            fetchPricesForHoldings(_uiState.value.holdings)
+        }
     }
 
     private fun ensureServiceState(shouldRun: Boolean) {

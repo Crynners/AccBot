@@ -55,4 +55,12 @@ object DateFormatters {
     val isoDateTime: DateTimeFormatter = DateTimeFormatter
         .ofPattern("yyyy-MM-dd HH:mm:ss")
         .withZone(ZoneId.systemDefault())
+
+    /**
+     * Format: "15 Jan 2024"
+     * Used for filter chips and chart scrub date display
+     */
+    val shortDate: DateTimeFormatter = DateTimeFormatter
+        .ofPattern("d MMM yyyy")
+        .withZone(ZoneId.systemDefault())
 }

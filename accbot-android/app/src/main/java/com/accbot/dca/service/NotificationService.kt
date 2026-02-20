@@ -90,13 +90,17 @@ class NotificationService @Inject constructor(
     }
 
     /**
-     * Show notification for successful purchase
+     * Show notification for successful purchase.
+     * Uses a unique notification ID per plan so multiple plan notifications are all visible.
+     * @param pending If true, shows a "confirming" message instead of crypto amount (for PENDING orders)
      */
     fun showPurchaseNotification(
         crypto: String,
         cryptoAmount: BigDecimal,
         fiatAmount: BigDecimal,
-        fiat: String
+        fiat: String,
+        planId: Long = 0,
+        pending: Boolean = false
     ) {
         val intent = Intent(context, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
@@ -104,21 +108,28 @@ class NotificationService @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val text = if (pending) {
+            context.getString(R.string.notification_purchase_pending_text, fiatAmount.toPlainString(), fiat, crypto)
+        } else {
+            context.getString(R.string.notification_purchase_text, cryptoAmount.toPlainString(), crypto, fiatAmount.toPlainString(), fiat)
+        }
+
         val notification = NotificationCompat.Builder(context, CHANNEL_PURCHASE)
             .setContentTitle(context.getString(R.string.notification_purchase_title))
-            .setContentText(context.getString(R.string.notification_purchase_text, cryptoAmount.toPlainString(), crypto, fiatAmount.toPlainString(), fiat))
+            .setContentText(text)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
 
-        notificationManager.notify(NOTIFICATION_ID_PURCHASE, notification)
+        notificationManager.notify(notificationIdForPlan(NOTIFICATION_ID_PURCHASE, planId), notification)
     }
 
     /**
-     * Show error notification
+     * Show error notification.
+     * Uses a unique notification ID per plan so multiple error notifications are all visible.
      */
-    fun showErrorNotification(title: String, message: String) {
+    fun showErrorNotification(title: String, message: String, planId: Long = 0) {
         val intent = Intent(context, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             context, 0, intent,
@@ -133,13 +144,14 @@ class NotificationService @Inject constructor(
             .setAutoCancel(true)
             .build()
 
-        notificationManager.notify(NOTIFICATION_ID_ERROR, notification)
+        notificationManager.notify(notificationIdForPlan(NOTIFICATION_ID_ERROR, planId), notification)
     }
 
     /**
-     * Show low balance warning notification
+     * Show low balance warning notification.
+     * Uses a unique notification ID per plan so multiple warnings are all visible.
      */
-    fun showLowBalanceNotification(exchange: String, fiat: String, remainingDays: Double) {
+    fun showLowBalanceNotification(exchange: String, fiat: String, remainingDays: Double, planId: Long = 0) {
         val intent = Intent(context, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             context, 0, intent,
@@ -155,7 +167,7 @@ class NotificationService @Inject constructor(
             .setAutoCancel(true)
             .build()
 
-        notificationManager.notify(NOTIFICATION_ID_LOW_BALANCE, notification)
+        notificationManager.notify(notificationIdForPlan(NOTIFICATION_ID_LOW_BALANCE, planId), notification)
     }
 
     companion object {
@@ -165,8 +177,16 @@ class NotificationService @Inject constructor(
         const val CHANNEL_LOW_BALANCE = "accbot_low_balance"
 
         const val NOTIFICATION_ID_SERVICE = 1
-        const val NOTIFICATION_ID_PURCHASE = 2
-        const val NOTIFICATION_ID_ERROR = 3
-        const val NOTIFICATION_ID_LOW_BALANCE = 4
+        private const val NOTIFICATION_ID_PURCHASE = 100
+        private const val NOTIFICATION_ID_ERROR = 200
+        private const val NOTIFICATION_ID_LOW_BALANCE = 300
+
+        /**
+         * Generate a unique notification ID per plan to prevent overwriting.
+         * Each category (purchase/error/low_balance) gets a range of 100 IDs.
+         */
+        private fun notificationIdForPlan(baseId: Int, planId: Long): Int {
+            return if (planId > 0) baseId + (planId % 99).toInt() + 1 else baseId
+        }
     }
 }

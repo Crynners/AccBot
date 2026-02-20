@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.DcaPlanEntity
-import com.accbot.dca.data.remote.MarketDataService
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
+import com.accbot.dca.domain.usecase.CalculateMonthlyCostUseCase
 import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.exchange.MinOrderSizeRepository
 import com.accbot.dca.presentation.model.MonthlyCostEstimate
@@ -16,11 +16,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.Duration
 import java.time.Instant
+import androidx.compose.runtime.Immutable
 import javax.inject.Inject
 
+@Immutable
 data class EditPlanUiState(
     val planId: Long = 0,
     val crypto: String = "",
@@ -107,7 +108,7 @@ private fun isValidGenericAddress(address: String, minLength: Int, maxLength: In
 @HiltViewModel
 class EditPlanViewModel @Inject constructor(
     private val dcaPlanDao: DcaPlanDao,
-    private val marketDataService: MarketDataService,
+    private val calculateMonthlyCost: CalculateMonthlyCostUseCase,
     private val minOrderSizeRepository: MinOrderSizeRepository
 ) : ViewModel() {
 
@@ -220,127 +221,21 @@ class EditPlanViewModel @Inject constructor(
         estimateJob?.cancel()
         estimateJob = viewModelScope.launch {
             delay(300)
-            computeEstimate()
-        }
-    }
-
-    private fun getEffectiveIntervalMinutes(state: EditPlanUiState): Long {
-        return if (state.selectedFrequency == DcaFrequency.CUSTOM) {
-            CronUtils.getIntervalMinutesEstimate(state.cronExpression) ?: 1440L
-        } else {
-            state.selectedFrequency.intervalMinutes
-        }
-    }
-
-    private suspend fun computeEstimate() {
-        val state = _uiState.value
-        val amount = state.amount.toBigDecimalOrNull()
-        if (amount == null || amount <= BigDecimal.ZERO) {
-            _uiState.update { it.copy(monthlyCostEstimate = null) }
-            return
-        }
-
-        val intervalMinutes = getEffectiveIntervalMinutes(state)
-        if (intervalMinutes <= 0) {
-            _uiState.update { it.copy(monthlyCostEstimate = null) }
-            return
-        }
-
-        val runsPerMonth = BigDecimal(30 * 24 * 60).divide(
-            BigDecimal(intervalMinutes),
-            2, RoundingMode.HALF_UP
-        )
-
-        when (val strategy = state.selectedStrategy) {
-            is DcaStrategy.Classic -> {
-                val monthly = amount.multiply(runsPerMonth)
-                _uiState.update {
-                    it.copy(monthlyCostEstimate = MonthlyCostEstimate(
-                        minMonthly = monthly,
-                        maxMonthly = monthly,
-                        currentMonthly = monthly,
-                        currentInfo = null
-                    ))
-                }
+            val state = _uiState.value
+            val amount = state.amount.toBigDecimalOrNull()
+            if (amount == null) {
+                _uiState.update { it.copy(monthlyCostEstimate = null) }
+                return@launch
             }
-            is DcaStrategy.AthBased -> {
-                computeStrategyEstimate(
-                    amount = amount,
-                    runsPerMonth = runsPerMonth,
-                    minMult = strategy.tiers.minOf { it.multiplier },
-                    maxMult = strategy.tiers.maxOf { it.multiplier },
-                    fetchCurrentMultiplier = {
-                        val cryptoData = marketDataService.getCryptoData(state.crypto, state.fiat)
-                        if (cryptoData != null) {
-                            val mult = strategy.tiers.sortedBy { it.maxDistancePercent }
-                                .firstOrNull { cryptoData.athDistance <= it.maxDistancePercent }
-                                ?.multiplier ?: 1.0f
-                            mult to "${state.crypto} is ${cryptoData.athDistancePercent}% below ATH"
-                        } else null
-                    }
-                )
-            }
-            is DcaStrategy.FearAndGreed -> {
-                computeStrategyEstimate(
-                    amount = amount,
-                    runsPerMonth = runsPerMonth,
-                    minMult = strategy.tiers.minOf { it.multiplier },
-                    maxMult = strategy.tiers.maxOf { it.multiplier },
-                    fetchCurrentMultiplier = {
-                        val fngData = marketDataService.getFearGreedIndex()
-                        if (fngData != null) {
-                            val mult = strategy.tiers.sortedBy { it.maxIndex }
-                                .firstOrNull { fngData.value <= it.maxIndex }
-                                ?.multiplier ?: 1.0f
-                            mult to "Fear & Greed: ${fngData.value} (${fngData.classification})"
-                        } else null
-                    }
-                )
-            }
-        }
-    }
-
-    private suspend fun computeStrategyEstimate(
-        amount: BigDecimal,
-        runsPerMonth: BigDecimal,
-        minMult: Float,
-        maxMult: Float,
-        fetchCurrentMultiplier: suspend () -> Pair<Float, String>?
-    ) {
-        val minMonthly = amount.multiply(BigDecimal(minMult.toString())).multiply(runsPerMonth)
-        val maxMonthly = amount.multiply(BigDecimal(maxMult.toString())).multiply(runsPerMonth)
-
-        // Show range immediately
-        _uiState.update {
-            it.copy(monthlyCostEstimate = MonthlyCostEstimate(
-                minMonthly = minMonthly, maxMonthly = maxMonthly
-            ))
-        }
-
-        // Fetch live data, then re-read current state to avoid stale values
-        val result = fetchCurrentMultiplier()
-        val freshState = _uiState.value
-        val freshAmount = freshState.amount.toBigDecimalOrNull() ?: return
-        val freshIntervalMinutes = getEffectiveIntervalMinutes(freshState)
-        if (freshIntervalMinutes <= 0) return
-        val freshRunsPerMonth = BigDecimal(30 * 24 * 60).divide(
-            BigDecimal(freshIntervalMinutes),
-            2, RoundingMode.HALF_UP
-        )
-        val freshMinMonthly = freshAmount.multiply(BigDecimal(minMult.toString())).multiply(freshRunsPerMonth)
-        val freshMaxMonthly = freshAmount.multiply(BigDecimal(maxMult.toString())).multiply(freshRunsPerMonth)
-
-        val currentMonthly = result?.let { (mult, _) ->
-            freshAmount.multiply(BigDecimal(mult.toString())).multiply(freshRunsPerMonth)
-        }
-
-        _uiState.update {
-            it.copy(monthlyCostEstimate = MonthlyCostEstimate(
-                minMonthly = freshMinMonthly,
-                maxMonthly = freshMaxMonthly,
-                currentMonthly = currentMonthly,
-                currentInfo = result?.second
-            ))
+            val estimate = calculateMonthlyCost.computeEstimate(
+                amount = amount,
+                frequency = state.selectedFrequency,
+                cronExpression = state.cronExpression.takeIf { it.isNotBlank() },
+                strategy = state.selectedStrategy,
+                crypto = state.crypto,
+                fiat = state.fiat
+            )
+            _uiState.update { it.copy(monthlyCostEstimate = estimate) }
         }
     }
 

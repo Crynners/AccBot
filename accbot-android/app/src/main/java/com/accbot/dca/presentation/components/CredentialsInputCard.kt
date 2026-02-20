@@ -2,6 +2,7 @@ package com.accbot.dca.presentation.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -12,7 +13,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -64,10 +68,15 @@ fun CredentialsInputCard(
 ) {
     var showSecret by remember { mutableStateOf(false) }
     var showMultiScanner by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     // Determine field requirements based on exchange
     val needsClientId = exchange == Exchange.COINMATE
-    val needsPassphrase = exchange == Exchange.KUCOIN
+    val needsPassphrase = exchange == Exchange.KUCOIN || exchange == Exchange.COINBASE
+    // The last field gets ImeAction.Done, others get ImeAction.Next
+    val lastFieldImeAction = ImeAction.Done
+    val lastFieldKeyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+    val nextFieldKeyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
 
     // Build target fields for multi-field scanner
     val targetFields = remember(exchange) {
@@ -145,7 +154,8 @@ fun CredentialsInputCard(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text(stringResource(R.string.credentials_client_id)) },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                    keyboardActions = nextFieldKeyboardActions,
                     isError = errorMessage != null && clientId.isBlank(),
                     enabled = !isValidating,
                     supportingText = if (clientId.isBlank()) {
@@ -163,6 +173,8 @@ fun CredentialsInputCard(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(if (needsClientId) R.string.credentials_public_key else R.string.credentials_api_key)) },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = nextFieldKeyboardActions,
                 isError = errorMessage != null,
                 enabled = !isValidating,
                 trailingIcon = {
@@ -176,6 +188,8 @@ fun CredentialsInputCard(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(if (needsClientId) R.string.credentials_private_key else R.string.credentials_api_secret)) },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = if (needsPassphrase) ImeAction.Next else lastFieldImeAction),
+                keyboardActions = if (needsPassphrase) nextFieldKeyboardActions else lastFieldKeyboardActions,
                 visualTransformation = if (showSecret) {
                     VisualTransformation.None
                 } else {
@@ -208,6 +222,8 @@ fun CredentialsInputCard(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text(stringResource(R.string.credentials_passphrase)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = lastFieldImeAction),
+                    keyboardActions = lastFieldKeyboardActions,
                     visualTransformation = PasswordVisualTransformation(),
                     isError = errorMessage != null && passphrase.isBlank(),
                     enabled = !isValidating,
@@ -264,6 +280,6 @@ fun areCredentialsComplete(
 ): Boolean {
     if (apiKey.isBlank() || apiSecret.isBlank()) return false
     if (exchange == Exchange.COINMATE && clientId.isBlank()) return false
-    if (exchange == Exchange.KUCOIN && passphrase.isBlank()) return false
+    if ((exchange == Exchange.KUCOIN || exchange == Exchange.COINBASE) && passphrase.isBlank()) return false
     return true
 }

@@ -68,6 +68,17 @@ class ExportTransactionsToCsvUseCase @Inject constructor(
     }
 
     /**
+     * Escape a CSV field value, quoting it if it contains special characters.
+     */
+    private fun escapeCsvField(value: String): String {
+        return if (value.contains(',') || value.contains('"') || value.contains('\n') || value.contains('\r')) {
+            "\"${value.replace("\"", "\"\"")}\""
+        } else {
+            value
+        }
+    }
+
+    /**
      * Generate CSV string from transactions.
      */
     private fun generateCsv(transactions: List<TransactionEntity>): String {
@@ -79,11 +90,11 @@ class ExportTransactionsToCsvUseCase @Inject constructor(
             transactions.forEach { tx ->
                 append(DateFormatters.isoDateTime.format(tx.executedAt))
                 append(",")
-                append(tx.exchange.displayName)
+                append(escapeCsvField(tx.exchange.displayName))
                 append(",")
-                append(tx.crypto)
+                append(escapeCsvField(tx.crypto))
                 append(",")
-                append(tx.fiat)
+                append(escapeCsvField(tx.fiat))
                 append(",")
                 append(tx.cryptoAmount.toPlainString())
                 append(",")
@@ -93,14 +104,13 @@ class ExportTransactionsToCsvUseCase @Inject constructor(
                 append(",")
                 append(tx.fee.toPlainString())
                 append(",")
-                append(tx.feeAsset)
+                append(escapeCsvField(tx.feeAsset))
                 append(",")
-                append(tx.status.name)
+                append(escapeCsvField(tx.status.name))
                 append(",")
-                append(tx.exchangeOrderId ?: "")
+                append(escapeCsvField(tx.exchangeOrderId ?: ""))
                 append(",")
-                // Escape quotes in error message for CSV
-                append("\"${tx.errorMessage?.replace("\"", "\"\"") ?: ""}\"")
+                append(escapeCsvField(tx.errorMessage ?: ""))
                 appendLine()
             }
         }

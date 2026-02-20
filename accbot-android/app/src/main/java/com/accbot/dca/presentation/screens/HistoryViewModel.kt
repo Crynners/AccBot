@@ -8,7 +8,9 @@ import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.usecase.CsvExportResult
 import com.accbot.dca.domain.usecase.ExportTransactionsToCsvUseCase
+import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -38,6 +40,7 @@ data class CsvExportData(
     val fileName: String
 )
 
+@Immutable
 data class HistoryUiState(
     val transactions: List<TransactionEntity> = emptyList(),
     val filter: HistoryFilter = HistoryFilter(),
@@ -62,77 +65,20 @@ class HistoryViewModel @Inject constructor(
     private val initialCrypto: String? = savedStateHandle["crypto"]
     private val initialFiat: String? = savedStateHandle["fiat"]
 
-    private val _uiState = MutableStateFlow(
-        HistoryUiState(
-            filter = HistoryFilter(crypto = initialCrypto)
-        )
+    private val _filterState = MutableStateFlow(HistoryFilter(crypto = initialCrypto))
+    private val _sortOption = MutableStateFlow(SortOption.DATE_NEWEST)
+
+    private val _uiExtras = MutableStateFlow(
+        HistoryUiState()
     )
-    val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
 
-    private val allTransactions = MutableStateFlow<List<TransactionEntity>>(emptyList())
-
-    init {
-        loadTransactions()
-        loadFilterOptions()
-    }
-
-    private fun loadTransactions() {
-        viewModelScope.launch {
-            transactionDao.getAllTransactions().collect { transactions ->
-                allTransactions.value = transactions
-                applyFilter()
-            }
-        }
-    }
-
-    private fun loadFilterOptions() {
-        viewModelScope.launch {
-            val cryptos = transactionDao.getDistinctCryptos()
-            val exchanges = transactionDao.getDistinctExchanges()
-
-            _uiState.update {
-                it.copy(
-                    availableCryptos = cryptos,
-                    availableExchanges = exchanges
-                )
-            }
-        }
-    }
-
-    fun setFilter(filter: HistoryFilter) {
-        _uiState.update { it.copy(filter = filter) }
-        applyFilter()
-    }
-
-    fun clearFilter() {
-        _uiState.update { it.copy(filter = HistoryFilter()) }
-        applyFilter()
-    }
-
-    fun setSortOption(option: SortOption) {
-        _uiState.update { it.copy(sortOption = option) }
-        applyFilter()
-    }
-
-    fun toggleFilterSheet() {
-        _uiState.update { it.copy(showFilterSheet = !it.showFilterSheet) }
-    }
-
-    fun hideFilterSheet() {
-        _uiState.update { it.copy(showFilterSheet = false) }
-    }
-
-    fun deleteTransaction(transaction: TransactionEntity) {
-        viewModelScope.launch {
-            transactionDao.deleteTransaction(transaction)
-        }
-    }
-
-    private fun applyFilter() {
-        val filter = _uiState.value.filter
-        val sortOption = _uiState.value.sortOption
-
-        val filtered = allTransactions.value.filter { tx ->
+    // Stage 1: expensive filter + sort only re-runs when data/filter/sort change
+    private val _computedTransactions: Flow<HistoryUiState> = combine(
+        transactionDao.getAllTransactions(),
+        _filterState,
+        _sortOption
+    ) { transactions, filter, sortOption ->
+        val filtered = transactions.filter { tx ->
             val epochMillis = tx.executedAt.toEpochMilli()
             (filter.crypto == null || tx.crypto == filter.crypto) &&
             (filter.exchange == null || tx.exchange.name == filter.exchange) &&
@@ -150,7 +96,68 @@ class HistoryViewModel @Inject constructor(
             SortOption.PRICE_LOWEST -> filtered.sortedBy { it.price }
         }
 
-        _uiState.update { it.copy(transactions = sorted) }
+        HistoryUiState(transactions = sorted, filter = filter, sortOption = sortOption)
+    }
+
+    // Stage 2: merge transient UI state without re-filtering/re-sorting
+    val uiState: StateFlow<HistoryUiState> = combine(
+        _computedTransactions,
+        _uiExtras
+    ) { computed, extras ->
+        computed.copy(
+            availableCryptos = extras.availableCryptos,
+            availableExchanges = extras.availableExchanges,
+            showFilterSheet = extras.showFilterSheet,
+            isExporting = extras.isExporting,
+            exportSuccess = extras.exportSuccess,
+            exportError = extras.exportError,
+            exportData = extras.exportData,
+            snackbarMessage = extras.snackbarMessage
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HistoryUiState(filter = HistoryFilter(crypto = initialCrypto)))
+
+    init {
+        loadFilterOptions()
+    }
+
+    private fun loadFilterOptions() {
+        viewModelScope.launch {
+            val cryptosDeferred = async { transactionDao.getDistinctCryptos() }
+            val exchangesDeferred = async { transactionDao.getDistinctExchanges() }
+
+            _uiExtras.update {
+                it.copy(
+                    availableCryptos = cryptosDeferred.await(),
+                    availableExchanges = exchangesDeferred.await()
+                )
+            }
+        }
+    }
+
+    fun setFilter(filter: HistoryFilter) {
+        _filterState.value = filter
+    }
+
+    fun clearFilter() {
+        _filterState.value = HistoryFilter()
+    }
+
+    fun setSortOption(option: SortOption) {
+        _sortOption.value = option
+    }
+
+    fun toggleFilterSheet() {
+        _uiExtras.update { it.copy(showFilterSheet = !it.showFilterSheet) }
+    }
+
+    fun hideFilterSheet() {
+        _uiExtras.update { it.copy(showFilterSheet = false) }
+    }
+
+    fun deleteTransaction(transaction: TransactionEntity) {
+        viewModelScope.launch {
+            transactionDao.deleteTransaction(transaction)
+        }
     }
 
     /**
@@ -160,11 +167,11 @@ class HistoryViewModel @Inject constructor(
      */
     fun exportToCsv() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isExporting = true, exportError = null, exportSuccess = false, exportData = null) }
+            _uiExtras.update { it.copy(isExporting = true, exportError = null, exportSuccess = false, exportData = null) }
 
             when (val result = exportTransactionsToCsvUseCase.execute()) {
                 is CsvExportResult.Success -> {
-                    _uiState.update {
+                    _uiExtras.update {
                         it.copy(
                             isExporting = false,
                             exportSuccess = true,
@@ -176,7 +183,7 @@ class HistoryViewModel @Inject constructor(
                     }
                 }
                 is CsvExportResult.Error -> {
-                    _uiState.update {
+                    _uiExtras.update {
                         it.copy(
                             isExporting = false,
                             exportError = result.message
@@ -188,6 +195,6 @@ class HistoryViewModel @Inject constructor(
     }
 
     fun clearExportState() {
-        _uiState.update { it.copy(exportSuccess = false, exportError = null, exportData = null) }
+        _uiExtras.update { it.copy(exportSuccess = false, exportError = null, exportData = null) }
     }
 }

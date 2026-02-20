@@ -39,10 +39,21 @@ class BinanceApi(
      * Ensure time is synced once per instance lifetime.
      * Called before every signed API request.
      */
+    private val timeSyncLock = Any()
+
     private fun ensureTimeSynced() {
         if (!timeSynced) {
-            syncServerTime()
-            timeSynced = true
+            synchronized(timeSyncLock) {
+                if (!timeSynced) {
+                    syncServerTime()
+                    if (timeOffset == 0L) {
+                        // Retry once if initial sync failed
+                        Thread.sleep(500)
+                        syncServerTime()
+                    }
+                    timeSynced = true
+                }
+            }
         }
     }
 
@@ -105,6 +116,15 @@ class BinanceApi(
 
             val response = client.newCall(request).execute()
             val body = response.body?.string() ?: throw Exception("Empty response")
+
+            if (!response.isSuccessful) {
+                val isRetryable = response.code in 500..599 || response.code == 429
+                val errorMsg = try {
+                    JSONObject(body).optString("msg", "HTTP ${response.code}")
+                } catch (_: Exception) { "HTTP ${response.code}" }
+                return@withContext DcaResult.Error(errorMsg, retryable = isRetryable)
+            }
+
             val json = JSONObject(body)
 
             if (json.has("code")) {
@@ -170,6 +190,7 @@ class BinanceApi(
 
             val response = client.newCall(request).execute()
             val body = response.body?.string() ?: return@withContext null
+            if (!response.isSuccessful) return@withContext null
             val json = JSONObject(body)
 
             if (json.has("code")) return@withContext null
@@ -197,6 +218,7 @@ class BinanceApi(
 
             val response = client.newCall(request).execute()
             val body = response.body?.string() ?: return@withContext null
+            if (!response.isSuccessful) return@withContext null
             val json = JSONObject(body)
 
             BigDecimal(json.getString("price"))
@@ -231,6 +253,14 @@ class BinanceApi(
 
             val response = client.newCall(request).execute()
             val body = response.body?.string() ?: throw Exception("Empty response")
+
+            if (!response.isSuccessful) {
+                val errorMsg = try {
+                    JSONObject(body).optString("msg", "HTTP ${response.code}")
+                } catch (_: Exception) { "HTTP ${response.code}" }
+                return@withContext Result.failure(Exception(errorMsg))
+            }
+
             val json = JSONObject(body)
 
             if (json.has("code")) {
@@ -259,6 +289,7 @@ class BinanceApi(
 
             val response = client.newCall(request).execute()
             val body = response.body?.string() ?: return@withContext null
+            if (!response.isSuccessful) return@withContext null
             val json = org.json.JSONArray(body)
 
             for (i in 0 until json.length()) {
@@ -308,6 +339,13 @@ class BinanceApi(
 
         val response = client.newCall(request).execute()
         val body = response.body?.string() ?: throw Exception("Empty response")
+
+        if (!response.isSuccessful) {
+            val errorMsg = try {
+                JSONObject(body).optString("msg", "HTTP ${response.code}")
+            } catch (_: Exception) { "HTTP ${response.code}" }
+            throw Exception(errorMsg)
+        }
 
         // Check for error response (JSON object with "code" field)
         if (body.trimStart().startsWith("{")) {
@@ -372,6 +410,11 @@ class BinanceApi(
 
             if (body == null) {
                 android.util.Log.e("BinanceApi", "validateCredentials: Empty response")
+                return@withContext false
+            }
+
+            if (!response.isSuccessful) {
+                android.util.Log.e("BinanceApi", "validateCredentials: HTTP ${response.code}")
                 return@withContext false
             }
 

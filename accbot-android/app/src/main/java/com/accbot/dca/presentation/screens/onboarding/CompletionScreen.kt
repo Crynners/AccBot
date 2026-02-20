@@ -59,7 +59,7 @@ fun CompletionScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(60.dp))
@@ -87,7 +87,7 @@ fun CompletionScreen(
 
         Text(
             text = stringResource(R.string.completion_title),
-            fontSize = 32.sp,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
@@ -202,7 +202,7 @@ fun CompletionScreen(
 }
 
 @Composable
-private fun NextStepItem(
+internal fun NextStepItem(
     icon: ImageVector,
     title: String,
     description: String

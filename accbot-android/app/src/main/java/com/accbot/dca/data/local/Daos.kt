@@ -32,6 +32,9 @@ interface DcaPlanDao {
     @Query("UPDATE dca_plans SET lastExecutedAt = :lastExecutedAt, nextExecutionAt = :nextExecutionAt WHERE id = :planId")
     suspend fun updateExecutionTime(planId: Long, lastExecutedAt: Instant, nextExecutionAt: Instant)
 
+    @Query("UPDATE dca_plans SET lastExecutedAt = :lastExecutedAt, nextExecutionAt = :nextExecutionAt WHERE id = :planId")
+    fun updateExecutionTimeSync(planId: Long, lastExecutedAt: Instant, nextExecutionAt: Instant)
+
     @Query("UPDATE dca_plans SET isEnabled = :enabled WHERE id = :planId")
     suspend fun setEnabled(planId: Long, enabled: Boolean)
 
@@ -172,6 +175,9 @@ interface TransactionDao {
     """)
     suspend fun getMonthlyStats(crypto: String): List<MonthlyStatsResult>
 
+    @Query("SELECT * FROM transactions WHERE status = 'PENDING' AND exchangeOrderId IS NOT NULL")
+    suspend fun getPendingTransactionsWithOrderId(): List<TransactionEntity>
+
     @Query("SELECT exchangeOrderId FROM transactions WHERE planId = :planId AND exchangeOrderId IS NOT NULL")
     suspend fun getExchangeOrderIdsByPlan(planId: Long): List<String>
 
@@ -180,6 +186,9 @@ interface TransactionDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransaction(transaction: TransactionEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertTransactionSync(transaction: TransactionEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransactions(transactions: List<TransactionEntity>)

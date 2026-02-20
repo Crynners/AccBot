@@ -4,7 +4,6 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -16,13 +15,16 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -30,9 +32,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.accbot.dca.BuildConfig
 import com.accbot.dca.R
+import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.successColor
+import com.accbot.dca.presentation.utils.showBiometricPrompt
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,14 +46,14 @@ fun SettingsScreen(
     onNavigateToExchanges: (() -> Unit)? = null,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var showLowBalanceDialog by remember { mutableStateOf(false) }
-    var showLanguageDialog by remember { mutableStateOf(false) }
-    var dangerZoneExpanded by remember { mutableStateOf(false) }
+    var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var showLowBalanceDialog by rememberSaveable { mutableStateOf(false) }
+    var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
+    var dangerZoneExpanded by rememberSaveable { mutableStateOf(false) }
 
     // Refresh battery status when returning from system settings
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -91,7 +95,7 @@ fun SettingsScreen(
 
     // Low balance threshold dialog
     if (showLowBalanceDialog) {
-        val currentThreshold = remember { mutableIntStateOf(viewModel.getLowBalanceThresholdDays()) }
+        val currentThreshold = remember { mutableIntStateOf(uiState.lowBalanceThresholdDays) }
         AlertDialog(
             onDismissRequest = { showLowBalanceDialog = false },
             title = { Text(stringResource(R.string.settings_low_balance_dialog_title)) },
@@ -141,7 +145,7 @@ fun SettingsScreen(
 
     // Language picker dialog
     if (showLanguageDialog) {
-        val currentTag = viewModel.getCurrentLanguageTag()
+        val currentTag = uiState.languageTag
         AlertDialog(
             onDismissRequest = { showLanguageDialog = false },
             title = { Text(stringResource(R.string.settings_language)) },
@@ -193,7 +197,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(
-                    onClick = { viewModel.confirmSandboxModeChange(context) },
+                    onClick = { viewModel.confirmSandboxModeChange() },
                     colors = ButtonDefaults.textButtonColors(contentColor = Warning)
                 ) {
                     Text(stringResource(R.string.settings_restart_now))
@@ -299,18 +303,16 @@ fun SettingsScreen(
             }
 
             item {
-                val threshold = viewModel.getLowBalanceThresholdDays()
                 SettingsCard(
                     title = stringResource(R.string.settings_low_balance_warning),
-                    subtitle = stringResource(R.string.settings_low_balance_subtitle, threshold),
+                    subtitle = stringResource(R.string.settings_low_balance_subtitle, uiState.lowBalanceThresholdDays),
                     icon = Icons.Default.Warning,
                     onClick = { showLowBalanceDialog = true }
                 )
             }
 
             item {
-                val currentTag = viewModel.getCurrentLanguageTag()
-                val languageLabel = when (currentTag) {
+                val languageLabel = when (uiState.languageTag) {
                     "en" -> stringResource(R.string.settings_language_english)
                     "cs" -> stringResource(R.string.settings_language_czech)
                     else -> stringResource(R.string.settings_language_system_default)
@@ -350,12 +352,12 @@ fun SettingsScreen(
             }
 
             item {
-                val biometricEnabled = viewModel.isBiometricLockEnabled()
-                var biometricChecked by remember { mutableStateOf(biometricEnabled) }
                 val activity = context as? FragmentActivity
+                val biometricTitle = stringResource(R.string.biometric_prompt_title)
+                val biometricSubtitle = stringResource(R.string.biometric_prompt_subtitle)
 
                 BiometricToggleCard(
-                    isEnabled = biometricChecked,
+                    isEnabled = uiState.isBiometricLockEnabled,
                     onToggle = { requestedState ->
                         val biometricManager = BiometricManager.from(context)
                         val canAuthenticate = biometricManager.canAuthenticate(
@@ -373,28 +375,14 @@ fun SettingsScreen(
                         }
 
                         if (activity != null) {
-                            val executor = ContextCompat.getMainExecutor(activity)
-                            val biometricPrompt = BiometricPrompt(
-                                activity,
-                                executor,
-                                object : BiometricPrompt.AuthenticationCallback() {
-                                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                                        viewModel.setBiometricLockEnabled(requestedState)
-                                        biometricChecked = requestedState
-                                    }
+                            showBiometricPrompt(
+                                activity = activity,
+                                title = biometricTitle,
+                                subtitle = biometricSubtitle,
+                                onSuccess = {
+                                    viewModel.setBiometricLockEnabled(requestedState)
                                 }
                             )
-
-                            val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                                .setTitle(context.getString(R.string.biometric_prompt_title))
-                                .setSubtitle(context.getString(R.string.biometric_prompt_subtitle))
-                                .setAllowedAuthenticators(
-                                    BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                                            BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                                )
-                                .build()
-
-                            biometricPrompt.authenticate(promptInfo)
                         }
                     }
                 )
@@ -474,7 +462,7 @@ fun SettingsScreen(
                     )
                     Icon(
                         imageVector = if (dangerZoneExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = null,
+                        contentDescription = if (dangerZoneExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
                         tint = Error,
                         modifier = Modifier.size(20.dp)
                     )
@@ -564,20 +552,69 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsCard(
+internal fun ExchangeSettingsCard(
+    exchange: Exchange,
+    onRemove: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = successColor(),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = exchange.displayName,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            IconButton(onClick = onRemove) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.common_remove),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SettingsCardBase(
     title: String,
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    showWarning: Boolean = false,
-    onClick: () -> Unit
+    iconTint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    titleColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    subtitleColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable () -> Unit = {
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Row(
             modifier = Modifier
@@ -588,27 +625,42 @@ private fun SettingsCard(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (showWarning) Error else MaterialTheme.colorScheme.onSurfaceVariant
+                tint = iconTint
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = titleColor
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (showWarning) Error else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = subtitleColor
                 )
             }
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            trailing()
         }
     }
+}
+
+@Composable
+internal fun SettingsCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    showWarning: Boolean = false,
+    onClick: () -> Unit
+) {
+    SettingsCardBase(
+        title = title,
+        subtitle = subtitle,
+        icon = icon,
+        iconTint = if (showWarning) Error else MaterialTheme.colorScheme.onSurfaceVariant,
+        subtitleColor = if (showWarning) Error else MaterialTheme.colorScheme.onSurfaceVariant,
+        onClick = onClick
+    )
 }
 
 @Composable
@@ -640,97 +692,63 @@ private fun LanguageOption(
 }
 
 @Composable
-private fun BiometricToggleCard(
+internal fun BiometricToggleCard(
     isEnabled: Boolean,
     onToggle: (Boolean) -> Unit
 ) {
     val accent = successColor()
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Fingerprint,
-                contentDescription = null,
-                tint = if (isEnabled) accent else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.biometric_lock_title),
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = stringResource(R.string.biometric_lock_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+    val haptic = LocalHapticFeedback.current
+    SettingsCardBase(
+        title = stringResource(R.string.biometric_lock_title),
+        subtitle = stringResource(R.string.biometric_lock_subtitle),
+        icon = Icons.Default.Fingerprint,
+        iconTint = if (isEnabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+        trailing = {
             Switch(
                 checked = isEnabled,
-                onCheckedChange = { onToggle(!isEnabled) },
+                onCheckedChange = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggle(!isEnabled)
+                },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = accent,
                     checkedTrackColor = accent.copy(alpha = 0.5f)
                 )
             )
         }
-    }
+    )
 }
 
 @Composable
-private fun SandboxToggleCard(
+internal fun SandboxToggleCard(
     isEnabled: Boolean,
     onToggle: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = if (isEnabled) Warning.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Science,
-                contentDescription = null,
-                tint = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.settings_sandbox_mode),
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = if (isEnabled) {
-                        stringResource(R.string.settings_sandbox_enabled)
-                    } else {
-                        stringResource(R.string.settings_sandbox_disabled)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+    val haptic = LocalHapticFeedback.current
+    SettingsCardBase(
+        title = stringResource(R.string.settings_sandbox_mode),
+        subtitle = if (isEnabled) {
+            stringResource(R.string.settings_sandbox_enabled)
+        } else {
+            stringResource(R.string.settings_sandbox_disabled)
+        },
+        icon = Icons.Default.Science,
+        iconTint = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurfaceVariant,
+        titleColor = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurface,
+        subtitleColor = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurfaceVariant,
+        containerColor = if (isEnabled) Warning.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface,
+        trailing = {
             Switch(
                 checked = isEnabled,
-                onCheckedChange = { onToggle() },
+                onCheckedChange = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggle()
+                },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Warning,
                     checkedTrackColor = Warning.copy(alpha = 0.5f)
                 )
             )
         }
-    }
+    )
 }

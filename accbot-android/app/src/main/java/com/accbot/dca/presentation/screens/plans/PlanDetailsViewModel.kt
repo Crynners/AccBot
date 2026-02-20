@@ -14,6 +14,7 @@ import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.domain.usecase.ImportTradeHistoryUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.presentation.utils.TimeUtils
+import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -24,6 +25,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import javax.inject.Inject
 
+@Immutable
 data class PlanDetailsUiState(
     val plan: DcaPlan? = null,
     val transactions: List<Transaction> = emptyList(),
@@ -141,10 +143,10 @@ class PlanDetailsViewModel @Inject constructor(
                     val currentValue = totalCrypto.multiply(price).setScale(2, RoundingMode.HALF_UP)
                     val roiAbsolute = currentValue.subtract(totalInvested)
                     val roiPercent = if (totalInvested > BigDecimal.ZERO) {
-                        roiAbsolute.multiply(BigDecimal(100)).divide(totalInvested, 2, RoundingMode.HALF_UP)
-                    } else {
-                        BigDecimal.ZERO
-                    }
+                        roiAbsolute.divide(totalInvested, 4, RoundingMode.HALF_UP)
+                            .multiply(BigDecimal(100))
+                            .setScale(2, RoundingMode.HALF_UP)
+                    } else null
                     _uiState.update { it.copy(
                         currentPrice = price,
                         currentValue = currentValue,
@@ -223,6 +225,7 @@ class PlanDetailsViewModel @Inject constructor(
     fun deletePlan(onDeleted: () -> Unit) {
         viewModelScope.launch {
             try {
+                transactionDao.deleteTransactionsByPlanId(planId)
                 dcaPlanDao.deletePlanById(planId)
                 onDeleted()
             } catch (e: Exception) {
@@ -308,40 +311,6 @@ class PlanDetailsViewModel @Inject constructor(
     fun dismissImportResult() {
         _uiState.update { it.copy(apiImportResult = null) }
     }
-
-    private fun DcaPlanEntity.toDomain() = DcaPlan(
-        id = id,
-        exchange = exchange,
-        crypto = crypto,
-        fiat = fiat,
-        amount = amount,
-        frequency = frequency,
-        cronExpression = cronExpression,
-        strategy = strategy,
-        isEnabled = isEnabled,
-        withdrawalEnabled = withdrawalEnabled,
-        withdrawalAddress = withdrawalAddress,
-        createdAt = createdAt,
-        lastExecutedAt = lastExecutedAt,
-        nextExecutionAt = nextExecutionAt
-    )
-
-    private fun TransactionEntity.toDomain() = Transaction(
-        id = id,
-        planId = planId,
-        exchange = exchange,
-        crypto = crypto,
-        fiat = fiat,
-        fiatAmount = fiatAmount,
-        cryptoAmount = cryptoAmount,
-        price = price,
-        fee = fee,
-        feeAsset = feeAsset,
-        status = status,
-        exchangeOrderId = exchangeOrderId,
-        errorMessage = errorMessage,
-        executedAt = executedAt
-    )
 
     companion object {
         private const val TAG = "PlanDetailsViewModel"

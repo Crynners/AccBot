@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -34,9 +35,9 @@ import com.accbot.dca.presentation.components.SandboxModeIndicator
 import com.accbot.dca.presentation.components.ScheduleBuilder
 import com.accbot.dca.presentation.components.SelectableChip
 import com.accbot.dca.presentation.components.StrategyInfoBottomSheet
+import com.accbot.dca.presentation.components.StrategyOption
 import com.accbot.dca.presentation.components.getCryptoIconRes
 import com.accbot.dca.presentation.components.getFiatIconRes
-import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,7 +47,7 @@ fun AddPlanScreen(
     onPlanCreated: () -> Unit,
     viewModel: AddPlanViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
@@ -446,69 +447,6 @@ private fun FrequencyDropdown(
                     } else null
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun StrategyOption(
-    strategy: DcaStrategy,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    onInfoClick: () -> Unit
-) {
-    val accentCol = accentColor()
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                accentCol.copy(alpha = 0.15f)
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringResource(strategy.displayNameRes),
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) accentCol else MaterialTheme.colorScheme.onSurface
-                    )
-                    IconButton(
-                        onClick = onInfoClick,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = stringResource(R.string.add_plan_strategy_info),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-                Text(
-                    text = stringResource(strategy.descriptionRes),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            RadioButton(
-                selected = isSelected,
-                onClick = onClick,
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = accentCol
-                )
-            )
         }
     }
 }

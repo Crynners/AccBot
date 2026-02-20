@@ -394,6 +394,13 @@ telegram-accbot-converter/result*.json
 telegram-accbot-converter/output/
 
 # ======================================
+# Store promotional screenshots (generated, large binaries)
+# ======================================
+accbot-android/store-assets/*_promo_*/
+accbot-android/store-assets/feature_graphic.png
+accbot-android/store-assets/icon.png
+
+# ======================================
 # Miscellaneous
 # ======================================
 nul

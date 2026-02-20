@@ -73,4 +73,10 @@ object NumberFormatters {
         nf.isGroupingUsed = false
         return nf.format(value.setScale(2, RoundingMode.HALF_UP))
     }
+
+    /** Returns "+" for non-negative values, "" for negative (BigDecimal already includes "-") */
+    fun roiSign(value: BigDecimal): String = if (value >= BigDecimal.ZERO) "+" else ""
+
+    /** Returns true if value is >= 0 */
+    fun isPositiveRoi(value: BigDecimal): Boolean = value >= BigDecimal.ZERO
 }

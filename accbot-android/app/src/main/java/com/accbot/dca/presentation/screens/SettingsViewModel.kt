@@ -15,17 +15,22 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.accbot.dca.service.DcaForegroundService
 import com.accbot.dca.worker.DcaWorker
+import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@Immutable
 data class SettingsUiState(
     val configuredExchanges: List<Exchange> = emptyList(),
     val isBatteryOptimized: Boolean = true,
     val isSandboxMode: Boolean = false,
     val showRestartDialog: Boolean = false,
-    val pendingSandboxMode: Boolean = false
+    val pendingSandboxMode: Boolean = false,
+    val lowBalanceThresholdDays: Int = 3,
+    val languageTag: String = "",
+    val isBiometricLockEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -56,7 +61,10 @@ class SettingsViewModel @Inject constructor(
             it.copy(
                 configuredExchanges = configuredExchanges,
                 isBatteryOptimized = isBatteryOptimized,
-                isSandboxMode = isSandbox
+                isSandboxMode = isSandbox,
+                lowBalanceThresholdDays = userPreferences.getLowBalanceThresholdDays(),
+                languageTag = userPreferences.getLanguageTag(),
+                isBiometricLockEnabled = userPreferences.isBiometricLockEnabled()
             )
         }
     }
@@ -88,10 +96,10 @@ class SettingsViewModel @Inject constructor(
      * Confirm sandbox mode change and restart the app.
      * This is needed because the database singleton is created at app startup.
      */
-    fun confirmSandboxModeChange(context: Context) {
+    fun confirmSandboxModeChange() {
         val newMode = _uiState.value.pendingSandboxMode
         userPreferences.setSandboxMode(newMode)
-        restartApp(context)
+        restartApp(application)
     }
 
     /**
@@ -111,16 +119,14 @@ class SettingsViewModel @Inject constructor(
         requestSandboxModeChange()
     }
 
-    fun isBiometricLockEnabled(): Boolean = userPreferences.isBiometricLockEnabled()
-
     fun setBiometricLockEnabled(enabled: Boolean) {
         userPreferences.setBiometricLockEnabled(enabled)
+        _uiState.update { it.copy(isBiometricLockEnabled = enabled) }
     }
-
-    fun getCurrentLanguageTag(): String = userPreferences.getLanguageTag()
 
     fun setLanguage(tag: String) {
         userPreferences.setLanguageTag(tag)
+        _uiState.update { it.copy(languageTag = tag) }
         val localeList = if (tag.isEmpty()) {
             LocaleListCompat.getEmptyLocaleList()
         } else {
@@ -129,10 +135,9 @@ class SettingsViewModel @Inject constructor(
         AppCompatDelegate.setApplicationLocales(localeList)
     }
 
-    fun getLowBalanceThresholdDays(): Int = userPreferences.getLowBalanceThresholdDays()
-
     fun setLowBalanceThresholdDays(days: Int) {
         userPreferences.setLowBalanceThresholdDays(days)
+        _uiState.update { it.copy(lowBalanceThresholdDays = days) }
     }
 
     fun refreshBatteryStatus() {

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +46,8 @@ import com.accbot.dca.presentation.ui.theme.Primary
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.NumberFormatters
+import com.accbot.dca.presentation.utils.NumberFormatters.isPositiveRoi
+import com.accbot.dca.presentation.utils.NumberFormatters.roiSign
 import java.math.BigDecimal
 import java.time.Month
 import java.time.format.TextStyle
@@ -58,7 +61,7 @@ fun PortfolioScreen(
     onChartTouching: (Boolean) -> Unit = {},
     viewModel: PortfolioViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -120,19 +123,11 @@ fun PortfolioScreen(
                         )
 
                         // Legend below chart
-                        val (line1, line2) = when (uiState.denominationMode) {
-                            DenominationMode.FIAT -> stringResource(R.string.chart_portfolio_value) to stringResource(R.string.chart_cost_basis)
-                            DenominationMode.CRYPTO -> stringResource(R.string.chart_legend_crypto_held) to stringResource(R.string.chart_legend_invested_equiv)
-                        }
-                        val legendEntries = buildList {
-                            add(LegendEntry(0, line1, Primary))
-                            add(LegendEntry(1, line2, androidx.compose.ui.graphics.Color(0xFF888888)))
-                            if (isSinglePair && uiState.denominationMode == DenominationMode.FIAT) {
-                                val crypto = uiState.currentPairCrypto ?: "BTC"
-                                add(LegendEntry(2, stringResource(R.string.chart_crypto_price, crypto), btcPriceColor))
-                                add(LegendEntry(3, stringResource(R.string.chart_accumulated_crypto, crypto), accumulatedCryptoColor))
-                            }
-                        }
+                        val legendEntries = rememberLegendEntries(
+                            denominationMode = uiState.denominationMode,
+                            isSinglePair = isSinglePair,
+                            currentPairCrypto = uiState.currentPairCrypto
+                        )
                         InteractiveChartLegend(
                             entries = legendEntries,
                             visibleSeries = uiState.visibleSeries,
@@ -189,7 +184,7 @@ fun PortfolioScreen(
                                 },
                                 modifier = Modifier.size(32.dp)
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.common_previous), modifier = Modifier.size(20.dp))
                             }
                             Text(
                                 text = pairLabel,
@@ -204,7 +199,7 @@ fun PortfolioScreen(
                                 },
                                 modifier = Modifier.size(32.dp)
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.common_next), modifier = Modifier.size(20.dp))
                             }
                         }
                     } else {
@@ -300,7 +295,7 @@ fun PortfolioScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PortfolioContent(
+internal fun PortfolioContent(
     uiState: PortfolioUiState,
     onDrillDownYear: (Int) -> Unit,
     onDrillDownMonth: (Int, Int) -> Unit,
@@ -391,6 +386,7 @@ private fun PortfolioContent(
                     Column {
                         HorizontalPager(
                             state = pagerState,
+                            userScrollEnabled = pageCount > 1,
                             modifier = Modifier.fillMaxWidth()
                         ) { page ->
                             val pageItem = uiState.pages.getOrNull(page)
@@ -548,19 +544,11 @@ private fun PortfolioContent(
         // Interactive chart legend
         if (hasData) {
             item {
-                val (line1, line2) = when (uiState.denominationMode) {
-                    DenominationMode.FIAT -> stringResource(R.string.chart_portfolio_value) to stringResource(R.string.chart_cost_basis)
-                    DenominationMode.CRYPTO -> stringResource(R.string.chart_legend_crypto_held) to stringResource(R.string.chart_legend_invested_equiv)
-                }
-                val legendEntries = buildList {
-                    add(LegendEntry(0, line1, Primary))
-                    add(LegendEntry(1, line2, androidx.compose.ui.graphics.Color(0xFF888888)))
-                    if (isSinglePair && uiState.denominationMode == DenominationMode.FIAT) {
-                        val crypto = uiState.currentPairCrypto ?: "BTC"
-                        add(LegendEntry(2, stringResource(R.string.chart_crypto_price, crypto), btcPriceColor))
-                        add(LegendEntry(3, stringResource(R.string.chart_accumulated_crypto, crypto), accumulatedCryptoColor))
-                    }
-                }
+                val legendEntries = rememberLegendEntries(
+                    denominationMode = uiState.denominationMode,
+                    isSinglePair = isSinglePair,
+                    currentPairCrypto = uiState.currentPairCrypto
+                )
                 InteractiveChartLegend(
                     entries = legendEntries,
                     visibleSeries = uiState.visibleSeries,
@@ -588,7 +576,32 @@ private fun PortfolioContent(
 }
 
 @Composable
-private fun ChartZoomHeader(
+private fun rememberLegendEntries(
+    denominationMode: DenominationMode,
+    isSinglePair: Boolean,
+    currentPairCrypto: String?
+): List<LegendEntry> {
+    val (line1, line2) = when (denominationMode) {
+        DenominationMode.FIAT -> stringResource(R.string.chart_portfolio_value) to stringResource(R.string.chart_cost_basis)
+        DenominationMode.CRYPTO -> stringResource(R.string.chart_legend_crypto_held) to stringResource(R.string.chart_legend_invested_equiv)
+    }
+    val crypto = currentPairCrypto ?: "BTC"
+    val cryptoPriceLabel = stringResource(R.string.chart_crypto_price, crypto)
+    val accumulatedCryptoLabel = stringResource(R.string.chart_accumulated_crypto, crypto)
+    return remember(denominationMode, isSinglePair, currentPairCrypto) {
+        buildList {
+            add(LegendEntry(0, line1, Primary))
+            add(LegendEntry(1, line2, androidx.compose.ui.graphics.Color(0xFF888888)))
+            if (isSinglePair && denominationMode == DenominationMode.FIAT) {
+                add(LegendEntry(2, cryptoPriceLabel, btcPriceColor))
+                add(LegendEntry(3, accumulatedCryptoLabel, accumulatedCryptoColor))
+            }
+        }
+    }
+}
+
+@Composable
+internal fun ChartZoomHeader(
     zoomLevel: ChartZoomLevel,
     canNavigatePrev: Boolean,
     canNavigateNext: Boolean,
@@ -614,7 +627,7 @@ private fun ChartZoomHeader(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.chart_zoom_all_time),
                         modifier = Modifier.size(16.dp),
                         tint = accentColor()
                     )
@@ -636,7 +649,7 @@ private fun ChartZoomHeader(
                 ) {
                     Icon(
                         Icons.Default.ChevronLeft,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.common_previous),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -656,7 +669,7 @@ private fun ChartZoomHeader(
                 ) {
                     Icon(
                         Icons.Default.ChevronRight,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.common_next),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -680,7 +693,7 @@ private fun ChartZoomHeader(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.common_back),
                         modifier = Modifier.size(16.dp),
                         tint = accentColor()
                     )
@@ -702,7 +715,7 @@ private fun ChartZoomHeader(
                 ) {
                     Icon(
                         Icons.Default.ChevronLeft,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.common_previous),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -722,7 +735,7 @@ private fun ChartZoomHeader(
                 ) {
                     Icon(
                         Icons.Default.ChevronRight,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.common_next),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -732,7 +745,7 @@ private fun ChartZoomHeader(
 }
 
 @Composable
-private fun DrillDownChips(
+internal fun DrillDownChips(
     zoomLevel: ChartZoomLevel,
     availableYears: List<Int>,
     availableMonths: List<Int>,
@@ -825,21 +838,10 @@ private fun DrillDownChips(
     }
 }
 
-@Composable
-private fun KpiCardContent(
-    uiState: PortfolioUiState,
-    isSinglePair: Boolean,
-    scrubbedDataPoint: com.accbot.dca.domain.usecase.ChartDataPoint? = null
-) {
-    val displayPoint = scrubbedDataPoint ?: uiState.chartData.lastOrNull() ?: return
-    val latest = displayPoint
-    val isScrubbing = scrubbedDataPoint != null
-    val isPositive = latest.roiAbsolute >= BigDecimal.ZERO
-    val roiColor = if (isPositive) successColor() else MaterialTheme.colorScheme.error
-    val sign = if (isPositive) "+" else ""
-    val fiatSymbol = uiState.currentPairFiat ?: "EUR"
-
-    // Period ROI (only when zoomed into Year or Month)
+/**
+ * Calculates the period label and ROI percentage for the current zoom level.
+ */
+private fun calculatePeriodRoi(uiState: PortfolioUiState): Pair<String?, BigDecimal?> {
     val periodLabel = when (val zoom = uiState.zoomLevel) {
         is ChartZoomLevel.Year -> "${zoom.year}"
         is ChartZoomLevel.Month -> {
@@ -860,12 +862,32 @@ private fun KpiCardContent(
                 .divide(startValue, 2, java.math.RoundingMode.HALF_UP)
         } else null
     } else null
+    return periodLabel to periodRoi
+}
+
+@Composable
+internal fun KpiCardContent(
+    uiState: PortfolioUiState,
+    isSinglePair: Boolean,
+    scrubbedDataPoint: com.accbot.dca.domain.usecase.ChartDataPoint? = null
+) {
+    val displayPoint = scrubbedDataPoint ?: uiState.chartData.lastOrNull() ?: return
+    val latest = displayPoint
+    val isScrubbing = scrubbedDataPoint != null
+    val isPositive = isPositiveRoi(latest.roiAbsolute)
+    val roiColor = if (isPositive) successColor() else MaterialTheme.colorScheme.error
+    val sign = roiSign(latest.roiAbsolute)
+    val fiatSymbol = uiState.currentPairFiat ?: "EUR"
+
+    val (periodLabel, periodRoi) = remember(uiState.zoomLevel, uiState.chartData) {
+        calculatePeriodRoi(uiState)
+    }
 
     // Scrub date indicator
     if (isScrubbing) {
         Text(
             text = LocalDate.ofEpochDay(latest.epochDay)
-                .format(DateTimeFormatter.ofPattern("d MMM yyyy")),
+                .format(com.accbot.dca.presentation.utils.DateFormatters.shortDate),
             style = MaterialTheme.typography.labelMedium,
             color = accentColor(),
             fontWeight = FontWeight.SemiBold,
@@ -911,9 +933,8 @@ private fun KpiCardContent(
             )
             // Period ROI below all-time ROI
             if (periodRoi != null && periodLabel != null) {
-                val periodPositive = periodRoi >= BigDecimal.ZERO
-                val periodSign = if (periodPositive) "+" else ""
-                val periodColor = if (periodPositive) successColor() else MaterialTheme.colorScheme.error
+                val periodSign = roiSign(periodRoi)
+                val periodColor = if (isPositiveRoi(periodRoi)) successColor() else MaterialTheme.colorScheme.error
                 Text(
                     text = stringResource(
                         R.string.chart_period_roi,
@@ -981,39 +1002,21 @@ private fun LandscapeKpiContent(
 ) {
     val displayPoint = scrubbedDataPoint ?: uiState.chartData.lastOrNull() ?: return
     val isScrubbing = scrubbedDataPoint != null
-    val isPositive = displayPoint.roiAbsolute >= BigDecimal.ZERO
+    val isPositive = isPositiveRoi(displayPoint.roiAbsolute)
     val roiColor = if (isPositive) successColor() else MaterialTheme.colorScheme.error
-    val sign = if (isPositive) "+" else ""
+    val sign = roiSign(displayPoint.roiAbsolute)
     val fiatSymbol = uiState.currentPairFiat ?: "EUR"
 
-    // Period ROI
-    val periodLabel = when (val zoom = uiState.zoomLevel) {
-        is ChartZoomLevel.Year -> "${zoom.year}"
-        is ChartZoomLevel.Month -> {
-            val monthName = Month.of(zoom.month)
-                .getDisplayName(TextStyle.SHORT, Locale.getDefault())
-            "$monthName ${zoom.year}"
-        }
-        else -> null
+    val (periodLabel, periodRoi) = remember(uiState.zoomLevel, uiState.chartData) {
+        calculatePeriodRoi(uiState)
     }
-    val periodRoi = if (periodLabel != null && uiState.chartData.size >= 2) {
-        val first = uiState.chartData.first()
-        val last = uiState.chartData.last()
-        val startValue = first.portfolioValue
-        val endValue = last.portfolioValue
-        if (startValue > BigDecimal.ZERO) {
-            endValue.subtract(startValue)
-                .multiply(BigDecimal(100))
-                .divide(startValue, 2, java.math.RoundingMode.HALF_UP)
-        } else null
-    } else null
 
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         // Scrub date
         if (isScrubbing) {
             Text(
                 text = LocalDate.ofEpochDay(displayPoint.epochDay)
-                    .format(DateTimeFormatter.ofPattern("d MMM yyyy")),
+                    .format(com.accbot.dca.presentation.utils.DateFormatters.shortDate),
                 style = MaterialTheme.typography.labelMedium,
                 color = accentColor(),
                 fontWeight = FontWeight.SemiBold
@@ -1047,9 +1050,8 @@ private fun LandscapeKpiContent(
 
         // Period ROI
         if (periodRoi != null && periodLabel != null) {
-            val periodPositive = periodRoi >= BigDecimal.ZERO
-            val periodSign = if (periodPositive) "+" else ""
-            val periodColor = if (periodPositive) successColor() else MaterialTheme.colorScheme.error
+            val periodSign = roiSign(periodRoi)
+            val periodColor = if (isPositiveRoi(periodRoi)) successColor() else MaterialTheme.colorScheme.error
             Text(
                 text = stringResource(
                     R.string.chart_period_roi,

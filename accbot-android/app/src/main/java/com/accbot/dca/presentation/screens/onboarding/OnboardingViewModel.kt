@@ -19,8 +19,10 @@ import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
+import androidx.compose.runtime.Immutable
 import javax.inject.Inject
 
+@Immutable
 data class OnboardingUiState(
     // Sandbox state (immutable after init)
     val isSandboxMode: Boolean = false,
