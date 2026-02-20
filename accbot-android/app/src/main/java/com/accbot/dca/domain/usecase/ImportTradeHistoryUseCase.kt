@@ -11,6 +11,11 @@ import java.math.BigDecimal
 import java.time.Instant
 import javax.inject.Inject
 
+sealed class ApiImportResultState {
+    data class Success(val imported: Int, val skipped: Int) : ApiImportResultState()
+    data class Error(val message: String) : ApiImportResultState()
+}
+
 sealed class ApiImportProgress {
     data class Fetching(val page: Int, val totalFetched: Int) : ApiImportProgress()
     data class Deduplicating(val count: Int) : ApiImportProgress()

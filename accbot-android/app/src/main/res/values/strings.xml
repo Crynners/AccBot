@@ -264,6 +264,9 @@
     <string name="exchange_detail_save">Save Credentials</string>
     <string name="exchange_detail_saved">Credentials saved successfully</string>
     <string name="exchange_detail_edit_credentials">API Credentials</string>
+    <string name="exchange_detail_credentials_title">API Credentials</string>
+    <string name="exchange_detail_import_subtitle_plans">Import for %1$d plan(s)</string>
+    <string name="exchange_detail_import_no_plans">No DCA plans using this exchange</string>
 
     <!-- Add Exchange Screen -->
     <string name="add_exchange_select">Select Exchange</string>
@@ -286,6 +289,7 @@
     <string name="add_exchange_connect">Connect Exchange</string>
     <string name="add_exchange_connected">%1$s Connected!</string>
     <string name="add_exchange_connected_desc">You can now create DCA plans using this exchange</string>
+    <string name="add_exchange_import_hint">Create a DCA plan first, then you can import trade history via API</string>
 
     <!-- Transaction Details Screen -->
     <string name="transaction_details_title">Transaction Details</string>

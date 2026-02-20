@@ -265,6 +265,9 @@
     <string name="exchange_detail_save">Uložit přihlašovací údaje</string>
     <string name="exchange_detail_saved">Přihlašovací údaje uloženy</string>
     <string name="exchange_detail_edit_credentials">API přihlašovací údaje</string>
+    <string name="exchange_detail_credentials_title">API přihlašovací údaje</string>
+    <string name="exchange_detail_import_subtitle_plans">Import pro %1$d plán(ů)</string>
+    <string name="exchange_detail_import_no_plans">Žádné DCA plány na této burze</string>
 
     <!-- Add Exchange Screen -->
     <string name="add_exchange_select">Vybrat burzu</string>
@@ -287,6 +290,7 @@
     <string name="add_exchange_connect">Připojit burzu</string>
     <string name="add_exchange_connected">%1$s připojeno!</string>
     <string name="add_exchange_connected_desc">Nyní můžete vytvářet DCA plány s touto burzou</string>
+    <string name="add_exchange_import_hint">Nejprve vytvořte DCA plán, poté můžete importovat historii obchodů přes API</string>
 
     <!-- Transaction Details Screen -->
     <string name="transaction_details_title">Detail transakce</string>
