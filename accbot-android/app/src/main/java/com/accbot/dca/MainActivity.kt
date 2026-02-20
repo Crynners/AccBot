@@ -14,10 +14,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +58,7 @@ import com.accbot.dca.presentation.screens.portfolio.PortfolioScreen
 import com.accbot.dca.presentation.screens.splash.SplashScreen
 import com.accbot.dca.presentation.ui.theme.AccBotTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -146,288 +149,311 @@ fun AccBotApp(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Determine if navigation should be shown
-    val showNav = bottomNavItems.any { currentRoute?.startsWith(it.route) == true }
-
     // Detect orientation
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // Determine start destination
     val startDestination = if (isOnboardingCompleted) {
-        Screen.Dashboard.route
+        "main"
     } else {
         Screen.Splash.route
     }
 
-    val navHost: @Composable (Modifier) -> Unit = { modifier ->
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = modifier
-        ) {
-            // Splash screen
-            composable(Screen.Splash.route) {
-                SplashScreen(
-                    onNavigateToOnboarding = {
-                        navController.navigate(Screen.Welcome.route) {
-                            popUpTo(Screen.Splash.route) { inclusive = true }
-                        }
-                    },
-                    onNavigateToDashboard = {
-                        navController.navigate(Screen.Dashboard.route) {
-                            popUpTo(Screen.Splash.route) { inclusive = true }
-                        }
-                    }
-                )
-            }
-
-            // Onboarding flow
-            composable(Screen.Welcome.route) {
-                WelcomeScreen(
-                    onContinue = {
-                        navController.navigate(Screen.Security.route)
-                    }
-                )
-            }
-
-            composable(Screen.Security.route) {
-                SecurityScreen(
-                    onContinue = {
-                        navController.navigate(Screen.ExchangeSetup.route)
-                    },
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(Screen.ExchangeSetup.route) {
-                ExchangeSetupScreen(
-                    onContinue = {
-                        navController.navigate(Screen.FirstPlan.route)
-                    },
-                    onSkip = {
-                        navController.navigate(Screen.OnboardingComplete.route)
-                    },
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(Screen.FirstPlan.route) {
-                FirstPlanScreen(
-                    onContinue = {
-                        navController.navigate(Screen.OnboardingComplete.route)
-                    },
-                    onSkip = {
-                        navController.navigate(Screen.OnboardingComplete.route)
-                    },
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(Screen.OnboardingComplete.route) {
-                CompletionScreen(
-                    onFinish = {
-                        onOnboardingComplete()
-                        navController.navigate(Screen.Dashboard.route) {
-                            popUpTo(Screen.Welcome.route) { inclusive = true }
-                        }
-                    }
-                )
-            }
-
-            // Main screens
-            composable(Screen.Dashboard.route) {
-                DashboardScreen(
-                    onNavigateToPlans = { navController.navigate(Screen.AddPlan.route) },
-                    onNavigateToHistory = { navController.navigate(Screen.History.createRoute()) },
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                    onNavigateToPlanDetails = { planId ->
-                        navController.navigate(Screen.PlanDetails.createRoute(planId))
-                    },
-                    onNavigateToPortfolio = { crypto, fiat ->
-                        navController.navigate("main/portfolio?crypto=$crypto&fiat=$fiat")
-                    }
-                )
-            }
-
-            composable(
-                route = "main/portfolio?crypto={crypto}&fiat={fiat}",
-                arguments = listOf(
-                    navArgument("crypto") { type = NavType.StringType; nullable = true; defaultValue = null },
-                    navArgument("fiat") { type = NavType.StringType; nullable = true; defaultValue = null }
-                )
-            ) {
-                PortfolioScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToHistory = { crypto, fiat ->
-                        navController.navigate(Screen.History.createRoute(crypto, fiat))
-                    }
-                )
-            }
-
-            composable(Screen.Settings.route) {
-                SettingsScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToExchanges = { navController.navigate(Screen.ExchangeManagement.route) }
-                )
-            }
-
-            // Plan screens
-            composable(Screen.AddPlan.route) {
-                AddPlanScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onPlanCreated = { navController.popBackStack() }
-                )
-            }
-
-            composable(
-                route = Screen.PlanDetails.route,
-                arguments = listOf(
-                    navArgument(Screen.PLAN_ID_ARG) { type = NavType.LongType }
-                )
-            ) { backStackEntry ->
-                val planId = backStackEntry.arguments?.getLong(Screen.PLAN_ID_ARG) ?: return@composable
-                PlanDetailsScreen(
-                    planId = planId,
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToEdit = {
-                        navController.navigate(Screen.EditPlan.createRoute(planId))
-                    },
-                    onNavigateToImport = {
-                        navController.navigate(Screen.ImportCsv.createRoute(planId))
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.EditPlan.route,
-                arguments = listOf(
-                    navArgument(Screen.PLAN_ID_ARG) { type = NavType.LongType }
-                )
-            ) { backStackEntry ->
-                val planId = backStackEntry.arguments?.getLong(Screen.PLAN_ID_ARG) ?: return@composable
-                EditPlanScreen(
-                    planId = planId,
-                    onNavigateBack = { navController.popBackStack() },
-                    onPlanUpdated = { navController.popBackStack() }
-                )
-            }
-
-            composable(
-                route = Screen.ImportCsv.route,
-                arguments = listOf(
-                    navArgument(Screen.PLAN_ID_ARG) { type = NavType.LongType }
-                )
-            ) { backStackEntry ->
-                val planId = backStackEntry.arguments?.getLong(Screen.PLAN_ID_ARG) ?: return@composable
-                ImportCsvScreen(
-                    planId = planId,
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToHistory = {
-                        navController.navigate(Screen.History.createRoute()) {
-                            popUpTo(Screen.PlanDetails.createRoute(planId)) { inclusive = false }
-                        }
-                    }
-                )
-            }
-
-            // Exchange screens
-            composable(Screen.ExchangeManagement.route) {
-                ExchangeManagementScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToAddExchange = { exchangeName ->
-                        navController.navigate(Screen.AddExchange.createRoute(exchangeName))
-                    },
-                    onNavigateToExchangeDetail = { exchangeName ->
-                        navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName))
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.ExchangeDetail.route,
-                arguments = listOf(
-                    navArgument(Screen.EXCHANGE_ARG) { type = NavType.StringType }
-                )
-            ) {
-                ExchangeDetailScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(
-                route = Screen.AddExchange.route,
-                arguments = listOf(
-                    navArgument(Screen.EXCHANGE_ARG) {
-                        type = NavType.StringType; nullable = true; defaultValue = null
-                    }
-                )
-            ) {
-                AddExchangeScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onExchangeAdded = { navController.popBackStack() }
-                )
-            }
-
-            // History
-            composable(
-                route = Screen.History.route,
-                arguments = listOf(
-                    navArgument("crypto") { type = NavType.StringType; nullable = true; defaultValue = null },
-                    navArgument("fiat") { type = NavType.StringType; nullable = true; defaultValue = null }
-                )
-            ) {
-                HistoryScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToTransactionDetails = { transactionId ->
-                        navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.TransactionDetails.route,
-                arguments = listOf(
-                    navArgument(Screen.TRANSACTION_ID_ARG) { type = NavType.LongType }
-                )
-            ) { backStackEntry ->
-                val transactionId = backStackEntry.arguments?.getLong(Screen.TRANSACTION_ID_ARG) ?: return@composable
-                TransactionDetailsScreen(
-                    transactionId = transactionId,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-        }
+    // Pager state for main tab swiping
+    val pagerState = rememberPagerState(pageCount = { bottomNavItems.size })
+    val coroutineScope = rememberCoroutineScope()
+    val onTabSelected: (Int) -> Unit = { index ->
+        coroutineScope.launch { pagerState.animateScrollToPage(index) }
     }
 
-    if (isLandscape && showNav) {
-        // Landscape with NavigationRail on the left
-        Row(modifier = Modifier.fillMaxSize()) {
-            AccBotNavRail(
-                navController = navController,
-                currentRoute = currentRoute
-            )
-            navHost(
-                Modifier
-                    .weight(1f)
-                    .statusBarsPadding()
-                    .navigationBarsPadding()
+    NavHost(
+        navController = navController,
+        startDestination = startDestination
+    ) {
+        // Splash screen
+        composable(Screen.Splash.route) {
+            SplashScreen(
+                onNavigateToOnboarding = {
+                    navController.navigate(Screen.Welcome.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                },
+                onNavigateToDashboard = {
+                    navController.navigate("main") {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                }
             )
         }
-    } else {
-        // Portrait or non-nav screens: standard Scaffold with bottom bar
-        Scaffold(
-            contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
-            bottomBar = {
-                if (showNav) {
-                    AccBotBottomNav(
-                        navController = navController,
-                        currentRoute = currentRoute
+
+        // Onboarding flow
+        composable(Screen.Welcome.route) {
+            WelcomeScreen(
+                onContinue = {
+                    navController.navigate(Screen.Security.route)
+                }
+            )
+        }
+
+        composable(Screen.Security.route) {
+            SecurityScreen(
+                onContinue = {
+                    navController.navigate(Screen.ExchangeSetup.route)
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.ExchangeSetup.route) {
+            ExchangeSetupScreen(
+                onContinue = {
+                    navController.navigate(Screen.FirstPlan.route)
+                },
+                onSkip = {
+                    navController.navigate(Screen.OnboardingComplete.route)
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.FirstPlan.route) {
+            FirstPlanScreen(
+                onContinue = {
+                    navController.navigate(Screen.OnboardingComplete.route)
+                },
+                onSkip = {
+                    navController.navigate(Screen.OnboardingComplete.route)
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.OnboardingComplete.route) {
+            CompletionScreen(
+                onFinish = {
+                    onOnboardingComplete()
+                    navController.navigate("main") {
+                        popUpTo(Screen.Welcome.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // Main screens — HorizontalPager with bottom nav / nav rail
+        composable("main") {
+            var isChartTouching by remember { mutableStateOf(false) }
+
+            if (isLandscape) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .systemBarsPadding()
+                ) {
+                    AccBotNavRail(
+                        selectedIndex = pagerState.currentPage,
+                        onItemSelected = onTabSelected
                     )
+                    HorizontalPager(
+                        state = pagerState,
+                        userScrollEnabled = !isChartTouching,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    ) { page ->
+                        MainTabPage(
+                            page = page,
+                            navController = navController,
+                            onSwitchToTab = onTabSelected,
+                            onChartTouching = { isChartTouching = it }
+                        )
+                    }
+                }
+            } else {
+                Scaffold(
+                    contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
+                    bottomBar = {
+                        AccBotBottomNav(
+                            selectedIndex = pagerState.currentPage,
+                            onItemSelected = onTabSelected
+                        )
+                    }
+                ) { padding ->
+                    HorizontalPager(
+                        state = pagerState,
+                        userScrollEnabled = !isChartTouching,
+                        modifier = Modifier
+                            .padding(padding)
+                            .fillMaxSize()
+                    ) { page ->
+                        MainTabPage(
+                            page = page,
+                            navController = navController,
+                            onSwitchToTab = onTabSelected,
+                            onChartTouching = { isChartTouching = it }
+                        )
+                    }
                 }
             }
-        ) { paddingValues ->
-            navHost(Modifier.padding(paddingValues))
         }
+
+        // Plan screens
+        composable(Screen.AddPlan.route) {
+            AddPlanScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onPlanCreated = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.PlanDetails.route,
+            arguments = listOf(
+                navArgument(Screen.PLAN_ID_ARG) { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val planId = backStackEntry.arguments?.getLong(Screen.PLAN_ID_ARG) ?: return@composable
+            PlanDetailsScreen(
+                planId = planId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEdit = {
+                    navController.navigate(Screen.EditPlan.createRoute(planId))
+                },
+                onNavigateToImport = {
+                    navController.navigate(Screen.ImportCsv.createRoute(planId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.EditPlan.route,
+            arguments = listOf(
+                navArgument(Screen.PLAN_ID_ARG) { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val planId = backStackEntry.arguments?.getLong(Screen.PLAN_ID_ARG) ?: return@composable
+            EditPlanScreen(
+                planId = planId,
+                onNavigateBack = { navController.popBackStack() },
+                onPlanUpdated = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.ImportCsv.route,
+            arguments = listOf(
+                navArgument(Screen.PLAN_ID_ARG) { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val planId = backStackEntry.arguments?.getLong(Screen.PLAN_ID_ARG) ?: return@composable
+            ImportCsvScreen(
+                planId = planId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToHistory = {
+                    navController.navigate(Screen.History.createRoute()) {
+                        popUpTo(Screen.PlanDetails.createRoute(planId)) { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        // Exchange screens
+        composable(Screen.ExchangeManagement.route) {
+            ExchangeManagementScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToAddExchange = { exchangeName ->
+                    navController.navigate(Screen.AddExchange.createRoute(exchangeName))
+                },
+                onNavigateToExchangeDetail = { exchangeName ->
+                    navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.ExchangeDetail.route,
+            arguments = listOf(
+                navArgument(Screen.EXCHANGE_ARG) { type = NavType.StringType }
+            )
+        ) {
+            ExchangeDetailScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.AddExchange.route,
+            arguments = listOf(
+                navArgument(Screen.EXCHANGE_ARG) {
+                    type = NavType.StringType; nullable = true; defaultValue = null
+                }
+            )
+        ) {
+            AddExchangeScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onExchangeAdded = { navController.popBackStack() }
+            )
+        }
+
+        // History
+        composable(
+            route = Screen.History.route,
+            arguments = listOf(
+                navArgument("crypto") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("fiat") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) {
+            HistoryScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToTransactionDetails = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.TransactionDetails.route,
+            arguments = listOf(
+                navArgument(Screen.TRANSACTION_ID_ARG) { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val transactionId = backStackEntry.arguments?.getLong(Screen.TRANSACTION_ID_ARG) ?: return@composable
+            TransactionDetailsScreen(
+                transactionId = transactionId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainTabPage(
+    page: Int,
+    navController: androidx.navigation.NavController,
+    onSwitchToTab: (Int) -> Unit,
+    onChartTouching: (Boolean) -> Unit = {}
+) {
+    when (page) {
+        0 -> DashboardScreen(
+            onNavigateToPlans = { navController.navigate(Screen.AddPlan.route) },
+            onNavigateToHistory = { navController.navigate(Screen.History.createRoute()) },
+            onNavigateToSettings = { onSwitchToTab(2) },
+            onNavigateToPlanDetails = { planId ->
+                navController.navigate(Screen.PlanDetails.createRoute(planId))
+            },
+            onNavigateToPortfolio = { _, _ -> onSwitchToTab(1) }
+        )
+        1 -> PortfolioScreen(
+            onNavigateBack = { onSwitchToTab(0) },
+            onNavigateToHistory = { crypto, fiat ->
+                navController.navigate(Screen.History.createRoute(crypto, fiat))
+            },
+            onChartTouching = onChartTouching
+        )
+        2 -> SettingsScreen(
+            onNavigateBack = { onSwitchToTab(0) },
+            onNavigateToExchanges = {
+                navController.navigate(Screen.ExchangeManagement.route)
+            }
+        )
     }
 }

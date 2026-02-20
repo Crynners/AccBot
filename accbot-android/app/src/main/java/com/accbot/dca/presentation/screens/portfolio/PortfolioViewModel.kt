@@ -122,6 +122,39 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
+    private fun refreshTransactionsAndPairs() {
+        viewModelScope.launch {
+            try {
+                val completed = transactionDao.getCompletedTransactionsOrdered()
+                completedTransactions = completed
+                val exchanges = completed.map { it.exchange.name }.distinct().sorted()
+                val pairs = completed.map { it.crypto to it.fiat }.distinct()
+
+                val pairsByFiat = pairs.groupBy { it.second }
+                val pages = mutableListOf<PairPage>()
+                for ((fiat, fiatPairs) in pairsByFiat) {
+                    if (fiatPairs.size >= 2) {
+                        pages.add(PairPage.Aggregate(fiat))
+                    }
+                }
+                for (pair in pairs) {
+                    pages.add(PairPage.SinglePair(pair.first, pair.second))
+                }
+
+                _uiState.update { state ->
+                    // Keep current page index if still valid, otherwise reset to 0
+                    val pageIndex = state.selectedPageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
+                    state.copy(
+                        availableExchanges = exchanges,
+                        pages = pages,
+                        selectedPageIndex = pageIndex
+                    )
+                }
+                updateNavigationState()
+            } catch (_: Exception) { }
+        }
+    }
+
     fun drillDownToYear(year: Int) {
         _uiState.update { it.copy(zoomLevel = ChartZoomLevel.Year(year)) }
         updateNavigationState()
@@ -279,6 +312,7 @@ class PortfolioViewModel @Inject constructor(
     }
 
     fun syncPricesAndLoadChart() {
+        refreshTransactionsAndPairs()
         loadChartData()
         syncJob?.cancel()
         syncJob = viewModelScope.launch {
