@@ -49,7 +49,7 @@ fun WelcomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(60.dp))
@@ -57,7 +57,7 @@ fun WelcomeScreen(
         // Logo and tagline
         Text(
             text = stringResource(R.string.app_name),
-            fontSize = 48.sp,
+            style = MaterialTheme.typography.displayMedium,
             fontWeight = FontWeight.Bold,
             color = accentColor()
         )
@@ -123,7 +123,7 @@ fun WelcomeScreen(
 }
 
 @Composable
-private fun FeatureCard(
+internal fun FeatureCard(
     icon: ImageVector,
     title: String,
     description: String,

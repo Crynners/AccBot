@@ -256,6 +256,7 @@ fun AccBotApp(
                     )
                     HorizontalPager(
                         state = pagerState,
+                        beyondViewportPageCount = 1,
                         userScrollEnabled = !isChartTouching,
                         modifier = Modifier
                             .weight(1f)
@@ -281,6 +282,7 @@ fun AccBotApp(
                 ) { padding ->
                     HorizontalPager(
                         state = pagerState,
+                        beyondViewportPageCount = 1,
                         userScrollEnabled = !isChartTouching,
                         modifier = Modifier
                             .padding(padding)
@@ -320,6 +322,9 @@ fun AccBotApp(
                 },
                 onNavigateToImport = {
                     navController.navigate(Screen.ImportCsv.createRoute(planId))
+                },
+                onNavigateToHistory = { crypto, fiat ->
+                    navController.navigate(Screen.History.createRoute(crypto, fiat))
                 }
             )
         }

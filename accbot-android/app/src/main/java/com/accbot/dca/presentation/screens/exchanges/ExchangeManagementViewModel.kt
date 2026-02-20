@@ -6,10 +6,14 @@ import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.Exchange
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.Immutable
 import javax.inject.Inject
 
+@Immutable
 data class ExchangeManagementUiState(
     val connectedExchanges: List<Exchange> = emptyList(),
     val isLoading: Boolean = false,
@@ -30,19 +34,18 @@ class ExchangeManagementViewModel @Inject constructor(
     }
 
     fun loadConnectedExchanges() {
-        val isSandbox = userPreferences.isSandboxMode()
-        val connected = credentialsStore.getConfiguredExchanges(isSandbox)
-        _uiState.update { it.copy(connectedExchanges = connected, isSandboxMode = isSandbox) }
+        viewModelScope.launch {
+            val isSandbox = withContext(Dispatchers.IO) { userPreferences.isSandboxMode() }
+            val connected = withContext(Dispatchers.IO) { credentialsStore.getConfiguredExchanges(isSandbox) }
+            _uiState.update { it.copy(connectedExchanges = connected, isSandboxMode = isSandbox) }
+        }
     }
 
     fun removeExchange(exchange: Exchange) {
-        val isSandbox = userPreferences.isSandboxMode()
-        credentialsStore.deleteCredentials(exchange, isSandbox)
-        loadConnectedExchanges()
-    }
-
-    fun hasExchange(exchange: Exchange): Boolean {
-        val isSandbox = userPreferences.isSandboxMode()
-        return credentialsStore.hasCredentials(exchange, isSandbox)
+        viewModelScope.launch {
+            val isSandbox = withContext(Dispatchers.IO) { userPreferences.isSandboxMode() }
+            withContext(Dispatchers.IO) { credentialsStore.deleteCredentials(exchange, isSandbox) }
+            loadConnectedExchanges()
+        }
     }
 }

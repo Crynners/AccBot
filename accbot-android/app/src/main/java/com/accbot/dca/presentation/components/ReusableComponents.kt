@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.accbot.dca.R
+import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.presentation.ui.theme.Error
@@ -317,6 +318,73 @@ fun NextStepItem(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * Strategy option card used in AddPlanScreen and EditPlanScreen.
+ * Displays the DCA strategy name, description, info button, and radio selection.
+ */
+@Composable
+fun StrategyOption(
+    strategy: DcaStrategy,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onInfoClick: () -> Unit
+) {
+    val accentCol = accentColor()
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) {
+                accentCol.copy(alpha = 0.15f)
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(strategy.displayNameRes),
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (isSelected) accentCol else MaterialTheme.colorScheme.onSurface
+                    )
+                    IconButton(
+                        onClick = onInfoClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = stringResource(R.string.add_plan_strategy_info),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                Text(
+                    text = stringResource(strategy.descriptionRes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            RadioButton(
+                selected = isSelected,
+                onClick = onClick,
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = accentCol
+                )
             )
         }
     }

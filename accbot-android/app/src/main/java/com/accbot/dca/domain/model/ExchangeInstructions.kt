@@ -144,7 +144,7 @@ object ExchangeInstructionsProvider {
                     R.string.exchange_instructions_coinbase_5
                 ),
                 url = "https://www.coinbase.com/settings/api",
-                needsPassphrase = false,
+                needsPassphrase = true,
                 sandboxSteps = listOf(
                     R.string.exchange_instructions_coinbase_sandbox_1,
                     R.string.exchange_instructions_coinbase_sandbox_2,
@@ -162,7 +162,7 @@ object ExchangeInstructionsProvider {
      * Check if an exchange requires a passphrase for API authentication.
      */
     fun needsPassphrase(exchange: Exchange): Boolean {
-        return exchange == Exchange.KUCOIN
+        return exchange == Exchange.KUCOIN || exchange == Exchange.COINBASE
     }
 
     /**

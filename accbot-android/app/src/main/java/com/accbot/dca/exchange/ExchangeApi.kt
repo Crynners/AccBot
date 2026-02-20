@@ -5,6 +5,7 @@ import com.accbot.dca.domain.model.DcaResult
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.ExchangeCredentials
 import com.accbot.dca.domain.model.TradeHistoryPage
+import com.accbot.dca.domain.model.Transaction
 import okhttp3.OkHttpClient
 import java.math.BigDecimal
 import java.time.Instant
@@ -61,6 +62,14 @@ interface ExchangeApi {
     suspend fun validateCredentials(): Boolean
 
     /**
+     * Query the status and fill details of a previously placed order.
+     * Used to resolve PENDING transactions whose fill details weren't available at order time.
+     * @param orderId The exchange order ID
+     * @return Filled transaction details, or null if still pending/unknown
+     */
+    suspend fun getOrderStatus(orderId: String): Transaction? = null
+
+    /**
      * Get trade history for a currency pair.
      * Not all exchanges support this - default throws UnsupportedOperationException.
      * @param crypto Cryptocurrency symbol (e.g., "BTC")
@@ -102,7 +111,7 @@ class ExchangeApiFactory @Inject constructor(
             Exchange.KUCOIN -> KuCoinApi(credentials, sandboxMode, okHttpClient)
             Exchange.BITFINEX -> BitfinexApi(credentials, sandboxMode)
             Exchange.HUOBI -> HuobiApi(credentials, sandboxMode)
-            Exchange.COINBASE -> CoinbaseApi(credentials, sandboxMode)
+            Exchange.COINBASE -> CoinbaseApi(credentials, sandboxMode, okHttpClient)
         }
     }
 }

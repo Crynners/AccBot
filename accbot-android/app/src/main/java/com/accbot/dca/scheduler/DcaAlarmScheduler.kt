@@ -24,13 +24,23 @@ object DcaAlarmScheduler {
     private const val ACTION_DCA_ALARM = "com.accbot.dca.ACTION_DCA_ALARM"
     private const val MIN_DELAY_MS = 5_000L  // 5 seconds minimum delay for past times
 
+    // Cache UserPreferences per application context to avoid repeated construction
+    @Volatile
+    private var cachedPreferences: UserPreferences? = null
+
+    private fun getPreferences(context: Context): UserPreferences {
+        return cachedPreferences ?: synchronized(this) {
+            cachedPreferences ?: UserPreferences(context.applicationContext).also { cachedPreferences = it }
+        }
+    }
+
     /**
      * Query the DB for the earliest enabled plan execution time and set an exact alarm.
      * If the time is in the past, fires 5 seconds from now.
      */
     suspend fun scheduleNextAlarm(context: Context) = withContext(Dispatchers.IO) {
         val appContext = context.applicationContext
-        val userPreferences = UserPreferences(appContext)
+        val userPreferences = getPreferences(appContext)
         val database = DcaDatabase.getInstance(appContext, userPreferences.isSandboxMode())
         val earliestMillis = database.dcaPlanDao().getEarliestNextExecution()
 

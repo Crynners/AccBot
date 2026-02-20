@@ -13,6 +13,8 @@ import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,15 +46,16 @@ fun PlanDetailsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToEdit: () -> Unit,
     onNavigateToImport: (() -> Unit)? = null,
+    onNavigateToHistory: ((crypto: String, fiat: String) -> Unit)? = null,
     viewModel: PlanDetailsViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var showStrategyInfo by remember { mutableStateOf(false) }
-    var showDeleteTransactionsDialog by remember { mutableStateOf(false) }
-    var deleteTransactionsConfirmText by remember { mutableStateOf("") }
+    var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var showStrategyInfo by rememberSaveable { mutableStateOf(false) }
+    var showDeleteTransactionsDialog by rememberSaveable { mutableStateOf(false) }
+    var deleteTransactionsConfirmText by rememberSaveable { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(planId) {
@@ -247,7 +250,7 @@ fun PlanDetailsScreen(
 
                                 Text(
                                     text = "${plan.crypto}/${plan.fiat}",
-                                    fontSize = 24.sp,
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
 
@@ -602,7 +605,11 @@ fun PlanDetailsScreen(
                         if (uiState.transactions.size > 10) {
                             item {
                                 TextButton(
-                                    onClick = { /* Navigate to full history */ },
+                                    onClick = {
+                                        uiState.plan?.let { plan ->
+                                            onNavigateToHistory?.invoke(plan.crypto, plan.fiat)
+                                        }
+                                    },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(stringResource(R.string.plan_details_view_all, uiState.transactions.size))
@@ -751,7 +758,7 @@ fun PlanDetailsScreen(
 }
 
 @Composable
-private fun PlanConfigRow(
+internal fun PlanConfigRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String

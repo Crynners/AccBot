@@ -40,6 +40,9 @@ abstract class DcaDatabase : RoomDatabase() {
         @Volatile
         private var sandboxInstance: DcaDatabase? = null
 
+        @Volatile
+        private var legacyMigrationDone: Boolean = false
+
         // Migration from version 1 to 2: Add exchange_balances and monthly_summaries tables
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -152,8 +155,11 @@ abstract class DcaDatabase : RoomDatabase() {
          * @return Database instance for the specified mode
          */
         fun getInstance(context: Context, isSandbox: Boolean = false): DcaDatabase {
-            // Migrate legacy database to prod on first access
-            migrateLegacyDatabase(context)
+            // Migrate legacy database to prod on first access (skip check after first run)
+            if (!legacyMigrationDone) {
+                migrateLegacyDatabase(context)
+                legacyMigrationDone = true
+            }
 
             return if (isSandbox) {
                 sandboxInstance ?: synchronized(this) {

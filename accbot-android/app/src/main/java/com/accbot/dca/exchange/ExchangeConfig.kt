@@ -19,7 +19,7 @@ object ExchangeConfig {
     private val productionUrls = mapOf(
         Exchange.BINANCE to "https://api.binance.com",
         Exchange.KUCOIN to "https://api.kucoin.com",
-        Exchange.COINBASE to "https://api.exchange.coinbase.com",
+        Exchange.COINBASE to "https://api.coinbase.com",
         Exchange.KRAKEN to "https://api.kraken.com",
         Exchange.BITFINEX to "https://api.bitfinex.com",
         Exchange.HUOBI to "https://api.huobi.pro",

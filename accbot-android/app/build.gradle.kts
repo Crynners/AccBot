@@ -1,12 +1,15 @@
+import java.lang.reflect.Field
 import java.time.ZonedDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.TreeMap
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
+    id("com.android.compose.screenshot")
 }
 
 // Read version from gradle.properties
@@ -70,11 +73,14 @@ android {
         buildConfig = true
     }
 
+    experimentalProperties["android.experimental.enableScreenshotTest"] = true
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
 }
 
 dependencies {
@@ -144,4 +150,89 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Screenshot testing
+    screenshotTestImplementation("androidx.compose.ui:ui-tooling")
+    screenshotTestImplementation("com.android.tools.screenshot:screenshot-validation-api:0.0.1-alpha13")
+}
+
+// Workaround for Windows CreateProcess error=206 (command line too long)
+// The screenshot plugin passes ~70K chars of classpath data via -D system properties,
+// exceeding Windows' 32K CreateProcess limit.
+// Solution: Use reflection to replace the forkOptions' internal systemProperties map with
+// a custom map that diverts long values to a JDK @argfile.
+afterEvaluate {
+    tasks.matching { it.name.contains("ScreenshotTest") && it is Test }.configureEach {
+        val test = this as Test
+        test.maxHeapSize = "4g"
+        val argfileDir = File(project.layout.buildDirectory.asFile.get(), "argfiles")
+        argfileDir.mkdirs()
+        val argfile = File(argfileDir, "${test.name}-sysprops.txt")
+        val longProps = mutableMapOf<String, Any>()
+
+        // Use reflection to replace the internal systemProperties map inside forkOptions.options (JvmOptions)
+        val forkOptionsField = Test::class.java.getDeclaredField("forkOptions")
+        forkOptionsField.isAccessible = true
+        val forkOptions = forkOptionsField.get(test)
+
+        // Access DefaultJavaForkOptions.options (JvmOptions)
+        val optionsField = forkOptions::class.java.superclass!!.getDeclaredField("options")
+        optionsField.isAccessible = true
+        val jvmOptions = optionsField.get(forkOptions)
+
+        // Find mutableSystemProperties field in JvmOptions
+        val jvmOptionsClass = jvmOptions::class.java.let { c ->
+            generateSequence(c) { it.superclass }.first { it.simpleName == "JvmOptions" }
+        }
+        val sysPropsField = jvmOptionsClass.getDeclaredField("mutableSystemProperties")
+        sysPropsField.isAccessible = true
+
+        // Use Unsafe to replace the final field with our intercepting map
+        val unsafeField = Class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe")
+        unsafeField.isAccessible = true
+        val unsafe = unsafeField.get(null)
+        val unsafeClass = unsafe::class.java
+        val objectFieldOffset = unsafeClass.getMethod("objectFieldOffset", Field::class.java)
+        val putObject = unsafeClass.getMethod("putObject", Any::class.java, Long::class.java, Any::class.java)
+        val offset = objectFieldOffset.invoke(unsafe, sysPropsField) as Long
+        @Suppress("UNCHECKED_CAST")
+        val originalMap = sysPropsField.get(jvmOptions) as MutableMap<String, Any?>
+        // Copy existing entries
+        val originalEntries = originalMap.toMutableMap()
+
+        // Create intercepting map that diverts long values
+        val backingMap = TreeMap<String, Any?>()
+        backingMap.putAll(originalEntries)
+        val interceptingMap = object : MutableMap<String, Any?> by backingMap {
+            override fun put(key: String, value: Any?): Any? {
+                if (value != null && value.toString().length > 500) {
+                    longProps[key] = value
+                    return null
+                }
+                return backingMap.put(key, value)
+            }
+
+            override fun putAll(from: Map<out String, Any?>) {
+                for ((k, v) in from) put(k, v)
+            }
+        }
+        // Replace the final field using Unsafe
+        putObject.invoke(unsafe, jvmOptions, offset, interceptingMap)
+
+        // Add provider to write diverted props to @argfile
+        test.jvmArgumentProviders.add(object : org.gradle.process.CommandLineArgumentProvider {
+            override fun asArguments(): Iterable<String> {
+                if (longProps.isEmpty()) return emptyList()
+                val sb = StringBuilder()
+                for ((key, value) in longProps) {
+                    // In JDK @argfile with double quotes, backslash is escape char - double them
+                    val escaped = value.toString().replace("\\", "\\\\")
+                    sb.appendLine("\"-D${key}=${escaped}\"")
+                }
+                argfile.writeText(sb.toString())
+                println("Diverted ${longProps.size} long system properties (${longProps.values.sumOf { it.toString().length }} chars) to @argfile")
+                return listOf("@${argfile.absolutePath}")
+            }
+        })
+    }
 }

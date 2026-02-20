@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -25,6 +26,7 @@ import com.accbot.dca.presentation.components.ErrorState
 import com.accbot.dca.presentation.components.MonthlyCostEstimateCard
 import com.accbot.dca.presentation.components.QrScannerButton
 import com.accbot.dca.presentation.components.StrategyInfoBottomSheet
+import com.accbot.dca.presentation.components.StrategyOption
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 
@@ -36,7 +38,7 @@ fun EditPlanScreen(
     onPlanUpdated: () -> Unit,
     viewModel: EditPlanViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(planId) {
         viewModel.loadPlan(planId)
@@ -331,7 +333,7 @@ fun EditPlanScreen(
 }
 
 @Composable
-private fun FrequencyOption(
+internal fun FrequencyOption(
     frequency: DcaFrequency,
     isSelected: Boolean,
     onClick: () -> Unit
@@ -372,65 +374,3 @@ private fun FrequencyOption(
     }
 }
 
-@Composable
-private fun StrategyOption(
-    strategy: DcaStrategy,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    onInfoClick: () -> Unit
-) {
-    val accentCol = accentColor()
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                accentCol.copy(alpha = 0.15f)
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringResource(strategy.displayNameRes),
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) accentCol else MaterialTheme.colorScheme.onSurface
-                    )
-                    IconButton(
-                        onClick = onInfoClick,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = stringResource(R.string.add_plan_strategy_info),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-                Text(
-                    text = stringResource(strategy.descriptionRes),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            RadioButton(
-                selected = isSelected,
-                onClick = onClick,
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = accentCol
-                )
-            )
-        }
-    }
-}

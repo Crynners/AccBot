@@ -98,7 +98,7 @@ val Exchange.supportsImport: Boolean get() = this == Exchange.COINMATE
 /**
  * Check if exchange supports API-based transaction history import
  */
-val Exchange.supportsApiImport: Boolean get() = this in setOf(Exchange.COINMATE, Exchange.BINANCE)
+val Exchange.supportsApiImport: Boolean get() = this in setOf(Exchange.COINMATE, Exchange.BINANCE, Exchange.KRAKEN, Exchange.COINBASE)
 
 /**
  * Get list of available exchanges based on sandbox mode.

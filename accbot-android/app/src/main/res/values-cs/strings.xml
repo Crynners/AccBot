@@ -16,6 +16,10 @@
     <string name="common_connected">Připojeno</string>
     <string name="common_not_connected">Nepřipojeno</string>
     <string name="common_all">Vše</string>
+    <string name="common_previous">Předchozí</string>
+    <string name="common_next">Další</string>
+    <string name="common_expand">Rozbalit</string>
+    <string name="common_collapse">Sbalit</string>
     <string name="common_amount">Částka</string>
     <string name="common_settings">Nastavení</string>
     <string name="common_copy">Kopírovat</string>
@@ -184,7 +188,7 @@
     <string name="plan_details_title">Detail plánu</string>
     <string name="plan_details_edit">Upravit</string>
     <string name="plan_details_delete_title">Smazat plán</string>
-    <string name="plan_details_delete_text">Opravdu chcete smazat tento DCA plán? Tuto akci nelze vrátit zpět.</string>
+    <string name="plan_details_delete_text">Opravdu chcete smazat tento DCA plán? Všechny související transakce budou také trvale smazány. Tuto akci nelze vrátit zpět.</string>
     <string name="plan_details_loading">Načítání plánu…</string>
     <string name="plan_details_active">Aktivní</string>
     <string name="plan_details_paused">Pozastaveno</string>
@@ -441,6 +445,7 @@
     <string name="notification_service_text">Sledování vašich DCA plánů</string>
     <string name="notification_purchase_title">DCA nákup dokončen ✓</string>
     <string name="notification_purchase_text">Nakoupeno %1$s %2$s za %3$s %4$s</string>
+    <string name="notification_purchase_pending_text">Nakoupeno ~%1$s %2$s za %3$s (potvrzování…)</string>
     <string name="notification_dca_failed">DCA selhalo</string>
     <string name="notification_dca_failed_text">Nepodařilo se nakoupit %1$s: %2$s</string>
     <string name="notification_dca_error">DCA chyba</string>

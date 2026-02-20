@@ -11,6 +11,7 @@ import com.accbot.dca.domain.usecase.CalculateChartDataUseCase
 import com.accbot.dca.domain.usecase.ChartDataPoint
 import com.accbot.dca.domain.usecase.ChartZoomLevel
 import com.accbot.dca.domain.usecase.SyncDailyPricesUseCase
+import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
@@ -26,6 +27,7 @@ sealed class PairPage {
     data class SinglePair(val crypto: String, val fiat: String) : PairPage()
 }
 
+@Immutable
 data class PortfolioUiState(
     val chartData: List<ChartDataPoint> = emptyList(),
     val zoomLevel: ChartZoomLevel = ChartZoomLevel.Overview,
