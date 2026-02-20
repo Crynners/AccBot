@@ -31,6 +31,9 @@ sealed class Screen(val route: String) {
 
     // Exchange screens
     data object ExchangeManagement : Screen("exchanges/manage")
+    data object ExchangeDetail : Screen("exchanges/detail/{exchange}") {
+        fun createRoute(exchangeName: String) = "exchanges/detail/$exchangeName"
+    }
     data object AddExchange : Screen("exchanges/add?exchange={exchange}") {
         fun createRoute(exchangeName: String? = null): String {
             return if (exchangeName != null) "exchanges/add?exchange=$exchangeName" else "exchanges/add"

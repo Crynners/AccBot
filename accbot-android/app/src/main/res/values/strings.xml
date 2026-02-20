@@ -55,7 +55,7 @@
     <string name="dashboard_invested">Invested</string>
     <string name="dashboard_avg_price">Avg Price</string>
     <string name="dashboard_current_price">Current Price</string>
-    <string name="dashboard_active_plans">Active DCA Plans</string>
+    <string name="dashboard_active_plans">My DCA Plans</string>
     <string name="dashboard_next_prefix">Next: %1$s</string>
     <string name="dashboard_remaining_suffix">~%1$s remaining</string>
     <string name="dashboard_remaining_with_exec">~%1$s remaining (%2$d exec)</string>
@@ -238,12 +238,14 @@
     <string name="chart_total_roi">ROI</string>
     <string name="chart_invested">Invested</string>
     <string name="chart_portfolio_value">Portfolio Value</string>
-    <string name="chart_cost_basis">Cost Basis</string>
+    <string name="chart_cost_basis">Invested</string>
     <string name="chart_legend_crypto_held">Crypto Held</string>
     <string name="chart_legend_invested_equiv">Invested Equiv.</string>
     <string name="chart_avg_price">Avg. Price</string>
     <string name="chart_transactions">Transactions</string>
     <string name="chart_period_roi">%1$s in %2$s</string>
+    <string name="chart_crypto_price">%1$s Price</string>
+    <string name="chart_accumulated_crypto">Accum. %1$s</string>
     <string name="chart_explore">Explore:</string>
 
     <!-- Exchange Management Screen -->
@@ -255,6 +257,13 @@
     <string name="exchanges_remove_text">Are you sure you want to remove %1$s? This will delete your API credentials from this device.</string>
     <string name="exchanges_none_title">No Exchanges Available</string>
     <string name="exchanges_none_desc">There are no exchanges to display</string>
+    <string name="exchanges_detail_cryptos">Cryptocurrencies</string>
+    <string name="exchanges_detail_fiats">Fiat currencies</string>
+    <string name="exchanges_remove_exchange">Remove Exchange</string>
+    <string name="exchange_detail_title">Exchange Details</string>
+    <string name="exchange_detail_save">Save Credentials</string>
+    <string name="exchange_detail_saved">Credentials saved successfully</string>
+    <string name="exchange_detail_edit_credentials">API Credentials</string>
 
     <!-- Add Exchange Screen -->
     <string name="add_exchange_select">Select Exchange</string>

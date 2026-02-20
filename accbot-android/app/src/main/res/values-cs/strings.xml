@@ -54,7 +54,7 @@
     <string name="dashboard_invested">Investováno</string>
     <string name="dashboard_avg_price">Prům. cena</string>
     <string name="dashboard_current_price">Aktuální cena</string>
-    <string name="dashboard_active_plans">Aktivní DCA plány</string>
+    <string name="dashboard_active_plans">Moje DCA plány</string>
     <string name="dashboard_next_prefix">Další: %1$s</string>
     <string name="dashboard_remaining_suffix">~%1$s zbývá</string>
     <string name="dashboard_remaining_with_exec">~%1$s zbývá (%2$d nák.)</string>
@@ -239,12 +239,14 @@
     <string name="chart_total_roi">ROI</string>
     <string name="chart_invested">Investováno</string>
     <string name="chart_portfolio_value">Hodnota portfolia</string>
-    <string name="chart_cost_basis">Nákladová základna</string>
+    <string name="chart_cost_basis">Investováno</string>
     <string name="chart_legend_crypto_held">Držené krypto</string>
     <string name="chart_legend_invested_equiv">Ekvivalent investice</string>
     <string name="chart_avg_price">Prům. cena</string>
     <string name="chart_transactions">Transakce</string>
     <string name="chart_period_roi">%1$s za %2$s</string>
+    <string name="chart_crypto_price">Cena %1$s</string>
+    <string name="chart_accumulated_crypto">Akum. %1$s</string>
     <string name="chart_explore">Prozkoumat:</string>
 
     <!-- Exchange Management Screen -->
@@ -256,6 +258,13 @@
     <string name="exchanges_remove_text">Opravdu chcete odebrat %1$s? Tím se smažou vaše API přihlašovací údaje z tohoto zařízení.</string>
     <string name="exchanges_none_title">Žádné dostupné burzy</string>
     <string name="exchanges_none_desc">Nejsou k dispozici žádné burzy</string>
+    <string name="exchanges_detail_cryptos">Kryptoměny</string>
+    <string name="exchanges_detail_fiats">Fiat měny</string>
+    <string name="exchanges_remove_exchange">Odebrat burzu</string>
+    <string name="exchange_detail_title">Detail burzy</string>
+    <string name="exchange_detail_save">Uložit přihlašovací údaje</string>
+    <string name="exchange_detail_saved">Přihlašovací údaje uloženy</string>
+    <string name="exchange_detail_edit_credentials">API přihlašovací údaje</string>
 
     <!-- Add Exchange Screen -->
     <string name="add_exchange_select">Vybrat burzu</string>

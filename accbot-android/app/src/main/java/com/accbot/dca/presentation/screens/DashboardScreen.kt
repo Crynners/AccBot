@@ -28,6 +28,7 @@ import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.presentation.components.CryptoIcon
+import com.accbot.dca.presentation.components.SectionHeader
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.accentColor
@@ -81,14 +82,6 @@ fun DashboardScreen(
                 )
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToPlans,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dashboard_add_plan))
-            }
-        }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -118,13 +111,12 @@ fun DashboardScreen(
                 )
             }
 
-            // Active Plans
+            // My DCA Plans
             item {
-                Text(
-                    stringResource(R.string.dashboard_active_plans),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 8.dp)
+                SectionHeader(
+                    title = stringResource(R.string.dashboard_active_plans),
+                    action = "+",
+                    onAction = onNavigateToPlans
                 )
             }
 
@@ -162,7 +154,7 @@ fun DashboardScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(56.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }

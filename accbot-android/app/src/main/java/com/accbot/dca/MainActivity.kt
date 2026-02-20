@@ -39,6 +39,7 @@ import com.accbot.dca.presentation.screens.DashboardScreen
 import com.accbot.dca.presentation.screens.HistoryScreen
 import com.accbot.dca.presentation.screens.SettingsScreen
 import com.accbot.dca.presentation.screens.exchanges.AddExchangeScreen
+import com.accbot.dca.presentation.screens.exchanges.ExchangeDetailScreen
 import com.accbot.dca.presentation.screens.exchanges.ExchangeManagementScreen
 import com.accbot.dca.presentation.screens.onboarding.*
 import com.accbot.dca.presentation.screens.history.TransactionDetailsScreen
@@ -77,7 +78,7 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val isSandboxMode = userPreferences.isSandboxMode()
-            var isUnlocked by remember { mutableStateOf(false) }
+            var isUnlocked by rememberSaveable { mutableStateOf(false) }
             val biometricEnabled = userPreferences.isBiometricLockEnabled()
 
             AccBotTheme(isSandboxMode = isSandboxMode) {
@@ -336,7 +337,21 @@ fun AccBotApp(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToAddExchange = { exchangeName ->
                         navController.navigate(Screen.AddExchange.createRoute(exchangeName))
+                    },
+                    onNavigateToExchangeDetail = { exchangeName ->
+                        navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName))
                     }
+                )
+            }
+
+            composable(
+                route = Screen.ExchangeDetail.route,
+                arguments = listOf(
+                    navArgument(Screen.EXCHANGE_ARG) { type = NavType.StringType }
+                )
+            ) {
+                ExchangeDetailScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 

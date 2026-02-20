@@ -27,6 +27,7 @@ import com.accbot.dca.presentation.screens.portfolio.DenominationMode
 import com.accbot.dca.presentation.ui.theme.Primary
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberEnd
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
@@ -36,6 +37,7 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.fill
+import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
@@ -57,35 +59,44 @@ import com.patrykandpatrick.vico.core.common.shape.CorneredShape
 
 private val chartAccentColor = Primary
 private val costBasisColor = Color(0xFF888888)
+internal val btcPriceColor = Color(0xFFF7931A)
+internal val accumulatedCryptoColor = Color(0xFF4CAF50)
+
+data class LegendEntry(
+    val seriesIndex: Int,
+    val label: String,
+    val color: Color
+)
 
 /**
  * Interactive chart legend — tap a label to show/hide its series.
+ * Renders entries in rows of 2.
  */
 @Composable
 fun InteractiveChartLegend(
-    line1Label: String,
-    line2Label: String,
+    entries: List<LegendEntry>,
     visibleSeries: Set<Int> = setOf(0, 1),
     onToggleSeries: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        LegendItem(
-            color = chartAccentColor,
-            label = line1Label,
-            enabled = 0 in visibleSeries,
-            onClick = { onToggleSeries(0) }
-        )
-        Spacer(Modifier.width(24.dp))
-        LegendItem(
-            color = costBasisColor,
-            label = line2Label,
-            enabled = 1 in visibleSeries,
-            onClick = { onToggleSeries(1) }
-        )
+        entries.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.Center) {
+                row.forEachIndexed { i, entry ->
+                    if (i > 0) Spacer(Modifier.width(24.dp))
+                    LegendItem(
+                        color = entry.color,
+                        label = entry.label,
+                        enabled = entry.seriesIndex in visibleSeries,
+                        onClick = { onToggleSeries(entry.seriesIndex) }
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -115,15 +126,18 @@ private fun LegendItem(color: Color, label: String, enabled: Boolean = true, onC
 }
 
 /**
- * Portfolio line chart with value line (solid with gradient fill) and cost basis line.
- * Supports FIAT and CRYPTO denomination modes, Y-axis units, series visibility, and tap-to-inspect markers.
- * X-axis formatting adapts to the current zoom level.
+ * Portfolio line chart with dual Y-axis support.
+ * Left axis (start): portfolio value, cost basis, crypto price (all in fiat).
+ * Right axis (end): accumulated crypto (in crypto units, e.g. BTC).
+ * Tooltip shows only values for currently visible series.
  */
 @Composable
 fun PortfolioLineChart(
     chartData: List<ChartDataPoint>,
     denominationMode: DenominationMode = DenominationMode.FIAT,
     unitSuffix: String = "",
+    fiatSymbol: String = "",
+    cryptoSymbol: String = "",
     visibleSeries: Set<Int> = setOf(0, 1),
     zoomLevel: ChartZoomLevel = ChartZoomLevel.Overview,
     onScrub: (Int?) -> Unit = {},
@@ -132,11 +146,13 @@ fun PortfolioLineChart(
     if (chartData.isEmpty()) return
 
     val modelProducer = remember { CartesianChartModelProducer() }
+    val hasRightAxis = cryptoSymbol.isNotEmpty() && 3 in visibleSeries
 
     // Update model when data, denomination, or visibility changes
     LaunchedEffect(chartData, denominationMode, visibleSeries) {
         try {
             modelProducer.runTransaction {
+                // Layer 1: left axis (portfolio value, cost basis, crypto price — all fiat)
                 lineSeries {
                     val (series0, series1) = when (denominationMode) {
                         DenominationMode.FIAT ->
@@ -148,6 +164,15 @@ fun PortfolioLineChart(
                     }
                     if (0 in visibleSeries) series(series0)
                     if (1 in visibleSeries) series(series1)
+                    if (2 in visibleSeries) series(chartData.map { it.price.toFloat() })
+                    if (setOf(0, 1, 2).none { it in visibleSeries }) {
+                        series(List(chartData.size) { 0f })
+                    }
+                }
+                // Layer 2: right axis (accumulated crypto — BTC units)
+                lineSeries {
+                    if (3 in visibleSeries) series(chartData.map { it.cumulativeCrypto.toFloat() })
+                    else series(List(chartData.size) { 0f })
                 }
             }
         } catch (e: OutOfMemoryError) {
@@ -167,12 +192,12 @@ fun PortfolioLineChart(
     val xAxisSpacing = remember(chartData.size, zoomLevel) {
         when (zoomLevel) {
             is ChartZoomLevel.Overview -> maxOf(1, chartData.size / 6)
-            is ChartZoomLevel.Year -> 1  // show all 12 months
-            is ChartZoomLevel.Month -> maxOf(1, chartData.size / 7)  // ~weekly labels
+            is ChartZoomLevel.Year -> 1
+            is ChartZoomLevel.Month -> maxOf(1, chartData.size / 7)
         }
     }
 
-    // Always remember both lines (composable calls can't be conditional)
+    // Always remember all line styles (composable calls can't be conditional)
     val valueLine = LineCartesianLayer.rememberLine(
         fill = LineCartesianLayer.LineFill.single(fill(chartAccentColor)),
         areaFill = LineCartesianLayer.AreaFill.single(fill(chartAccentColor.copy(alpha = 0.4f)))
@@ -180,31 +205,49 @@ fun PortfolioLineChart(
     val costBasisLine = LineCartesianLayer.rememberLine(
         fill = LineCartesianLayer.LineFill.single(fill(costBasisColor))
     )
+    val priceLine = LineCartesianLayer.rememberLine(
+        fill = LineCartesianLayer.LineFill.single(fill(btcPriceColor))
+    )
+    val accumulatedLine = LineCartesianLayer.rememberLine(
+        fill = LineCartesianLayer.LineFill.single(fill(accumulatedCryptoColor))
+    )
+    val hiddenLine = LineCartesianLayer.rememberLine(
+        fill = LineCartesianLayer.LineFill.single(fill(Color.Transparent))
+    )
 
-    // Build visible line list
-    val lines = buildList<LineCartesianLayer.Line> {
+    // Build visible line lists for each layer
+    val leftLines = buildList<LineCartesianLayer.Line> {
         if (0 in visibleSeries) add(valueLine)
         if (1 in visibleSeries) add(costBasisLine)
+        if (2 in visibleSeries) add(priceLine)
+        if (isEmpty()) add(hiddenLine)
+    }
+    val rightLines = buildList<LineCartesianLayer.Line> {
+        if (3 in visibleSeries) add(accumulatedLine)
+        if (isEmpty()) add(hiddenLine)
     }
 
-    // Tap-to-inspect marker — simplified to date-only tooltip; KPI header shows live values
+    // Tap-to-inspect marker with conditional tooltip content
     val labelColor = MaterialTheme.colorScheme.onSurface
     val surfaceContainerColor = MaterialTheme.colorScheme.surfaceContainer
     val indicatorComponent = rememberShapeComponent(
         fill = fill(chartAccentColor),
         shape = CorneredShape.Pill
     )
+    val tooltipCurrency = fiatSymbol.ifEmpty { unitSuffix }
+
     val marker = rememberDefaultCartesianMarker(
         label = rememberTextComponent(
             color = labelColor,
             textSize = 11.sp,
-            lineCount = 1,
+            lineCount = 8,
             background = rememberShapeComponent(
                 fill = fill(surfaceContainerColor),
                 shape = CorneredShape.rounded(allPercent = 8)
             ),
-            padding = insets(8.dp, 4.dp)
+            padding = insets(10.dp, 6.dp)
         ),
+        labelPosition = DefaultCartesianMarker.LabelPosition.AroundPoint,
         valueFormatter = DefaultCartesianMarker.ValueFormatter { _, targets ->
             val points = targets.filterIsInstance<LineCartesianLayerMarkerTarget>()
                 .flatMap { it.points }
@@ -212,13 +255,49 @@ fun PortfolioLineChart(
                 ?.coerceIn(0, chartData.size - 1)
             val dataPoint = xIndex?.let { chartData[it] }
 
-            // Notify scrub listener
             if (xIndex != null) onScrub(xIndex)
 
-            // Tooltip shows only date
             if (dataPoint != null) {
-                LocalDate.ofEpochDay(dataPoint.epochDay)
+                val date = LocalDate.ofEpochDay(dataPoint.epochDay)
                     .format(DateTimeFormatter.ofPattern("d MMM yyyy"))
+
+                val text = buildString {
+                    append(date)
+                    append("\n")
+                    if (0 in visibleSeries) {
+                        val v = when (denominationMode) {
+                            DenominationMode.FIAT -> "${NumberFormatters.fiat(dataPoint.portfolioValue)} $tooltipCurrency"
+                            DenominationMode.CRYPTO -> "${NumberFormatters.crypto(dataPoint.cumulativeCrypto)} $cryptoSymbol"
+                        }
+                        append("\n$v")
+                    }
+                    if (1 in visibleSeries) {
+                        val v = when (denominationMode) {
+                            DenominationMode.FIAT -> "${NumberFormatters.fiat(dataPoint.totalInvested)} $tooltipCurrency"
+                            DenominationMode.CRYPTO -> "${NumberFormatters.crypto(dataPoint.investedEquivCrypto)} $cryptoSymbol"
+                        }
+                        append("\n$v")
+                    }
+                    if (0 in visibleSeries) {
+                        val isPositive = dataPoint.roiAbsolute >= BigDecimal.ZERO
+                        val sign = if (isPositive) "+" else ""
+                        append("\nROI: $sign${NumberFormatters.percent(dataPoint.roiPercent)}% ($sign${NumberFormatters.fiat(dataPoint.roiAbsolute)} $tooltipCurrency)")
+                    }
+                    if (2 in visibleSeries && dataPoint.price > BigDecimal.ZERO) {
+                        append("\n$cryptoSymbol: ${NumberFormatters.fiat(dataPoint.price)} $tooltipCurrency")
+                    }
+                    if (3 in visibleSeries && dataPoint.cumulativeCrypto > BigDecimal.ZERO) {
+                        append("\n${NumberFormatters.crypto(dataPoint.cumulativeCrypto)} $cryptoSymbol")
+                    }
+                }
+
+                android.text.SpannableStringBuilder(text).apply {
+                    setSpan(
+                        android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+                        0, date.length,
+                        android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
             } else ""
         },
         indicator = { indicatorComponent },
@@ -226,10 +305,26 @@ fun PortfolioLineChart(
         guideline = rememberAxisGuidelineComponent()
     )
 
+    // Axis title styling — unit label shown once above axis instead of on every tick
+    val axisTitleComponent = rememberTextComponent(
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textSize = 10.sp
+    )
+
+    // End (right) axis — accumulated crypto in BTC units
+    val endAxisComponent = VerticalAxis.rememberEnd(
+        title = cryptoSymbol,
+        titleComponent = axisTitleComponent,
+        itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
+        valueFormatter = { _, value, _ ->
+            NumberFormatters.crypto(BigDecimal.valueOf(value))
+        }
+    )
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(300.dp)
+            .height(220.dp)
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -244,18 +339,25 @@ fun PortfolioLineChart(
         CartesianChartHost(
             chart = rememberCartesianChart(
                 rememberLineCartesianLayer(
-                    lineProvider = LineCartesianLayer.LineProvider.series(lines)
+                    lineProvider = LineCartesianLayer.LineProvider.series(leftLines)
+                ),
+                rememberLineCartesianLayer(
+                    lineProvider = LineCartesianLayer.LineProvider.series(rightLines),
+                    verticalAxisPosition = Axis.Position.Vertical.End
                 ),
                 startAxis = VerticalAxis.rememberStart(
+                    title = unitSuffix,
+                    titleComponent = axisTitleComponent,
                     itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
                     valueFormatter = { _, value, _ ->
                         val bd = BigDecimal.valueOf(value)
                         when {
-                            value >= 1 -> "${NumberFormatters.compactFiat(bd)} $unitSuffix"
-                            else -> "${NumberFormatters.crypto(bd)} $unitSuffix"
+                            value >= 1 -> NumberFormatters.compactFiat(bd)
+                            else -> NumberFormatters.crypto(bd)
                         }
                     }
                 ),
+                endAxis = if (hasRightAxis) endAxisComponent else null,
                 bottomAxis = HorizontalAxis.rememberBottom(
                     valueFormatter = { _, value, _ ->
                         val index = value.toInt().coerceIn(0, xLabels.size - 1)

@@ -39,6 +39,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.usecase.ChartZoomLevel
 import com.accbot.dca.presentation.components.*
+import com.accbot.dca.presentation.components.btcPriceColor
+import com.accbot.dca.presentation.components.accumulatedCryptoColor
+import com.accbot.dca.presentation.ui.theme.Primary
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.NumberFormatters
@@ -92,6 +95,8 @@ fun PortfolioScreen(
                     chartData = chartData,
                     denominationMode = uiState.denominationMode,
                     unitSuffix = unitSuffix,
+                    fiatSymbol = uiState.currentPairFiat ?: "EUR",
+                    cryptoSymbol = uiState.currentPairCrypto ?: "",
                     visibleSeries = uiState.visibleSeries,
                     zoomLevel = uiState.zoomLevel,
                     modifier = Modifier.fillMaxSize()
@@ -234,7 +239,6 @@ fun PortfolioScreen(
                     onNavigateNext = { viewModel.navigateNext() },
                     onExchangeFilterSelected = { viewModel.selectExchangeFilter(it) },
                     onPairPageSelected = { viewModel.selectPairPage(it) },
-                    onToggleDenomination = { viewModel.toggleDenomination() },
                     onToggleSeriesVisibility = { viewModel.toggleSeriesVisibility(it) },
                     onRefresh = { viewModel.syncPricesAndLoadChart() },
                     modifier = Modifier.padding(paddingValues)
@@ -255,7 +259,6 @@ private fun PortfolioContent(
     onNavigateNext: () -> Unit,
     onExchangeFilterSelected: (String?) -> Unit,
     onPairPageSelected: (Int) -> Unit,
-    onToggleDenomination: () -> Unit,
     onToggleSeriesVisibility: (Int) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
@@ -431,41 +434,27 @@ private fun PortfolioContent(
             }
         }
 
-        // Denomination toggle (only for single pair)
-        if (isSinglePair && hasData) {
-            item {
-                DenominationToggle(
-                    denominationMode = uiState.denominationMode,
-                    cryptoSymbol = uiState.currentPairCrypto ?: "",
-                    fiatSymbol = uiState.currentPairFiat ?: "",
-                    onToggle = onToggleDenomination
+        // Zoom header + drill-down chips (combined to reduce gap before chart)
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Crossfade(targetState = uiState.zoomLevel, label = "zoom") { zoom ->
+                    ChartZoomHeader(
+                        zoomLevel = zoom,
+                        canNavigatePrev = uiState.canNavigatePrev,
+                        canNavigateNext = uiState.canNavigateNext,
+                        onZoomOut = onZoomOut,
+                        onNavigatePrev = onNavigatePrev,
+                        onNavigateNext = onNavigateNext
+                    )
+                }
+                DrillDownChips(
+                    zoomLevel = uiState.zoomLevel,
+                    availableYears = uiState.availableYears,
+                    availableMonths = uiState.availableMonths,
+                    onDrillDownYear = onDrillDownYear,
+                    onDrillDownMonth = onDrillDownMonth
                 )
             }
-        }
-
-        // Zoom header (navigation controls) with crossfade animation
-        item {
-            Crossfade(targetState = uiState.zoomLevel, label = "zoom") { zoom ->
-                ChartZoomHeader(
-                    zoomLevel = zoom,
-                    canNavigatePrev = uiState.canNavigatePrev,
-                    canNavigateNext = uiState.canNavigateNext,
-                    onZoomOut = onZoomOut,
-                    onNavigatePrev = onNavigatePrev,
-                    onNavigateNext = onNavigateNext
-                )
-            }
-        }
-
-        // Drill-down chips (above chart so user sees result without scrolling)
-        item {
-            DrillDownChips(
-                zoomLevel = uiState.zoomLevel,
-                availableYears = uiState.availableYears,
-                availableMonths = uiState.availableMonths,
-                onDrillDownYear = onDrillDownYear,
-                onDrillDownMonth = onDrillDownMonth
-            )
         }
 
         // Chart
@@ -474,7 +463,7 @@ private fun PortfolioContent(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(300.dp),
+                        .height(220.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(color = accentColor())
@@ -488,6 +477,8 @@ private fun PortfolioContent(
                     chartData = chartData,
                     denominationMode = uiState.denominationMode,
                     unitSuffix = unitSuffix,
+                    fiatSymbol = uiState.currentPairFiat ?: "EUR",
+                    cryptoSymbol = uiState.currentPairCrypto ?: "",
                     visibleSeries = uiState.visibleSeries,
                     zoomLevel = uiState.zoomLevel,
                     onScrub = { idx -> scrubbedIndex = idx ?: -1 },
@@ -509,9 +500,17 @@ private fun PortfolioContent(
                     DenominationMode.FIAT -> stringResource(R.string.chart_portfolio_value) to stringResource(R.string.chart_cost_basis)
                     DenominationMode.CRYPTO -> stringResource(R.string.chart_legend_crypto_held) to stringResource(R.string.chart_legend_invested_equiv)
                 }
+                val legendEntries = buildList {
+                    add(LegendEntry(0, line1, Primary))
+                    add(LegendEntry(1, line2, androidx.compose.ui.graphics.Color(0xFF888888)))
+                    if (isSinglePair && uiState.denominationMode == DenominationMode.FIAT) {
+                        val crypto = uiState.currentPairCrypto ?: "BTC"
+                        add(LegendEntry(2, stringResource(R.string.chart_crypto_price, crypto), btcPriceColor))
+                        add(LegendEntry(3, stringResource(R.string.chart_accumulated_crypto, crypto), accumulatedCryptoColor))
+                    }
+                }
                 InteractiveChartLegend(
-                    line1Label = line1,
-                    line2Label = line2,
+                    entries = legendEntries,
                     visibleSeries = uiState.visibleSeries,
                     onToggleSeries = onToggleSeriesVisibility
                 )
@@ -929,32 +928,6 @@ private fun KpiCardContent(
                 fontWeight = FontWeight.SemiBold
             )
         }
-    }
-}
-
-@Composable
-private fun DenominationToggle(
-    denominationMode: DenominationMode,
-    cryptoSymbol: String,
-    fiatSymbol: String,
-    onToggle: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        FilterChip(
-            selected = denominationMode == DenominationMode.FIAT,
-            onClick = { if (denominationMode != DenominationMode.FIAT) onToggle() },
-            label = { Text(fiatSymbol) }
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        FilterChip(
-            selected = denominationMode == DenominationMode.CRYPTO,
-            onClick = { if (denominationMode != DenominationMode.CRYPTO) onToggle() },
-            label = { Text(cryptoSymbol) }
-        )
     }
 }
 
