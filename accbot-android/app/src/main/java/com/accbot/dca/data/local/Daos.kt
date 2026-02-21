@@ -43,6 +43,9 @@ interface DcaPlanDao {
 
     @Query("DELETE FROM dca_plans WHERE id = :planId")
     suspend fun deletePlanById(planId: Long)
+
+    @Query("DELETE FROM dca_plans")
+    suspend fun deleteAllPlans()
 }
 
 @Dao

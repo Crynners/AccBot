@@ -116,6 +116,21 @@ V menu vlevo úplně dole v sekci **Policy -> App content** (Zásady -> Obsah ap
 - *Vysvětlení:* Kryptoměnové a finanční aplikace nesmí cílit na děti. Pokud bys vybral i mladší, bude Google požadovat další přísná opatření.
 - **Appeal to children (Může zaujmout děti):** `No` (Aplikace by nemohla neúmyslně zaujmout děti).
 
+### Oprávnění služby na popředí (Foreground service permissions)
+Od Androidu 14 vyžaduje Google detailní vysvětlení, proč aplikace běží na pozadí. Pokud narazíš na dotazník ohledně `FOREGROUND_SERVICE_DATA_SYNC`:
+- **What tasks require your app to use the FOREGROUND_SERVICE_DATA_SYNC permission?** 
+  - V sekci **Network processing** zaškrtni: `Other` (Jiné).
+- **Video link:** Google bude vyžadovat odkaz na video (nahrát např. na YouTube jako neveřejné nebo na Google Drive s odkazem pro čtení), které prokazuje oprávněnost tohoto použití.
+  - *Co natočit do videa:* Ukaž spuštění aplikace. Vytvoř v aplikaci nový DCA nákupní plán (nebo použij už existující) a ukaž proces, kdy se nákup spustí. Zkus simulovat stav, kdy aplikace běží na pozadí – ukaž, že se nahoře v notifikační liště telefonu objeví "trvalá" notifikace o tom, že AccBot běží na pozadí a provádí nákup / zpracovává data. Poté ukaž, že se nákup dokončil (např. notifikace o úspěchu nebo vložení do historie transakcí). Tímto ukážeš přesně to, k čemu služba na popředí slouží a že o ní uživatel ví. Můžeš přidat slovní nebo textový komentář k videu, vysvětlující, že "The foreground service guarantees reliable background execution for user-configured DCA crypto purchases, even if the app is closed, while displaying a persistent notification."
+
+### Oprávnění přesných alarmů (Exact alarms)
+Od Androidu 14 a novějších je striktně omezeno oprávnění `USE_EXACT_ALARM`. Toto konkrétní oprávnění je vyhrazeno **POUZE** pro aplikace typu "Kalendář" (Calendar) nebo "Budík" (Alarm clock). 
+Jelikož AccBot je finanční aplikace, tak pod tyto dvě kategorie nespadá.
+- **NEZAŠKRTÁVEJ** "Alarm clock" ani "Calendar". Kdybys to udělal, Google appku po manuálním review zamítne za "Deceptive behavior" (klamavé chování).
+- **Řešení:** Oprávnění `USE_EXACT_ALARM` musíme v appce smazat. Pokud kód vyžaduje přesné alarmy pro naplánované DCA nákupy, používá se k tomu místo něj oprávnění `SCHEDULE_EXACT_ALARM`. To se liší tím, že není uděleno rovnou (jako u budíku), ale systém při spuštění uživatele vyzve (nebo si ho aplikace musí v nastavení sama vyžádat) k tomu, aby appce dovolil plánovat přesné události.
+
+Pokud zrovna teď potřebuješ tento krok v konzoli nějak přejít a nenechá tě to bez vyplnění pustit, pak **release nelze s aktuálně nahraným `.aab` dokončit**. Musíme v kódu (`AndroidManifest.xml`) zrušit oprávnění `USE_EXACT_ALARM`, aplikaci přeložit a poslat na Play Console nový `.aab` balíček.
+
 ### Zpravodajské aplikace (News apps)
 - **Odpověď:** `No` (Ne).
 

@@ -963,7 +963,7 @@ internal fun KpiCardContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "${NumberFormatters.fiat(latest.avgBuyPrice)} $fiatSymbol",
+                    text = "${NumberFormatters.fiat(latest.avgBuyPrice)} $fiatSymbol/${uiState.currentPairCrypto ?: "BTC"}",
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -1071,7 +1071,7 @@ private fun LandscapeKpiContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "${NumberFormatters.fiat(displayPoint.avgBuyPrice)} $fiatSymbol",
+                text = "${NumberFormatters.fiat(displayPoint.avgBuyPrice)} $fiatSymbol/${uiState.currentPairCrypto ?: "BTC"}",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold
             )

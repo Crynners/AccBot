@@ -468,13 +468,13 @@ internal fun HoldingPage(
                     Spacer(Modifier.height(4.dp))
                     StatItemInline(
                         label = stringResource(R.string.dashboard_avg_price),
-                        value = "${NumberFormatters.fiat(holding.averageBuyPrice)} ${holding.fiat}"
+                        value = "${NumberFormatters.fiat(holding.averageBuyPrice)} ${holding.fiat}/${holding.crypto}"
                     )
                     if (holding.currentPrice != null) {
                         Spacer(Modifier.height(4.dp))
                         StatItemInline(
                             label = stringResource(R.string.dashboard_current_price),
-                            value = "${NumberFormatters.fiat(holding.currentPrice)} ${holding.fiat}"
+                            value = "${NumberFormatters.fiat(holding.currentPrice)} ${holding.fiat}/${holding.crypto}"
                         )
                     }
                 }
@@ -509,7 +509,7 @@ internal fun HoldingPage(
                 )
                 StatItem(
                     label = stringResource(R.string.dashboard_avg_price),
-                    value = "${NumberFormatters.fiat(holding.averageBuyPrice)} ${holding.fiat}"
+                    value = "${NumberFormatters.fiat(holding.averageBuyPrice)} ${holding.fiat}/${holding.crypto}"
                 )
             }
 
@@ -521,7 +521,7 @@ internal fun HoldingPage(
                 ) {
                     StatItem(
                         label = stringResource(R.string.dashboard_current_price),
-                        value = "${NumberFormatters.fiat(holding.currentPrice)} ${holding.fiat}"
+                        value = "${NumberFormatters.fiat(holding.currentPrice)} ${holding.fiat}/${holding.crypto}"
                     )
                     if (holding.roiAbsolute != null && holding.roiPercent != null) {
                         val isPositive = NumberFormatters.isPositiveRoi(holding.roiAbsolute)
