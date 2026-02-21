@@ -438,7 +438,7 @@ fun PlanDetailsScreen(
                         ) {
                             StatCard(
                                 title = stringResource(R.string.plan_details_avg_price),
-                                value = "${NumberFormatters.fiat(uiState.averagePrice)} ${plan.fiat}",
+                                value = "${NumberFormatters.fiat(uiState.averagePrice)} ${plan.fiat}/${plan.crypto}",
                                 modifier = Modifier.weight(1f)
                             )
                             StatCard(
@@ -490,7 +490,7 @@ fun PlanDetailsScreen(
                                             PlanConfigRow(
                                                 icon = Icons.AutoMirrored.Filled.TrendingUp,
                                                 label = stringResource(R.string.plan_details_current_price),
-                                                value = "${NumberFormatters.fiat(price)} ${plan.fiat}"
+                                                value = "${NumberFormatters.fiat(price)} ${plan.fiat}/${plan.crypto}"
                                             )
                                         }
 
@@ -576,6 +576,15 @@ fun PlanDetailsScreen(
                                             label = stringResource(R.string.plan_details_balance),
                                             value = "${NumberFormatters.fiat(balance)} ${plan.fiat}"
                                         )
+
+                                        val cryptoBalance = uiState.cryptoBalance
+                                        if (cryptoBalance != null) {
+                                            PlanConfigRow(
+                                                icon = Icons.Default.CurrencyBitcoin,
+                                                label = stringResource(R.string.plan_details_crypto_balance),
+                                                value = "${NumberFormatters.crypto(cryptoBalance)} ${plan.crypto}"
+                                            )
+                                        }
 
                                         val days = uiState.remainingDays
                                         val exec = uiState.remainingExecutions

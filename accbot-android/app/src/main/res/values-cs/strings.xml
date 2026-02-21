@@ -210,6 +210,7 @@
     <string name="plan_details_current_value">Aktuální hodnota</string>
     <string name="plan_details_roi">ROI</string>
     <string name="plan_details_balance">Zůstatek na burze</string>
+    <string name="plan_details_crypto_balance">Zůstatek krypta</string>
     <string name="plan_details_estimated_duration">Odhadovaná doba</string>
     <string name="plan_details_days_remaining">~%1$d dní (%2$d nákupů)</string>
     <string name="plan_details_delete_transactions_title">Smazat všechny transakce</string>

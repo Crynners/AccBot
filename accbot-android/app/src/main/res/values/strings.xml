@@ -209,6 +209,7 @@
     <string name="plan_details_current_value">Current Value</string>
     <string name="plan_details_roi">ROI</string>
     <string name="plan_details_balance">Exchange Balance</string>
+    <string name="plan_details_crypto_balance">Crypto Balance</string>
     <string name="plan_details_estimated_duration">Estimated Duration</string>
     <string name="plan_details_days_remaining">~%1$d days (%2$d executions)</string>
     <string name="plan_details_delete_transactions_title">Delete All Transactions</string>

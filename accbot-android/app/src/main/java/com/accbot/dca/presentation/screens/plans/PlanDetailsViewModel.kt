@@ -41,6 +41,7 @@ data class PlanDetailsUiState(
     val roiAbsolute: BigDecimal? = null,
     val roiPercent: BigDecimal? = null,
     val fiatBalance: BigDecimal? = null,
+    val cryptoBalance: BigDecimal? = null,
     val remainingExecutions: Int? = null,
     val remainingDays: Int? = null,
     val isPriceLoading: Boolean = false,
@@ -176,6 +177,7 @@ class PlanDetailsViewModel @Inject constructor(
                 if (credentials != null) {
                     val api = exchangeApiFactory.create(credentials)
                     val balance = withTimeoutOrNull(10_000) { api.getBalance(plan.fiat) }
+                    val cryptoBalance = withTimeoutOrNull(10_000) { api.getBalance(plan.crypto) }
                     if (balance != null && plan.amount > BigDecimal.ZERO) {
                         val remainingExec = balance.divide(plan.amount, 0, RoundingMode.DOWN).toInt()
                         val effectiveInterval = if (plan.cronExpression != null) {
@@ -186,12 +188,16 @@ class PlanDetailsViewModel @Inject constructor(
                         val remainingDays = (remainingExec.toLong() * effectiveInterval / 1440.0).toInt()
                         _uiState.update { it.copy(
                             fiatBalance = balance,
+                            cryptoBalance = cryptoBalance,
                             remainingExecutions = remainingExec,
                             remainingDays = remainingDays,
                             isBalanceLoading = false
                         ) }
                     } else {
-                        _uiState.update { it.copy(isBalanceLoading = false) }
+                        _uiState.update { it.copy(
+                            cryptoBalance = cryptoBalance,
+                            isBalanceLoading = false
+                        ) }
                     }
                 } else {
                     _uiState.update { it.copy(isBalanceLoading = false) }
