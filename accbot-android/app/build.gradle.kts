@@ -37,7 +37,7 @@ android {
         applicationId = "com.accbot.dca"
         minSdk = 26
         targetSdk = 36
-        versionCode = versionMajor * 10000 + versionMinor * 100 + versionPatch
+        versionCode = versionMajor * 10000 + versionMinor * 1000 + versionPatch * 100
         versionName = "$versionMajor.$versionMinor.$versionPatch"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
