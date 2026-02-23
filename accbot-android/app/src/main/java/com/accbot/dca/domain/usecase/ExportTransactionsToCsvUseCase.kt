@@ -84,7 +84,7 @@ class ExportTransactionsToCsvUseCase @Inject constructor(
     private fun generateCsv(transactions: List<TransactionEntity>): String {
         return buildString {
             // CSV header
-            appendLine("Date,Exchange,Crypto,Fiat,Crypto Amount,Fiat Amount,Price,Fee,Fee Asset,Status,Order ID,Error")
+            appendLine("Date,Exchange,Crypto,Fiat,Crypto Amount,Fiat Amount,Price,Fee,Fee Asset,Status,Order ID,Error,Warning")
 
             // Data rows
             transactions.forEach { tx ->
@@ -111,6 +111,8 @@ class ExportTransactionsToCsvUseCase @Inject constructor(
                 append(escapeCsvField(tx.exchangeOrderId ?: ""))
                 append(",")
                 append(escapeCsvField(tx.errorMessage ?: ""))
+                append(",")
+                append(escapeCsvField(tx.warningMessage ?: ""))
                 appendLine()
             }
         }

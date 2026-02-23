@@ -2,6 +2,7 @@ package com.accbot.dca.presentation.screens
 
 import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,8 +22,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
+import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,6 +56,7 @@ import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.TimeUtils
 import com.accbot.dca.presentation.utils.NumberFormatters
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +73,15 @@ fun DashboardScreen(
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    // Ticker to force recomposition of "Next:" time every 60s
+    var refreshTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000L)
+            refreshTick++
+        }
+    }
 
     LaunchedEffect(uiState.runNowTriggered) {
         if (uiState.runNowTriggered) {
@@ -79,12 +103,7 @@ fun DashboardScreen(
         contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        stringResource(R.string.app_name),
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { AccBotHeaderLogo() },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -166,7 +185,8 @@ fun DashboardScreen(
                             DcaPlanCard(
                                 planWithBalance = planWithBalance,
                                 onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
-                                onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) }
+                                onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
+                                refreshTick = refreshTick
                             )
                         }
                     }
@@ -235,7 +255,8 @@ fun DashboardScreen(
                         DcaPlanCard(
                             planWithBalance = planWithBalance,
                             onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
-                            onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) }
+                            onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
+                            refreshTick = refreshTick
                         )
                     }
                 }
@@ -252,6 +273,73 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+        }
+    }
+}
+
+@Composable
+internal fun AccBotHeaderLogo() {
+    val textStyle = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+    val textColor = MaterialTheme.colorScheme.onBackground
+    val density = LocalDensity.current
+    val logoSizeDp = 36.dp
+    val logoSizePx = with(density) { logoSizeDp.toPx() }.roundToInt()
+    var btcCenter by remember { mutableStateOf(Offset.Zero) }
+
+    Layout(
+        content = {
+            // Child 0: Logo image (drawn behind text)
+            Image(
+                painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .graphicsLayer {
+                        alpha = if (btcCenter != Offset.Zero) 1f else 0f
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.00f to Color.Black,
+                                    0.28f to Color.Black,
+                                    0.40f to Color.Transparent,
+                                    0.60f to Color.Transparent,
+                                    0.72f to Color.Black,
+                                    1.00f to Color.Black
+                                )
+                            ),
+                            blendMode = BlendMode.DstIn
+                        )
+                    }
+            )
+            // Child 1: Text (drives layout size)
+            Text(
+                text = "Acc\u20BFot",
+                style = textStyle,
+                color = textColor,
+                onTextLayout = { result ->
+                    val rect = result.getBoundingBox(3)
+                    btcCenter = rect.center
+                }
+            )
+        }
+    ) { measurables, constraints ->
+        val imagePlaceable = measurables[0].measure(
+            Constraints.fixed(logoSizePx, logoSizePx)
+        )
+        val textPlaceable = measurables[1].measure(constraints)
+
+        layout(textPlaceable.width, textPlaceable.height) {
+            // Place logo centered on ₿ character, behind text
+            imagePlaceable.placeRelative(
+                x = (btcCenter.x - logoSizePx / 2f).roundToInt(),
+                y = (btcCenter.y - logoSizePx / 2f).roundToInt()
+            )
+            // Place text on top
+            textPlaceable.placeRelative(0, 0)
         }
     }
 }
@@ -583,7 +671,9 @@ internal fun StatItem(label: String, value: String) {
 internal fun DcaPlanCard(
     planWithBalance: DcaPlanWithBalance,
     onToggle: () -> Unit,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    @Suppress("UNUSED_PARAMETER") // Changing value forces recomposition → refreshes relative "Next:" time
+    refreshTick: Int = 0
 ) {
     val plan = planWithBalance.plan
     val successCol = successColor()
@@ -663,6 +753,30 @@ internal fun DcaPlanCard(
                                 text = stringResource(R.string.dashboard_next_prefix, TimeUtils.formatTimeUntil(plan.nextExecutionAt, context)),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    // Withdrawal threshold warning
+                    if (plan.isEnabled && planWithBalance.isOverWithdrawalThreshold && planWithBalance.exchangeCryptoBalance != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = Warning
+                            )
+                            Text(
+                                text = stringResource(
+                                    R.string.dashboard_withdrawal_ready,
+                                    NumberFormatters.crypto(planWithBalance.exchangeCryptoBalance),
+                                    plan.crypto
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Warning,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }

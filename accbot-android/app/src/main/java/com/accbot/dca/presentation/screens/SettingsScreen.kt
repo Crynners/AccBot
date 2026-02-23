@@ -21,10 +21,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -33,6 +36,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.accbot.dca.BuildConfig
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.model.WithdrawalThreshold
+import java.math.BigDecimal
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -53,6 +58,10 @@ fun SettingsScreen(
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var showLowBalanceDialog by rememberSaveable { mutableStateOf(false) }
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
+    var showWithdrawalThresholdDialog by rememberSaveable { mutableStateOf(false) }
+    var showDeletePlansDialog by rememberSaveable { mutableStateOf(false) }
+    var showDeleteTransactionsDialog by rememberSaveable { mutableStateOf(false) }
+    var showDeleteNotificationsDialog by rememberSaveable { mutableStateOf(false) }
     var dangerZoneExpanded by rememberSaveable { mutableStateOf(false) }
 
     // Refresh battery status when returning from system settings
@@ -95,41 +104,40 @@ fun SettingsScreen(
 
     // Low balance threshold dialog
     if (showLowBalanceDialog) {
-        val currentThreshold = remember { mutableIntStateOf(uiState.lowBalanceThresholdDays) }
+        val currentThreshold = remember { mutableFloatStateOf(uiState.lowBalanceThresholdDays.toFloat()) }
         AlertDialog(
             onDismissRequest = { showLowBalanceDialog = false },
             title = { Text(stringResource(R.string.settings_low_balance_dialog_title)) },
             text = {
                 Column {
                     Text(stringResource(R.string.settings_low_balance_dialog_text))
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = stringResource(R.string.settings_low_balance_days, currentThreshold.floatValue.roundToInt()),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Slider(
+                        value = currentThreshold.floatValue,
+                        onValueChange = { currentThreshold.floatValue = it },
+                        valueRange = 1f..14f,
+                        steps = 12
+                    )
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        IconButton(
-                            onClick = { if (currentThreshold.intValue > 1) currentThreshold.intValue-- }
-                        ) {
-                            Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.settings_decrease))
-                        }
-                        Text(
-                            text = stringResource(R.string.settings_low_balance_days, currentThreshold.intValue),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                        IconButton(
-                            onClick = { if (currentThreshold.intValue < 14) currentThreshold.intValue++ }
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.settings_increase))
-                        }
+                        Text("1", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("14", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.setLowBalanceThresholdDays(currentThreshold.intValue)
+                    viewModel.setLowBalanceThresholdDays(currentThreshold.floatValue.roundToInt())
                     showLowBalanceDialog = false
                 }) {
                     Text(stringResource(R.string.common_save))
@@ -205,6 +213,102 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissRestartDialog() }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+
+    // Withdrawal threshold dialog
+    if (showWithdrawalThresholdDialog) {
+        WithdrawalThresholdDialog(
+            pairs = uiState.availableCryptoExchangePairs,
+            thresholds = uiState.withdrawalThresholds,
+            onSave = { crypto, exchange, amount ->
+                viewModel.setWithdrawalThreshold(crypto, exchange, amount)
+            },
+            onRemove = { crypto, exchange ->
+                viewModel.removeWithdrawalThreshold(crypto, exchange)
+            },
+            onDismiss = { showWithdrawalThresholdDialog = false }
+        )
+    }
+
+    // Delete Plans confirmation dialog
+    if (showDeletePlansDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeletePlansDialog = false },
+            title = { Text(stringResource(R.string.settings_delete_plans_dialog_title)) },
+            text = {
+                Text(stringResource(R.string.settings_delete_plans_dialog_text, uiState.dcaPlanCount))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deletePlans()
+                        showDeletePlansDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Error)
+                ) {
+                    Text(stringResource(R.string.common_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeletePlansDialog = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+
+    // Delete Transactions confirmation dialog
+    if (showDeleteTransactionsDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteTransactionsDialog = false },
+            title = { Text(stringResource(R.string.settings_delete_transactions_dialog_title)) },
+            text = {
+                Text(stringResource(R.string.settings_delete_transactions_dialog_text, uiState.transactionCount))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteTransactions()
+                        showDeleteTransactionsDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Error)
+                ) {
+                    Text(stringResource(R.string.common_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteTransactionsDialog = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+
+    // Delete Notifications confirmation dialog
+    if (showDeleteNotificationsDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteNotificationsDialog = false },
+            title = { Text(stringResource(R.string.settings_delete_notifications_dialog_title)) },
+            text = {
+                Text(stringResource(R.string.settings_delete_notifications_dialog_text, uiState.notificationCount))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteNotifications()
+                        showDeleteNotificationsDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Error)
+                ) {
+                    Text(stringResource(R.string.common_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteNotificationsDialog = false }) {
                     Text(stringResource(R.string.common_cancel))
                 }
             }
@@ -303,15 +407,6 @@ fun SettingsScreen(
             }
 
             item {
-                SettingsCard(
-                    title = stringResource(R.string.settings_low_balance_warning),
-                    subtitle = stringResource(R.string.settings_low_balance_subtitle, uiState.lowBalanceThresholdDays),
-                    icon = Icons.Default.Warning,
-                    onClick = { showLowBalanceDialog = true }
-                )
-            }
-
-            item {
                 val languageLabel = when (uiState.languageTag) {
                     "en" -> stringResource(R.string.settings_language_english)
                     "cs" -> stringResource(R.string.settings_language_czech)
@@ -336,6 +431,36 @@ fun SettingsScreen(
                         }
                         context.startActivity(intent)
                     }
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            // DCA Alerts
+            item {
+                Text(
+                    text = stringResource(R.string.settings_dca_alerts),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.settings_low_balance_warning),
+                    subtitle = stringResource(R.string.settings_low_balance_subtitle, uiState.lowBalanceThresholdDays),
+                    icon = Icons.Default.Warning,
+                    onClick = { showLowBalanceDialog = true }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.settings_withdrawal_alert),
+                    subtitle = stringResource(R.string.settings_withdrawal_alert_subtitle),
+                    icon = Icons.AutoMirrored.Filled.CallMade,
+                    onClick = { showWithdrawalThresholdDialog = true }
                 )
             }
 
@@ -440,6 +565,45 @@ fun SettingsScreen(
                 SandboxToggleCard(
                     isEnabled = uiState.isSandboxMode,
                     onToggle = { viewModel.requestSandboxModeChange() }
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            // Data Management
+            item {
+                Text(
+                    text = stringResource(R.string.settings_data_management),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.settings_delete_plans),
+                    subtitle = pluralStringResource(R.plurals.settings_plans_count, uiState.dcaPlanCount, uiState.dcaPlanCount),
+                    icon = Icons.AutoMirrored.Filled.EventNote,
+                    onClick = { showDeletePlansDialog = true }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.settings_delete_transactions),
+                    subtitle = pluralStringResource(R.plurals.settings_transactions_count, uiState.transactionCount, uiState.transactionCount),
+                    icon = Icons.Default.Receipt,
+                    onClick = { showDeleteTransactionsDialog = true }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.settings_delete_notifications),
+                    subtitle = pluralStringResource(R.plurals.settings_notifications_count, uiState.notificationCount, uiState.notificationCount),
+                    icon = Icons.Default.NotificationsOff,
+                    onClick = { showDeleteNotificationsDialog = true }
                 )
             }
 
@@ -715,6 +879,88 @@ internal fun BiometricToggleCard(
                     checkedTrackColor = accent.copy(alpha = 0.5f)
                 )
             )
+        }
+    )
+}
+
+@Composable
+private fun WithdrawalThresholdDialog(
+    pairs: List<Pair<String, Exchange>>,
+    thresholds: List<WithdrawalThreshold>,
+    onSave: (String, Exchange, BigDecimal) -> Unit,
+    onRemove: (String, Exchange) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val thresholdInputs = remember(pairs, thresholds) {
+        mutableStateMapOf<String, String>().apply {
+            pairs.forEach { (crypto, exchange) ->
+                val key = "${crypto}_${exchange.name}"
+                val existing = thresholds.find { it.crypto == crypto && it.exchange == exchange }
+                this[key] = existing?.thresholdAmount?.toPlainString() ?: ""
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_withdrawal_threshold_title)) },
+        text = {
+            if (pairs.isEmpty()) {
+                Text(stringResource(R.string.settings_withdrawal_threshold_no_plans))
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    pairs.forEach { (crypto, exchange) ->
+                        val key = "${crypto}_${exchange.name}"
+                        val inputValue = thresholdInputs[key] ?: ""
+                        OutlinedTextField(
+                            value = inputValue,
+                            onValueChange = { thresholdInputs[key] = it },
+                            label = { Text("$crypto on ${exchange.displayName}") },
+                            placeholder = { Text(stringResource(R.string.settings_withdrawal_threshold_hint)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            trailingIcon = {
+                                if (inputValue.isNotEmpty()) {
+                                    IconButton(onClick = {
+                                        thresholdInputs[key] = ""
+                                        onRemove(crypto, exchange)
+                                    }) {
+                                        Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.common_clear))
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                pairs.forEach { (crypto, exchange) ->
+                    val key = "${crypto}_${exchange.name}"
+                    val input = thresholdInputs[key] ?: ""
+                    if (input.isNotBlank()) {
+                        try {
+                            val amount = BigDecimal(input)
+                            if (amount > BigDecimal.ZERO) {
+                                onSave(crypto, exchange, amount)
+                            }
+                        } catch (_: NumberFormatException) {
+                            // Ignore invalid input
+                        }
+                    } else {
+                        onRemove(crypto, exchange)
+                    }
+                }
+                onDismiss()
+            }) {
+                Text(stringResource(R.string.common_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_cancel))
+            }
         }
     )
 }

@@ -15,6 +15,7 @@ sealed class Screen(val route: String) {
     // Main screens (with bottom nav)
     data object Dashboard : Screen("main/dashboard")
     data object Portfolio : Screen("main/portfolio")
+    data object Notifications : Screen("main/notifications")
     data object Settings : Screen("main/settings")
 
     // Plan screens
@@ -70,5 +71,6 @@ enum class BottomNavItem(
 ) {
     DASHBOARD(Screen.Dashboard.route, "Dashboard"),
     PORTFOLIO(Screen.Portfolio.route, "Portfolio"),
+    NOTIFICATIONS(Screen.Notifications.route, "Notifications"),
     SETTINGS(Screen.Settings.route, "Settings")
 }

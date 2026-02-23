@@ -29,6 +29,7 @@
     <!-- Navigation -->
     <string name="nav_dashboard">Dashboard</string>
     <string name="nav_portfolio">Portfolio</string>
+    <string name="nav_notifications">Notifications</string>
     <string name="nav_settings">Settings</string>
 
     <!-- DCA Strategy -->
@@ -112,9 +113,9 @@
     <string name="settings_sandbox_disabled">Switch to testnet for risk-free testing</string>
     <string name="settings_danger_zone">DANGER ZONE</string>
     <string name="settings_delete_all_data">Delete All Data</string>
-    <string name="settings_delete_all_subtitle">Remove all plans, history, and credentials</string>
+    <string name="settings_delete_all_subtitle">Remove everything and restart app</string>
     <string name="settings_delete_dialog_title">Delete All Data?</string>
-    <string name="settings_delete_dialog_text">This will remove all DCA plans, transaction history, and stored credentials. This action cannot be undone.</string>
+    <string name="settings_delete_dialog_text">This will remove all DCA plans, transaction history, notifications, and stored credentials. The app will restart. This action cannot be undone.</string>
     <string name="settings_restart_required">Restart Required</string>
     <string name="settings_restart_sandbox_on">Switching to sandbox mode requires app restart. Your production data will remain safe in a separate database.</string>
     <string name="settings_restart_sandbox_off">Switching to production mode requires app restart. Your sandbox data will remain safe in a separate database.</string>
@@ -212,6 +213,8 @@
     <string name="plan_details_crypto_balance">Crypto Balance</string>
     <string name="plan_details_estimated_duration">Estimated Duration</string>
     <string name="plan_details_days_remaining">~%1$d days (%2$d executions)</string>
+    <string name="plan_details_delete_subtitle">Permanently delete this plan and all its transactions</string>
+    <string name="plan_details_delete_confirm_hint">Type %1$s to confirm</string>
     <string name="plan_details_delete_transactions_title">Delete All Transactions</string>
     <string name="plan_details_delete_transactions_text">This will permanently delete all %1$d transactions for this plan. This action cannot be undone.\n\nTo confirm, type the number of transactions below:</string>
     <string name="plan_details_delete_transactions_hint">Type %1$d to confirm</string>
@@ -307,6 +310,7 @@
     <string name="transaction_details_date_time">Date &amp; Time</string>
     <string name="transaction_details_order_id">Order ID</string>
     <string name="transaction_details_error_message">Error Message</string>
+    <string name="transaction_details_warning_message">Retry Warning</string>
     <string name="transaction_details_copied">Copied to clipboard</string>
     <string name="transaction_status_completed">Completed</string>
     <string name="transaction_status_failed">Failed</string>
@@ -627,6 +631,57 @@
     <string name="exchange_instructions_coinbase_sandbox_4">Create a new API key</string>
     <string name="exchange_instructions_coinbase_sandbox_5">Select \'View\' and \'Trade\' permissions</string>
     <string name="exchange_instructions_coinbase_sandbox_6">Copy the API Key and Secret</string>
+
+    <!-- Notifications screen -->
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_empty_title">No notifications yet</string>
+    <string name="notifications_empty_description">Notifications about purchases, errors and warnings will appear here</string>
+    <string name="notifications_dismiss_all">Dismiss All</string>
+    <string name="notifications_archive">Archive</string>
+    <string name="notifications_clear_archive">Clear Archive</string>
+    <string name="notifications_archive_empty_title">No archived notifications</string>
+    <string name="notifications_archive_empty_description">Dismissed notifications will appear here</string>
+    <string name="notifications_clear_archive_dialog_title">Clear Archive?</string>
+    <string name="notifications_clear_archive_dialog_text">This will permanently delete all archived notifications. This action cannot be undone.</string>
+
+    <!-- Withdrawal threshold -->
+    <string name="settings_withdrawal_alert">Withdrawal Alert</string>
+    <string name="settings_withdrawal_alert_subtitle">Notify when accumulated crypto exceeds threshold</string>
+    <string name="settings_withdrawal_threshold_title">Withdrawal Thresholds</string>
+    <string name="settings_withdrawal_threshold_hint">Amount (e.g. 0.01)</string>
+    <string name="settings_withdrawal_threshold_no_plans">No active DCA plans found</string>
+    <string name="notification_withdrawal_threshold_title">Withdrawal Recommended</string>
+    <string name="notification_withdrawal_threshold_text">You have accumulated %1$s %2$s on %3$s — consider withdrawing to cold wallet</string>
+    <string name="dashboard_withdrawal_ready">%1$s %2$s on exchange — consider withdrawal</string>
+
+    <!-- DCA Alerts section -->
+    <string name="settings_dca_alerts">DCA ALERTS</string>
+
+    <!-- Data Management section -->
+    <string name="settings_data_management">DATA MANAGEMENT</string>
+    <string name="settings_delete_plans">Delete DCA Plans</string>
+    <string name="settings_delete_transactions">Delete Transaction History</string>
+    <string name="settings_delete_notifications">Delete Notification History</string>
+
+    <plurals name="settings_plans_count">
+        <item quantity="one">%1$d plan</item>
+        <item quantity="other">%1$d plans</item>
+    </plurals>
+    <plurals name="settings_transactions_count">
+        <item quantity="one">%1$d transaction</item>
+        <item quantity="other">%1$d transactions</item>
+    </plurals>
+    <plurals name="settings_notifications_count">
+        <item quantity="one">%1$d notification</item>
+        <item quantity="other">%1$d notifications</item>
+    </plurals>
+
+    <string name="settings_delete_plans_dialog_title">Delete All DCA Plans?</string>
+    <string name="settings_delete_plans_dialog_text">This will permanently delete all %1$d DCA plans. Active plans will stop executing. This action cannot be undone.</string>
+    <string name="settings_delete_transactions_dialog_title">Delete Transaction History?</string>
+    <string name="settings_delete_transactions_dialog_text">This will permanently delete all %1$d transactions. Your portfolio data will be lost. This action cannot be undone.</string>
+    <string name="settings_delete_notifications_dialog_title">Delete Notification History?</string>
+    <string name="settings_delete_notifications_dialog_text">This will permanently delete all %1$d notifications. This action cannot be undone.</string>
 
     <!-- Accessibility -->
     <string name="a11y_retry">Retry</string>

@@ -111,6 +111,10 @@ V menu vlevo úplně dole v sekci **Policy -> App content** (Zásady -> Obsah ap
 ### Reklamy (Ads)
 - **Odpověď:** Zvol `No, my app does not contain ads` (Ne, moje aplikace neobsahuje reklamy).
 
+### Inzertní ID (Advertising ID)
+- **Odpověď na "Does your app use advertising ID?":** Zvol `No` (Ne).
+- *Vysvětlení:* AccBot neobsahuje žádné analytické ani reklamní SDK knihovny (jako Google Analytics, AdMob, Facebook SDK), které by k reklamnímu identifikátoru uživatele (AD_ID) přistupovaly.
+
 ### Cílová skupina a obsah (Target audience and content)
 - **Cílová věková skupina:** Zvol **POUZE** věkovou kategorii `18 and over` (18 a více). 
 - *Vysvětlení:* Kryptoměnové a finanční aplikace nesmí cílit na děti. Pokud bys vybral i mladší, bude Google požadovat další přísná opatření.

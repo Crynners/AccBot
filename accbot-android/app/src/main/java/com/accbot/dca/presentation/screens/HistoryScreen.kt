@@ -32,6 +32,7 @@ import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.presentation.components.EmptyState
 import com.accbot.dca.presentation.components.SelectableChip
+import com.accbot.dca.presentation.components.WarningOrange
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -734,6 +735,16 @@ internal fun TransactionCard(
                         text = transaction.errorMessage,
                         style = MaterialTheme.typography.bodySmall,
                         color = Error,
+                        maxLines = 1
+                    )
+                }
+
+                if (transaction.warningMessage != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = transaction.warningMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = WarningOrange,
                         maxLines = 1
                     )
                 }

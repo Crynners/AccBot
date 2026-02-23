@@ -8,9 +8,18 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.CredentialsStore
+import com.accbot.dca.data.local.DcaPlanDao
+import com.accbot.dca.data.local.ExchangeBalanceDao
+import com.accbot.dca.data.local.NotificationDao
 import com.accbot.dca.data.local.OnboardingPreferences
+import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.UserPreferences
+import com.accbot.dca.data.local.WithdrawalThresholdDao
+import com.accbot.dca.data.local.WithdrawalThresholdEntity
+import com.accbot.dca.data.local.toDomain
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.model.WithdrawalThreshold
+import java.math.BigDecimal
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.accbot.dca.service.DcaForegroundService
@@ -30,7 +39,12 @@ data class SettingsUiState(
     val pendingSandboxMode: Boolean = false,
     val lowBalanceThresholdDays: Int = 3,
     val languageTag: String = "",
-    val isBiometricLockEnabled: Boolean = false
+    val isBiometricLockEnabled: Boolean = false,
+    val withdrawalThresholds: List<WithdrawalThreshold> = emptyList(),
+    val availableCryptoExchangePairs: List<Pair<String, Exchange>> = emptyList(),
+    val dcaPlanCount: Int = 0,
+    val transactionCount: Int = 0,
+    val notificationCount: Int = 0
 )
 
 @HiltViewModel
@@ -39,7 +53,11 @@ class SettingsViewModel @Inject constructor(
     private val credentialsStore: CredentialsStore,
     private val onboardingPreferences: OnboardingPreferences,
     private val userPreferences: UserPreferences,
-    private val database: DcaDatabase
+    private val database: DcaDatabase,
+    private val dcaPlanDao: DcaPlanDao,
+    private val transactionDao: TransactionDao,
+    private val notificationDao: NotificationDao,
+    private val withdrawalThresholdDao: WithdrawalThresholdDao
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -48,6 +66,8 @@ class SettingsViewModel @Inject constructor(
 
     init {
         loadSettings()
+        loadWithdrawalThresholds()
+        loadDataCounts()
     }
 
     private fun loadSettings() {
@@ -146,6 +166,70 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(isBatteryOptimized = isBatteryOptimized) }
     }
 
+    private fun loadWithdrawalThresholds() {
+        viewModelScope.launch {
+            // Collect available crypto/exchange pairs from enabled plans
+            dcaPlanDao.getAllPlans().combine(withdrawalThresholdDao.getAll()) { plans, thresholds ->
+                val pairs = plans.map { it.crypto to it.exchange }.distinct()
+                val thresholdDomains = thresholds.map { it.toDomain() }
+                Pair(pairs, thresholdDomains)
+            }.collect { (pairs, thresholds) ->
+                _uiState.update {
+                    it.copy(
+                        availableCryptoExchangePairs = pairs,
+                        withdrawalThresholds = thresholds
+                    )
+                }
+            }
+        }
+    }
+
+    fun setWithdrawalThreshold(crypto: String, exchange: Exchange, amount: BigDecimal) {
+        viewModelScope.launch {
+            withdrawalThresholdDao.upsert(
+                WithdrawalThresholdEntity(crypto = crypto, exchange = exchange, thresholdAmount = amount)
+            )
+        }
+    }
+
+    fun removeWithdrawalThreshold(crypto: String, exchange: Exchange) {
+        viewModelScope.launch {
+            withdrawalThresholdDao.delete(crypto, exchange)
+        }
+    }
+
+    private fun loadDataCounts() {
+        viewModelScope.launch {
+            val plans = dcaPlanDao.getPlanCount()
+            val txs = transactionDao.getTransactionCount()
+            val notifs = notificationDao.getNotificationCount()
+            _uiState.update { it.copy(dcaPlanCount = plans, transactionCount = txs, notificationCount = notifs) }
+        }
+    }
+
+    fun deletePlans() {
+        viewModelScope.launch {
+            DcaForegroundService.stop(application)
+            DcaWorker.cancel(application)
+            dcaPlanDao.deleteAllPlans()
+            loadDataCounts()
+        }
+    }
+
+    fun deleteTransactions() {
+        viewModelScope.launch {
+            transactionDao.deleteAllTransactions()
+            loadDataCounts()
+        }
+    }
+
+    fun deleteNotifications() {
+        viewModelScope.launch {
+            notificationDao.deleteAllNotifications()
+            loadDataCounts()
+        }
+    }
+
     fun removeExchangeCredentials(exchange: Exchange) {
         val isSandbox = userPreferences.isSandboxMode()
         credentialsStore.deleteCredentials(exchange, isSandbox)
@@ -160,6 +244,7 @@ class SettingsViewModel @Inject constructor(
                 // Stop services
                 DcaForegroundService.stop(application)
                 DcaWorker.cancel(application)
+                kotlinx.coroutines.delay(200) // service intent propagation
 
                 // Clear all credentials for both environments
                 credentialsStore.clearAllCredentialsBothEnvironments()
@@ -173,8 +258,9 @@ class SettingsViewModel @Inject constructor(
                 // Clear database
                 database.clearAllTables()
 
-                // Reload settings
-                loadSettings()
+                // Restart app to avoid Flow race condition (Room Flows actively
+                // collecting while clearAllTables() invalidates tables)
+                restartApp(application)
             } finally {
                 isDeleting = false
             }

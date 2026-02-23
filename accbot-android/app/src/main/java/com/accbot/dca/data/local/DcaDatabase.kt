@@ -15,9 +15,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         WithdrawalEntity::class,
         ExchangeBalanceEntity::class,
         MonthlySummaryEntity::class,
-        DailyPriceEntity::class
+        DailyPriceEntity::class,
+        NotificationEntity::class,
+        WithdrawalThresholdEntity::class
     ],
-    version = 8,
+    version = 11,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -28,6 +30,8 @@ abstract class DcaDatabase : RoomDatabase() {
     abstract fun exchangeBalanceDao(): ExchangeBalanceDao
     abstract fun monthlySummaryDao(): MonthlySummaryDao
     abstract fun dailyPriceDao(): DailyPriceDao
+    abstract fun notificationDao(): NotificationDao
+    abstract fun withdrawalThresholdDao(): WithdrawalThresholdDao
 
     companion object {
         private const val LEGACY_DATABASE_NAME = "accbot_dca.db"
@@ -146,6 +150,51 @@ abstract class DcaDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 8 to 9: Add warningMessage column to transactions
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE transactions ADD COLUMN warningMessage TEXT DEFAULT NULL")
+            }
+        }
+
+        // Migration from version 10 to 11: Add isArchived column to notifications
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE notifications ADD COLUMN isArchived INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_notifications_isArchived ON notifications (isArchived)")
+            }
+        }
+
+        // Migration from version 9 to 10: Add notifications and withdrawal_thresholds tables
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS notifications (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        type TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        message TEXT NOT NULL,
+                        planId INTEGER,
+                        crypto TEXT,
+                        exchange TEXT,
+                        isRead INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL
+                    )
+                """)
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_notifications_isRead ON notifications (isRead)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_notifications_createdAt ON notifications (createdAt)")
+
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS withdrawal_thresholds (
+                        crypto TEXT NOT NULL,
+                        exchange TEXT NOT NULL,
+                        thresholdAmount TEXT NOT NULL,
+                        PRIMARY KEY (crypto, exchange)
+                    )
+                """)
+            }
+        }
+
         /**
          * Get the database instance for the specified mode.
          * Production and sandbox use separate database files to prevent data mixing.
@@ -205,7 +254,7 @@ abstract class DcaDatabase : RoomDatabase() {
                 DcaDatabase::class.java,
                 databaseName
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                 // Only allow destructive migration on app downgrade, never on failed upgrade
                 // This protects user's transaction history from accidental deletion
                 .fallbackToDestructiveMigrationOnDowngrade()

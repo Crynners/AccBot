@@ -1,6 +1,7 @@
 package com.accbot.dca.presentation.screens.plans
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -53,6 +54,7 @@ fun PlanDetailsScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var deletePlanConfirmText by rememberSaveable { mutableStateOf("") }
     var showStrategyInfo by rememberSaveable { mutableStateOf(false) }
     var showDeleteTransactionsDialog by rememberSaveable { mutableStateOf(false) }
     var deleteTransactionsConfirmText by rememberSaveable { mutableStateOf("") }
@@ -64,24 +66,48 @@ fun PlanDetailsScreen(
 
     // Delete confirmation dialog
     if (showDeleteDialog) {
+        val plan = uiState.plan
+        val confirmPair = plan?.let { "${it.crypto}/${it.fiat}" } ?: ""
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
+            onDismissRequest = {
+                showDeleteDialog = false
+                deletePlanConfirmText = ""
+            },
             title = { Text(stringResource(R.string.plan_details_delete_title)) },
             text = {
-                Text(stringResource(R.string.plan_details_delete_text))
+                Column {
+                    Text(stringResource(R.string.plan_details_delete_text))
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = deletePlanConfirmText,
+                        onValueChange = { deletePlanConfirmText = it },
+                        label = { Text(stringResource(R.string.plan_details_delete_confirm_hint, confirmPair)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.deletePlan { onNavigateBack() }
                         showDeleteDialog = false
-                    }
+                        deletePlanConfirmText = ""
+                    },
+                    enabled = deletePlanConfirmText == confirmPair
                 ) {
-                    Text(stringResource(R.string.common_delete), color = Error)
+                    Text(
+                        stringResource(R.string.common_delete),
+                        color = if (deletePlanConfirmText == confirmPair) Error
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    deletePlanConfirmText = ""
+                }) {
                     Text(stringResource(R.string.common_cancel))
                 }
             }
@@ -187,9 +213,6 @@ fun PlanDetailsScreen(
                 actions = {
                     IconButton(onClick = onNavigateToEdit) {
                         Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.plan_details_edit))
-                    }
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.common_delete), tint = Error)
                     }
                 }
             )
@@ -753,6 +776,57 @@ fun PlanDetailsScreen(
                                         imageVector = Icons.Default.ChevronRight,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Danger Zone
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.settings_danger_zone),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Error,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+
+                    item {
+                        OutlinedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showDeleteDialog = true },
+                            colors = CardDefaults.outlinedCardColors(
+                                containerColor = Error.copy(alpha = 0.1f)
+                            ),
+                            border = CardDefaults.outlinedCardBorder().copy(
+                                brush = androidx.compose.ui.graphics.SolidColor(Error)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = Error
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.plan_details_delete_title),
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Error
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.plan_details_delete_subtitle),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }

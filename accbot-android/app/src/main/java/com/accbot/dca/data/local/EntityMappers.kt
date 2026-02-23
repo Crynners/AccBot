@@ -1,7 +1,9 @@
 package com.accbot.dca.data.local
 
+import com.accbot.dca.domain.model.AppNotification
 import com.accbot.dca.domain.model.DcaPlan
 import com.accbot.dca.domain.model.Transaction
+import com.accbot.dca.domain.model.WithdrawalThreshold
 
 fun DcaPlanEntity.toDomain() = DcaPlan(
     id = id,
@@ -34,5 +36,25 @@ fun TransactionEntity.toDomain() = Transaction(
     status = status,
     exchangeOrderId = exchangeOrderId,
     errorMessage = errorMessage,
+    warningMessage = warningMessage,
     executedAt = executedAt
+)
+
+fun NotificationEntity.toDomain() = AppNotification(
+    id = id,
+    type = type,
+    title = title,
+    message = message,
+    planId = planId,
+    crypto = crypto,
+    exchange = exchange,
+    isRead = isRead,
+    isArchived = isArchived,
+    createdAt = createdAt
+)
+
+fun WithdrawalThresholdEntity.toDomain() = WithdrawalThreshold(
+    crypto = crypto,
+    exchange = exchange,
+    thresholdAmount = thresholdAmount
 )

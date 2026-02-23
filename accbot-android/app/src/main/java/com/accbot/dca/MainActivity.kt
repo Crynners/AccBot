@@ -27,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavType
@@ -35,11 +36,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.presentation.components.AccBotBottomNav
 import com.accbot.dca.presentation.components.AccBotNavRail
 import com.accbot.dca.presentation.components.bottomNavItems
+import com.accbot.dca.presentation.screens.notifications.NotificationsScreen
 import com.accbot.dca.presentation.navigation.Screen
 import com.accbot.dca.presentation.screens.BiometricLockScreen
 import com.accbot.dca.presentation.screens.AddPlanScreen
@@ -244,6 +247,12 @@ fun AccBotApp(
         composable("main") {
             var isChartTouching by remember { mutableStateOf(false) }
 
+            // Notification badge count
+            val notificationBadgeCount by remember {
+                DcaDatabase.getInstance(navController.context, false)
+                    .notificationDao().getUnreadCount()
+            }.collectAsState(initial = 0)
+
             if (isLandscape) {
                 Row(
                     modifier = Modifier
@@ -252,7 +261,8 @@ fun AccBotApp(
                 ) {
                     AccBotNavRail(
                         selectedIndex = pagerState.currentPage,
-                        onItemSelected = onTabSelected
+                        onItemSelected = onTabSelected,
+                        notificationBadgeCount = notificationBadgeCount
                     )
                     HorizontalPager(
                         state = pagerState,
@@ -276,7 +286,8 @@ fun AccBotApp(
                     bottomBar = {
                         AccBotBottomNav(
                             selectedIndex = pagerState.currentPage,
-                            onItemSelected = onTabSelected
+                            onItemSelected = onTabSelected,
+                            notificationBadgeCount = notificationBadgeCount
                         )
                     }
                 ) { padding ->
@@ -441,7 +452,7 @@ private fun MainTabPage(
         0 -> DashboardScreen(
             onNavigateToPlans = { navController.navigate(Screen.AddPlan.route) },
             onNavigateToHistory = { navController.navigate(Screen.History.createRoute()) },
-            onNavigateToSettings = { onSwitchToTab(2) },
+            onNavigateToSettings = { onSwitchToTab(3) },
             onNavigateToPlanDetails = { planId ->
                 navController.navigate(Screen.PlanDetails.createRoute(planId))
             },
@@ -454,7 +465,8 @@ private fun MainTabPage(
             },
             onChartTouching = onChartTouching
         )
-        2 -> SettingsScreen(
+        2 -> NotificationsScreen()
+        3 -> SettingsScreen(
             onNavigateBack = { onSwitchToTab(0) },
             onNavigateToExchanges = {
                 navController.navigate(Screen.ExchangeManagement.route)

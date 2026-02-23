@@ -41,6 +41,12 @@ val bottomNavItems = listOf(
         unselectedIcon = Icons.Outlined.PieChart
     ),
     NavItem(
+        route = Screen.Notifications.route,
+        labelRes = R.string.nav_notifications,
+        selectedIcon = Icons.Filled.Notifications,
+        unselectedIcon = Icons.Outlined.Notifications
+    ),
+    NavItem(
         route = Screen.Settings.route,
         labelRes = R.string.nav_settings,
         selectedIcon = Icons.Filled.Settings,
@@ -51,7 +57,8 @@ val bottomNavItems = listOf(
 @Composable
 fun AccBotBottomNav(
     selectedIndex: Int,
-    onItemSelected: (Int) -> Unit
+    onItemSelected: (Int) -> Unit,
+    notificationBadgeCount: Int = 0
 ) {
     val successCol = successColor()
     NavigationBar(
@@ -63,11 +70,21 @@ fun AccBotBottomNav(
                 selected = index == selectedIndex,
                 onClick = { onItemSelected(index) },
                 icon = {
-                    Icon(
-                        imageVector = if (index == selectedIndex) item.selectedIcon else item.unselectedIcon,
-                        contentDescription = stringResource(item.labelRes),
-                        modifier = Modifier.size(24.dp)
-                    )
+                    if (index == 2 && notificationBadgeCount > 0) {
+                        BadgedBox(badge = { Badge { Text("$notificationBadgeCount") } }) {
+                            Icon(
+                                imageVector = if (index == selectedIndex) item.selectedIcon else item.unselectedIcon,
+                                contentDescription = stringResource(item.labelRes),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    } else {
+                        Icon(
+                            imageVector = if (index == selectedIndex) item.selectedIcon else item.unselectedIcon,
+                            contentDescription = stringResource(item.labelRes),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 },
                 label = {
                     Text(
@@ -90,7 +107,8 @@ fun AccBotBottomNav(
 @Composable
 fun AccBotNavRail(
     selectedIndex: Int,
-    onItemSelected: (Int) -> Unit
+    onItemSelected: (Int) -> Unit,
+    notificationBadgeCount: Int = 0
 ) {
     val successCol = successColor()
     NavigationRail(
@@ -102,11 +120,21 @@ fun AccBotNavRail(
                 selected = index == selectedIndex,
                 onClick = { onItemSelected(index) },
                 icon = {
-                    Icon(
-                        imageVector = if (index == selectedIndex) item.selectedIcon else item.unselectedIcon,
-                        contentDescription = stringResource(item.labelRes),
-                        modifier = Modifier.size(24.dp)
-                    )
+                    if (index == 2 && notificationBadgeCount > 0) {
+                        BadgedBox(badge = { Badge { Text("$notificationBadgeCount") } }) {
+                            Icon(
+                                imageVector = if (index == selectedIndex) item.selectedIcon else item.unselectedIcon,
+                                contentDescription = stringResource(item.labelRes),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    } else {
+                        Icon(
+                            imageVector = if (index == selectedIndex) item.selectedIcon else item.unselectedIcon,
+                            contentDescription = stringResource(item.labelRes),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 },
                 label = {
                     Text(
