@@ -46,6 +46,9 @@ interface DcaPlanDao {
 
     @Query("DELETE FROM dca_plans")
     suspend fun deleteAllPlans()
+
+    @Query("SELECT COUNT(*) FROM dca_plans")
+    suspend fun getPlanCount(): Int
 }
 
 @Dao
@@ -240,6 +243,9 @@ interface TransactionDao {
         ORDER BY executedAt ASC
     """)
     suspend fun getCompletedTransactionsOrdered(exchange: String? = null): List<TransactionEntity>
+
+    @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE exchange = :exchange AND crypto = :crypto AND status = 'COMPLETED'")
+    suspend fun getTotalCryptoByExchangeAndCrypto(exchange: String, crypto: String): String
 }
 
 data class CryptoFiatHolding(
@@ -344,4 +350,58 @@ interface DailyPriceDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPrices(prices: List<DailyPriceEntity>)
+}
+
+@Dao
+interface NotificationDao {
+    @Query("SELECT * FROM notifications WHERE isArchived = 0 ORDER BY createdAt DESC")
+    fun getActiveNotifications(): Flow<List<NotificationEntity>>
+
+    @Query("SELECT * FROM notifications WHERE isArchived = 1 ORDER BY createdAt DESC")
+    fun getArchivedNotifications(): Flow<List<NotificationEntity>>
+
+    @Query("SELECT COUNT(*) FROM notifications WHERE isRead = 0")
+    fun getUnreadCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM notifications WHERE isArchived = 1")
+    fun getArchivedCount(): Flow<Int>
+
+    @Query("UPDATE notifications SET isArchived = 1, isRead = 1 WHERE id = :id")
+    suspend fun archiveNotification(id: Long)
+
+    @Query("UPDATE notifications SET isArchived = 1, isRead = 1 WHERE isArchived = 0")
+    suspend fun archiveAllNotifications()
+
+    @Query("DELETE FROM notifications WHERE isArchived = 1")
+    suspend fun deleteArchivedNotifications()
+
+    @Insert
+    suspend fun insert(notification: NotificationEntity): Long
+
+    @Query("SELECT COUNT(*) FROM notifications")
+    suspend fun getNotificationCount(): Int
+
+    @Query("DELETE FROM notifications")
+    suspend fun deleteAllNotifications()
+}
+
+@Dao
+interface WithdrawalThresholdDao {
+    @Query("SELECT * FROM withdrawal_thresholds")
+    fun getAll(): Flow<List<WithdrawalThresholdEntity>>
+
+    @Query("SELECT * FROM withdrawal_thresholds WHERE crypto = :crypto AND exchange = :exchange")
+    suspend fun get(crypto: String, exchange: Exchange): WithdrawalThresholdEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: WithdrawalThresholdEntity)
+
+    @Query("DELETE FROM withdrawal_thresholds WHERE crypto = :crypto AND exchange = :exchange")
+    suspend fun delete(crypto: String, exchange: Exchange)
+
+    @Query("SELECT thresholdAmount FROM withdrawal_thresholds WHERE exchange = :exchange AND crypto = :crypto")
+    suspend fun getThresholdAmount(exchange: Exchange, crypto: String): BigDecimal?
+
+    @Query("DELETE FROM withdrawal_thresholds")
+    suspend fun deleteAll()
 }

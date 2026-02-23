@@ -140,13 +140,39 @@ class DcaWorker @AssistedInject constructor(
                     continue
                 }
 
-                // Execute DCA purchase
+                // Execute DCA purchase with immediate retry
                 val api = exchangeApiFactory.create(credentials)
-                val result = withTimeoutOrNull(30_000L) {
-                    api.marketBuy(plan.crypto, plan.fiat, purchaseAmount)
-                } ?: DcaResult.Error("API call timed out after 30s", retryable = true)
+                val maxAttempts = 3
+                val retryDelayMs = 2_000L
+                val failedAttemptMessages = mutableListOf<String>()
+                var finalResult: DcaResult? = null
 
-                when (result) {
+                for (attempt in 1..maxAttempts) {
+                    val attemptResult = withTimeoutOrNull(30_000L) {
+                        api.marketBuy(plan.crypto, plan.fiat, purchaseAmount)
+                    } ?: DcaResult.Error("API call timed out after 30s", retryable = true)
+
+                    if (attemptResult is DcaResult.Success) {
+                        finalResult = attemptResult
+                        break
+                    }
+
+                    val error = attemptResult as DcaResult.Error
+                    failedAttemptMessages.add("Attempt $attempt: ${error.message}")
+                    Log.w(TAG, "Plan ${plan.id} attempt $attempt/$maxAttempts failed: ${error.message}")
+
+                    if (attempt < maxAttempts) {
+                        kotlinx.coroutines.delay(retryDelayMs)
+                    } else {
+                        finalResult = error
+                    }
+                }
+
+                val warningMessage = if (finalResult is DcaResult.Success && failedAttemptMessages.isNotEmpty()) {
+                    failedAttemptMessages.joinToString("; ")
+                } else null
+
+                when (finalResult) {
                     is DcaResult.Success -> {
                         // Save transaction atomically with plan update
                         try {
@@ -155,13 +181,14 @@ class DcaWorker @AssistedInject constructor(
                                 exchange = plan.exchange,
                                 crypto = plan.crypto,
                                 fiat = plan.fiat,
-                                fiatAmount = result.transaction.fiatAmount,
-                                cryptoAmount = result.transaction.cryptoAmount,
-                                price = result.transaction.price,
-                                fee = result.transaction.fee,
-                                feeAsset = result.transaction.feeAsset,
-                                status = result.transaction.status,
-                                exchangeOrderId = result.transaction.exchangeOrderId,
+                                fiatAmount = finalResult.transaction.fiatAmount,
+                                cryptoAmount = finalResult.transaction.cryptoAmount,
+                                price = finalResult.transaction.price,
+                                fee = finalResult.transaction.fee,
+                                feeAsset = finalResult.transaction.feeAsset,
+                                status = finalResult.transaction.status,
+                                exchangeOrderId = finalResult.transaction.exchangeOrderId,
+                                warningMessage = warningMessage,
                                 executedAt = Instant.now()
                             )
                             database.runInTransaction {
@@ -173,18 +200,23 @@ class DcaWorker @AssistedInject constructor(
                         }
 
                         // Show notification (pending-aware)
-                        val isPending = result.transaction.status == TransactionStatus.PENDING
+                        val isPending = finalResult.transaction.status == TransactionStatus.PENDING
                         notificationService.showPurchaseNotification(
                             plan.crypto,
-                            result.transaction.cryptoAmount,
-                            if (isPending) purchaseAmount else result.transaction.fiatAmount,
+                            finalResult.transaction.cryptoAmount,
+                            if (isPending) purchaseAmount else finalResult.transaction.fiatAmount,
                             plan.fiat,
                             plan.id,
-                            pending = isPending
+                            pending = isPending,
+                            exchange = plan.exchange
                         )
 
-                        Log.d(TAG, "DCA purchase successful: ${result.transaction.cryptoAmount} ${plan.crypto}" +
-                            if (isPending) " (pending confirmation)" else "")
+                        // Check withdrawal threshold
+                        checkWithdrawalThreshold(plan, api)
+
+                        Log.d(TAG, "DCA purchase successful: ${finalResult.transaction.cryptoAmount} ${plan.crypto}" +
+                            if (isPending) " (pending confirmation)" else "" +
+                            if (warningMessage != null) " (with retries: $warningMessage)" else "")
 
                         // Check remaining balance for low-balance warning
                         val effectiveInterval = if (plan.cronExpression != null) {
@@ -196,17 +228,20 @@ class DcaWorker @AssistedInject constructor(
                     }
 
                     is DcaResult.Error -> {
-                        if (result.retryable) {
+                        if (finalResult.retryable) {
                             // Network error — silent retry in 5 min, no transaction saved
                             try {
                                 val retryTime = now.plus(Duration.ofMinutes(5))
                                 database.dcaPlanDao().updateExecutionTime(plan.id, now, retryTime)
-                                Log.w(TAG, "Network error for plan ${plan.id}, will retry at $retryTime: ${result.message}")
+                                Log.w(TAG, "Network error for plan ${plan.id}, will retry at $retryTime: ${finalResult.message}")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to update retry time for plan ${plan.id}", e)
                             }
                         } else {
                             // Business error — save failed transaction, notify, advance to next interval
+                            val failedWarning = if (failedAttemptMessages.size > 1) {
+                                failedAttemptMessages.dropLast(1).joinToString("; ")
+                            } else null
                             try {
                                 val transaction = TransactionEntity(
                                     planId = plan.id,
@@ -218,7 +253,8 @@ class DcaWorker @AssistedInject constructor(
                                     price = BigDecimal.ZERO,
                                     fee = BigDecimal.ZERO,
                                     status = TransactionStatus.FAILED,
-                                    errorMessage = result.message,
+                                    errorMessage = finalResult.message,
+                                    warningMessage = failedWarning,
                                     executedAt = Instant.now()
                                 )
                                 database.runInTransaction {
@@ -231,11 +267,15 @@ class DcaWorker @AssistedInject constructor(
 
                             notificationService.showErrorNotification(
                                 context.getString(R.string.notification_dca_failed),
-                                context.getString(R.string.notification_dca_failed_text, plan.crypto, result.message),
+                                context.getString(R.string.notification_dca_failed_text, plan.crypto, finalResult.message),
                                 plan.id
                             )
-                            Log.e(TAG, "DCA purchase failed for plan ${plan.id}: ${result.message}")
+                            Log.e(TAG, "DCA purchase failed for plan ${plan.id} after $maxAttempts attempts: ${finalResult.message}")
                         }
+                    }
+
+                    null -> {
+                        Log.e(TAG, "DCA purchase for plan ${plan.id}: no result (unexpected)")
                     }
                 }
             }
@@ -259,6 +299,24 @@ class DcaWorker @AssistedInject constructor(
                 ?: now.plus(Duration.ofMinutes(plan.frequency.intervalMinutes.takeIf { it > 0 } ?: 1440))
         } else {
             now.plus(Duration.ofMinutes(plan.frequency.intervalMinutes))
+        }
+    }
+
+    private suspend fun checkWithdrawalThreshold(plan: DcaPlanEntity, api: ExchangeApi) {
+        try {
+            val threshold = database.withdrawalThresholdDao().getThresholdAmount(plan.exchange, plan.crypto) ?: return
+            val cryptoBalance = withTimeoutOrNull(10_000) { api.getBalance(plan.crypto) } ?: return
+            if (cryptoBalance >= threshold) {
+                notificationService.showWithdrawalThresholdNotification(
+                    crypto = plan.crypto,
+                    exchange = plan.exchange.displayName,
+                    amount = cryptoBalance,
+                    threshold = threshold,
+                    planId = plan.id
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking withdrawal threshold", e)
         }
     }
 

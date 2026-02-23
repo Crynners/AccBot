@@ -82,13 +82,30 @@ img { max-width: 100%; display: block; }
 .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  position: relative;
   font-weight: 700;
   font-size: 1.25rem;
   color: var(--text);
 }
 
-.logo svg { flex-shrink: 0; }
+.logo-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  pointer-events: none;
+  line-height: 0;
+}
+
+.logo-btc {
+  position: relative;
+}
+
+.logo-text {
+  position: relative;
+  z-index: 1;
+}
 
 .nav-links {
   display: flex;
@@ -740,6 +757,41 @@ section { padding: 96px 0; }
 .mock-qr-cell.empty { background: transparent; }
 
 /* ======================
+   Store Badges
+   ====================== */
+.store-badges {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.store-badge {
+  display: inline-block;
+  height: 48px;
+  border-radius: 8px;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.store-badge:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.store-badge svg {
+  height: 48px;
+  width: auto;
+  display: block;
+}
+
+.store-badge.disabled {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ======================
    Exchanges
    ====================== */
 .exchange-logos {
@@ -773,6 +825,17 @@ section { padding: 96px 0; }
   font-size: 0.75rem;
   color: var(--text);
   transition: border-color 0.3s;
+}
+
+.exchange-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.exchange-icon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
 }
 
 .exchange-logo:hover .exchange-icon { border-color: var(--accent); }

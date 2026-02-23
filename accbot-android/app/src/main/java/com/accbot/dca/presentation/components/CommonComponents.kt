@@ -5,6 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -158,6 +159,10 @@ fun CryptoIcon(
     crypto: String,
     size: Int = 48
 ) {
+    if (crypto.uppercase() == "BTC") {
+        BtcIcon(size = size)
+        return
+    }
     val iconRes = getCryptoIconRes(crypto)
     Box(
         modifier = Modifier
@@ -179,6 +184,33 @@ fun CryptoIcon(
                 fontWeight = FontWeight.Bold,
                 fontSize = (size / 2.4).sp,
                 color = successColor()
+            )
+        }
+    }
+}
+
+@Composable
+private fun BtcIcon(size: Int = 48) {
+    val iconSize = (size * 0.75f).dp
+    Box(
+        modifier = Modifier
+            .size(size.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(iconSize)
+                .clip(CircleShape)
+                .background(Color(0xFFF7931A)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "\u20BF",
+                fontWeight = FontWeight.Bold,
+                fontSize = (size * 0.75f / 1.8f).sp,
+                color = Color.White
             )
         }
     }

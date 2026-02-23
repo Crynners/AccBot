@@ -10,8 +10,10 @@ import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.data.local.DailyPriceDao
 import com.accbot.dca.data.local.ExchangeBalanceDao
 import com.accbot.dca.data.local.MonthlySummaryDao
+import com.accbot.dca.data.local.NotificationDao
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.WithdrawalDao
+import com.accbot.dca.data.local.WithdrawalThresholdDao
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.google.gson.Gson
 import dagger.Module
@@ -72,6 +74,18 @@ object AppModule {
     @Singleton
     fun provideDailyPriceDao(database: DcaDatabase): DailyPriceDao {
         return database.dailyPriceDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideNotificationDao(database: DcaDatabase): NotificationDao {
+        return database.notificationDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideWithdrawalThresholdDao(database: DcaDatabase): WithdrawalThresholdDao {
+        return database.withdrawalThresholdDao()
     }
 
     @Provides

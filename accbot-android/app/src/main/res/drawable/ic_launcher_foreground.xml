@@ -4,10 +4,70 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- AccBot Bitcoin-style logo -->
-    <group android:translateX="27" android:translateY="27">
+
+    <!-- Outer ring (r=35.86, stroke green 30% opacity) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#4D4ECCA3"
+        android:strokeWidth="1.69"
+        android:pathData="M54,18.14C73.81,18.14 89.86,34.19 89.86,54C89.86,73.81 73.81,89.86 54,89.86C34.19,89.86 18.14,73.81 18.14,54C18.14,34.19 34.19,18.14 54,18.14Z"/>
+
+    <!-- Inner circle (r=29.53, faint green fill, green stroke) -->
+    <path
+        android:fillColor="#0D4ECCA3"
+        android:strokeColor="#4ECCA3"
+        android:strokeWidth="0.84"
+        android:pathData="M54,24.47C70.31,24.47 83.53,37.69 83.53,54C83.53,70.31 70.31,83.53 54,83.53C37.69,83.53 24.47,70.31 24.47,54C24.47,37.69 37.69,24.47 54,24.47Z"/>
+
+    <!-- Bar chart (4 ascending bars clipped to inner circle) -->
+    <group>
+        <clip-path
+            android:pathData="M54,24.89C70.08,24.89 83.11,37.92 83.11,54C83.11,70.08 70.08,83.11 54,83.11C37.92,83.11 24.89,70.08 24.89,54C24.89,37.92 37.92,24.89 54,24.89Z"/>
+
+        <!-- Bar 1 (opacity 0.3) -->
         <path
-            android:fillColor="#4ECCA3"
-            android:pathData="M27,0C12.09,0 0,12.09 0,27s12.09,27 27,27 27,-12.09 27,-27S41.91,0 27,0zM29.38,47.95v4.73h-4.05v-4.67c-1.7,-0.19 -3.43,-0.59 -5.16,-1.22l1,-4c1.57,0.57 3.19,1.05 4.84,1.05 2.03,0 3.08,-0.73 3.08,-1.95 0,-1.14 -0.89,-1.84 -3.08,-2.57 -3.43,-1.16 -5.56,-2.78 -5.56,-5.97 0,-2.86 2,-5.13 5.43,-5.84v-4.38h4.05v4.4c1.4,0.19 2.54,0.49 3.67,0.86l-0.84,3.86c-1.22,-0.43 -2.51,-0.86 -4.08,-0.86 -2.19,0 -2.86,0.92 -2.86,1.76 0,1 0.97,1.65 3.4,2.57 3.65,1.3 5.24,3.05 5.24,6.02 0,2.95 -2.08,5.32 -5.89,5.97z"/>
+            android:fillColor="#4D4ECCA3"
+            android:pathData="M27.85,59.06L35.86,59.06a1.27,1.27,0,0,1,1.27,1.27L37.13,99.98a1.27,1.27,0,0,1,-1.27,1.27L27.85,101.25a1.27,1.27,0,0,1,-1.27,-1.27L26.58,60.33a1.27,1.27,0,0,1,1.27,-1.27Z"/>
+
+        <!-- Bar 2 (opacity 0.5) -->
+        <path
+            android:fillColor="#804ECCA3"
+            android:pathData="M42.61,48.52L50.62,48.52a1.27,1.27,0,0,1,1.27,1.27L51.89,99.98a1.27,1.27,0,0,1,-1.27,1.27L42.61,101.25a1.27,1.27,0,0,1,-1.27,-1.27L41.34,49.79a1.27,1.27,0,0,1,1.27,-1.27Z"/>
+
+        <!-- Bar 3 (opacity 0.7) -->
+        <path
+            android:fillColor="#B34ECCA3"
+            android:pathData="M57.38,35.86L65.39,35.86a1.27,1.27,0,0,1,1.27,1.27L66.66,99.98a1.27,1.27,0,0,1,-1.27,1.27L57.38,101.25a1.27,1.27,0,0,1,-1.27,-1.27L56.11,37.13a1.27,1.27,0,0,1,1.27,-1.27Z"/>
+
+        <!-- Bar 4 (opacity 0.9) -->
+        <path
+            android:fillColor="#E64ECCA3"
+            android:pathData="M72.15,21.09L80.16,21.09a1.27,1.27,0,0,1,1.27,1.27L81.43,99.98a1.27,1.27,0,0,1,-1.27,1.27L72.15,101.25a1.27,1.27,0,0,1,-1.27,-1.27L70.88,22.36a1.27,1.27,0,0,1,1.27,-1.27Z"/>
     </group>
+
+    <!-- Central dark circle (r=17.93) -->
+    <path
+        android:fillColor="#16213E"
+        android:strokeColor="#4ECCA3"
+        android:strokeWidth="0.84"
+        android:pathData="M54,36.07C63.9,36.07 71.93,44.1 71.93,54C71.93,63.9 63.9,71.93 54,71.93C44.1,71.93 36.07,63.9 36.07,54C36.07,44.1 44.1,36.07 54,36.07Z"/>
+
+    <!-- Inner dashed circle (solid approximation, r=15.19, 60% opacity) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#994ECCA3"
+        android:strokeWidth="0.42"
+        android:pathData="M54,38.81C62.39,38.81 69.19,45.61 69.19,54C69.19,62.39 62.39,69.19 54,69.19C45.61,69.19 38.81,62.39 38.81,54C38.81,45.61 45.61,38.81 54,38.81Z"/>
+
+    <!-- Bitcoin symbol vertical strokes (above and below B body) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M49,40L51,40L51,43L49,43Z M53.5,40L55.5,40L55.5,43L53.5,43Z M49,65L51,65L51,68L49,68Z M53.5,65L55.5,65L55.5,68L53.5,68Z"/>
+
+    <!-- Bitcoin symbol B body with counter holes -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M46,43L56,43C60,43 62,45.5 62,48.5C62,51.5 60,53.5 57,54C60.5,54 63,56.5 63,59.5C63,62.5 60.5,65 56.5,65L46,65Z M50,46L55.5,46C57.5,46 59,47 59,48.5C59,50 57.5,51.5 55.5,51.5L50,51.5Z M50,56.5L56.5,56.5C59,56.5 60,58 60,59.5C60,61 59,62.5 56.5,62.5L50,62.5Z"/>
+
 </vector>

@@ -182,6 +182,7 @@ data class Transaction(
     val status: TransactionStatus,
     val exchangeOrderId: String? = null,
     val errorMessage: String? = null,
+    val warningMessage: String? = null,
     val executedAt: Instant = Instant.now()
 )
 
@@ -240,6 +241,31 @@ sealed class DcaResult {
         val retryable: Boolean = true
     ) : DcaResult()
 }
+
+/**
+ * In-app notification for display in the Notifications tab
+ */
+data class AppNotification(
+    val id: Long,
+    val type: com.accbot.dca.data.local.NotificationType,
+    val title: String,
+    val message: String,
+    val planId: Long? = null,
+    val crypto: String? = null,
+    val exchange: Exchange? = null,
+    val isRead: Boolean,
+    val isArchived: Boolean = false,
+    val createdAt: Instant
+)
+
+/**
+ * Withdrawal threshold configuration
+ */
+data class WithdrawalThreshold(
+    val crypto: String,
+    val exchange: Exchange,
+    val thresholdAmount: BigDecimal
+)
 
 /**
  * A single historical trade from an exchange API

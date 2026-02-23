@@ -27,6 +27,7 @@
     <!-- Navigation -->
     <string name="nav_dashboard">Přehled</string>
     <string name="nav_portfolio">Portfolio</string>
+    <string name="nav_notifications">Oznámení</string>
     <string name="nav_settings">Nastavení</string>
 
     <!-- DCA Strategy -->
@@ -113,9 +114,9 @@
     <string name="settings_sandbox_disabled">Přepnout na testnet pro bezrizikové testování</string>
     <string name="settings_danger_zone">NEBEZPEČNÁ ZÓNA</string>
     <string name="settings_delete_all_data">Smazat všechna data</string>
-    <string name="settings_delete_all_subtitle">Odebrat všechny plány, historii a přihlašovací údaje</string>
+    <string name="settings_delete_all_subtitle">Odstranit vše a restartovat aplikaci</string>
     <string name="settings_delete_dialog_title">Smazat všechna data?</string>
-    <string name="settings_delete_dialog_text">Tím se odstraní všechny DCA plány, historie transakcí a uložené přihlašovací údaje. Tuto akci nelze vrátit zpět.</string>
+    <string name="settings_delete_dialog_text">Tím se odstraní všechny DCA plány, historie transakcí, oznámení a uložené přihlašovací údaje. Aplikace se restartuje. Tuto akci nelze vrátit zpět.</string>
     <string name="settings_restart_required">Vyžadován restart</string>
     <string name="settings_restart_sandbox_on">Přepnutí do sandbox režimu vyžaduje restart aplikace. Vaše produkční data zůstanou bezpečně v oddělené databázi.</string>
     <string name="settings_restart_sandbox_off">Přepnutí do produkčního režimu vyžaduje restart aplikace. Vaše sandbox data zůstanou bezpečně v oddělené databázi.</string>
@@ -213,6 +214,8 @@
     <string name="plan_details_crypto_balance">Zůstatek krypta</string>
     <string name="plan_details_estimated_duration">Odhadovaná doba</string>
     <string name="plan_details_days_remaining">~%1$d dní (%2$d nákupů)</string>
+    <string name="plan_details_delete_subtitle">Trvale smazat tento plán a všechny jeho transakce</string>
+    <string name="plan_details_delete_confirm_hint">Zadejte %1$s pro potvrzení</string>
     <string name="plan_details_delete_transactions_title">Smazat všechny transakce</string>
     <string name="plan_details_delete_transactions_text">Trvale se smaže všech %1$d transakcí tohoto plánu. Tuto akci nelze vrátit zpět.\n\nPro potvrzení zadejte počet transakcí:</string>
     <string name="plan_details_delete_transactions_hint">Zadejte %1$d pro potvrzení</string>
@@ -308,6 +311,7 @@
     <string name="transaction_details_date_time">Datum a čas</string>
     <string name="transaction_details_order_id">ID objednávky</string>
     <string name="transaction_details_error_message">Chybová zpráva</string>
+    <string name="transaction_details_warning_message">Upozornění při opakování</string>
     <string name="transaction_details_copied">Zkopírováno do schránky</string>
     <string name="transaction_status_completed">Dokončeno</string>
     <string name="transaction_status_failed">Selhalo</string>
@@ -629,6 +633,60 @@
     <string name="exchange_instructions_coinbase_sandbox_4">Vytvořte nový API klíč</string>
     <string name="exchange_instructions_coinbase_sandbox_5">Vyberte oprávnění \'Zobrazení\' a \'Obchodování\'</string>
     <string name="exchange_instructions_coinbase_sandbox_6">Zkopírujte API klíč a tajný klíč</string>
+
+    <!-- Notifications screen -->
+    <string name="notifications_title">Oznámení</string>
+    <string name="notifications_empty_title">Zatím žádná oznámení</string>
+    <string name="notifications_empty_description">Oznámení o nákupech, chybách a upozorněních se zobrazí zde</string>
+    <string name="notifications_dismiss_all">Zamítnout vše</string>
+    <string name="notifications_archive">Archiv</string>
+    <string name="notifications_clear_archive">Vymazat archiv</string>
+    <string name="notifications_archive_empty_title">Žádná archivovaná oznámení</string>
+    <string name="notifications_archive_empty_description">Zamítnutá oznámení se zobrazí zde</string>
+    <string name="notifications_clear_archive_dialog_title">Vymazat archiv?</string>
+    <string name="notifications_clear_archive_dialog_text">Trvale se smažou všechna archivovaná oznámení. Tuto akci nelze vrátit zpět.</string>
+
+    <!-- Withdrawal threshold -->
+    <string name="settings_withdrawal_alert">Upozornění na výběr</string>
+    <string name="settings_withdrawal_alert_subtitle">Upozornit, když nakumulované krypto překročí limit</string>
+    <string name="settings_withdrawal_threshold_title">Limity pro výběr</string>
+    <string name="settings_withdrawal_threshold_hint">Částka (např. 0,01)</string>
+    <string name="settings_withdrawal_threshold_no_plans">Žádné aktivní DCA plány</string>
+    <string name="notification_withdrawal_threshold_title">Doporučen výběr</string>
+    <string name="notification_withdrawal_threshold_text">Nakumulovali jste %1$s %2$s na %3$s — zvažte výběr do cold wallet</string>
+    <string name="dashboard_withdrawal_ready">%1$s %2$s na burze — zvažte výběr</string>
+
+    <!-- DCA Alerts section -->
+    <string name="settings_dca_alerts">DCA UPOZORNĚNÍ</string>
+
+    <!-- Data Management section -->
+    <string name="settings_data_management">SPRÁVA DAT</string>
+    <string name="settings_delete_plans">Smazat DCA plány</string>
+    <string name="settings_delete_transactions">Smazat historii transakcí</string>
+    <string name="settings_delete_notifications">Smazat historii oznámení</string>
+
+    <plurals name="settings_plans_count">
+        <item quantity="one">%1$d plán</item>
+        <item quantity="few">%1$d plány</item>
+        <item quantity="other">%1$d plánů</item>
+    </plurals>
+    <plurals name="settings_transactions_count">
+        <item quantity="one">%1$d transakce</item>
+        <item quantity="few">%1$d transakce</item>
+        <item quantity="other">%1$d transakcí</item>
+    </plurals>
+    <plurals name="settings_notifications_count">
+        <item quantity="one">%1$d oznámení</item>
+        <item quantity="few">%1$d oznámení</item>
+        <item quantity="other">%1$d oznámení</item>
+    </plurals>
+
+    <string name="settings_delete_plans_dialog_title">Smazat všechny DCA plány?</string>
+    <string name="settings_delete_plans_dialog_text">Trvale se smaže všech %1$d DCA plánů. Aktivní plány přestanou fungovat. Tuto akci nelze vrátit zpět.</string>
+    <string name="settings_delete_transactions_dialog_title">Smazat historii transakcí?</string>
+    <string name="settings_delete_transactions_dialog_text">Trvale se smaže všech %1$d transakcí. Portfolio data budou ztracena. Tuto akci nelze vrátit zpět.</string>
+    <string name="settings_delete_notifications_dialog_title">Smazat historii oznámení?</string>
+    <string name="settings_delete_notifications_dialog_text">Trvale se smaže všech %1$d oznámení. Tuto akci nelze vrátit zpět.</string>
 
     <!-- Accessibility -->
     <string name="a11y_retry">Opakovat</string>

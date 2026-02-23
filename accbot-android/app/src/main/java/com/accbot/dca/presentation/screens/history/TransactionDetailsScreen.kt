@@ -31,6 +31,7 @@ import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.ErrorState
 import com.accbot.dca.presentation.components.LoadingState
+import com.accbot.dca.presentation.components.WarningOrange
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -218,6 +219,43 @@ fun TransactionDetailsScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = transaction.errorMessage,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+
+                    // Warning message card (retry warnings)
+                    if (transaction.warningMessage != null) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = WarningOrange.copy(alpha = 0.1f)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = WarningOrange,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.transaction_details_warning_message),
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = WarningOrange
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = transaction.warningMessage,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )

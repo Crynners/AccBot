@@ -11,6 +11,7 @@ import com.accbot.dca.data.local.ExchangeBalanceEntity
 import com.accbot.dca.data.local.CryptoFiatHolding
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.UserPreferences
+import com.accbot.dca.data.local.WithdrawalThresholdDao
 import com.accbot.dca.data.local.toDomain
 import com.accbot.dca.data.remote.MarketDataService
 import com.accbot.dca.domain.model.DcaPlan
@@ -49,7 +50,9 @@ data class DcaPlanWithBalance(
     val fiatBalance: BigDecimal? = null,
     val remainingExecutions: Int? = null,
     val remainingDays: Double? = null,
-    val isLowBalance: Boolean = false
+    val isLowBalance: Boolean = false,
+    val isOverWithdrawalThreshold: Boolean = false,
+    val exchangeCryptoBalance: BigDecimal? = null
 )
 
 @Immutable
@@ -72,7 +75,8 @@ class DashboardViewModel @Inject constructor(
     private val marketDataService: MarketDataService,
     private val exchangeApiFactory: ExchangeApiFactory,
     private val credentialsStore: CredentialsStore,
-    private val exchangeBalanceDao: ExchangeBalanceDao
+    private val exchangeBalanceDao: ExchangeBalanceDao,
+    private val withdrawalThresholdDao: WithdrawalThresholdDao
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -227,6 +231,23 @@ class DashboardViewModel @Inject constructor(
                 }
             }
 
+            // Check withdrawal threshold using live crypto balance from exchange
+            val withdrawalThreshold = try {
+                withdrawalThresholdDao.getThresholdAmount(plan.exchange, plan.crypto)
+            } catch (_: Exception) { null }
+            val cryptoBalanceKey = "${plan.exchange}_${plan.crypto}"
+            val exchangeCryptoBalance = balanceCache.getOrPut(cryptoBalanceKey) {
+                try {
+                    val creds = credentialsStore.getCredentials(plan.exchange, isSandbox)
+                        ?: return@getOrPut null
+                    val api = exchangeApiFactory.create(creds)
+                    withTimeoutOrNull(10_000) { api.getBalance(plan.crypto) }
+                } catch (_: Exception) { null }
+            }
+            val isOverThreshold = withdrawalThreshold != null
+                && exchangeCryptoBalance != null
+                && exchangeCryptoBalance >= withdrawalThreshold
+
             if (balance != null && plan.amount > BigDecimal.ZERO) {
                 val remainingExec = balance.divide(plan.amount, 0, RoundingMode.DOWN).toInt()
                 val effectiveInterval = if (plan.cronExpression != null) {
@@ -241,10 +262,16 @@ class DashboardViewModel @Inject constructor(
                     fiatBalance = balance,
                     remainingExecutions = remainingExec,
                     remainingDays = remainingDaysVal,
-                    isLowBalance = remainingDaysVal < thresholdDays
+                    isLowBalance = remainingDaysVal < thresholdDays,
+                    isOverWithdrawalThreshold = isOverThreshold,
+                    exchangeCryptoBalance = exchangeCryptoBalance
                 )
             } else {
-                DcaPlanWithBalance(plan = plan)
+                DcaPlanWithBalance(
+                    plan = plan,
+                    isOverWithdrawalThreshold = isOverThreshold,
+                    exchangeCryptoBalance = exchangeCryptoBalance
+                )
             }
         }
 

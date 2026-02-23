@@ -15,6 +15,11 @@ import java.math.BigDecimal
 import java.time.Instant
 
 /**
+ * Notification type for in-app notification history
+ */
+enum class NotificationType { PURCHASE, ERROR, LOW_BALANCE, WITHDRAWAL_THRESHOLD }
+
+/**
  * Room type converters
  */
 class Converters {
@@ -97,6 +102,17 @@ class Converters {
 
     @TypeConverter
     fun toDcaStrategy(value: String): DcaStrategy = DcaStrategy.fromString(value)
+
+    @TypeConverter
+    fun fromNotificationType(value: NotificationType): String = value.name
+
+    @TypeConverter
+    fun toNotificationType(value: String): NotificationType = try {
+        NotificationType.valueOf(value)
+    } catch (e: IllegalArgumentException) {
+        Log.w(TAG, "Unknown NotificationType '$value', falling back to ERROR")
+        NotificationType.ERROR
+    }
 }
 
 /**
@@ -161,6 +177,7 @@ data class TransactionEntity(
     val status: TransactionStatus,
     val exchangeOrderId: String? = null,
     val errorMessage: String? = null,
+    val warningMessage: String? = null,
     val executedAt: Instant = Instant.now()
 )
 
@@ -244,4 +261,44 @@ data class DailyPriceEntity(
     val dateEpochDay: Long,       // LocalDate.toEpochDay()
     val price: BigDecimal,
     val fetchedAt: Instant = Instant.now()
+)
+
+/**
+ * In-app notification history entity
+ */
+@Entity(
+    tableName = "notifications",
+    indices = [
+        Index(value = ["isRead"]),
+        Index(value = ["isArchived"]),
+        Index(value = ["createdAt"])
+    ]
+)
+@TypeConverters(Converters::class)
+data class NotificationEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val type: NotificationType,
+    val title: String,
+    val message: String,
+    val planId: Long? = null,
+    val crypto: String? = null,
+    val exchange: Exchange? = null,
+    val isRead: Boolean = false,
+    val isArchived: Boolean = false,
+    val createdAt: Instant = Instant.now()
+)
+
+/**
+ * Withdrawal threshold configuration per crypto+exchange pair
+ */
+@Entity(
+    tableName = "withdrawal_thresholds",
+    primaryKeys = ["crypto", "exchange"]
+)
+@TypeConverters(Converters::class)
+data class WithdrawalThresholdEntity(
+    val crypto: String,
+    val exchange: Exchange,
+    val thresholdAmount: BigDecimal
 )

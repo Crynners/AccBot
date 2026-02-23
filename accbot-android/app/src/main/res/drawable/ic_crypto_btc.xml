@@ -7,26 +7,13 @@
     <path
         android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
         android:fillColor="#F7931A"/>
-    <!-- Vertical bars -->
+    <!-- Vertical bars (filled rectangles) -->
     <path
-        android:pathData="M56,36L56,42M72,36L72,42M56,86L56,92M72,86L72,92"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="5"
-        android:fillColor="#00000000"
-        android:strokeLineCap="round"/>
-    <!-- B shape -->
+        android:fillColor="#FFFFFF"
+        android:pathData="M54.5,33L57.5,33L57.5,42L54.5,42Z M70.5,33L73.5,33L73.5,42L70.5,42Z M54.5,86L57.5,86L57.5,95L54.5,95Z M70.5,86L73.5,86L73.5,95L70.5,95Z"/>
+    <!-- B shape with counter holes (filled, evenOdd) -->
     <path
-        android:pathData="M50,42L66,42C74,42 80,47 80,54C80,61 74,64 68,64L50,64L50,42Z"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="5"
-        android:fillColor="#00000000"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"/>
-    <path
-        android:pathData="M50,64L70,64C78,64 84,69 84,76C84,83 78,86 70,86L50,86L50,64Z"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="5"
-        android:fillColor="#00000000"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"/>
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M48,42L68,42C75,42 80,47.5 80,54C80,59 77,62.5 73,64C78,65.5 84,69.5 84,76C84,83 78.5,88 70,88L48,88Z M56,50L66,50C70,50 72,52 72,54C72,56 70,58 66,58L56,58Z M56,66L68,66C72.5,66 76,68.5 76,72.5C76,76.5 72.5,79 68,79L56,79Z"/>
 </vector>
