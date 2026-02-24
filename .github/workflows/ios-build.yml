@@ -67,16 +67,19 @@ jobs:
 
       - name: Build
         run: |
+          set -o pipefail
           xcodebuild build \
             -project AccBot.xcodeproj \
             -scheme AccBot \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -clonedSourcePackagesDirPath SourcePackages \
             CODE_SIGNING_ALLOWED=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            | xcpretty --color
 
       - name: Test
         run: |
+          set -o pipefail
           xcodebuild test \
             -project AccBot.xcodeproj \
             -scheme AccBot \
@@ -85,7 +88,7 @@ jobs:
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
-            | xcpretty --color && exit ${PIPESTATUS[0]}
+            | xcpretty --color
 
       - name: Upload test results
         if: always()
