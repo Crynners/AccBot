@@ -51,7 +51,7 @@ struct ExchangeSetupView: View {
 
                     // Credentials input card
                     if let exchange = viewModel.selectedExchange {
-                        CredentialsInputCard(
+                        OnboardingCredentialsCard(
                             exchange: exchange,
                             apiKey: $viewModel.apiKey,
                             apiSecret: $viewModel.apiSecret,
@@ -151,7 +151,7 @@ private struct ExchangeGridItem: View {
 
 // MARK: - Credentials Input Card
 
-private struct CredentialsInputCard: View {
+private struct OnboardingCredentialsCard: View {
     let exchange: Exchange
     @Binding var apiKey: String
     @Binding var apiSecret: String
