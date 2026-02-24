@@ -11,8 +11,6 @@ jobs:
       github.event.pull_request.merged == true &&
       startsWith(github.event.pull_request.head.ref, 'release/v')
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Extract version from branch name
@@ -27,6 +25,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.PAT_GITHUB }}
 
       - name: Create and push tag
         run: |
