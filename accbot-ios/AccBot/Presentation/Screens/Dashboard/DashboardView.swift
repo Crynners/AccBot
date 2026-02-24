@@ -154,7 +154,7 @@ struct DashboardView: View {
 
             if viewModel.plans.isEmpty {
                 EmptyStateView(
-                    icon: "chart.bar.doc.horizontal",
+                    systemImage: "chart.bar.doc.horizontal",
                     title: "No DCA Plans",
                     subtitle: "Create your first plan to start accumulating crypto"
                 )

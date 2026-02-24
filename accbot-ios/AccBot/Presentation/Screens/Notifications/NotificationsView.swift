@@ -60,7 +60,7 @@ struct NotificationsView: View {
         Group {
             if viewModel.activeNotifications.isEmpty {
                 EmptyStateView(
-                    icon: "bell.slash",
+                    systemImage: "bell.slash",
                     title: "No Notifications",
                     subtitle: "DCA alerts and updates will appear here"
                 )
@@ -91,7 +91,7 @@ struct NotificationsView: View {
         Group {
             if viewModel.archivedNotifications.isEmpty {
                 EmptyStateView(
-                    icon: "archivebox",
+                    systemImage: "archivebox",
                     title: "No Archived Notifications",
                     subtitle: "Dismissed notifications will appear here"
                 )

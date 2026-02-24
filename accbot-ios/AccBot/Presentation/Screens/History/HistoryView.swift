@@ -19,7 +19,7 @@ struct HistoryView: View {
                 LoadingStateView(message: "Loading transactions...")
             } else if viewModel.transactions.isEmpty {
                 EmptyStateView(
-                    icon: "clock.arrow.circlepath",
+                    systemImage: "clock.arrow.circlepath",
                     title: "No Transactions",
                     subtitle: "Your DCA purchase history will appear here"
                 )

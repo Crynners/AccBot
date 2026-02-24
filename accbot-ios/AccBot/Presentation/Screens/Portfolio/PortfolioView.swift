@@ -18,7 +18,7 @@ struct PortfolioView: View {
                     LoadingStateView(message: "Loading portfolio...")
                 } else if viewModel.pairs.isEmpty {
                     EmptyStateView(
-                        icon: "chart.pie",
+                        systemImage: "chart.pie",
                         title: "No Portfolio Data",
                         subtitle: "Complete your first DCA purchase to see portfolio analytics"
                     )

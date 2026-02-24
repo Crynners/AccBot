@@ -36,7 +36,7 @@ final class NotificationService {
     func postPurchaseNotification(crypto: String, fiat: String, amount: Decimal, exchange: Exchange) {
         let content = UNMutableNotificationContent()
         content.title = String(localized: "DCA Purchase Completed")
-        content.body = String(localized: "Bought \(crypto) for \(amount) \(fiat) on \(exchange.displayName)")
+        content.body = String(localized: "Bought \(crypto) for \(amount as NSDecimalNumber) \(fiat) on \(exchange.displayName)")
         content.sound = .default
         content.categoryIdentifier = Self.purchaseCategory
 
@@ -66,7 +66,7 @@ final class NotificationService {
     func postLowBalanceNotification(exchange: Exchange, fiat: String, balance: Decimal, daysLeft: Int) {
         let content = UNMutableNotificationContent()
         content.title = String(localized: "Low Balance Warning")
-        content.body = String(localized: "\(exchange.displayName): \(balance) \(fiat) remaining (~\(daysLeft) days)")
+        content.body = String(localized: "\(exchange.displayName): \(balance as NSDecimalNumber) \(fiat) remaining (~\(daysLeft) days)")
         content.sound = .default
         content.categoryIdentifier = Self.lowBalanceCategory
 
@@ -81,7 +81,7 @@ final class NotificationService {
     func postWithdrawalThresholdNotification(crypto: String, exchange: Exchange, amount: Decimal) {
         let content = UNMutableNotificationContent()
         content.title = String(localized: "Withdrawal Threshold Reached")
-        content.body = String(localized: "\(amount) \(crypto) on \(exchange.displayName) ready for withdrawal")
+        content.body = String(localized: "\(amount as NSDecimalNumber) \(crypto) on \(exchange.displayName) ready for withdrawal")
         content.sound = .default
         content.categoryIdentifier = Self.withdrawalThresholdCategory
 
