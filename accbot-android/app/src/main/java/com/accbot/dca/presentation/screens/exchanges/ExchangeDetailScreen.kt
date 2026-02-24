@@ -81,11 +81,18 @@ fun ExchangeDetailScreen(
 
     // Remove confirmation dialog
     if (showRemoveDialog) {
+        val planCount = uiState.plans.size
         AlertDialog(
             onDismissRequest = { showRemoveDialog = false },
             title = { Text(stringResource(R.string.exchanges_remove_title)) },
             text = {
-                Text(stringResource(R.string.exchanges_remove_text, exchange.displayName))
+                Text(
+                    if (planCount > 0) {
+                        stringResource(R.string.exchanges_remove_text_with_plans, exchange.displayName, planCount)
+                    } else {
+                        stringResource(R.string.exchanges_remove_text, exchange.displayName)
+                    }
+                )
             },
             confirmButton = {
                 TextButton(

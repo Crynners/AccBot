@@ -314,7 +314,11 @@ fun AccBotApp(
         composable(Screen.AddPlan.route) {
             AddPlanScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onPlanCreated = { navController.popBackStack() }
+                onPlanCreated = { navController.popBackStack() },
+                onNavigateToExchangeDetail = { exchangeName ->
+                    navController.popBackStack()
+                    navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName, autoImport = true))
+                }
             )
         }
 
@@ -388,7 +392,8 @@ fun AccBotApp(
         composable(
             route = Screen.ExchangeDetail.route,
             arguments = listOf(
-                navArgument(Screen.EXCHANGE_ARG) { type = NavType.StringType }
+                navArgument(Screen.EXCHANGE_ARG) { type = NavType.StringType },
+                navArgument("autoImport") { type = NavType.BoolType; defaultValue = false }
             )
         ) {
             ExchangeDetailScreen(
@@ -406,7 +411,11 @@ fun AccBotApp(
         ) {
             AddExchangeScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onExchangeAdded = { navController.popBackStack() }
+                onExchangeAdded = { navController.popBackStack() },
+                onNavigateToExchangeDetail = { exchangeName ->
+                    navController.popBackStack()
+                    navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName, autoImport = true))
+                }
             )
         }
 

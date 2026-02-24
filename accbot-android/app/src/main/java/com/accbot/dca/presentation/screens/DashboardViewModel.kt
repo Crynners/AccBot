@@ -22,9 +22,11 @@ import com.accbot.dca.worker.DcaWorker
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.coroutineContext
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Instant
@@ -185,6 +187,7 @@ class DashboardViewModel @Inject constructor(
                 holding
             }
         }
+        coroutineContext.ensureActive()
         _uiState.update { it.copy(holdings = updatedHoldings, isPriceLoading = false) }
     }
 
@@ -275,7 +278,14 @@ class DashboardViewModel @Inject constructor(
             }
         }
 
-        _uiState.update { it.copy(activePlans = plansWithBalance) }
+        // Guard: only update if the plan set hasn't changed (prevents stale
+        // data from a cancelled collectLatest block overwriting fresh data)
+        coroutineContext.ensureActive()
+        _uiState.update { current ->
+            val currentIds = current.activePlans.map { it.plan.id }.toSet()
+            val fetchedIds = plansWithBalance.map { it.plan.id }.toSet()
+            if (currentIds == fetchedIds) current.copy(activePlans = plansWithBalance) else current
+        }
     }
 
     fun refreshPrices() {

@@ -64,12 +64,12 @@ fun SettingsScreen(
     var showDeleteNotificationsDialog by rememberSaveable { mutableStateOf(false) }
     var dangerZoneExpanded by rememberSaveable { mutableStateOf(false) }
 
-    // Refresh battery status when returning from system settings
+    // Refresh non-reactive data (battery, exchange count, data counts) when returning
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.refreshBatteryStatus()
+                viewModel.refresh()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

@@ -75,11 +75,22 @@ class OnboardingViewModel @Inject constructor(
     init {
         // Initialize sandbox state once - avoids repeated calls during recomposition
         val isSandbox = userPreferences.isSandboxMode()
+        // Detect already-configured exchange (e.g. credentials saved on ExchangeSetupScreen).
+        // hiltViewModel() creates a separate instance per NavBackStackEntry, so FirstPlanScreen
+        // needs to restore the selected exchange from persisted credentials.
+        val configured = credentialsStore.getConfiguredExchanges(isSandbox).firstOrNull()
         _uiState.update {
             it.copy(
                 isSandboxMode = isSandbox,
-                availableExchanges = ExchangeFilter.getAvailableExchanges(isSandbox)
+                availableExchanges = ExchangeFilter.getAvailableExchanges(isSandbox),
+                selectedExchange = configured,
+                selectedCrypto = configured?.supportedCryptos?.firstOrNull() ?: "BTC",
+                selectedFiat = configured?.supportedFiats?.firstOrNull() ?: "EUR",
+                credentialsValid = configured != null
             )
+        }
+        if (configured != null) {
+            updateMinOrderSize()
         }
     }
 

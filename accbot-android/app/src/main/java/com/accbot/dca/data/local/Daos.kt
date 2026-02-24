@@ -47,6 +47,9 @@ interface DcaPlanDao {
     @Query("DELETE FROM dca_plans")
     suspend fun deleteAllPlans()
 
+    @Query("DELETE FROM dca_plans WHERE exchange = :exchange")
+    suspend fun deletePlansByExchange(exchange: Exchange)
+
     @Query("SELECT COUNT(*) FROM dca_plans")
     suspend fun getPlanCount(): Int
 }
@@ -208,6 +211,9 @@ interface TransactionDao {
     @Query("DELETE FROM transactions WHERE planId = :planId")
     suspend fun deleteTransactionsByPlanId(planId: Long)
 
+    @Query("DELETE FROM transactions WHERE exchange = :exchange")
+    suspend fun deleteTransactionsByExchange(exchange: Exchange)
+
     @Query("""
         SELECT crypto || '/' || fiat as pair, crypto, fiat,
                CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) as totalCrypto,
@@ -288,6 +294,9 @@ interface WithdrawalDao {
 
     @Delete
     suspend fun deleteWithdrawal(withdrawal: WithdrawalEntity)
+
+    @Query("DELETE FROM withdrawals")
+    suspend fun deleteAllWithdrawals()
 }
 
 @Dao
@@ -350,6 +359,9 @@ interface DailyPriceDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPrices(prices: List<DailyPriceEntity>)
+
+    @Query("DELETE FROM daily_prices")
+    suspend fun deleteAllPrices()
 }
 
 @Dao

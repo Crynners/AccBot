@@ -263,7 +263,8 @@
     <string name="exchanges_connected">Připojené burzy</string>
     <string name="exchanges_available">Dostupné burzy</string>
     <string name="exchanges_remove_title">Odebrat burzu</string>
-    <string name="exchanges_remove_text">Opravdu chcete odebrat %1$s? Tím se smažou vaše API přihlašovací údaje z tohoto zařízení.</string>
+    <string name="exchanges_remove_text">Opravdu chcete odebrat %1$s? Tím se smaže veškerá historie transakcí a API přihlašovací údaje pro tuto burzu.</string>
+    <string name="exchanges_remove_text_with_plans">Opravdu chcete odebrat %1$s? Tato burza má %2$d aktivní(ch) DCA plán(ů). Odebrání burzy smaže všechny přidružené DCA plány, historii transakcí a API přihlašovací údaje.</string>
     <string name="exchanges_none_title">Žádné dostupné burzy</string>
     <string name="exchanges_none_desc">Nejsou k dispozici žádné burzy</string>
     <string name="exchanges_detail_cryptos">Kryptoměny</string>
@@ -449,8 +450,8 @@
     <string name="notification_service_title">AccBot DCA aktivní</string>
     <string name="notification_service_text">Sledování vašich DCA plánů</string>
     <string name="notification_purchase_title">DCA nákup dokončen ✓</string>
-    <string name="notification_purchase_text">Nakoupeno %1$s %2$s za %3$s %4$s</string>
-    <string name="notification_purchase_pending_text">Nakoupeno ~%1$s %2$s za %3$s (potvrzování…)</string>
+    <string name="notification_purchase_text">Nakoupeno %1$s %2$s za %3$s %4$s @ %5$s %4$s</string>
+    <string name="notification_purchase_pending_text">Nakoupeno ~%1$s %2$s za %3$s @ %4$s %2$s (potvrzování…)</string>
     <string name="notification_dca_failed">DCA selhalo</string>
     <string name="notification_dca_failed_text">Nepodařilo se nakoupit %1$s: %2$s</string>
     <string name="notification_dca_error">DCA chyba</string>
@@ -462,10 +463,14 @@
     <!-- TimeUtils -->
     <string name="time_not_scheduled">Nenaplánováno</string>
     <string name="time_due_now">Právě teď</string>
-    <string name="time_in_days">za %1$d dní</string>
-    <string name="time_in_1_day">za 1 den</string>
-    <string name="time_in_hours">za %1$d hodin</string>
-    <string name="time_in_1_hour">za 1 hodinu</string>
+    <string name="time_in_days">za %1$d dní %2$d h</string>
+    <string name="time_in_1_day">za 1 den %1$d h</string>
+    <string name="time_in_days_exact">za %1$d dní</string>
+    <string name="time_in_1_day_exact">za 1 den</string>
+    <string name="time_in_hours">za %1$d h %2$d min</string>
+    <string name="time_in_1_hour">za 1 h %1$d min</string>
+    <string name="time_in_hours_exact">za %1$d h</string>
+    <string name="time_in_1_hour_exact">za 1 h</string>
     <string name="time_in_minutes">za %1$d min</string>
     <string name="time_in_less_1_min">za &lt; 1 min</string>
 
@@ -543,6 +548,8 @@
     <string name="import_api_error_title">Import selhal</string>
     <string name="import_api_success_message">%1$d transakcí importováno, %2$d přeskočeno (již existovaly)</string>
     <string name="import_api_no_new">Žádné nové transakce k importu</string>
+    <string name="import_api_offer_title">Importovat historii transakcí?</string>
+    <string name="import_api_offer_text">Chcete importovat existující historii transakcí z %1$s? Můžete to udělat i později v detailu burzy.</string>
 
     <!-- Schedule Builder -->
     <string name="schedule_type_label">Typ rozvrhu</string>

@@ -109,6 +109,7 @@ class NotificationService @Inject constructor(
         cryptoAmount: BigDecimal,
         fiatAmount: BigDecimal,
         fiat: String,
+        price: BigDecimal,
         planId: Long = 0,
         pending: Boolean = false,
         exchange: Exchange? = null
@@ -120,10 +121,11 @@ class NotificationService @Inject constructor(
         )
 
         val title = context.getString(R.string.notification_purchase_title)
+        val priceFormatted = price.stripTrailingZeros().toPlainString()
         val text = if (pending) {
-            context.getString(R.string.notification_purchase_pending_text, fiatAmount.toPlainString(), fiat, crypto)
+            context.getString(R.string.notification_purchase_pending_text, fiatAmount.toPlainString(), fiat, crypto, priceFormatted)
         } else {
-            context.getString(R.string.notification_purchase_text, cryptoAmount.toPlainString(), crypto, fiatAmount.toPlainString(), fiat)
+            context.getString(R.string.notification_purchase_text, cryptoAmount.toPlainString(), crypto, fiatAmount.toPlainString(), fiat, priceFormatted)
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_PURCHASE)
