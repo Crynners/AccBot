@@ -288,6 +288,9 @@ interface WithdrawalDao {
 
     @Delete
     suspend fun deleteWithdrawal(withdrawal: WithdrawalEntity)
+
+    @Query("DELETE FROM withdrawals")
+    suspend fun deleteAllWithdrawals()
 }
 
 @Dao
@@ -350,6 +353,9 @@ interface DailyPriceDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPrices(prices: List<DailyPriceEntity>)
+
+    @Query("DELETE FROM daily_prices")
+    suspend fun deleteAllPrices()
 }
 
 @Dao

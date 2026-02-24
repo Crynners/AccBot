@@ -6,14 +6,16 @@ import android.content.Intent
 import android.os.PowerManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.CredentialsStore
+import com.accbot.dca.data.local.DailyPriceDao
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.ExchangeBalanceDao
+import com.accbot.dca.data.local.MonthlySummaryDao
 import com.accbot.dca.data.local.NotificationDao
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.UserPreferences
+import com.accbot.dca.data.local.WithdrawalDao
 import com.accbot.dca.data.local.WithdrawalThresholdDao
 import com.accbot.dca.data.local.WithdrawalThresholdEntity
 import com.accbot.dca.data.local.toDomain
@@ -53,10 +55,13 @@ class SettingsViewModel @Inject constructor(
     private val credentialsStore: CredentialsStore,
     private val onboardingPreferences: OnboardingPreferences,
     private val userPreferences: UserPreferences,
-    private val database: DcaDatabase,
     private val dcaPlanDao: DcaPlanDao,
     private val transactionDao: TransactionDao,
     private val notificationDao: NotificationDao,
+    private val exchangeBalanceDao: ExchangeBalanceDao,
+    private val monthlySummaryDao: MonthlySummaryDao,
+    private val dailyPriceDao: DailyPriceDao,
+    private val withdrawalDao: WithdrawalDao,
     private val withdrawalThresholdDao: WithdrawalThresholdDao
 ) : AndroidViewModel(application) {
 
@@ -255,11 +260,19 @@ class SettingsViewModel @Inject constructor(
                 // Reset sandbox mode to default (off)
                 userPreferences.setSandboxMode(false)
 
-                // Clear database
-                database.clearAllTables()
+                // Clear all database tables using suspend DAO methods
+                // (Room runs these on its IO executor, unlike clearAllTables()
+                // which is a blocking call that can fail on the main thread)
+                dcaPlanDao.deleteAllPlans()
+                transactionDao.deleteAllTransactions()
+                notificationDao.deleteAllNotifications()
+                exchangeBalanceDao.deleteAllBalances()
+                monthlySummaryDao.deleteAllSummaries()
+                dailyPriceDao.deleteAllPrices()
+                withdrawalDao.deleteAllWithdrawals()
+                withdrawalThresholdDao.deleteAll()
 
-                // Restart app to avoid Flow race condition (Room Flows actively
-                // collecting while clearAllTables() invalidates tables)
+                // Restart app to apply clean state
                 restartApp(application)
             } finally {
                 isDeleting = false
