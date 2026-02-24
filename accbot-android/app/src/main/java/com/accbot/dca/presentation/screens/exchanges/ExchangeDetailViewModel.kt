@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.DcaPlanEntity
+import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.usecase.ApiImportProgress
@@ -47,6 +48,7 @@ class ExchangeDetailViewModel @Inject constructor(
     private val userPreferences: UserPreferences,
     private val validateAndSaveCredentialsUseCase: ValidateAndSaveCredentialsUseCase,
     private val dcaPlanDao: DcaPlanDao,
+    private val transactionDao: TransactionDao,
     private val importTradeHistoryUseCase: ImportTradeHistoryUseCase,
     private val exchangeApiFactory: ExchangeApiFactory,
     savedStateHandle: SavedStateHandle
@@ -58,6 +60,7 @@ class ExchangeDetailViewModel @Inject constructor(
     init {
         val isSandbox = userPreferences.isSandboxMode()
         val exchangeName = savedStateHandle.get<String>("exchange")
+        val autoImport = savedStateHandle.get<Boolean>("autoImport") ?: false
         val exchange = exchangeName?.let { name ->
             Exchange.entries.find { it.name == name }
         }
@@ -76,9 +79,15 @@ class ExchangeDetailViewModel @Inject constructor(
             }
 
             // Load plans for this exchange
+            var autoImportTriggered = false
             viewModelScope.launch {
                 dcaPlanDao.getPlansByExchange(exchange).collect { plans ->
                     _uiState.update { it.copy(plans = plans) }
+                    // Auto-trigger import when navigated from import offer dialog
+                    if (autoImport && !autoImportTriggered && plans.isNotEmpty()) {
+                        autoImportTriggered = true
+                        importViaApi()
+                    }
                 }
             }
         }
@@ -224,8 +233,13 @@ class ExchangeDetailViewModel @Inject constructor(
     fun removeExchange(onRemoved: () -> Unit) {
         val state = _uiState.value
         val exchange = state.exchange ?: return
-        credentialsStore.deleteCredentials(exchange, state.isSandboxMode)
-        onRemoved()
+        viewModelScope.launch {
+            // Delete transactions, plans and credentials for this exchange
+            transactionDao.deleteTransactionsByExchange(exchange)
+            dcaPlanDao.deletePlansByExchange(exchange)
+            credentialsStore.deleteCredentials(exchange, state.isSandboxMode)
+            onRemoved()
+        }
     }
 
     companion object {

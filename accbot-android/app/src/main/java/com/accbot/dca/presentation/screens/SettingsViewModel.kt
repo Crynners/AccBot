@@ -75,6 +75,12 @@ class SettingsViewModel @Inject constructor(
         loadDataCounts()
     }
 
+    /** Re-read non-reactive data (credentials, battery, counts). Called on ON_RESUME. */
+    fun refresh() {
+        loadSettings()
+        loadDataCounts()
+    }
+
     private fun loadSettings() {
         val isSandbox = userPreferences.isSandboxMode()
         val configuredExchanges = credentialsStore.getConfiguredExchanges(isSandbox)

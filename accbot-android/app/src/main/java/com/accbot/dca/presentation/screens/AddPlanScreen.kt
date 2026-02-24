@@ -45,6 +45,7 @@ import com.accbot.dca.presentation.ui.theme.successColor
 fun AddPlanScreen(
     onNavigateBack: () -> Unit,
     onPlanCreated: () -> Unit,
+    onNavigateToExchangeDetail: ((String) -> Unit)? = null,
     viewModel: AddPlanViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -53,6 +54,31 @@ fun AddPlanScreen(
         if (uiState.isSuccess) {
             onPlanCreated()
         }
+    }
+
+    // Import offer dialog after creating plan with new credentials
+    if (uiState.showImportDialog) {
+        val exchangeName = uiState.selectedExchange?.displayName ?: ""
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissImportDialog() },
+            title = { Text(stringResource(R.string.import_api_offer_title)) },
+            text = { Text(stringResource(R.string.import_api_offer_text, exchangeName)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.dismissImportDialog()
+                    uiState.selectedExchange?.let { exchange ->
+                        onNavigateToExchangeDetail?.invoke(exchange.name)
+                    }
+                }) {
+                    Text(stringResource(R.string.import_api_title))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissImportDialog() }) {
+                    Text(stringResource(R.string.common_skip))
+                }
+            }
+        )
     }
 
     Scaffold(

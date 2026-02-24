@@ -262,7 +262,8 @@
     <string name="exchanges_connected">Connected Exchanges</string>
     <string name="exchanges_available">Available Exchanges</string>
     <string name="exchanges_remove_title">Remove Exchange</string>
-    <string name="exchanges_remove_text">Are you sure you want to remove %1$s? This will delete your API credentials from this device.</string>
+    <string name="exchanges_remove_text">Are you sure you want to remove %1$s? This will delete all transaction history and API credentials for this exchange.</string>
+    <string name="exchanges_remove_text_with_plans">Are you sure you want to remove %1$s? This exchange has %2$d active DCA plan(s). Removing the exchange will delete all associated DCA plans, transaction history and API credentials.</string>
     <string name="exchanges_none_title">No Exchanges Available</string>
     <string name="exchanges_none_desc">There are no exchanges to display</string>
     <string name="exchanges_detail_cryptos">Cryptocurrencies</string>
@@ -448,8 +449,8 @@
     <string name="notification_service_title">AccBot DCA Active</string>
     <string name="notification_service_text">Monitoring your DCA plans</string>
     <string name="notification_purchase_title">DCA Purchase Completed ✓</string>
-    <string name="notification_purchase_text">Bought %1$s %2$s for %3$s %4$s</string>
-    <string name="notification_purchase_pending_text">Purchased ~%1$s %2$s of %3$s (confirming…)</string>
+    <string name="notification_purchase_text">Bought %1$s %2$s for %3$s %4$s @ %5$s %4$s</string>
+    <string name="notification_purchase_pending_text">Purchased ~%1$s %2$s of %3$s @ %4$s %2$s (confirming…)</string>
     <string name="notification_dca_failed">DCA Failed</string>
     <string name="notification_dca_failed_text">Failed to buy %1$s: %2$s</string>
     <string name="notification_dca_error">DCA Error</string>
@@ -567,6 +568,8 @@
     <string name="import_api_error_title">Import Failed</string>
     <string name="import_api_success_message">%1$d transactions imported, %2$d skipped (already existed)</string>
     <string name="import_api_no_new">No new transactions to import</string>
+    <string name="import_api_offer_title">Import Transaction History?</string>
+    <string name="import_api_offer_text">Would you like to import your existing transaction history from %1$s? You can also do this later from the exchange detail screen.</string>
 
     <!-- Exchange Instructions - Coinmate -->
     <string name="exchange_instructions_coinmate_1">Go to coinmate.io and log in</string>

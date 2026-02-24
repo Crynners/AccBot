@@ -14,6 +14,7 @@ import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.ExchangeInstructions
 import com.accbot.dca.domain.model.ExchangeInstructionsProvider
+import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.domain.model.supportsSandbox
 import com.accbot.dca.domain.usecase.ApiImportProgress
 import com.accbot.dca.domain.usecase.ApiImportResultState
@@ -55,6 +56,7 @@ data class AddExchangeUiState(
     val error: String? = null,
     val isSandboxMode: Boolean = false,
     val plansForExchange: List<DcaPlanEntity> = emptyList(),
+    val showImportOffer: Boolean = false,
     val isApiImporting: Boolean = false,
     val apiImportProgress: String = "",
     val apiImportResult: ApiImportResultState? = null
@@ -152,6 +154,7 @@ class AddExchangeViewModel @Inject constructor(
                         it.copy(
                             isValidating = false,
                             isSuccess = true,
+                            showImportOffer = exchange.supportsApiImport,
                             currentStep = ExchangeSetupStep.SUCCESS
                         )
                     }
@@ -254,6 +257,10 @@ class AddExchangeViewModel @Inject constructor(
 
     fun dismissImportResult() {
         _uiState.update { it.copy(apiImportResult = null) }
+    }
+
+    fun dismissImportOffer() {
+        _uiState.update { it.copy(showImportOffer = false) }
     }
 
     /**

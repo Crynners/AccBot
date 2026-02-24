@@ -47,6 +47,9 @@ interface DcaPlanDao {
     @Query("DELETE FROM dca_plans")
     suspend fun deleteAllPlans()
 
+    @Query("DELETE FROM dca_plans WHERE exchange = :exchange")
+    suspend fun deletePlansByExchange(exchange: Exchange)
+
     @Query("SELECT COUNT(*) FROM dca_plans")
     suspend fun getPlanCount(): Int
 }
@@ -207,6 +210,9 @@ interface TransactionDao {
 
     @Query("DELETE FROM transactions WHERE planId = :planId")
     suspend fun deleteTransactionsByPlanId(planId: Long)
+
+    @Query("DELETE FROM transactions WHERE exchange = :exchange")
+    suspend fun deleteTransactionsByExchange(exchange: Exchange)
 
     @Query("""
         SELECT crypto || '/' || fiat as pair, crypto, fiat,
