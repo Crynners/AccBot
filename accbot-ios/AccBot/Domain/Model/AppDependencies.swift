@@ -8,8 +8,8 @@ final class AppDependencies: ObservableObject {
     let database: DcaDatabase
     let sandboxDatabase: DcaDatabase
     let credentialsStore: CredentialsStore
-    let userPreferences: UserPreferences
-    let onboardingPreferences: OnboardingPreferences
+    var userPreferences: UserPreferences
+    var onboardingPreferences: OnboardingPreferences
     let networkClient: NetworkClient
     let exchangeApiFactory: ExchangeApiFactory
     let marketDataService: MarketDataService
