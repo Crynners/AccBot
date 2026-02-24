@@ -74,14 +74,7 @@ fun DashboardScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    // Ticker to force recomposition of "Next:" time every 60s
-    var refreshTick by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(60_000L)
-            refreshTick++
-        }
-    }
+    // Ticker moved into DcaPlanCard – see currentTime state there
 
     LaunchedEffect(uiState.runNowTriggered) {
         if (uiState.runNowTriggered) {
@@ -186,7 +179,7 @@ fun DashboardScreen(
                                 planWithBalance = planWithBalance,
                                 onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
                                 onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
-                                refreshTick = refreshTick
+
                             )
                         }
                     }
@@ -255,8 +248,7 @@ fun DashboardScreen(
                         DcaPlanCard(
                             planWithBalance = planWithBalance,
                             onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
-                            onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
-                            refreshTick = refreshTick
+                            onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) }
                         )
                     }
                 }
@@ -671,14 +663,21 @@ internal fun StatItem(label: String, value: String) {
 internal fun DcaPlanCard(
     planWithBalance: DcaPlanWithBalance,
     onToggle: () -> Unit,
-    onClick: (() -> Unit)? = null,
-    @Suppress("UNUSED_PARAMETER") // Changing value forces recomposition → refreshes relative "Next:" time
-    refreshTick: Int = 0
+    onClick: (() -> Unit)? = null
 ) {
     val plan = planWithBalance.plan
     val successCol = successColor()
     val accentCol = accentColor()
     val context = LocalContext.current
+
+    // Self-contained ticker: updates currentTime every 60s so the countdown text refreshes
+    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000L)
+            currentTime = System.currentTimeMillis()
+        }
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -749,6 +748,8 @@ internal fun DcaPlanCard(
                                 modifier = Modifier.size(12.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            @Suppress("UNUSED_EXPRESSION")
+                            currentTime // read state so Compose tracks it as a dependency
                             Text(
                                 text = stringResource(R.string.dashboard_next_prefix, TimeUtils.formatTimeUntil(plan.nextExecutionAt, context)),
                                 style = MaterialTheme.typography.bodySmall,

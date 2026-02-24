@@ -462,10 +462,14 @@
     <!-- TimeUtils -->
     <string name="time_not_scheduled">Nenaplánováno</string>
     <string name="time_due_now">Právě teď</string>
-    <string name="time_in_days">za %1$d dní</string>
-    <string name="time_in_1_day">za 1 den</string>
-    <string name="time_in_hours">za %1$d hodin</string>
-    <string name="time_in_1_hour">za 1 hodinu</string>
+    <string name="time_in_days">za %1$d dní %2$d h</string>
+    <string name="time_in_1_day">za 1 den %1$d h</string>
+    <string name="time_in_days_exact">za %1$d dní</string>
+    <string name="time_in_1_day_exact">za 1 den</string>
+    <string name="time_in_hours">za %1$d h %2$d min</string>
+    <string name="time_in_1_hour">za 1 h %1$d min</string>
+    <string name="time_in_hours_exact">za %1$d h</string>
+    <string name="time_in_1_hour_exact">za 1 h</string>
     <string name="time_in_minutes">za %1$d min</string>
     <string name="time_in_less_1_min">za &lt; 1 min</string>
 

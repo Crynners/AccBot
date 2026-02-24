@@ -461,10 +461,14 @@
     <!-- TimeUtils -->
     <string name="time_not_scheduled">Not scheduled</string>
     <string name="time_due_now">Due now</string>
-    <string name="time_in_days">in %1$d days</string>
-    <string name="time_in_1_day">in 1 day</string>
-    <string name="time_in_hours">in %1$d hours</string>
-    <string name="time_in_1_hour">in 1 hour</string>
+    <string name="time_in_days">in %1$d days %2$d h</string>
+    <string name="time_in_1_day">in 1 day %1$d h</string>
+    <string name="time_in_days_exact">in %1$d days</string>
+    <string name="time_in_1_day_exact">in 1 day</string>
+    <string name="time_in_hours">in %1$d h %2$d min</string>
+    <string name="time_in_1_hour">in 1 h %1$d min</string>
+    <string name="time_in_hours_exact">in %1$d h</string>
+    <string name="time_in_1_hour_exact">in 1 h</string>
     <string name="time_in_minutes">in %1$d min</string>
     <string name="time_in_less_1_min">in &lt; 1 min</string>
 
