@@ -5,8 +5,8 @@ final class UserPreferences: ObservableObject {
     private let defaults: UserDefaults
     private let suiteName = "com.accbot.dca.preferences"
 
-    init() {
-        self.defaults = UserDefaults(suiteName: suiteName) ?? .standard
+    convenience init() {
+        self.init(defaults: UserDefaults(suiteName: "com.accbot.dca.preferences") ?? .standard)
     }
 
     // MARK: - Theme
