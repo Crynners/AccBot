@@ -3,7 +3,7 @@ options:
   bundleIdPrefix: com.accbot
   deploymentTarget:
     iOS: "16.0"
-  xcodeVersion: "15.4"
+  xcodeVersion: "16.0"
   generateEmptyDirectories: true
 
 packages:
