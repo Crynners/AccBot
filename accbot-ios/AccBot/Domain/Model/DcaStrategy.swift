@@ -99,4 +99,10 @@ struct StrategyMultiplierResult {
     let multiplier: Float
     let reason: String
     let marketData: MarketData?
+
+    init(multiplier: Float, reason: String, marketData: MarketData? = nil) {
+        self.multiplier = multiplier
+        self.reason = reason
+        self.marketData = marketData
+    }
 }
