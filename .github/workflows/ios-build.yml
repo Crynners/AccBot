@@ -67,22 +67,13 @@ jobs:
 
       - name: Build
         run: |
-          set -o pipefail
           xcodebuild build \
             -project AccBot.xcodeproj \
             -scheme AccBot \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -clonedSourcePackagesDirPath SourcePackages \
             CODE_SIGNING_ALLOWED=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            2>&1 | tee build.log | xcpretty --color
-          EXIT_CODE=${PIPESTATUS[0]}
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "::group::Raw build errors"
-            grep -A2 -E '(error:|undefined|symbol.*not found|Undefined)' build.log || tail -50 build.log
-            echo "::endgroup::"
-            exit $EXIT_CODE
-          fi
+            COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: Test
         run: |
