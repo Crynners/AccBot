@@ -154,7 +154,7 @@ final class DcaExecutionEngine {
 
             if case .error(let msg, _) = attemptResult {
                 failedAttemptMessages.append("Attempt \(attempt): \(msg)")
-                logger.warning("Plan \(plan.id) attempt \(attempt)/\(maxAttempts) failed: \(msg)")
+                logger.warning("Plan \(plan.id) attempt \(attempt)/\(self.maxAttempts) failed: \(msg)")
             }
 
             if attempt < maxAttempts {
