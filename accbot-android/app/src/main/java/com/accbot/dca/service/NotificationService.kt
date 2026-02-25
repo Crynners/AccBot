@@ -13,6 +13,7 @@ import com.accbot.dca.data.local.NotificationDao
 import com.accbot.dca.data.local.NotificationEntity
 import com.accbot.dca.data.local.NotificationType
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.presentation.utils.NumberFormatters
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -121,11 +122,11 @@ class NotificationService @Inject constructor(
         )
 
         val title = context.getString(R.string.notification_purchase_title)
-        val priceFormatted = price.stripTrailingZeros().toPlainString()
+        val priceFormatted = NumberFormatters.fiat(price)
         val text = if (pending) {
-            context.getString(R.string.notification_purchase_pending_text, fiatAmount.toPlainString(), fiat, crypto, priceFormatted)
+            context.getString(R.string.notification_purchase_pending_text, NumberFormatters.fiat(fiatAmount), fiat, crypto, priceFormatted)
         } else {
-            context.getString(R.string.notification_purchase_text, cryptoAmount.toPlainString(), crypto, fiatAmount.toPlainString(), fiat, priceFormatted)
+            context.getString(R.string.notification_purchase_text, NumberFormatters.crypto(cryptoAmount), crypto, NumberFormatters.fiat(fiatAmount), fiat, priceFormatted)
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_PURCHASE)

@@ -58,6 +58,10 @@ sealed class Screen(val route: String) {
         fun createRoute(transactionId: Long) = "history/transaction/$transactionId"
     }
 
+    // Backup
+    data object BackupExport : Screen("backup/export")
+    data object BackupImport : Screen("backup/import")
+
     companion object {
         const val PLAN_ID_ARG = "planId"
         const val TRANSACTION_ID_ARG = "transactionId"
