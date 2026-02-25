@@ -49,6 +49,8 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToExchanges: (() -> Unit)? = null,
+    onNavigateToBackupExport: (() -> Unit)? = null,
+    onNavigateToBackupImport: (() -> Unit)? = null,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -515,6 +517,36 @@ fun SettingsScreen(
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
+            // Backup & Restore
+            item {
+                Text(
+                    text = stringResource(R.string.backup_section_title),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.backup_export_title),
+                    subtitle = stringResource(R.string.backup_export_subtitle),
+                    icon = Icons.Default.Upload,
+                    onClick = { onNavigateToBackupExport?.invoke() }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.backup_import_title),
+                    subtitle = stringResource(R.string.backup_import_subtitle),
+                    icon = Icons.Default.Download,
+                    onClick = { onNavigateToBackupImport?.invoke() }
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
             // About
             item {
                 Text(
@@ -570,45 +602,6 @@ fun SettingsScreen(
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
-            // Data Management
-            item {
-                Text(
-                    text = stringResource(R.string.settings_data_management),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.settings_delete_plans),
-                    subtitle = pluralStringResource(R.plurals.settings_plans_count, uiState.dcaPlanCount, uiState.dcaPlanCount),
-                    icon = Icons.AutoMirrored.Filled.EventNote,
-                    onClick = { showDeletePlansDialog = true }
-                )
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.settings_delete_transactions),
-                    subtitle = pluralStringResource(R.plurals.settings_transactions_count, uiState.transactionCount, uiState.transactionCount),
-                    icon = Icons.Default.Receipt,
-                    onClick = { showDeleteTransactionsDialog = true }
-                )
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.settings_delete_notifications),
-                    subtitle = pluralStringResource(R.plurals.settings_notifications_count, uiState.notificationCount, uiState.notificationCount),
-                    icon = Icons.Default.NotificationsOff,
-                    onClick = { showDeleteNotificationsDialog = true }
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
             // Danger Zone (collapsible)
             item {
                 Row(
@@ -639,40 +632,60 @@ fun SettingsScreen(
                     enter = expandVertically(),
                     exit = shrinkVertically()
                 ) {
-                    OutlinedCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showDeleteDialog = true },
-                        colors = CardDefaults.outlinedCardColors(
-                            containerColor = Error.copy(alpha = 0.1f)
-                        ),
-                        border = CardDefaults.outlinedCardBorder().copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(Error)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SettingsCard(
+                            title = stringResource(R.string.settings_delete_plans),
+                            subtitle = pluralStringResource(R.plurals.settings_plans_count, uiState.dcaPlanCount, uiState.dcaPlanCount),
+                            icon = Icons.AutoMirrored.Filled.EventNote,
+                            onClick = { showDeletePlansDialog = true }
                         )
-                    ) {
-                        Row(
+                        SettingsCard(
+                            title = stringResource(R.string.settings_delete_transactions),
+                            subtitle = pluralStringResource(R.plurals.settings_transactions_count, uiState.transactionCount, uiState.transactionCount),
+                            icon = Icons.Default.Receipt,
+                            onClick = { showDeleteTransactionsDialog = true }
+                        )
+                        SettingsCard(
+                            title = stringResource(R.string.settings_delete_notifications),
+                            subtitle = pluralStringResource(R.plurals.settings_notifications_count, uiState.notificationCount, uiState.notificationCount),
+                            icon = Icons.Default.NotificationsOff,
+                            onClick = { showDeleteNotificationsDialog = true }
+                        )
+                        OutlinedCard(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = null,
-                                tint = Error
+                                .clickable { showDeleteDialog = true },
+                            colors = CardDefaults.outlinedCardColors(
+                                containerColor = Error.copy(alpha = 0.1f)
+                            ),
+                            border = CardDefaults.outlinedCardBorder().copy(
+                                brush = androidx.compose.ui.graphics.SolidColor(Error)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.settings_delete_all_data),
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Error
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = Error
                                 )
-                                Text(
-                                    text = stringResource(R.string.settings_delete_all_subtitle),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.settings_delete_all_data),
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Error
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_delete_all_subtitle),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }

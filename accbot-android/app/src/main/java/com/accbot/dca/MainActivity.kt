@@ -57,6 +57,8 @@ import com.accbot.dca.presentation.screens.history.TransactionDetailsScreen
 import com.accbot.dca.presentation.screens.plans.EditPlanScreen
 import com.accbot.dca.presentation.screens.plans.PlanDetailsScreen
 import com.accbot.dca.presentation.screens.ImportCsvScreen
+import com.accbot.dca.presentation.screens.backup.BackupExportScreen
+import com.accbot.dca.presentation.screens.backup.BackupImportScreen
 import com.accbot.dca.presentation.screens.portfolio.PortfolioScreen
 import com.accbot.dca.presentation.screens.splash.SplashScreen
 import com.accbot.dca.presentation.ui.theme.AccBotTheme
@@ -447,6 +449,14 @@ fun AccBotApp(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
+
+        // Backup
+        composable(Screen.BackupExport.route) {
+            BackupExportScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Screen.BackupImport.route) {
+            BackupImportScreen(onNavigateBack = { navController.popBackStack() })
+        }
     }
 }
 
@@ -479,6 +489,12 @@ private fun MainTabPage(
             onNavigateBack = { onSwitchToTab(0) },
             onNavigateToExchanges = {
                 navController.navigate(Screen.ExchangeManagement.route)
+            },
+            onNavigateToBackupExport = {
+                navController.navigate(Screen.BackupExport.route)
+            },
+            onNavigateToBackupImport = {
+                navController.navigate(Screen.BackupImport.route)
             }
         )
     }

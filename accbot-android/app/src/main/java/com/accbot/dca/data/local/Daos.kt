@@ -52,6 +52,9 @@ interface DcaPlanDao {
 
     @Query("SELECT COUNT(*) FROM dca_plans")
     suspend fun getPlanCount(): Int
+
+    @Query("SELECT * FROM dca_plans ORDER BY createdAt DESC")
+    suspend fun getAllPlansOnce(): List<DcaPlanEntity>
 }
 
 @Dao
@@ -252,6 +255,9 @@ interface TransactionDao {
 
     @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE exchange = :exchange AND crypto = :crypto AND status = 'COMPLETED'")
     suspend fun getTotalCryptoByExchangeAndCrypto(exchange: String, crypto: String): String
+
+    @Query("SELECT * FROM transactions WHERE exchangeOrderId = :orderId LIMIT 1")
+    suspend fun getByExchangeOrderId(orderId: String): TransactionEntity?
 }
 
 data class CryptoFiatHolding(
@@ -297,6 +303,12 @@ interface WithdrawalDao {
 
     @Query("DELETE FROM withdrawals")
     suspend fun deleteAllWithdrawals()
+
+    @Query("SELECT * FROM withdrawals ORDER BY createdAt DESC")
+    suspend fun getAllWithdrawalsOnce(): List<WithdrawalEntity>
+
+    @Query("SELECT COUNT(*) FROM withdrawals")
+    suspend fun getWithdrawalCount(): Int
 }
 
 @Dao
@@ -395,6 +407,9 @@ interface NotificationDao {
 
     @Query("DELETE FROM notifications")
     suspend fun deleteAllNotifications()
+
+    @Query("SELECT * FROM notifications ORDER BY createdAt DESC")
+    suspend fun getAllNotificationsOnce(): List<NotificationEntity>
 }
 
 @Dao
@@ -416,4 +431,7 @@ interface WithdrawalThresholdDao {
 
     @Query("DELETE FROM withdrawal_thresholds")
     suspend fun deleteAll()
+
+    @Query("SELECT * FROM withdrawal_thresholds")
+    suspend fun getAllThresholdsOnce(): List<WithdrawalThresholdEntity>
 }
