@@ -23,7 +23,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.accbot.dca.R
+import com.accbot.dca.domain.model.EncryptionMode
+import com.accbot.dca.domain.model.RestoreMode
 import com.accbot.dca.presentation.components.QrScannerDialog
+import com.accbot.dca.presentation.components.SeedPhraseGrid
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.DateFormatters
 import java.time.Instant
@@ -112,6 +115,8 @@ fun BackupImportScreen(
                     "Password required" -> stringResource(R.string.backup_step_enter_password)
                     "Invalid backup file" -> stringResource(R.string.backup_invalid_file)
                     "Invalid backup format" -> stringResource(R.string.backup_invalid_file)
+                    "backup_seed_incomplete" -> stringResource(R.string.backup_seed_incomplete)
+                    "backup_invalid_seed" -> stringResource(R.string.backup_invalid_seed)
                     else -> error
                 }
                 Card(
@@ -208,6 +213,7 @@ private fun SelectSourceStep(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EnterPasswordStep(
     uiState: BackupImportUiState,
@@ -219,20 +225,49 @@ private fun EnterPasswordStep(
         fontWeight = FontWeight.Bold
     )
 
-    OutlinedTextField(
-        value = uiState.passphrase,
-        onValueChange = { viewModel.setPassphrase(it) },
-        label = { Text(stringResource(R.string.backup_enter_password)) },
-        singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        modifier = Modifier.fillMaxWidth()
-    )
+    // Mode selection: Password / Recovery Seed
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FilterChip(
+            selected = uiState.inputMode == EncryptionMode.Password,
+            onClick = { viewModel.setInputMode(EncryptionMode.Password) },
+            label = { Text(stringResource(R.string.backup_encryption_password)) },
+            modifier = Modifier.weight(1f)
+        )
+        FilterChip(
+            selected = uiState.inputMode == EncryptionMode.Seed,
+            onClick = { viewModel.setInputMode(EncryptionMode.Seed) },
+            label = { Text(stringResource(R.string.backup_encryption_seed)) },
+            modifier = Modifier.weight(1f)
+        )
+    }
 
-    Text(
-        text = stringResource(R.string.backup_enter_seed),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
+    if (uiState.inputMode == EncryptionMode.Password) {
+        OutlinedTextField(
+            value = uiState.passphrase,
+            onValueChange = { viewModel.setPassphrase(it) },
+            label = { Text(stringResource(R.string.backup_enter_password)) },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth()
+        )
+    } else {
+        Text(
+            text = stringResource(R.string.backup_enter_seed),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        SeedPhraseGrid(
+            seedWords = uiState.seedWords,
+            onWordChange = { index, word -> viewModel.setSeedWord(index, word) },
+            onAllWordsChange = { words -> viewModel.setAllSeedWords(words) },
+            getSuggestions = { prefix -> viewModel.getSuggestions(prefix) },
+            isValidWord = { word -> viewModel.isValidWord(word) }
+        )
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -246,7 +281,12 @@ private fun EnterPasswordStep(
         }
         Button(
             onClick = { viewModel.submitPassphrase() },
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            enabled = if (uiState.inputMode == EncryptionMode.Password) {
+                uiState.passphrase.isNotBlank()
+            } else {
+                uiState.seedWords.all { it.isNotBlank() }
+            }
         ) {
             Text(stringResource(R.string.common_next))
         }
@@ -300,23 +340,47 @@ private fun PreviewStep(
         }
     }
 
-    // Warning
+    // Restore mode selection
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FilterChip(
+            selected = uiState.restoreMode == RestoreMode.Merge,
+            onClick = { viewModel.setRestoreMode(RestoreMode.Merge) },
+            label = { Text(stringResource(R.string.backup_restore_mode_merge)) },
+            modifier = Modifier.weight(1f)
+        )
+        FilterChip(
+            selected = uiState.restoreMode == RestoreMode.Replace,
+            onClick = { viewModel.setRestoreMode(RestoreMode.Replace) },
+            label = { Text(stringResource(R.string.backup_restore_mode_replace)) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+
+    // Warning (dynamic based on restore mode)
+    val isReplace = uiState.restoreMode == RestoreMode.Replace
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            containerColor = if (isReplace) MaterialTheme.colorScheme.errorContainer
+            else MaterialTheme.colorScheme.secondaryContainer
         )
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
             Icon(
-                Icons.Default.Info,
+                if (isReplace) Icons.Default.Warning else Icons.Default.Info,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                tint = if (isReplace) MaterialTheme.colorScheme.onErrorContainer
+                else MaterialTheme.colorScheme.onSecondaryContainer
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = stringResource(R.string.backup_restore_warning),
+                text = if (isReplace) stringResource(R.string.backup_restore_warning_replace)
+                else stringResource(R.string.backup_restore_warning_merge),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
+                color = if (isReplace) MaterialTheme.colorScheme.onErrorContainer
+                else MaterialTheme.colorScheme.onSecondaryContainer
             )
         }
     }

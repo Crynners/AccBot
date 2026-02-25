@@ -21,22 +21,65 @@ class BackupDataRestorer @Inject constructor(
     private val credentialsStore: CredentialsStore,
     private val userPreferences: UserPreferences
 ) {
-    suspend fun restore(payload: BackupPayload): BackupResult {
+    suspend fun restore(payload: BackupPayload, restoreMode: RestoreMode = RestoreMode.Merge): BackupResult {
         return try {
             // DB operations inside a single transaction
             val planIdMap = mutableMapOf<Long, Long>()
 
             database.withTransaction {
-                // 1. Insert plans with id=0 → Room auto-generates new ID
-                for (plan in payload.plans) {
-                    val entity = plan.toEntity()
-                    val newId = dcaPlanDao.insertPlan(entity)
-                    planIdMap[plan.id] = newId
+                // Replace mode: wipe all existing DB data first
+                if (restoreMode == RestoreMode.Replace) {
+                    transactionDao.deleteAllTransactions()
+                    withdrawalDao.deleteAllWithdrawals()
+                    notificationDao.deleteAllNotifications()
+                    withdrawalThresholdDao.deleteAll()
+                    dcaPlanDao.deleteAllPlans()
                 }
 
-                // 2. Insert transactions with remapped planId
+                // 1. Plans: merge with dedup or insert after wipe
+                if (restoreMode == RestoreMode.Merge) {
+                    val existingPlans = dcaPlanDao.getAllPlansOnce()
+                    for (plan in payload.plans) {
+                        val entity = plan.toEntity()
+                        val match = existingPlans.find { existing ->
+                            existing.exchange.name == plan.exchange &&
+                                existing.crypto == plan.crypto &&
+                                existing.fiat == plan.fiat &&
+                                existing.amount.compareTo(entity.amount) == 0 &&
+                                existing.frequency == entity.frequency
+                        }
+                        if (match != null) {
+                            // Update existing plan with backup values, keep existing ID
+                            dcaPlanDao.updatePlan(match.copy(
+                                strategy = entity.strategy,
+                                isEnabled = entity.isEnabled,
+                                withdrawalEnabled = entity.withdrawalEnabled,
+                                withdrawalAddress = entity.withdrawalAddress,
+                                cronExpression = entity.cronExpression,
+                                lastExecutedAt = entity.lastExecutedAt,
+                                nextExecutionAt = entity.nextExecutionAt
+                            ))
+                            planIdMap[plan.id] = match.id
+                        } else {
+                            val newId = dcaPlanDao.insertPlan(entity)
+                            planIdMap[plan.id] = newId
+                        }
+                    }
+                } else {
+                    for (plan in payload.plans) {
+                        val entity = plan.toEntity()
+                        val newId = dcaPlanDao.insertPlan(entity)
+                        planIdMap[plan.id] = newId
+                    }
+                }
+
+                // 2. Transactions with remapped planId (merge: skip duplicates by exchangeOrderId)
                 for (tx in payload.transactions) {
                     val remappedPlanId = planIdMap[tx.planId] ?: tx.planId
+                    if (restoreMode == RestoreMode.Merge && !tx.exchangeOrderId.isNullOrEmpty()) {
+                        val existing = transactionDao.getByExchangeOrderId(tx.exchangeOrderId)
+                        if (existing != null) continue // Already imported, skip
+                    }
                     transactionDao.insertTransaction(tx.toEntity(remappedPlanId))
                 }
 
@@ -74,6 +117,9 @@ class BackupDataRestorer @Inject constructor(
 
             // Outside transaction: restore credentials
             val isSandbox = userPreferences.isSandboxMode()
+            if (restoreMode == RestoreMode.Replace) {
+                credentialsStore.clearAllCredentials(isSandbox)
+            }
             for (cred in payload.credentials) {
                 try {
                     val exchange = Exchange.valueOf(cred.exchange)

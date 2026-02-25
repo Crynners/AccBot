@@ -133,6 +133,7 @@
     <string name="backup_seed_confirm">I have written down the seed</string>
     <string name="backup_enter_seed">Enter your 12-word seed</string>
     <string name="backup_invalid_seed">Invalid seed phrase</string>
+    <string name="backup_seed_incomplete">Please fill in all 12 seed words</string>
     <string name="backup_creating">Creating backup…</string>
     <string name="backup_share_file">Share Backup File</string>
     <string name="backup_show_qr">Show QR Code</string>
@@ -155,6 +156,10 @@
     <string name="backup_preview_thresholds">Withdrawal Thresholds: %1$d</string>
     <string name="backup_restore_button">Restore</string>
     <string name="backup_restore_warning">This will add data from the backup to your current data. Existing data will not be deleted.</string>
+    <string name="backup_restore_mode_merge">Merge</string>
+    <string name="backup_restore_mode_replace">Replace All</string>
+    <string name="backup_restore_warning_merge">Backup data will be merged with your current data. Duplicate plans and transactions will be updated, new items will be added.</string>
+    <string name="backup_restore_warning_replace">All existing data will be deleted and replaced with the backup. This cannot be undone!</string>
     <string name="backup_restoring">Restoring backup…</string>
     <string name="backup_restore_success">Backup restored successfully. The app will restart.</string>
     <string name="backup_restore_error">Failed to restore backup</string>

@@ -5,6 +5,7 @@ import com.accbot.dca.domain.model.BackupEnvelope
 import com.accbot.dca.domain.model.BackupPayload
 import com.accbot.dca.domain.model.BackupPreview
 import com.accbot.dca.domain.model.BackupResult
+import com.accbot.dca.domain.model.RestoreMode
 import com.google.gson.Gson
 import java.io.ByteArrayInputStream
 import java.util.zip.GZIPInputStream
@@ -81,8 +82,8 @@ class RestoreBackupUseCase @Inject constructor(
         }
     }
 
-    suspend fun restore(payload: BackupPayload): RestoreBackupResult {
-        return when (val result = restorer.restore(payload)) {
+    suspend fun restore(payload: BackupPayload, restoreMode: RestoreMode = RestoreMode.Merge): RestoreBackupResult {
+        return when (val result = restorer.restore(payload, restoreMode)) {
             is BackupResult.Success -> RestoreBackupResult.RestoreComplete(result.message)
             is BackupResult.Error -> RestoreBackupResult.Error(result.message)
         }

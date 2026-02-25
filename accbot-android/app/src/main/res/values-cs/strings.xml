@@ -134,6 +134,7 @@
     <string name="backup_seed_confirm">Zapsal/a jsem si seed</string>
     <string name="backup_enter_seed">Zadejte svůj 12slovný seed</string>
     <string name="backup_invalid_seed">Neplatný seed</string>
+    <string name="backup_seed_incomplete">Vyplňte prosím všech 12 slov seedu</string>
     <string name="backup_creating">Vytvářím zálohu…</string>
     <string name="backup_share_file">Sdílet soubor zálohy</string>
     <string name="backup_show_qr">Zobrazit QR kód</string>
@@ -156,6 +157,10 @@
     <string name="backup_preview_thresholds">Prahové hodnoty výběrů: %1$d</string>
     <string name="backup_restore_button">Obnovit</string>
     <string name="backup_restore_warning">Data ze zálohy budou přidána k aktuálním datům. Stávající data nebudou smazána.</string>
+    <string name="backup_restore_mode_merge">Sloučit</string>
+    <string name="backup_restore_mode_replace">Nahradit vše</string>
+    <string name="backup_restore_warning_merge">Data ze zálohy budou sloučena s aktuálními daty. Duplicitní plány a transakce budou aktualizovány, nové položky přidány.</string>
+    <string name="backup_restore_warning_replace">Všechna stávající data budou smazána a nahrazena zálohou. Tuto operaci nelze vrátit!</string>
     <string name="backup_restoring">Obnovuji zálohu…</string>
     <string name="backup_restore_success">Záloha obnovena úspěšně. Aplikace se restartuje.</string>
     <string name="backup_restore_error">Obnova zálohy se nezdařila</string>

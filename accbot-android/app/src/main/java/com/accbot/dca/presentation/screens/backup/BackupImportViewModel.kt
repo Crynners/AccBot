@@ -5,8 +5,11 @@ import android.content.Intent
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.accbot.dca.data.local.Bip39WordList
 import com.accbot.dca.domain.model.BackupPayload
 import com.accbot.dca.domain.model.BackupPreview
+import com.accbot.dca.domain.model.EncryptionMode
+import com.accbot.dca.domain.model.RestoreMode
 import com.accbot.dca.domain.usecase.BackupCryptoUseCase
 import com.accbot.dca.domain.usecase.RestoreBackupResult
 import com.accbot.dca.domain.usecase.RestoreBackupUseCase
@@ -26,9 +29,12 @@ data class BackupImportUiState(
     val wizardStep: ImportWizardStep = ImportWizardStep.SELECT_SOURCE,
     val envelopeJson: String? = null,
     val isEncrypted: Boolean = false,
+    val inputMode: EncryptionMode = EncryptionMode.Password,
     val passphrase: String = "",
+    val seedWords: List<String> = List(12) { "" },
     val preview: BackupPreview? = null,
     val payload: BackupPayload? = null,
+    val restoreMode: RestoreMode = RestoreMode.Merge,
     val isRestoring: Boolean = false,
     val restoreSuccess: Boolean = false,
     val error: String? = null
@@ -38,7 +44,8 @@ data class BackupImportUiState(
 class BackupImportViewModel @Inject constructor(
     private val application: Application,
     private val restoreBackupUseCase: RestoreBackupUseCase,
-    private val cryptoUseCase: BackupCryptoUseCase
+    private val cryptoUseCase: BackupCryptoUseCase,
+    private val bip39WordList: Bip39WordList
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(BackupImportUiState())
@@ -58,10 +65,51 @@ class BackupImportViewModel @Inject constructor(
         _uiState.update { it.copy(passphrase = passphrase, error = null) }
     }
 
+    fun setRestoreMode(mode: RestoreMode) {
+        _uiState.update { it.copy(restoreMode = mode) }
+    }
+
+    fun setInputMode(mode: EncryptionMode) {
+        _uiState.update { it.copy(inputMode = mode, error = null) }
+    }
+
+    fun setSeedWord(index: Int, word: String) {
+        _uiState.update { state ->
+            val updated = state.seedWords.toMutableList().also { it[index] = word }
+            state.copy(seedWords = updated, error = null)
+        }
+    }
+
+    fun setAllSeedWords(words: List<String>) {
+        _uiState.update { state ->
+            val padded = (words + List(12) { "" }).take(12)
+            state.copy(seedWords = padded, error = null)
+        }
+    }
+
+    fun getSuggestions(prefix: String): List<String> =
+        bip39WordList.getSuggestions(prefix)
+
+    fun isValidWord(word: String): Boolean =
+        bip39WordList.isValidWord(word)
+
     fun submitPassphrase() {
         val state = _uiState.value
         val json = state.envelopeJson ?: return
-        tryParsePreview(json, state.passphrase)
+
+        if (state.inputMode == EncryptionMode.Seed) {
+            if (state.seedWords.any { it.isBlank() }) {
+                _uiState.update { it.copy(error = "backup_seed_incomplete") }
+                return
+            }
+            if (!bip39WordList.isValidSeed(state.seedWords)) {
+                _uiState.update { it.copy(error = "backup_invalid_seed") }
+                return
+            }
+            tryParsePreview(json, state.seedWords.joinToString(" "))
+        } else {
+            tryParsePreview(json, state.passphrase)
+        }
     }
 
     private fun tryParsePreview(json: String, passphrase: String) {
@@ -99,12 +147,13 @@ class BackupImportViewModel @Inject constructor(
     }
 
     fun confirmRestore() {
-        val payload = _uiState.value.payload ?: return
+        val state = _uiState.value
+        val payload = state.payload ?: return
 
         _uiState.update { it.copy(isRestoring = true, error = null) }
 
         viewModelScope.launch {
-            when (val result = restoreBackupUseCase.restore(payload)) {
+            when (val result = restoreBackupUseCase.restore(payload, state.restoreMode)) {
                 is RestoreBackupResult.RestoreComplete -> {
                     _uiState.update {
                         it.copy(

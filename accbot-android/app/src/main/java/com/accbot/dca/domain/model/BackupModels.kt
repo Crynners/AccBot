@@ -166,6 +166,14 @@ enum class EncryptionMode {
 }
 
 /**
+ * Restore mode for importing a backup.
+ */
+enum class RestoreMode {
+    Merge,   // Add & update, detect duplicates
+    Replace  // Wipe all existing data, then restore
+}
+
+/**
  * Preview of a parsed backup before restoring.
  */
 data class BackupPreview(
