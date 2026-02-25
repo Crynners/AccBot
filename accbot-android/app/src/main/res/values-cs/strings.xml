@@ -103,6 +103,71 @@
     <string name="settings_low_balance_days">%1$d dní</string>
     <string name="settings_decrease">Snížit</string>
     <string name="settings_increase">Zvýšit</string>
+    <!-- Backup & Restore -->
+    <string name="backup_section_title">ZÁLOHA A OBNOVA</string>
+    <string name="backup_export_title">Exportovat zálohu</string>
+    <string name="backup_export_subtitle">Uložit data do souboru</string>
+    <string name="backup_import_title">Importovat zálohu</string>
+    <string name="backup_import_subtitle">Obnovit data ze souboru</string>
+    <string name="backup_step_select_data">Výběr dat</string>
+    <string name="backup_step_encryption">Šifrování</string>
+    <string name="backup_step_result">Výsledek</string>
+    <string name="backup_step_select_source">Výběr zdroje</string>
+    <string name="backup_step_enter_password">Zadání hesla</string>
+    <string name="backup_step_preview">Náhled</string>
+    <string name="backup_include_plans">DCA plány</string>
+    <string name="backup_include_plans_hint">Vždy zahrnuto</string>
+    <string name="backup_include_settings">Nastavení</string>
+    <string name="backup_include_credentials">Přístupové údaje k burzám</string>
+    <string name="backup_include_credentials_hint">Vyžaduje šifrování</string>
+    <string name="backup_include_transactions">Transakce</string>
+    <string name="backup_include_notifications">Oznámení</string>
+    <string name="backup_include_withdrawals">Výběry</string>
+    <string name="backup_encryption_password">Heslo</string>
+    <string name="backup_encryption_seed">Obnovovací seed</string>
+    <string name="backup_enter_password">Zadejte heslo</string>
+    <string name="backup_confirm_password">Potvrďte heslo</string>
+    <string name="backup_password_mismatch">Hesla se neshodují</string>
+    <string name="backup_password_too_short">Heslo musí mít alespoň 8 znaků</string>
+    <string name="backup_generate_seed">Vygenerovat seed</string>
+    <string name="backup_seed_warning">Zapište si těchto 12 slov a bezpečně je uložte. Budete je potřebovat k obnovení zálohy. Zobrazí se pouze jednou.</string>
+    <string name="backup_seed_confirm">Zapsal/a jsem si seed</string>
+    <string name="backup_enter_seed">Zadejte svůj 12slovný seed</string>
+    <string name="backup_invalid_seed">Neplatný seed</string>
+    <string name="backup_seed_incomplete">Vyplňte prosím všech 12 slov seedu</string>
+    <string name="backup_creating">Vytvářím zálohu…</string>
+    <string name="backup_share_file">Sdílet soubor zálohy</string>
+    <string name="backup_show_qr">Zobrazit QR kód</string>
+    <string name="backup_qr_too_large">Záloha je příliš velká pro QR kód</string>
+    <string name="backup_export_success">Záloha vytvořena úspěšně</string>
+    <string name="backup_choose_file">Vybrat soubor</string>
+    <string name="backup_scan_qr">Naskenovat QR kód</string>
+    <string name="backup_choose_file_subtitle">Vyberte soubor zálohy AccBot</string>
+    <string name="backup_scan_qr_subtitle">Naskenujte QR kód zálohy</string>
+    <string name="backup_invalid_file">Neplatný soubor zálohy</string>
+    <string name="backup_wrong_password">Špatné heslo nebo seed</string>
+    <string name="backup_preview_created">Vytvořeno</string>
+    <string name="backup_preview_version">Verze aplikace</string>
+    <string name="backup_preview_plans">Plány: %1$d</string>
+    <string name="backup_preview_settings">Nastavení: zahrnuto</string>
+    <string name="backup_preview_credentials">Přístupové údaje: %1$d</string>
+    <string name="backup_preview_transactions">Transakce: %1$d</string>
+    <string name="backup_preview_notifications">Oznámení: %1$d</string>
+    <string name="backup_preview_withdrawals">Výběry: %1$d</string>
+    <string name="backup_preview_thresholds">Prahové hodnoty výběrů: %1$d</string>
+    <string name="backup_restore_button">Obnovit</string>
+    <string name="backup_restore_warning">Data ze zálohy budou přidána k aktuálním datům. Stávající data nebudou smazána.</string>
+    <string name="backup_restore_mode_merge">Sloučit</string>
+    <string name="backup_restore_mode_replace">Nahradit vše</string>
+    <string name="backup_restore_warning_merge">Data ze zálohy budou sloučena s aktuálními daty. Duplicitní plány a transakce budou aktualizovány, nové položky přidány.</string>
+    <string name="backup_restore_warning_replace">Všechna stávající data budou smazána a nahrazena zálohou. Tuto operaci nelze vrátit!</string>
+    <string name="backup_restoring">Obnovuji zálohu…</string>
+    <string name="backup_restore_success">Záloha obnovena úspěšně. Aplikace se restartuje.</string>
+    <string name="backup_restore_error">Obnova zálohy se nezdařila</string>
+    <string name="backup_credentials_require_encryption">Při zahrnutí přístupových údajů je nutné šifrování</string>
+    <string name="backup_no_passphrase">Zadejte heslo nebo vygenerujte seed</string>
+    <string name="backup_items_count">%1$d položek</string>
+
     <string name="settings_about">O APLIKACI</string>
     <string name="settings_documentation">Dokumentace</string>
     <string name="settings_documentation_subtitle">Návody a API dokumentace</string>
@@ -263,7 +328,8 @@
     <string name="exchanges_connected">Připojené burzy</string>
     <string name="exchanges_available">Dostupné burzy</string>
     <string name="exchanges_remove_title">Odebrat burzu</string>
-    <string name="exchanges_remove_text">Opravdu chcete odebrat %1$s? Tím se smažou vaše API přihlašovací údaje z tohoto zařízení.</string>
+    <string name="exchanges_remove_text">Opravdu chcete odebrat %1$s? Tím se smaže veškerá historie transakcí a API přihlašovací údaje pro tuto burzu.</string>
+    <string name="exchanges_remove_text_with_plans">Opravdu chcete odebrat %1$s? Tato burza má %2$d aktivní(ch) DCA plán(ů). Odebrání burzy smaže všechny přidružené DCA plány, historii transakcí a API přihlašovací údaje.</string>
     <string name="exchanges_none_title">Žádné dostupné burzy</string>
     <string name="exchanges_none_desc">Nejsou k dispozici žádné burzy</string>
     <string name="exchanges_detail_cryptos">Kryptoměny</string>
@@ -449,8 +515,8 @@
     <string name="notification_service_title">AccBot DCA aktivní</string>
     <string name="notification_service_text">Sledování vašich DCA plánů</string>
     <string name="notification_purchase_title">DCA nákup dokončen ✓</string>
-    <string name="notification_purchase_text">Nakoupeno %1$s %2$s za %3$s %4$s</string>
-    <string name="notification_purchase_pending_text">Nakoupeno ~%1$s %2$s za %3$s (potvrzování…)</string>
+    <string name="notification_purchase_text">Nakoupeno %1$s %2$s za %3$s %4$s @&#160;%5$s %4$s</string>
+    <string name="notification_purchase_pending_text">Nakoupeno ~%1$s %2$s za %3$s @&#160;%4$s %2$s (potvrzování…)</string>
     <string name="notification_dca_failed">DCA selhalo</string>
     <string name="notification_dca_failed_text">Nepodařilo se nakoupit %1$s: %2$s</string>
     <string name="notification_dca_error">DCA chyba</string>
@@ -462,10 +528,14 @@
     <!-- TimeUtils -->
     <string name="time_not_scheduled">Nenaplánováno</string>
     <string name="time_due_now">Právě teď</string>
-    <string name="time_in_days">za %1$d dní</string>
-    <string name="time_in_1_day">za 1 den</string>
-    <string name="time_in_hours">za %1$d hodin</string>
-    <string name="time_in_1_hour">za 1 hodinu</string>
+    <string name="time_in_days">za %1$d dní %2$d h</string>
+    <string name="time_in_1_day">za 1 den %1$d h</string>
+    <string name="time_in_days_exact">za %1$d dní</string>
+    <string name="time_in_1_day_exact">za 1 den</string>
+    <string name="time_in_hours">za %1$d h %2$d min</string>
+    <string name="time_in_1_hour">za 1 h %1$d min</string>
+    <string name="time_in_hours_exact">za %1$d h</string>
+    <string name="time_in_1_hour_exact">za 1 h</string>
     <string name="time_in_minutes">za %1$d min</string>
     <string name="time_in_less_1_min">za &lt; 1 min</string>
 
@@ -543,6 +613,8 @@
     <string name="import_api_error_title">Import selhal</string>
     <string name="import_api_success_message">%1$d transakcí importováno, %2$d přeskočeno (již existovaly)</string>
     <string name="import_api_no_new">Žádné nové transakce k importu</string>
+    <string name="import_api_offer_title">Importovat historii transakcí?</string>
+    <string name="import_api_offer_text">Chcete importovat existující historii transakcí z %1$s? Můžete to udělat i později v detailu burzy.</string>
 
     <!-- Schedule Builder -->
     <string name="schedule_type_label">Typ rozvrhu</string>
@@ -660,7 +732,7 @@
     <string name="settings_dca_alerts">DCA UPOZORNĚNÍ</string>
 
     <!-- Data Management section -->
-    <string name="settings_data_management">SPRÁVA DAT</string>
+
     <string name="settings_delete_plans">Smazat DCA plány</string>
     <string name="settings_delete_transactions">Smazat historii transakcí</string>
     <string name="settings_delete_notifications">Smazat historii oznámení</string>

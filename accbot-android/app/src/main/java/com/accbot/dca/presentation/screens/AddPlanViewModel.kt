@@ -9,6 +9,7 @@ import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.presentation.model.MonthlyCostEstimate
 import com.accbot.dca.domain.model.ExchangeFilter
@@ -55,6 +56,7 @@ data class AddPlanUiState(
     val withdrawalAddress: String = "",
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
+    val showImportDialog: Boolean = false,
     val errorMessage: String? = null,
     val monthlyCostEstimate: MonthlyCostEstimate? = null,
     val minOrderSize: BigDecimal? = null
@@ -301,7 +303,12 @@ class AddPlanViewModel @Inject constructor(
 
                 dcaPlanDao.insertPlan(plan)
 
-                _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+                val shouldOfferImport = !state.hasCredentials && exchange.supportsApiImport
+                _uiState.update { it.copy(
+                    isLoading = false,
+                    isSuccess = !shouldOfferImport,
+                    showImportDialog = shouldOfferImport
+                ) }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -311,5 +318,9 @@ class AddPlanViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun dismissImportDialog() {
+        _uiState.update { it.copy(showImportDialog = false, isSuccess = true) }
     }
 }

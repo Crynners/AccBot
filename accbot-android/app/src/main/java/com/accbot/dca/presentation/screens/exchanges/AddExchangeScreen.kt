@@ -47,10 +47,36 @@ import com.accbot.dca.presentation.ui.theme.successColor
 fun AddExchangeScreen(
     onNavigateBack: () -> Unit,
     onExchangeAdded: () -> Unit,
+    onNavigateToExchangeDetail: ((String) -> Unit)? = null,
     viewModel: AddExchangeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    // Import offer dialog after successful exchange connection
+    if (uiState.showImportOffer) {
+        val exchangeName = uiState.selectedExchange?.displayName ?: ""
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissImportOffer() },
+            title = { Text(stringResource(R.string.import_api_offer_title)) },
+            text = { Text(stringResource(R.string.import_api_offer_text, exchangeName)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.dismissImportOffer()
+                    uiState.selectedExchange?.let { exchange ->
+                        onNavigateToExchangeDetail?.invoke(exchange.name)
+                    }
+                }) {
+                    Text(stringResource(R.string.import_api_title))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissImportOffer() }) {
+                    Text(stringResource(R.string.common_skip))
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {

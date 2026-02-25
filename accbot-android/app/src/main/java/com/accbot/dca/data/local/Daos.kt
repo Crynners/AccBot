@@ -47,8 +47,14 @@ interface DcaPlanDao {
     @Query("DELETE FROM dca_plans")
     suspend fun deleteAllPlans()
 
+    @Query("DELETE FROM dca_plans WHERE exchange = :exchange")
+    suspend fun deletePlansByExchange(exchange: Exchange)
+
     @Query("SELECT COUNT(*) FROM dca_plans")
     suspend fun getPlanCount(): Int
+
+    @Query("SELECT * FROM dca_plans ORDER BY createdAt DESC")
+    suspend fun getAllPlansOnce(): List<DcaPlanEntity>
 }
 
 @Dao
@@ -208,6 +214,9 @@ interface TransactionDao {
     @Query("DELETE FROM transactions WHERE planId = :planId")
     suspend fun deleteTransactionsByPlanId(planId: Long)
 
+    @Query("DELETE FROM transactions WHERE exchange = :exchange")
+    suspend fun deleteTransactionsByExchange(exchange: Exchange)
+
     @Query("""
         SELECT crypto || '/' || fiat as pair, crypto, fiat,
                CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) as totalCrypto,
@@ -246,6 +255,9 @@ interface TransactionDao {
 
     @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE exchange = :exchange AND crypto = :crypto AND status = 'COMPLETED'")
     suspend fun getTotalCryptoByExchangeAndCrypto(exchange: String, crypto: String): String
+
+    @Query("SELECT * FROM transactions WHERE exchangeOrderId = :orderId LIMIT 1")
+    suspend fun getByExchangeOrderId(orderId: String): TransactionEntity?
 }
 
 data class CryptoFiatHolding(
@@ -288,6 +300,15 @@ interface WithdrawalDao {
 
     @Delete
     suspend fun deleteWithdrawal(withdrawal: WithdrawalEntity)
+
+    @Query("DELETE FROM withdrawals")
+    suspend fun deleteAllWithdrawals()
+
+    @Query("SELECT * FROM withdrawals ORDER BY createdAt DESC")
+    suspend fun getAllWithdrawalsOnce(): List<WithdrawalEntity>
+
+    @Query("SELECT COUNT(*) FROM withdrawals")
+    suspend fun getWithdrawalCount(): Int
 }
 
 @Dao
@@ -350,6 +371,9 @@ interface DailyPriceDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPrices(prices: List<DailyPriceEntity>)
+
+    @Query("DELETE FROM daily_prices")
+    suspend fun deleteAllPrices()
 }
 
 @Dao
@@ -383,6 +407,9 @@ interface NotificationDao {
 
     @Query("DELETE FROM notifications")
     suspend fun deleteAllNotifications()
+
+    @Query("SELECT * FROM notifications ORDER BY createdAt DESC")
+    suspend fun getAllNotificationsOnce(): List<NotificationEntity>
 }
 
 @Dao
@@ -404,4 +431,7 @@ interface WithdrawalThresholdDao {
 
     @Query("DELETE FROM withdrawal_thresholds")
     suspend fun deleteAll()
+
+    @Query("SELECT * FROM withdrawal_thresholds")
+    suspend fun getAllThresholdsOnce(): List<WithdrawalThresholdEntity>
 }

@@ -14,11 +14,21 @@ object TimeUtils {
         return when {
             duration.toHours() >= 24 -> {
                 val days = duration.toDays()
-                if (days == 1L) context.getString(R.string.time_in_1_day) else context.getString(R.string.time_in_days, days.toInt())
+                val remainingHours = (duration.toHours() % 24).toInt()
+                if (remainingHours == 0) {
+                    if (days == 1L) context.getString(R.string.time_in_1_day_exact) else context.getString(R.string.time_in_days_exact, days.toInt())
+                } else {
+                    if (days == 1L) context.getString(R.string.time_in_1_day, remainingHours) else context.getString(R.string.time_in_days, days.toInt(), remainingHours)
+                }
             }
             duration.toHours() >= 1 -> {
                 val hours = duration.toHours()
-                if (hours == 1L) context.getString(R.string.time_in_1_hour) else context.getString(R.string.time_in_hours, hours.toInt())
+                val remainingMinutes = (duration.toMinutes() % 60).toInt()
+                if (remainingMinutes == 0) {
+                    if (hours == 1L) context.getString(R.string.time_in_1_hour_exact) else context.getString(R.string.time_in_hours_exact, hours.toInt())
+                } else {
+                    if (hours == 1L) context.getString(R.string.time_in_1_hour, remainingMinutes) else context.getString(R.string.time_in_hours, hours.toInt(), remainingMinutes)
+                }
             }
             else -> {
                 val minutes = duration.toMinutes()

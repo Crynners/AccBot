@@ -246,6 +246,8 @@ Generated_Code/
 # because we have git ;-)
 _UpgradeReport_Files/
 Backup*/
+!**/screens/backup/
+!**/BACKUP_IMPLEMENTATION.md
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

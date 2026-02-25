@@ -206,6 +206,7 @@ class DcaWorker @AssistedInject constructor(
                             finalResult.transaction.cryptoAmount,
                             if (isPending) purchaseAmount else finalResult.transaction.fiatAmount,
                             plan.fiat,
+                            finalResult.transaction.price,
                             plan.id,
                             pending = isPending,
                             exchange = plan.exchange

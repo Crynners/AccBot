@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AccBot</string>
+    <string name="app_name">AccBot DCA</string>
 
     <!-- Common -->
     <string name="common_back">Back</string>
@@ -102,6 +102,71 @@
     <string name="settings_low_balance_days">%1$d days</string>
     <string name="settings_decrease">Decrease</string>
     <string name="settings_increase">Increase</string>
+    <!-- Backup & Restore -->
+    <string name="backup_section_title">BACKUP &amp; RESTORE</string>
+    <string name="backup_export_title">Export Backup</string>
+    <string name="backup_export_subtitle">Save your data to a file</string>
+    <string name="backup_import_title">Import Backup</string>
+    <string name="backup_import_subtitle">Restore data from a file</string>
+    <string name="backup_step_select_data">Select Data</string>
+    <string name="backup_step_encryption">Encryption</string>
+    <string name="backup_step_result">Result</string>
+    <string name="backup_step_select_source">Select Source</string>
+    <string name="backup_step_enter_password">Enter Password</string>
+    <string name="backup_step_preview">Preview</string>
+    <string name="backup_include_plans">DCA Plans</string>
+    <string name="backup_include_plans_hint">Always included</string>
+    <string name="backup_include_settings">Settings</string>
+    <string name="backup_include_credentials">Exchange Credentials</string>
+    <string name="backup_include_credentials_hint">Encryption required</string>
+    <string name="backup_include_transactions">Transactions</string>
+    <string name="backup_include_notifications">Notifications</string>
+    <string name="backup_include_withdrawals">Withdrawals</string>
+    <string name="backup_encryption_password">Password</string>
+    <string name="backup_encryption_seed">Recovery Seed</string>
+    <string name="backup_enter_password">Enter password</string>
+    <string name="backup_confirm_password">Confirm password</string>
+    <string name="backup_password_mismatch">Passwords do not match</string>
+    <string name="backup_password_too_short">Password must be at least 8 characters</string>
+    <string name="backup_generate_seed">Generate Seed</string>
+    <string name="backup_seed_warning">Write down these 12 words and store them safely. You will need them to restore the backup. This is the only time they will be shown.</string>
+    <string name="backup_seed_confirm">I have written down the seed</string>
+    <string name="backup_enter_seed">Enter your 12-word seed</string>
+    <string name="backup_invalid_seed">Invalid seed phrase</string>
+    <string name="backup_seed_incomplete">Please fill in all 12 seed words</string>
+    <string name="backup_creating">Creating backup…</string>
+    <string name="backup_share_file">Share Backup File</string>
+    <string name="backup_show_qr">Show QR Code</string>
+    <string name="backup_qr_too_large">Backup too large for QR code</string>
+    <string name="backup_export_success">Backup created successfully</string>
+    <string name="backup_choose_file">Choose File</string>
+    <string name="backup_scan_qr">Scan QR Code</string>
+    <string name="backup_choose_file_subtitle">Select an AccBot backup file</string>
+    <string name="backup_scan_qr_subtitle">Scan a backup QR code</string>
+    <string name="backup_invalid_file">Invalid backup file</string>
+    <string name="backup_wrong_password">Wrong password or seed</string>
+    <string name="backup_preview_created">Created</string>
+    <string name="backup_preview_version">App Version</string>
+    <string name="backup_preview_plans">Plans: %1$d</string>
+    <string name="backup_preview_settings">Settings: included</string>
+    <string name="backup_preview_credentials">Credentials: %1$d</string>
+    <string name="backup_preview_transactions">Transactions: %1$d</string>
+    <string name="backup_preview_notifications">Notifications: %1$d</string>
+    <string name="backup_preview_withdrawals">Withdrawals: %1$d</string>
+    <string name="backup_preview_thresholds">Withdrawal Thresholds: %1$d</string>
+    <string name="backup_restore_button">Restore</string>
+    <string name="backup_restore_warning">This will add data from the backup to your current data. Existing data will not be deleted.</string>
+    <string name="backup_restore_mode_merge">Merge</string>
+    <string name="backup_restore_mode_replace">Replace All</string>
+    <string name="backup_restore_warning_merge">Backup data will be merged with your current data. Duplicate plans and transactions will be updated, new items will be added.</string>
+    <string name="backup_restore_warning_replace">All existing data will be deleted and replaced with the backup. This cannot be undone!</string>
+    <string name="backup_restoring">Restoring backup…</string>
+    <string name="backup_restore_success">Backup restored successfully. The app will restart.</string>
+    <string name="backup_restore_error">Failed to restore backup</string>
+    <string name="backup_credentials_require_encryption">Encryption is required when including credentials</string>
+    <string name="backup_no_passphrase">Please enter a password or generate a seed</string>
+    <string name="backup_items_count">%1$d items</string>
+
     <string name="settings_about">ABOUT</string>
     <string name="settings_documentation">Documentation</string>
     <string name="settings_documentation_subtitle">View setup guides and API docs</string>
@@ -262,7 +327,8 @@
     <string name="exchanges_connected">Connected Exchanges</string>
     <string name="exchanges_available">Available Exchanges</string>
     <string name="exchanges_remove_title">Remove Exchange</string>
-    <string name="exchanges_remove_text">Are you sure you want to remove %1$s? This will delete your API credentials from this device.</string>
+    <string name="exchanges_remove_text">Are you sure you want to remove %1$s? This will delete all transaction history and API credentials for this exchange.</string>
+    <string name="exchanges_remove_text_with_plans">Are you sure you want to remove %1$s? This exchange has %2$d active DCA plan(s). Removing the exchange will delete all associated DCA plans, transaction history and API credentials.</string>
     <string name="exchanges_none_title">No Exchanges Available</string>
     <string name="exchanges_none_desc">There are no exchanges to display</string>
     <string name="exchanges_detail_cryptos">Cryptocurrencies</string>
@@ -448,8 +514,8 @@
     <string name="notification_service_title">AccBot DCA Active</string>
     <string name="notification_service_text">Monitoring your DCA plans</string>
     <string name="notification_purchase_title">DCA Purchase Completed ✓</string>
-    <string name="notification_purchase_text">Bought %1$s %2$s for %3$s %4$s</string>
-    <string name="notification_purchase_pending_text">Purchased ~%1$s %2$s of %3$s (confirming…)</string>
+    <string name="notification_purchase_text">Bought %1$s %2$s for %3$s %4$s @&#160;%5$s %4$s</string>
+    <string name="notification_purchase_pending_text">Purchased ~%1$s %2$s of %3$s @&#160;%4$s %2$s (confirming…)</string>
     <string name="notification_dca_failed">DCA Failed</string>
     <string name="notification_dca_failed_text">Failed to buy %1$s: %2$s</string>
     <string name="notification_dca_error">DCA Error</string>
@@ -461,10 +527,14 @@
     <!-- TimeUtils -->
     <string name="time_not_scheduled">Not scheduled</string>
     <string name="time_due_now">Due now</string>
-    <string name="time_in_days">in %1$d days</string>
-    <string name="time_in_1_day">in 1 day</string>
-    <string name="time_in_hours">in %1$d hours</string>
-    <string name="time_in_1_hour">in 1 hour</string>
+    <string name="time_in_days">in %1$d days %2$d h</string>
+    <string name="time_in_1_day">in 1 day %1$d h</string>
+    <string name="time_in_days_exact">in %1$d days</string>
+    <string name="time_in_1_day_exact">in 1 day</string>
+    <string name="time_in_hours">in %1$d h %2$d min</string>
+    <string name="time_in_1_hour">in 1 h %1$d min</string>
+    <string name="time_in_hours_exact">in %1$d h</string>
+    <string name="time_in_1_hour_exact">in 1 h</string>
     <string name="time_in_minutes">in %1$d min</string>
     <string name="time_in_less_1_min">in &lt; 1 min</string>
 
@@ -563,6 +633,8 @@
     <string name="import_api_error_title">Import Failed</string>
     <string name="import_api_success_message">%1$d transactions imported, %2$d skipped (already existed)</string>
     <string name="import_api_no_new">No new transactions to import</string>
+    <string name="import_api_offer_title">Import Transaction History?</string>
+    <string name="import_api_offer_text">Would you like to import your existing transaction history from %1$s? You can also do this later from the exchange detail screen.</string>
 
     <!-- Exchange Instructions - Coinmate -->
     <string name="exchange_instructions_coinmate_1">Go to coinmate.io and log in</string>
@@ -658,7 +730,7 @@
     <string name="settings_dca_alerts">DCA ALERTS</string>
 
     <!-- Data Management section -->
-    <string name="settings_data_management">DATA MANAGEMENT</string>
+
     <string name="settings_delete_plans">Delete DCA Plans</string>
     <string name="settings_delete_transactions">Delete Transaction History</string>
     <string name="settings_delete_notifications">Delete Notification History</string>

@@ -106,6 +106,7 @@ dependencies {
 
     // Room - local database
     implementation("androidx.room:room-runtime:2.8.4")
+    implementation("androidx.room:room-ktx:2.8.4")
     ksp("androidx.room:room-compiler:2.8.4")
 
     // Hilt - dependency injection
@@ -141,6 +142,9 @@ dependencies {
 
     // CRON expression parsing for custom DCA schedules
     implementation("com.cronutils:cron-utils:9.2.1")
+
+    // QR code generation for backup export
+    implementation("com.google.zxing:core:3.5.3")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

@@ -57,6 +57,8 @@ import com.accbot.dca.presentation.screens.history.TransactionDetailsScreen
 import com.accbot.dca.presentation.screens.plans.EditPlanScreen
 import com.accbot.dca.presentation.screens.plans.PlanDetailsScreen
 import com.accbot.dca.presentation.screens.ImportCsvScreen
+import com.accbot.dca.presentation.screens.backup.BackupExportScreen
+import com.accbot.dca.presentation.screens.backup.BackupImportScreen
 import com.accbot.dca.presentation.screens.portfolio.PortfolioScreen
 import com.accbot.dca.presentation.screens.splash.SplashScreen
 import com.accbot.dca.presentation.ui.theme.AccBotTheme
@@ -314,7 +316,11 @@ fun AccBotApp(
         composable(Screen.AddPlan.route) {
             AddPlanScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onPlanCreated = { navController.popBackStack() }
+                onPlanCreated = { navController.popBackStack() },
+                onNavigateToExchangeDetail = { exchangeName ->
+                    navController.popBackStack()
+                    navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName, autoImport = true))
+                }
             )
         }
 
@@ -388,7 +394,8 @@ fun AccBotApp(
         composable(
             route = Screen.ExchangeDetail.route,
             arguments = listOf(
-                navArgument(Screen.EXCHANGE_ARG) { type = NavType.StringType }
+                navArgument(Screen.EXCHANGE_ARG) { type = NavType.StringType },
+                navArgument("autoImport") { type = NavType.BoolType; defaultValue = false }
             )
         ) {
             ExchangeDetailScreen(
@@ -406,7 +413,11 @@ fun AccBotApp(
         ) {
             AddExchangeScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onExchangeAdded = { navController.popBackStack() }
+                onExchangeAdded = { navController.popBackStack() },
+                onNavigateToExchangeDetail = { exchangeName ->
+                    navController.popBackStack()
+                    navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName, autoImport = true))
+                }
             )
         }
 
@@ -437,6 +448,14 @@ fun AccBotApp(
                 transactionId = transactionId,
                 onNavigateBack = { navController.popBackStack() }
             )
+        }
+
+        // Backup
+        composable(Screen.BackupExport.route) {
+            BackupExportScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Screen.BackupImport.route) {
+            BackupImportScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }
@@ -470,6 +489,12 @@ private fun MainTabPage(
             onNavigateBack = { onSwitchToTab(0) },
             onNavigateToExchanges = {
                 navController.navigate(Screen.ExchangeManagement.route)
+            },
+            onNavigateToBackupExport = {
+                navController.navigate(Screen.BackupExport.route)
+            },
+            onNavigateToBackupImport = {
+                navController.navigate(Screen.BackupImport.route)
             }
         )
     }
