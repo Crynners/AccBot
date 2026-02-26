@@ -19,31 +19,24 @@ class NotificationsViewModel @Inject constructor(
         .map { entities -> entities.map { it.toDomain() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val archivedNotifications: StateFlow<List<AppNotification>> = notificationDao.getArchivedNotifications()
-        .map { entities -> entities.map { it.toDomain() } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val unreadCount: StateFlow<Int> = notificationDao.getUnreadCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val archivedCount: StateFlow<Int> = notificationDao.getArchivedCount()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
-    fun archiveNotification(id: Long) {
+    fun markAsRead(id: Long) {
         viewModelScope.launch {
-            notificationDao.archiveNotification(id)
+            notificationDao.markAsRead(id)
         }
     }
 
-    fun archiveAll() {
+    fun markAllAsRead() {
         viewModelScope.launch {
-            notificationDao.archiveAllNotifications()
+            notificationDao.markAllAsRead()
         }
     }
 
-    fun clearArchive() {
+    fun deleteNotification(id: Long) {
         viewModelScope.launch {
-            notificationDao.deleteArchivedNotifications()
+            notificationDao.deleteNotification(id)
         }
     }
 }
