@@ -5,27 +5,44 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
 
-    <!-- DCA ascending bars (matches launcher icon motif) -->
+    <!-- Acc₿ icon — "Acc" rotated 90° CCW (reads bottom-to-top) + Bitcoin ₿ -->
     <!-- White monochrome per Android status bar icon guidelines -->
 
-    <!-- Bar 1 (shortest) -->
+    <!-- "A" rotated — left-pointing chevron with crossbar notch (y:16-22) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M3,16L5,16A1,1,0,0,1,6,17L6,20A1,1,0,0,1,5,21L3,21A1,1,0,0,1,2,20L2,17A1,1,0,0,1,3,16Z"/>
+        android:pathData="M1,19 L7,16 L7,17.8 L4.2,19 L7,20.2 L7,22 Z"/>
 
-    <!-- Bar 2 -->
+    <!-- First "c" rotated — ∪ arch, curve at bottom, opening upward (y:9.5-14.5) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M8.33,12L10.33,12A1,1,0,0,1,11.33,13L11.33,20A1,1,0,0,1,10.33,21L8.33,21A1,1,0,0,1,7.33,20L7.33,13A1,1,0,0,1,8.33,12Z"/>
+        android:pathData="M1.5,9.5 C1.5,14.5 6.5,14.5 6.5,9.5 L5,9.5 C5,13 3,13 3,9.5 Z"/>
 
-    <!-- Bar 3 -->
+    <!-- Second "c" rotated — ∪ arch, curve at bottom, opening upward (y:3-8) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M13.67,8L15.67,8A1,1,0,0,1,16.67,9L16.67,20A1,1,0,0,1,15.67,21L13.67,21A1,1,0,0,1,12.67,20L12.67,9A1,1,0,0,1,13.67,8Z"/>
+        android:pathData="M1.5,3 C1.5,8 6.5,8 6.5,3 L5,3 C5,6.5 3,6.5 3,3 Z"/>
 
-    <!-- Bar 4 (tallest) -->
+    <!-- ₿ upper bump with counter (hole inside B) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M19,4L21,4A1,1,0,0,1,22,5L22,20A1,1,0,0,1,21,21L19,21A1,1,0,0,1,18,20L18,5A1,1,0,0,1,19,4Z"/>
+        android:fillType="evenOdd"
+        android:pathData="M10,5 h6 a3.5,3.5 0 0,1 0,7 h-6 z M12,7 h2.5 a1.5,1.5 0 0,1 0,3 h-2.5 z"/>
+
+    <!-- ₿ lower bump with counter (slightly wider) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M10,12 h7 a3.5,3.5 0 0,1 0,7 h-7 z M12,14 h3 a1.5,1.5 0 0,1 0,3 h-3 z"/>
+
+    <!-- ₿ top serifs -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12.5,3 h1.2 v2 h-1.2 z M15,3 h1.2 v2 h-1.2 z"/>
+
+    <!-- ₿ bottom serifs -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12.5,19 h1.2 v2 h-1.2 z M15,19 h1.2 v2 h-1.2 z"/>
 
 </vector>

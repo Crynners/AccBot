@@ -475,7 +475,14 @@ private fun MainTabPage(
             onNavigateToPlanDetails = { planId ->
                 navController.navigate(Screen.PlanDetails.createRoute(planId))
             },
-            onNavigateToPortfolio = { _, _ -> onSwitchToTab(1) }
+            onNavigateToPortfolio = { _, _ -> onSwitchToTab(1) },
+            onNavigateToExchangeDetail = { exchangeName ->
+                if (exchangeName.isNotEmpty()) {
+                    navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName))
+                } else {
+                    navController.navigate(Screen.ExchangeManagement.route)
+                }
+            }
         )
         1 -> PortfolioScreen(
             onNavigateBack = { onSwitchToTab(0) },

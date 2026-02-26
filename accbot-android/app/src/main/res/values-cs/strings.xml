@@ -157,11 +157,9 @@
     <string name="backup_preview_thresholds">Prahové hodnoty výběrů: %1$d</string>
     <string name="backup_restore_button">Obnovit</string>
     <string name="backup_restore_warning">Data ze zálohy budou přidána k aktuálním datům. Stávající data nebudou smazána.</string>
-    <string name="backup_restore_mode_merge">Sloučit</string>
-    <string name="backup_restore_mode_replace">Nahradit vše</string>
-    <string name="backup_restore_warning_merge">Data ze zálohy budou sloučena s aktuálními daty. Duplicitní plány a transakce budou aktualizovány, nové položky přidány.</string>
-    <string name="backup_restore_warning_replace">Všechna stávající data budou smazána a nahrazena zálohou. Tuto operaci nelze vrátit!</string>
+    <string name="backup_restore_warning_replace">Obnova nahradí všechna stávající data obsahem zálohy.</string>
     <string name="backup_restoring">Obnovuji zálohu…</string>
+    <string name="backup_decrypting">Dešifruji…</string>
     <string name="backup_restore_success">Záloha obnovena úspěšně. Aplikace se restartuje.</string>
     <string name="backup_restore_error">Obnova zálohy se nezdařila</string>
     <string name="backup_credentials_require_encryption">Při zahrnutí přístupových údajů je nutné šifrování</string>
@@ -710,13 +708,7 @@
     <string name="notifications_title">Oznámení</string>
     <string name="notifications_empty_title">Zatím žádná oznámení</string>
     <string name="notifications_empty_description">Oznámení o nákupech, chybách a upozorněních se zobrazí zde</string>
-    <string name="notifications_dismiss_all">Zamítnout vše</string>
-    <string name="notifications_archive">Archiv</string>
-    <string name="notifications_clear_archive">Vymazat archiv</string>
-    <string name="notifications_archive_empty_title">Žádná archivovaná oznámení</string>
-    <string name="notifications_archive_empty_description">Zamítnutá oznámení se zobrazí zde</string>
-    <string name="notifications_clear_archive_dialog_title">Vymazat archiv?</string>
-    <string name="notifications_clear_archive_dialog_text">Trvale se smažou všechna archivovaná oznámení. Tuto akci nelze vrátit zpět.</string>
+    <string name="notifications_mark_all_read">Označit vše jako přečtené</string>
 
     <!-- Withdrawal threshold -->
     <string name="settings_withdrawal_alert">Upozornění na výběr</string>

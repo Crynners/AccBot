@@ -156,11 +156,9 @@
     <string name="backup_preview_thresholds">Withdrawal Thresholds: %1$d</string>
     <string name="backup_restore_button">Restore</string>
     <string name="backup_restore_warning">This will add data from the backup to your current data. Existing data will not be deleted.</string>
-    <string name="backup_restore_mode_merge">Merge</string>
-    <string name="backup_restore_mode_replace">Replace All</string>
-    <string name="backup_restore_warning_merge">Backup data will be merged with your current data. Duplicate plans and transactions will be updated, new items will be added.</string>
-    <string name="backup_restore_warning_replace">All existing data will be deleted and replaced with the backup. This cannot be undone!</string>
+    <string name="backup_restore_warning_replace">Restoring will replace all existing data with the backup contents.</string>
     <string name="backup_restoring">Restoring backup…</string>
+    <string name="backup_decrypting">Decrypting…</string>
     <string name="backup_restore_success">Backup restored successfully. The app will restart.</string>
     <string name="backup_restore_error">Failed to restore backup</string>
     <string name="backup_credentials_require_encryption">Encryption is required when including credentials</string>
@@ -708,13 +706,7 @@
     <string name="notifications_title">Notifications</string>
     <string name="notifications_empty_title">No notifications yet</string>
     <string name="notifications_empty_description">Notifications about purchases, errors and warnings will appear here</string>
-    <string name="notifications_dismiss_all">Dismiss All</string>
-    <string name="notifications_archive">Archive</string>
-    <string name="notifications_clear_archive">Clear Archive</string>
-    <string name="notifications_archive_empty_title">No archived notifications</string>
-    <string name="notifications_archive_empty_description">Dismissed notifications will appear here</string>
-    <string name="notifications_clear_archive_dialog_title">Clear Archive?</string>
-    <string name="notifications_clear_archive_dialog_text">This will permanently delete all archived notifications. This action cannot be undone.</string>
+    <string name="notifications_mark_all_read">Mark all as read</string>
 
     <!-- Withdrawal threshold -->
     <string name="settings_withdrawal_alert">Withdrawal Alert</string>
