@@ -59,7 +59,8 @@
       <div class="container">
         <div class="privacy-content">
           <h1 data-i18n="privacy_title">Privacy Policy</h1>
-          <p class="updated" data-i18n="privacy_last_updated">Last updated: February 2026</p>
+          <p class="updated" data-i18n="privacy_effective_date">Effective date: February 26, 2026</p>
+          <p class="updated" data-i18n="privacy_last_updated">Last updated: February 26, 2026</p>
 
           <p data-i18n="privacy_intro">AccBot ("the App") is a self-custody cryptocurrency DCA (Dollar Cost Averaging) tool developed by Crynners. This privacy policy explains how the App handles your data.</p>
 
@@ -73,10 +74,28 @@
             <li data-i18n="privacy_stored_item2">DCA plan configurations (crypto pair, amount, frequency, strategy)</li>
             <li data-i18n="privacy_stored_item3">Transaction history (purchase records from your DCA executions)</li>
             <li data-i18n="privacy_stored_item4">App preferences and settings</li>
+            <li data-i18n="privacy_stored_item5">Withdrawal history (records of crypto withdrawals to your wallets)</li>
+            <li data-i18n="privacy_stored_item6">Exchange balance snapshots (cached account balances for portfolio display)</li>
+            <li data-i18n="privacy_stored_item7">Cached market price data (cryptocurrency prices fetched from third-party APIs)</li>
+            <li data-i18n="privacy_stored_item8">Notification history (records of app notifications and alerts)</li>
           </ul>
 
           <h2 data-i18n="privacy_network_title">Network Communication</h2>
-          <p data-i18n="privacy_network_text">The App communicates directly with cryptocurrency exchanges via HTTPS to execute trades and retrieve market data. No data is sent to any other server. There are no analytics, tracking, or advertising services.</p>
+          <p data-i18n="privacy_network_intro">The App communicates with the following external services via HTTPS. All connections are encrypted in transit. No personal data is intentionally sent; however, your device's IP address is exposed to these services as part of normal network communication.</p>
+          <p><strong data-i18n="privacy_network_exchanges">Cryptocurrency Exchanges:</strong> <span data-i18n="privacy_network_exchanges_text">The App connects directly to exchanges you configure (e.g. Coinmate, Binance, Kraken, KuCoin, Bitfinex, Huobi, Coinbase) to execute trades, retrieve balances, and fetch order data. Only your API credentials and trade parameters are sent.</span></p>
+          <p><strong data-i18n="privacy_network_market">Market Data Providers:</strong> <span data-i18n="privacy_network_market_text">The App fetches cryptocurrency prices and market data from CoinGecko (coingecko.com), CryptoCompare (cryptocompare.com), and Alternative.me (alternative.me) for the Fear & Greed Index. No personal data or API credentials are sent to these services — only standard HTTPS requests for public market data.</span></p>
+          <p><strong data-i18n="privacy_network_mlkit">Google ML Kit (on-device):</strong> <span data-i18n="privacy_network_mlkit_text">The App uses Google ML Kit for barcode scanning and text recognition. ML Kit processes data on-device, but the SDK may send diagnostic data to Google, including device information, app info, per-installation identifiers, and performance metrics. This data is not used for advertising or user profiling. This data collection is managed by Google and is described in <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>.</span></p>
+
+          <h2 data-i18n="privacy_security_title">Data Security</h2>
+          <p data-i18n="privacy_security_text">AccBot employs multiple layers of security to protect your data:</p>
+          <ul>
+            <li data-i18n="privacy_security_item1">Exchange API credentials are encrypted using AES-256-GCM with keys stored in the hardware-backed Android Keystore</li>
+            <li data-i18n="privacy_security_item2">Sensitive app preferences are stored using EncryptedSharedPreferences</li>
+            <li data-i18n="privacy_security_item3">All network communication uses HTTPS encryption in transit</li>
+            <li data-i18n="privacy_security_item4">All app data is stored in app-private storage, inaccessible to other applications</li>
+            <li data-i18n="privacy_security_item5">Optional biometric authentication (fingerprint or face recognition) adds an additional layer of access protection</li>
+            <li data-i18n="privacy_security_item6">Exported backups are encrypted with a user-chosen password using AES-256-GCM</li>
+          </ul>
 
           <h2 data-i18n="privacy_permissions_title">Permissions</h2>
           <ul>
@@ -85,22 +104,48 @@
             <li data-i18n="privacy_perm_battery">Battery optimization exemption: Required for reliable background execution of scheduled DCA purchases</li>
             <li data-i18n="privacy_perm_alarm">Exact alarms: Required for precise scheduling of DCA purchase executions</li>
             <li data-i18n="privacy_perm_foreground">Foreground service: Required to monitor and execute DCA plans in the background</li>
+            <li data-i18n="privacy_perm_notifications">Notifications: Used to inform you about DCA execution results, errors, and plan status updates</li>
+            <li data-i18n="privacy_perm_network">Network state: Used to check internet connectivity before attempting trade executions</li>
+            <li data-i18n="privacy_perm_boot">Boot completed: Allows the App to reschedule DCA plans after device restart</li>
+            <li data-i18n="privacy_perm_wakelock">Wake lock: Ensures the device stays awake long enough to complete trade executions</li>
           </ul>
 
           <h2 data-i18n="privacy_thirdparty_title">Third-Party Services</h2>
-          <p data-i18n="privacy_thirdparty_text">AccBot does not integrate any third-party analytics, advertising, or tracking services. The only external communication is with cryptocurrency exchanges that you explicitly connect.</p>
+          <p data-i18n="privacy_thirdparty_text">AccBot does not integrate any third-party analytics, advertising, or tracking services. The App communicates with the following third-party services:</p>
+          <ul>
+            <li data-i18n="privacy_thirdparty_exchanges">Cryptocurrency exchanges (Coinmate, Binance, Kraken, KuCoin, Bitfinex, Huobi, Coinbase) — only those you explicitly connect, for trade execution and balance retrieval</li>
+            <li data-i18n="privacy_thirdparty_coingecko">CoinGecko — for cryptocurrency price data and market information</li>
+            <li data-i18n="privacy_thirdparty_cryptocompare">CryptoCompare — for cryptocurrency price data and all-time high tracking</li>
+            <li data-i18n="privacy_thirdparty_alternative">Alternative.me — for the Fear & Greed Index used in the Fear & Greed DCA strategy</li>
+            <li data-i18n="privacy_thirdparty_mlkit">Google ML Kit — on-device barcode scanning and text recognition. ML Kit may collect diagnostic data as described in <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>. This data is not used for advertising or user profiling.</li>
+          </ul>
 
           <h2 data-i18n="privacy_deletion_title">Data Deletion</h2>
-          <p data-i18n="privacy_deletion_text">All data can be deleted by using the "Delete All Data" option in Settings, or by uninstalling the App. Since no data is stored externally, uninstallation removes all traces of your data.</p>
+          <p data-i18n="privacy_deletion_text">AccBot does not require user registration or user accounts. All data can be deleted by using the "Delete All Data" option in Settings, or by uninstalling the App. Since no data is stored externally, uninstallation removes all traces of your data.</p>
 
           <h2 data-i18n="privacy_children_title">Children's Privacy</h2>
           <p data-i18n="privacy_children_text">AccBot is not intended for use by children under 18. The App facilitates cryptocurrency trading which is subject to age restrictions in most jurisdictions.</p>
+
+          <h2 data-i18n="privacy_biometric_title">Biometric Authentication</h2>
+          <p data-i18n="privacy_biometric_text">AccBot offers an optional biometric lock (fingerprint or face recognition) to protect access to the App. Biometric data is handled entirely by the Android operating system and is never accessed, stored, or transmitted by AccBot. The App only receives a success/failure result from the system biometric prompt.</p>
+
+          <h2 data-i18n="privacy_backup_title">Backup and Export</h2>
+          <p data-i18n="privacy_backup_text">AccBot allows you to export encrypted backups of your data, including DCA plans, transaction history, and optionally your exchange API credentials. Backup files are encrypted with a password you choose using AES-256-GCM encryption. Backup files are saved to your device's local storage and are never uploaded to any server by the App. You are responsible for the security of exported backup files.</p>
+
+          <h2 data-i18n="privacy_retention_title">Data Retention</h2>
+          <p data-i18n="privacy_retention_text">All data is stored locally on your device for as long as the App is installed. There are no server-side retention policies because no data is stored on external servers. You can delete specific data (individual DCA plans, transaction history) within the App, or use "Delete All Data" in Settings to erase everything. Uninstalling the App permanently removes all locally stored data.</p>
+
+          <h2 data-i18n="privacy_rights_title">Your Rights</h2>
+          <p data-i18n="privacy_rights_text">Because AccBot stores all data locally on your device and does not collect personal data on any server, you have full control over your data at all times. You can view, export, or delete any data through the App's interface. If you are in the EU (GDPR) or California (CCPA), please note that AccBot does not process personal data on external servers, so typical data subject access requests do not apply. For any privacy concerns, please contact us.</p>
+
+          <h2 data-i18n="privacy_international_title">International Data Transfer</h2>
+          <p data-i18n="privacy_international_text">When AccBot communicates with cryptocurrency exchanges and market data providers, your requests are sent to servers that may be located in various countries worldwide. These connections are encrypted via HTTPS. AccBot does not control the location of third-party servers. Please review the privacy policies of the exchanges and services you use.</p>
 
           <h2 data-i18n="privacy_changes_title">Changes to This Policy</h2>
           <p data-i18n="privacy_changes_text">Any changes to this privacy policy will be published in the app's source code repository and reflected on this page.</p>
 
           <h2 data-i18n="privacy_contact_title">Contact</h2>
-          <p data-i18n="privacy_contact_text">For questions about this privacy policy or the App, please open an issue on our GitHub repository.</p>
+          <p data-i18n="privacy_contact_text">For questions about this privacy policy or the App, you can reach us at crynners@gmail.com or open an issue on our GitHub repository.</p>
 
           <a href="index.html" class="privacy-back-link">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
