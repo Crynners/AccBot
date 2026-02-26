@@ -66,6 +66,7 @@ fun DashboardScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToPlanDetails: ((Long) -> Unit)? = null,
     onNavigateToPortfolio: ((String, String) -> Unit)? = null,
+    onNavigateToExchangeDetail: ((String) -> Unit)? = null,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -130,6 +131,12 @@ fun DashboardScreen(
                         isPriceLoading = uiState.isPriceLoading,
                         onRefreshPrices = { viewModel.refreshPrices() },
                         onHoldingClick = onNavigateToPortfolio,
+                        onImportViaApi = onNavigateToExchangeDetail?.let { nav ->
+                            {
+                                val exchanges = uiState.activePlans.map { it.plan.exchange.name }.distinct()
+                                if (exchanges.size == 1) nav(exchanges.first()) else nav("")
+                            }
+                        },
                         compact = true
                     )
 
@@ -215,7 +222,13 @@ fun DashboardScreen(
                         holdings = uiState.holdings,
                         isPriceLoading = uiState.isPriceLoading,
                         onRefreshPrices = { viewModel.refreshPrices() },
-                        onHoldingClick = onNavigateToPortfolio
+                        onHoldingClick = onNavigateToPortfolio,
+                        onImportViaApi = onNavigateToExchangeDetail?.let { nav ->
+                            {
+                                val exchanges = uiState.activePlans.map { it.plan.exchange.name }.distinct()
+                                if (exchanges.size == 1) nav(exchanges.first()) else nav("")
+                            }
+                        }
                     )
                 }
 
@@ -375,6 +388,7 @@ internal fun HoldingsPager(
     isPriceLoading: Boolean,
     onRefreshPrices: () -> Unit,
     onHoldingClick: ((String, String) -> Unit)? = null,
+    onImportViaApi: (() -> Unit)? = null,
     compact: Boolean = false
 ) {
     val successCol = successColor()
@@ -411,6 +425,18 @@ internal fun HoldingsPager(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (onImportViaApi != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(onClick = onImportViaApi) {
+                        Icon(
+                            Icons.Default.CloudDownload,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.import_api_title))
+                    }
+                }
             }
         }
         return

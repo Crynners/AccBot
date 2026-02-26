@@ -24,7 +24,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.EncryptionMode
-import com.accbot.dca.domain.model.RestoreMode
 import com.accbot.dca.presentation.components.QrScannerDialog
 import com.accbot.dca.presentation.components.SeedPhraseGrid
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -282,13 +281,22 @@ private fun EnterPasswordStep(
         Button(
             onClick = { viewModel.submitPassphrase() },
             modifier = Modifier.weight(1f),
-            enabled = if (uiState.inputMode == EncryptionMode.Password) {
+            enabled = !uiState.isParsing && if (uiState.inputMode == EncryptionMode.Password) {
                 uiState.passphrase.isNotBlank()
             } else {
                 uiState.seedWords.all { it.isNotBlank() }
             }
         ) {
-            Text(stringResource(R.string.common_next))
+            if (uiState.isParsing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.backup_decrypting))
+            } else {
+                Text(stringResource(R.string.common_next))
+            }
         }
     }
 }
@@ -340,47 +348,23 @@ private fun PreviewStep(
         }
     }
 
-    // Restore mode selection
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        FilterChip(
-            selected = uiState.restoreMode == RestoreMode.Merge,
-            onClick = { viewModel.setRestoreMode(RestoreMode.Merge) },
-            label = { Text(stringResource(R.string.backup_restore_mode_merge)) },
-            modifier = Modifier.weight(1f)
-        )
-        FilterChip(
-            selected = uiState.restoreMode == RestoreMode.Replace,
-            onClick = { viewModel.setRestoreMode(RestoreMode.Replace) },
-            label = { Text(stringResource(R.string.backup_restore_mode_replace)) },
-            modifier = Modifier.weight(1f)
-        )
-    }
-
-    // Warning (dynamic based on restore mode)
-    val isReplace = uiState.restoreMode == RestoreMode.Replace
+    // Info card
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (isReplace) MaterialTheme.colorScheme.errorContainer
-            else MaterialTheme.colorScheme.secondaryContainer
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
             Icon(
-                if (isReplace) Icons.Default.Warning else Icons.Default.Info,
+                Icons.Default.Info,
                 contentDescription = null,
-                tint = if (isReplace) MaterialTheme.colorScheme.onErrorContainer
-                else MaterialTheme.colorScheme.onSecondaryContainer
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (isReplace) stringResource(R.string.backup_restore_warning_replace)
-                else stringResource(R.string.backup_restore_warning_merge),
+                text = stringResource(R.string.backup_restore_warning_replace),
                 style = MaterialTheme.typography.bodySmall,
-                color = if (isReplace) MaterialTheme.colorScheme.onErrorContainer
-                else MaterialTheme.colorScheme.onSecondaryContainer
+                color = MaterialTheme.colorScheme.onSecondaryContainer
             )
         }
     }

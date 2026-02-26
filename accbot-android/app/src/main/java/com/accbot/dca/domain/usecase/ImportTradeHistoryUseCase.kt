@@ -35,13 +35,12 @@ class ImportTradeHistoryUseCase @Inject constructor(
         exchange: Exchange
     ): Flow<ApiImportProgress> = flow {
         try {
-            // Get the latest transaction timestamp for incremental import
-            val latestTimestamp = transactionDao.getLatestTransactionTimestamp(planId)
-            val sinceInstant = latestTimestamp?.let { Instant.ofEpochMilli(it) }
-
-            // Fetch all pages
+            // Fetch all pages — always from the beginning.
+            // Deduplication by exchangeOrderId prevents duplicates, so there's no need
+            // for a timestamp cursor which can skip historical trades when the only
+            // existing transactions are from auto-buy (not from a prior API import).
             val allTrades = mutableListOf<com.accbot.dca.domain.model.HistoricalTrade>()
-            var cursor = sinceInstant
+            var cursor: Instant? = null
             var page = 0
             val maxPages = 10_000  // Safety cap only; pagination stops naturally via hasMore
 
