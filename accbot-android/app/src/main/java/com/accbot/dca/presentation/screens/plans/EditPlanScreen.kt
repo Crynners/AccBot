@@ -12,6 +12,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -241,7 +245,10 @@ fun EditPlanScreen(
                     // Auto-withdrawal toggle
                     item {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(role = Role.Switch) { viewModel.setWithdrawalEnabled(!uiState.withdrawalEnabled) }
+                                .semantics(mergeDescendants = true) { role = Role.Switch },
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -258,7 +265,8 @@ fun EditPlanScreen(
                             }
                             Switch(
                                 checked = uiState.withdrawalEnabled,
-                                onCheckedChange = viewModel::setWithdrawalEnabled,
+                                onCheckedChange = null,
+                                modifier = Modifier.clearAndSetSemantics {},
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = successColor(),
                                     checkedTrackColor = successColor().copy(alpha = 0.5f)

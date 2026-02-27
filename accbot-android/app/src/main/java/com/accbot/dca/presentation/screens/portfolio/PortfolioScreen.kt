@@ -123,6 +123,11 @@ fun PortfolioScreen(
                             DenominationMode.FIAT -> uiState.currentPairFiat ?: "EUR"
                             DenominationMode.CRYPTO -> uiState.currentPairCrypto ?: "BTC"
                         }
+                        val legendEntries = rememberLegendEntries(
+                            denominationMode = uiState.denominationMode,
+                            isSinglePair = isSinglePair,
+                            currentPairCrypto = uiState.currentPairCrypto
+                        )
                         PortfolioLineChart(
                             chartData = chartData,
                             denominationMode = uiState.denominationMode,
@@ -138,11 +143,6 @@ fun PortfolioScreen(
                         )
 
                         // Legend below chart
-                        val legendEntries = rememberLegendEntries(
-                            denominationMode = uiState.denominationMode,
-                            isSinglePair = isSinglePair,
-                            currentPairCrypto = uiState.currentPairCrypto
-                        )
                         InteractiveChartLegend(
                             entries = legendEntries,
                             visibleSeries = uiState.visibleSeries,
@@ -489,7 +489,8 @@ internal fun PortfolioContent(
                             Spacer(Modifier.height(8.dp))
                             KpiCardContent(
                                 uiState = uiState,
-                                isSinglePair = pageItem is PairPage.SinglePair
+                                isSinglePair = pageItem is PairPage.SinglePair,
+                                scrubbedDataPoint = scrubbedDataPoint
                             )
                         }
                     }
@@ -796,14 +797,6 @@ internal fun DrillDownChips(
                                 selected = false,
                                 onClick = { onDrillDownYear(year) },
                                 label = { Text("$year") },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.ChevronRight,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = accent
-                                    )
-                                },
                                 colors = chipColors,
                                 border = chipBorder
                             )
@@ -831,14 +824,6 @@ internal fun DrillDownChips(
                                 selected = false,
                                 onClick = { onDrillDownMonth(zoomLevel.year, month) },
                                 label = { Text(shortName) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.ChevronRight,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = accent
-                                    )
-                                },
                                 colors = chipColors,
                                 border = chipBorder
                             )

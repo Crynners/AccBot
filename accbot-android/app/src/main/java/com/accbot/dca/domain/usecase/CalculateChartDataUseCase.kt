@@ -9,6 +9,7 @@ import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.temporal.WeekFields
 import javax.inject.Inject
 
 /**
@@ -100,17 +101,21 @@ class CalculateChartDataUseCase @Inject constructor(
             nextTx = if (txIterator.hasNext()) txIterator.next() else null
         }
 
-        val emitMonthly = zoomLevel is ChartZoomLevel.Overview || zoomLevel is ChartZoomLevel.Year
+        val emitMonthly = zoomLevel is ChartZoomLevel.Overview
+        val emitWeekly = zoomLevel is ChartZoomLevel.Year
+        val emitBucketed = emitMonthly || emitWeekly
         val result = mutableListOf<ChartDataPoint>()
         var lastKnownPrice: BigDecimal? = null
         var currentDate = startDate
 
-        // For monthly emission: track raw values, only build ChartDataPoint at boundaries
+        // For bucketed emission: track raw values, only build ChartDataPoint at boundaries
         var pendingEpochDay = 0L
         var pendingCrypto = BigDecimal.ZERO
         var pendingInvested = BigDecimal.ZERO
         var pendingPrice: BigDecimal? = null
-        var pendingMonth: YearMonth? = null
+        var pendingBucketKey: Int? = null  // month ordinal or year*100+week
+
+        val isoWeekField = WeekFields.ISO.weekOfWeekBasedYear()
 
         while (!currentDate.isAfter(endDate)) {
             val epochDay = currentDate.toEpochDay()
@@ -128,22 +133,26 @@ class CalculateChartDataUseCase @Inject constructor(
             if (price != null) {
                 lastKnownPrice = price
 
-                if (emitMonthly) {
-                    val currentMonth = YearMonth.from(currentDate)
-                    if (pendingMonth != null && currentMonth != pendingMonth) {
-                        // Month boundary crossed — emit the pending month's last-day snapshot
+                if (emitBucketed) {
+                    val bucketKey = if (emitWeekly) {
+                        currentDate.get(WeekFields.ISO.weekBasedYear()) * 100 + currentDate.get(isoWeekField)
+                    } else {
+                        YearMonth.from(currentDate).let { it.year * 100 + it.monthValue }
+                    }
+                    if (pendingBucketKey != null && bucketKey != pendingBucketKey) {
+                        // Bucket boundary crossed — emit the pending snapshot
                         pendingPrice?.let { pp ->
                             result.add(buildChartDataPoint(
                                 pendingEpochDay, pendingCrypto, pendingInvested, pp
                             ))
                         }
                     }
-                    // Update pending snapshot (cheap: just primitive/reference assignments)
+                    // Update pending snapshot
                     pendingEpochDay = epochDay
                     pendingCrypto = cumulativeCrypto
                     pendingInvested = cumulativeInvested
                     pendingPrice = price
-                    pendingMonth = currentMonth
+                    pendingBucketKey = bucketKey
                 } else {
                     // Daily emission — build point directly
                     result.add(buildChartDataPoint(
@@ -155,8 +164,8 @@ class CalculateChartDataUseCase @Inject constructor(
             currentDate = currentDate.plusDays(1)
         }
 
-        // Flush last pending monthly point
-        if (emitMonthly) {
+        // Flush last pending bucketed point
+        if (emitBucketed) {
             pendingPrice?.let { pp ->
                 result.add(buildChartDataPoint(
                     pendingEpochDay, pendingCrypto, pendingInvested, pp
@@ -218,16 +227,20 @@ class CalculateChartDataUseCase @Inject constructor(
             }
         }
 
-        val emitMonthly = zoomLevel is ChartZoomLevel.Overview || zoomLevel is ChartZoomLevel.Year
+        val emitMonthly = zoomLevel is ChartZoomLevel.Overview
+        val emitWeekly = zoomLevel is ChartZoomLevel.Year
+        val emitBucketed = emitMonthly || emitWeekly
         val result = mutableListOf<ChartDataPoint>()
         var currentDate = startDate
 
-        // For monthly emission: track raw aggregate values
+        // For bucketed emission: track raw aggregate values
         var pendingEpochDay = 0L
         var pendingValue = BigDecimal.ZERO
         var pendingInvested = BigDecimal.ZERO
         var hasPendingData = false
-        var pendingMonth: YearMonth? = null
+        var pendingBucketKey: Int? = null
+
+        val isoWeekField = WeekFields.ISO.weekOfWeekBasedYear()
 
         while (!currentDate.isAfter(endDate)) {
             val epochDay = currentDate.toEpochDay()
@@ -255,17 +268,21 @@ class CalculateChartDataUseCase @Inject constructor(
             }
 
             if (anyPriceFound) {
-                if (emitMonthly) {
-                    val currentMonth = YearMonth.from(currentDate)
-                    if (pendingMonth != null && currentMonth != pendingMonth && hasPendingData) {
-                        // Emit previous month's last-day snapshot
+                if (emitBucketed) {
+                    val bucketKey = if (emitWeekly) {
+                        currentDate.get(WeekFields.ISO.weekBasedYear()) * 100 + currentDate.get(isoWeekField)
+                    } else {
+                        YearMonth.from(currentDate).let { it.year * 100 + it.monthValue }
+                    }
+                    if (pendingBucketKey != null && bucketKey != pendingBucketKey && hasPendingData) {
+                        // Bucket boundary crossed — emit previous snapshot
                         result.add(buildAggregatePoint(pendingEpochDay, pendingValue, pendingInvested))
                     }
                     pendingEpochDay = epochDay
                     pendingValue = totalValue
                     pendingInvested = totalInvested
                     hasPendingData = true
-                    pendingMonth = currentMonth
+                    pendingBucketKey = bucketKey
                 } else {
                     result.add(buildAggregatePoint(epochDay, totalValue, totalInvested))
                 }
@@ -274,7 +291,7 @@ class CalculateChartDataUseCase @Inject constructor(
             currentDate = currentDate.plusDays(1)
         }
 
-        if (emitMonthly && hasPendingData) {
+        if (emitBucketed && hasPendingData) {
             result.add(buildAggregatePoint(pendingEpochDay, pendingValue, pendingInvested))
         }
 

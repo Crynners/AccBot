@@ -115,12 +115,6 @@ class NotificationService @Inject constructor(
         pending: Boolean = false,
         exchange: Exchange? = null
     ) {
-        val intent = Intent(context, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
         val title = context.getString(R.string.notification_purchase_title)
         val priceFormatted = NumberFormatters.fiat(price)
         val text = if (pending) {
@@ -129,17 +123,22 @@ class NotificationService @Inject constructor(
             context.getString(R.string.notification_purchase_text, NumberFormatters.crypto(cryptoAmount), crypto, NumberFormatters.fiat(fiatAmount), fiat, priceFormatted)
         }
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_PURCHASE)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        notificationManager.notify(notificationIdForPlan(NOTIFICATION_ID_PURCHASE, planId), notification)
-
-        persistNotification(NotificationType.PURCHASE, title, text, planId.takeIf { it > 0 }, crypto, exchange)
+        val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_PURCHASE, planId)
+        persistAndShow(
+            sysNotifId = sysNotifId,
+            channel = CHANNEL_PURCHASE,
+            title = title,
+            text = text,
+            entity = NotificationEntity(
+                type = NotificationType.PURCHASE,
+                title = title,
+                message = text,
+                planId = planId.takeIf { it > 0 },
+                crypto = crypto,
+                exchange = exchange,
+                systemNotificationId = sysNotifId
+            )
+        )
     }
 
     /**
@@ -147,23 +146,22 @@ class NotificationService @Inject constructor(
      * Uses a unique notification ID per plan so multiple error notifications are all visible.
      */
     fun showErrorNotification(title: String, message: String, planId: Long = 0, exchange: Exchange? = null, crypto: String? = null) {
-        val intent = Intent(context, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_ERROR, planId)
+        persistAndShow(
+            sysNotifId = sysNotifId,
+            channel = CHANNEL_ERROR,
+            title = title,
+            text = message,
+            entity = NotificationEntity(
+                type = NotificationType.ERROR,
+                title = title,
+                message = message,
+                planId = planId.takeIf { it > 0 },
+                crypto = crypto,
+                exchange = exchange,
+                systemNotificationId = sysNotifId
+            )
         )
-
-        val notification = NotificationCompat.Builder(context, CHANNEL_ERROR)
-            .setContentTitle(title)
-            .setContentText(message)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        notificationManager.notify(notificationIdForPlan(NOTIFICATION_ID_ERROR, planId), notification)
-
-        persistNotification(NotificationType.ERROR, title, message, planId.takeIf { it > 0 }, crypto, exchange)
     }
 
     /**
@@ -171,26 +169,23 @@ class NotificationService @Inject constructor(
      * Uses a unique notification ID per plan so multiple warnings are all visible.
      */
     fun showLowBalanceNotification(exchange: String, fiat: String, remainingDays: Double, planId: Long = 0) {
-        val intent = Intent(context, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
         val title = context.getString(R.string.notification_low_balance_title, exchange)
         val daysText = if (remainingDays < 1) context.getString(R.string.notification_low_balance_less_1_day) else context.getString(R.string.notification_low_balance_days, remainingDays.toInt())
         val text = context.getString(R.string.notification_low_balance_text, daysText, fiat)
-        val notification = NotificationCompat.Builder(context, CHANNEL_LOW_BALANCE)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        notificationManager.notify(notificationIdForPlan(NOTIFICATION_ID_LOW_BALANCE, planId), notification)
-
-        persistNotification(NotificationType.LOW_BALANCE, title, text, planId.takeIf { it > 0 })
+        val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_LOW_BALANCE, planId)
+        persistAndShow(
+            sysNotifId = sysNotifId,
+            channel = CHANNEL_LOW_BALANCE,
+            title = title,
+            text = text,
+            entity = NotificationEntity(
+                type = NotificationType.LOW_BALANCE,
+                title = title,
+                message = text,
+                planId = planId.takeIf { it > 0 },
+                systemNotificationId = sysNotifId
+            )
+        )
     }
 
     /**
@@ -203,50 +198,75 @@ class NotificationService @Inject constructor(
         threshold: BigDecimal,
         planId: Long
     ) {
-        val intent = Intent(context, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
         val title = context.getString(R.string.notification_withdrawal_threshold_title)
         val text = context.getString(R.string.notification_withdrawal_threshold_text, amount.toPlainString(), crypto, exchange)
-
-        val notification = NotificationCompat.Builder(context, CHANNEL_LOW_BALANCE)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        notificationManager.notify(notificationIdForPlan(NOTIFICATION_ID_WITHDRAWAL_THRESHOLD, planId), notification)
-
-        persistNotification(NotificationType.WITHDRAWAL_THRESHOLD, title, text, planId.takeIf { it > 0 }, crypto)
+        val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_WITHDRAWAL_THRESHOLD, planId)
+        persistAndShow(
+            sysNotifId = sysNotifId,
+            channel = CHANNEL_LOW_BALANCE,
+            title = title,
+            text = text,
+            entity = NotificationEntity(
+                type = NotificationType.WITHDRAWAL_THRESHOLD,
+                title = title,
+                message = text,
+                planId = planId.takeIf { it > 0 },
+                crypto = crypto,
+                systemNotificationId = sysNotifId
+            )
+        )
     }
 
-    private fun persistNotification(
-        type: NotificationType,
+    /**
+     * Cancel a specific system notification by its ID.
+     */
+    fun cancelNotification(systemNotificationId: Int) {
+        notificationManager.cancel(systemNotificationId)
+    }
+
+    /**
+     * Cancel all system notifications except the foreground service notification.
+     * Note: cancelAll() does not cancel foreground service notifications.
+     */
+    fun cancelAllNotifications() {
+        notificationManager.cancelAll()
+    }
+
+    /**
+     * Persist notification to DB first, then show system notification with a PendingIntent
+     * that carries the DB row ID so tapping it can mark the notification as read.
+     */
+    private fun persistAndShow(
+        sysNotifId: Int,
+        channel: String,
         title: String,
-        message: String,
-        planId: Long? = null,
-        crypto: String? = null,
-        exchange: Exchange? = null
+        text: String,
+        entity: NotificationEntity
     ) {
         persistScope.launch {
             try {
-                notificationDao.insert(
-                    NotificationEntity(
-                        type = type,
-                        title = title,
-                        message = message,
-                        planId = planId,
-                        crypto = crypto,
-                        exchange = exchange
-                    )
+                val dbId = notificationDao.insert(entity)
+
+                val intent = Intent(context, MainActivity::class.java).apply {
+                    putExtra(EXTRA_NOTIFICATION_ID, dbId)
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+                val pendingIntent = PendingIntent.getActivity(
+                    context, sysNotifId, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
+
+                val notification = NotificationCompat.Builder(context, channel)
+                    .setContentTitle(title)
+                    .setContentText(text)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true)
+                    .build()
+
+                notificationManager.notify(sysNotifId, notification)
             } catch (_: Exception) {
-                // Best-effort persistence — don't crash if DB write fails
+                // Best-effort — don't crash if DB write fails
             }
         }
     }
@@ -262,6 +282,8 @@ class NotificationService @Inject constructor(
         private const val NOTIFICATION_ID_ERROR = 200
         private const val NOTIFICATION_ID_LOW_BALANCE = 300
         private const val NOTIFICATION_ID_WITHDRAWAL_THRESHOLD = 400
+
+        const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
 
         /**
          * Generate a unique notification ID per plan to prevent overwriting.

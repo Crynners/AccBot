@@ -20,6 +20,11 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -288,7 +293,10 @@ fun PlanDetailsScreen(
                                 // Status toggle
                                 val successCol = successColor()
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .clickable(role = Role.Switch) { viewModel.togglePlanEnabled() }
+                                        .semantics(mergeDescendants = true) { role = Role.Switch }
                                 ) {
                                     Text(
                                         text = if (plan.isEnabled) stringResource(R.string.plan_details_active) else stringResource(R.string.plan_details_paused),
@@ -298,7 +306,8 @@ fun PlanDetailsScreen(
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Switch(
                                         checked = plan.isEnabled,
-                                        onCheckedChange = { viewModel.togglePlanEnabled() },
+                                        onCheckedChange = null,
+                                        modifier = Modifier.clearAndSetSemantics {},
                                         colors = SwitchDefaults.colors(
                                             checkedThumbColor = successCol,
                                             checkedTrackColor = successCol.copy(alpha = 0.5f)
@@ -325,7 +334,8 @@ fun PlanDetailsScreen(
                                 Text(
                                     text = stringResource(R.string.plan_details_configuration),
                                     fontWeight = FontWeight.SemiBold,
-                                    style = MaterialTheme.typography.titleSmall
+                                    style = MaterialTheme.typography.titleSmall,
+                                    modifier = Modifier.semantics { heading() }
                                 )
 
                                 PlanConfigRow(
@@ -382,11 +392,11 @@ fun PlanDetailsScreen(
                                     Text(
                                         text = stringResource(R.string.add_plan_dca_strategy),
                                         fontWeight = FontWeight.SemiBold,
-                                        style = MaterialTheme.typography.titleSmall
+                                        style = MaterialTheme.typography.titleSmall,
+                                        modifier = Modifier.semantics { heading() }
                                     )
                                     IconButton(
-                                        onClick = { showStrategyInfo = true },
-                                        modifier = Modifier.size(32.dp)
+                                        onClick = { showStrategyInfo = true }
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Info,
@@ -489,7 +499,8 @@ fun PlanDetailsScreen(
                                     Text(
                                         text = stringResource(R.string.plan_details_performance),
                                         fontWeight = FontWeight.SemiBold,
-                                        style = MaterialTheme.typography.titleSmall
+                                        style = MaterialTheme.typography.titleSmall,
+                                        modifier = Modifier.semantics { heading() }
                                     )
 
                                     if (uiState.isPriceLoading) {
@@ -789,7 +800,9 @@ fun PlanDetailsScreen(
                             text = stringResource(R.string.settings_danger_zone),
                             style = MaterialTheme.typography.labelMedium,
                             color = Error,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier
+                                .padding(bottom = 8.dp)
+                                .semantics { heading() }
                         )
                     }
 
