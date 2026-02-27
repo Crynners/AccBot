@@ -126,7 +126,7 @@ struct SeedPhraseGrid: View {
                         focusedIndex = index
                         focusedField = index
                     }
-                    .onChange(of: focusedField) { _, newVal in
+                    .onChange(of: focusedField) { newVal in
                         focusedIndex = newVal
                         if let idx = newVal {
                             suggestions = getSuggestions(words[idx])

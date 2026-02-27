@@ -93,7 +93,7 @@ struct EditPlanView: View {
         if let exchange = plan?.exchange,
            let minSize = exchange.minOrderSize[selectedFiat],
            amountValue < minSize {
-            return String(localized: "Amount below minimum order size (\(minSize) \(selectedFiat))")
+            return String(localized: "Amount below minimum order size (\("\(minSize)") \(selectedFiat))")
         }
         if selectedFrequency == .custom && !CronUtils.isValid(cron: cronExpression) {
             return String(localized: "Enter a valid cron expression for custom frequency")
@@ -308,7 +308,7 @@ struct EditPlanView: View {
                         RoundedRectangle(cornerRadius: CornerRadius.sm)
                             .strokeBorder(amountIsBelowMin ? colors.error : Color.clear, lineWidth: 1)
                     )
-                    .onChange(of: amount) { _, newValue in
+                    .onChange(of: amount) { newValue in
                         let filtered = newValue.filter { $0.isNumber || $0 == "." || $0 == "," }
                         let normalized = filtered.replacingOccurrences(of: ",", with: ".")
                         let parts = normalized.split(separator: ".", maxSplits: 2)

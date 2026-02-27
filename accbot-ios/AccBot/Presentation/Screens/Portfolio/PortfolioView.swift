@@ -397,8 +397,7 @@ struct PortfolioView: View {
                 ])
                 .chartLegend(.hidden)
                 .chartXSelection(value: $selectedDate)
-                // TODO: iOS 17 - migrate to two-param onChange
-                .onChange(of: selectedDate) { _, _ in
+                .onChange(of: selectedDate) { _ in
                     let now = Date()
                     if now.timeIntervalSince(lastHapticTime) > 0.1 {
                         lastHapticTime = now

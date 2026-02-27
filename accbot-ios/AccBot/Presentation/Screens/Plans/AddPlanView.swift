@@ -96,7 +96,7 @@ struct AddPlanView: View {
         .onAppear {
             viewModel.setup(dependencies)
         }
-        .onChange(of: viewModel.validationHint) { _, newHint in
+        .onChange(of: viewModel.validationHint) { newHint in
             if let hint = newHint {
                 UIAccessibility.post(notification: .announcement, argument: hint)
             }
@@ -247,7 +247,7 @@ struct AddPlanView: View {
                             .strokeBorder(amountIsBelowMin ? colors.error : Color.clear, lineWidth: 1)
                     )
                     .accessibilityLabel(String(localized: "Amount per purchase"))
-                    .onChange(of: viewModel.amount) { _, newValue in
+                    .onChange(of: viewModel.amount) { newValue in
                         let filtered = newValue.filter { $0.isNumber || $0 == "." || $0 == "," }
                         let normalized = filtered.replacingOccurrences(of: ",", with: ".")
                         // Allow only one decimal separator
