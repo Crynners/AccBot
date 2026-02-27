@@ -1,4 +1,5 @@
 import Foundation
+import zlib
 
 enum RestoreBackupResult {
     case previewReady(preview: BackupPreview, payload: BackupPayload)

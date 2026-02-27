@@ -396,7 +396,7 @@ struct PortfolioView: View {
                     PortfolioViewModel.ChartSeries.accumulatedCrypto.localizedName: colors.success,
                 ])
                 .chartLegend(.hidden)
-                .chartXSelection(value: $selectedDate)
+                .chartXSelectionIfAvailable(value: $selectedDate)
                 .onChange(of: selectedDate) { _ in
                     let now = Date()
                     if now.timeIntervalSince(lastHapticTime) > 0.1 {
@@ -590,5 +590,18 @@ struct PortfolioView: View {
 
     private func formatCrypto(_ value: Decimal) -> String {
         AccBotFormatters.formatCryptoPlain(value)
+    }
+}
+
+// MARK: - iOS 17 chart selection compatibility
+
+private extension View {
+    @ViewBuilder
+    func chartXSelectionIfAvailable(value: Binding<Date?>) -> some View {
+        if #available(iOS 17.0, *) {
+            self.chartXSelection(value: value)
+        } else {
+            self
+        }
     }
 }
