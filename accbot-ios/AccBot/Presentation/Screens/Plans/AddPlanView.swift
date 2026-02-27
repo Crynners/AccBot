@@ -446,9 +446,8 @@ struct AddPlanView: View {
                     Text(String(localized: "Address looks too short"))
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.warning)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-
-                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(Spacing.lg)

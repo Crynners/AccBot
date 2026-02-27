@@ -124,7 +124,7 @@ class AddPlanViewModel: ObservableObject {
         if let exchange = selectedExchange,
            let minSize = exchange.minOrderSize[selectedFiat],
            amountValue < minSize {
-            return String(localized: "Amount below minimum order size (\(minSize) \(selectedFiat))")
+            return String(localized: "Amount below minimum order size (\("\(minSize)") \(selectedFiat))")
         }
         if selectedFrequency == .custom && !CronUtils.isValid(cron: cronExpression) {
             return String(localized: "Enter a valid cron expression for custom frequency")

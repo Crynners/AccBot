@@ -45,7 +45,7 @@ struct BackupExportView: View {
         .navigationTitle(String(localized: "Export Backup"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { viewModel.setup(dependencies) }
-        .onChange(of: viewModel.wizardStep) { _, newStep in
+        .onChange(of: viewModel.wizardStep) { newStep in
             if newStep == .result, viewModel.isQrFeasible,
                let qrData = viewModel.generateQrCode() {
                 qrImage = UIImage(data: qrData)

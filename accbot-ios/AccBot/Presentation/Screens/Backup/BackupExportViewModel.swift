@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import CoreImage.CIFilterBuiltins
 
 enum ExportWizardStep: Int, CaseIterable {
