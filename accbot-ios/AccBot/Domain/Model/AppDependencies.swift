@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftUI
 
@@ -15,6 +16,7 @@ final class AppDependencies: ObservableObject {
     let marketDataService: MarketDataService
     let notificationService: NotificationService
     let dcaExecutionEngine: DcaExecutionEngine
+    private var cancellables = Set<AnyCancellable>()
 
     /// Get the active database based on sandbox mode
     var activeDatabase: DcaDatabase {
@@ -66,5 +68,10 @@ final class AppDependencies: ObservableObject {
         self.marketDataService = marketDataService
         self.notificationService = notificationService
         self.dcaExecutionEngine = dcaExecutionEngine
+
+        // Forward nested ObservableObject changes so SwiftUI re-renders
+        onboardingPreferences.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
     }
 }

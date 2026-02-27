@@ -1,35 +1,45 @@
 import SwiftUI
 import Combine
 
-/// Main tab view with 4 tabs: Dashboard, Portfolio, Notifications, Settings
+/// Main tab view with 4 tabs: Dashboard, Portfolio, Notifications, Settings.
+/// Uses a manual ZStack + CustomTabBar instead of native TabView to avoid
+/// known SwiftUI TabView + NavigationStack lifecycle bugs and to provide
+/// a custom animated tab bar design.
 struct MainTabView: View {
     @EnvironmentObject var router: AppRouter
     @EnvironmentObject var dependencies: AppDependencies
     @Environment(\.accBotColors) private var colors
 
-    /// Custom binding that intercepts tab selection to pop-to-root when re-selecting the active tab
-    private var tabSelection: Binding<TabItem> {
-        Binding(
-            get: { router.selectedTab },
-            set: { newTab in
-                if newTab == router.selectedTab {
-                    // Re-selecting the same tab: pop to root (standard iOS pattern)
-                    router.popToRoot()
-                } else {
-                    router.selectedTab = newTab
-                }
-            }
-        )
-    }
-
     var body: some View {
-        TabView(selection: tabSelection) {
-            dashboardTab
-            portfolioTab
-            notificationsTab
-            settingsTab
+        VStack(spacing: 0) {
+            ZStack {
+                dashboardTab
+                    .opacity(router.selectedTab == .dashboard ? 1 : 0)
+                portfolioTab
+                    .opacity(router.selectedTab == .portfolio ? 1 : 0)
+                notificationsTab
+                    .opacity(router.selectedTab == .notifications ? 1 : 0)
+                settingsTab
+                    .opacity(router.selectedTab == .settings ? 1 : 0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            CustomTabBar(
+                selectedTab: $router.selectedTab,
+                unreadNotificationCount: router.unreadNotificationCount,
+                onTabSelected: { newTab in
+                    if newTab == router.selectedTab {
+                        router.popToRoot()
+                    } else {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            router.selectedTab = newTab
+                        }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+                }
+            )
         }
-        .tint(colors.primary)
+        .ignoresSafeArea(.keyboard)
         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
         .onReceive(
             dependencies.activeDatabase.notificationDao.observeUnreadCount()
@@ -47,10 +57,6 @@ struct MainTabView: View {
                     routeDestination(route)
                 }
         }
-        .tabItem {
-            Label(TabItem.dashboard.title, systemImage: TabItem.dashboard.systemImage(isSelected: router.selectedTab == .dashboard))
-        }
-        .tag(TabItem.dashboard)
     }
 
     private var portfolioTab: some View {
@@ -60,10 +66,6 @@ struct MainTabView: View {
                     routeDestination(route)
                 }
         }
-        .tabItem {
-            Label(TabItem.portfolio.title, systemImage: TabItem.portfolio.systemImage(isSelected: router.selectedTab == .portfolio))
-        }
-        .tag(TabItem.portfolio)
     }
 
     private var notificationsTab: some View {
@@ -73,14 +75,6 @@ struct MainTabView: View {
                     routeDestination(route)
                 }
         }
-        .tabItem {
-            Label(TabItem.notifications.title, systemImage: TabItem.notifications.systemImage(isSelected: router.selectedTab == .notifications))
-        }
-        .tag(TabItem.notifications)
-        .badge(router.unreadNotificationCount)
-        .accessibilityValue(router.unreadNotificationCount > 0
-            ? String(localized: "\(router.unreadNotificationCount) unread notifications")
-            : String(localized: "No unread notifications"))
     }
 
     private var settingsTab: some View {
@@ -90,10 +84,6 @@ struct MainTabView: View {
                     routeDestination(route)
                 }
         }
-        .tabItem {
-            Label(TabItem.settings.title, systemImage: TabItem.settings.systemImage(isSelected: router.selectedTab == .settings))
-        }
-        .tag(TabItem.settings)
     }
 
     @ViewBuilder

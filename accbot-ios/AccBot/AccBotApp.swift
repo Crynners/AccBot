@@ -100,7 +100,10 @@ struct OnboardingFlowView: View {
                     case .security:
                         SecurityView(onNext: { path.append(OnboardingStep.exchangeSetup) })
                     case .exchangeSetup:
-                        ExchangeSetupView(onNext: { path.append(OnboardingStep.firstPlan) })
+                        ExchangeSetupView(
+                            onNext: { path.append(OnboardingStep.firstPlan) },
+                            onSkip: { path.append(OnboardingStep.complete) }
+                        )
                     case .firstPlan:
                         FirstPlanView(onNext: { path.append(OnboardingStep.complete) })
                     case .complete:

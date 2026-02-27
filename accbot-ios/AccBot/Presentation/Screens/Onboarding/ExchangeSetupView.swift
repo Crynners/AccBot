@@ -4,6 +4,7 @@ import UIKit
 /// Exchange selection and credential input during onboarding.
 struct ExchangeSetupView: View {
     let onNext: () -> Void
+    var onSkip: (() -> Void)?
 
     @EnvironmentObject var dependencies: AppDependencies
     @Environment(\.accBotColors) private var colors
@@ -111,7 +112,7 @@ struct ExchangeSetupView: View {
                         }
                         .alert(String(localized: "Skip Exchange Setup?"), isPresented: $showSkipConfirmation) {
                             Button(String(localized: "Cancel"), role: .cancel) {}
-                            Button(String(localized: "Skip")) { onNext() }
+                            Button(String(localized: "Skip")) { (onSkip ?? onNext)() }
                         } message: {
                             Text(String(localized: "You can add exchanges later in Settings."))
                         }
