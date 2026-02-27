@@ -394,6 +394,8 @@
     <string name="credentials_api_secret">API tajný klíč</string>
     <string name="credentials_passphrase">Heslo</string>
     <string name="credentials_toggle_visibility">Přepnout viditelnost</string>
+    <string name="credentials_show_password">Zobrazit heslo</string>
+    <string name="credentials_hide_password">Skrýt heslo</string>
     <string name="credentials_required_for">Vyžadováno pro %1$s</string>
     <string name="credentials_stored_locally">Přihlašovací údaje uloženy lokálně se šifrováním</string>
     <string name="credentials_encrypted_aes">Šifrováno lokálně pomocí AES-256</string>
@@ -713,6 +715,8 @@
     <string name="notifications_empty_description">Oznámení o nákupech, chybách a upozorněních se zobrazí zde</string>
     <string name="notifications_mark_all_read">Označit vše jako přečtené</string>
     <string name="notifications_delete_all">Smazat vše</string>
+    <string name="notification_state_read">Přečtené</string>
+    <string name="notification_state_unread">Nepřečtené</string>
 
     <!-- Withdrawal threshold -->
     <string name="settings_withdrawal_alert">Upozornění na výběr</string>

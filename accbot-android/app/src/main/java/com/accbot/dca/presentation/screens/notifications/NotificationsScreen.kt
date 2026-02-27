@@ -11,9 +11,15 @@ import androidx.compose.material.icons.automirrored.filled.CallMade
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,13 +57,17 @@ fun NotificationsScreen(
                         TextButton(onClick = { viewModel.markAllAsRead() }) {
                             Text(stringResource(R.string.notifications_mark_all_read))
                         }
+                    } else if (notifications.isNotEmpty()) {
+                        TextButton(onClick = { viewModel.deleteAllNotifications() }) {
+                            Text(stringResource(R.string.notifications_delete_all))
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
-        }
+        },
     ) { paddingValues ->
         if (notifications.isEmpty()) {
             Box(
@@ -105,20 +115,29 @@ private fun SwipeToDismissNotification(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onDismiss()
-                true
-            } else {
-                false
+    val dismissState = rememberSwipeToDismissBoxState()
+    var isFingerDown by remember { mutableStateOf(false) }
+
+    // Only delete when finger is lifted AND state has settled at EndToStart
+    LaunchedEffect(Unit) {
+        snapshotFlow { isFingerDown to dismissState.currentValue }
+            .collect { (fingerDown, value) ->
+                if (!fingerDown && value == SwipeToDismissBoxValue.EndToStart) {
+                    onDismiss()
+                }
             }
-        }
-    )
+    }
 
     SwipeToDismissBox(
         state = dismissState,
-        modifier = modifier,
+        modifier = modifier.pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    isFingerDown = event.changes.any { it.pressed }
+                }
+            }
+        },
         backgroundContent = {
             Box(
                 modifier = Modifier
@@ -152,8 +171,12 @@ private fun NotificationItem(
     modifier: Modifier = Modifier
 ) {
     val successCol = successColor()
+    val readStateDesc = stringResource(
+        if (!notification.isRead) R.string.notification_state_unread
+        else R.string.notification_state_read
+    )
     val containerColor = if (!notification.isRead) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+        lerp(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.primaryContainer, 0.15f)
     } else {
         MaterialTheme.colorScheme.surface
     }
@@ -161,7 +184,8 @@ private fun NotificationItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .semantics { stateDescription = readStateDesc }
+            .clickable(role = Role.Button, onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Row(

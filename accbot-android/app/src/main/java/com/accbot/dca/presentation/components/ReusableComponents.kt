@@ -362,8 +362,7 @@ fun StrategyOption(
                         color = if (isSelected) accentCol else MaterialTheme.colorScheme.onSurface
                     )
                     IconButton(
-                        onClick = onInfoClick,
-                        modifier = Modifier.size(32.dp)
+                        onClick = onInfoClick
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,

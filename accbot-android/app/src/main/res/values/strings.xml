@@ -393,6 +393,8 @@
     <string name="credentials_api_secret">API Secret</string>
     <string name="credentials_passphrase">Passphrase</string>
     <string name="credentials_toggle_visibility">Toggle visibility</string>
+    <string name="credentials_show_password">Show password</string>
+    <string name="credentials_hide_password">Hide password</string>
     <string name="credentials_required_for">Required for %1$s</string>
     <string name="credentials_stored_locally">Credentials stored locally with encryption</string>
     <string name="credentials_encrypted_aes">Encrypted locally with AES-256</string>
@@ -711,6 +713,8 @@
     <string name="notifications_empty_description">Notifications about purchases, errors and warnings will appear here</string>
     <string name="notifications_mark_all_read">Mark all as read</string>
     <string name="notifications_delete_all">Delete all</string>
+    <string name="notification_state_read">Read</string>
+    <string name="notification_state_unread">Unread</string>
 
     <!-- Withdrawal threshold -->
     <string name="settings_withdrawal_alert">Withdrawal Alert</string>

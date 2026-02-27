@@ -396,6 +396,9 @@ interface NotificationDao {
     @Query("SELECT COUNT(*) FROM notifications")
     suspend fun getNotificationCount(): Int
 
+    @Query("SELECT systemNotificationId FROM notifications WHERE id = :id")
+    suspend fun getSystemNotificationId(id: Long): Int?
+
     @Query("DELETE FROM notifications")
     suspend fun deleteAllNotifications()
 

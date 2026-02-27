@@ -207,7 +207,10 @@ fun CredentialsInputCard(
                                 } else {
                                     Icons.Default.Visibility
                                 },
-                                contentDescription = stringResource(R.string.credentials_toggle_visibility)
+                                contentDescription = stringResource(
+                                    if (showSecret) R.string.credentials_hide_password
+                                    else R.string.credentials_show_password
+                                )
                             )
                         }
                     }

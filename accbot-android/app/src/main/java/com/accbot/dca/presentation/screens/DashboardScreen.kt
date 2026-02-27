@@ -22,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -447,7 +448,7 @@ internal fun HoldingsPager(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {
+            .clickable(role = Role.Button) {
                 val holding = holdings.getOrNull(pagerState.currentPage) ?: return@clickable
                 onHoldingClick?.invoke(holding.crypto, holding.fiat)
             },
@@ -473,8 +474,7 @@ internal fun HoldingsPager(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 IconButton(
-                    onClick = onRefreshPrices,
-                    modifier = Modifier.size(32.dp)
+                    onClick = onRefreshPrices
                 ) {
                     if (isPriceLoading) {
                         CircularProgressIndicator(
@@ -707,7 +707,7 @@ internal fun DcaPlanCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )

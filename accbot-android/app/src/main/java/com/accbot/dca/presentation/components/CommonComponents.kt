@@ -22,6 +22,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.accbot.dca.R
@@ -81,7 +84,7 @@ fun PlanCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(role = Role.Button, onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -229,7 +232,7 @@ fun TransactionCard(
         modifier = Modifier
             .fillMaxWidth()
             .then(
-                if (onClick != null) Modifier.clickable(onClick = onClick)
+                if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick)
                 else Modifier
             ),
         colors = CardDefaults.cardColors(
@@ -316,7 +319,7 @@ fun ExchangeCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(role = Role.Button, onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -556,12 +559,12 @@ fun SectionHeader(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.semantics { heading() }
         )
         if (action != null && onAction != null) {
             FilledTonalIconButton(
                 onClick = onAction,
-                modifier = Modifier.size(32.dp),
                 colors = IconButtonDefaults.filledTonalIconButtonColors(
                     containerColor = accentColor().copy(alpha = 0.15f),
                     contentColor = accentColor()
