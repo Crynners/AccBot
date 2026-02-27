@@ -44,7 +44,31 @@ func cleanQrValue(_ raw: String) -> String {
     return value.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
-// MARK: - QR Scanner View (existing, unchanged)
+// MARK: - Camera Preview UIView
+
+/// Custom UIView that keeps the AVCaptureVideoPreviewLayer frame in sync
+/// with its own bounds via `layoutSubviews()`. This is critical because
+/// `UIViewRepresentable.updateUIView` is only called on SwiftUI state changes,
+/// NOT on UIKit layout changes — so on initial sheet presentation (especially
+/// on iPad) the preview layer would stay at `.zero` frame = black screen.
+private class CameraPreviewView: UIView {
+    var previewLayer: AVCaptureVideoPreviewLayer? {
+        didSet {
+            oldValue?.removeFromSuperlayer()
+            if let layer = previewLayer {
+                self.layer.addSublayer(layer)
+                layer.frame = bounds
+            }
+        }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        previewLayer?.frame = bounds
+    }
+}
+
+// MARK: - QR Scanner View
 
 /// AVFoundation-based QR code scanner wrapped in UIViewRepresentable.
 /// Returns the scanned string via the `onCodeScanned` closure.
@@ -55,8 +79,8 @@ struct QrScannerView: UIViewRepresentable {
         Coordinator(onCodeScanned: onCodeScanned)
     }
 
-    func makeUIView(context: Context) -> UIView {
-        let containerView = UIView(frame: .zero)
+    func makeUIView(context: Context) -> CameraPreviewView {
+        let containerView = CameraPreviewView(frame: .zero)
         containerView.backgroundColor = .black
         containerView.accessibilityLabel = NSLocalizedString("Camera preview for QR code scanning", comment: "")
         containerView.isAccessibilityElement = true
@@ -81,7 +105,7 @@ struct QrScannerView: UIViewRepresentable {
 
         let previewLayer = AVCaptureVideoPreviewLayer(session: session)
         previewLayer.videoGravity = .resizeAspectFill
-        containerView.layer.addSublayer(previewLayer)
+        containerView.previewLayer = previewLayer
         context.coordinator.previewLayer = previewLayer
 
         DispatchQueue.global(qos: .userInitiated).async {
@@ -92,11 +116,9 @@ struct QrScannerView: UIViewRepresentable {
         return containerView
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {
-        context.coordinator.previewLayer?.frame = uiView.bounds
-    }
+    func updateUIView(_ uiView: CameraPreviewView, context: Context) {}
 
-    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+    static func dismantleUIView(_ uiView: CameraPreviewView, coordinator: Coordinator) {
         coordinator.session?.stopRunning()
     }
 
@@ -164,8 +186,8 @@ struct TextScannerView: UIViewRepresentable {
         Coordinator(onTextsDetected: onTextsDetected)
     }
 
-    func makeUIView(context: Context) -> UIView {
-        let containerView = UIView(frame: .zero)
+    func makeUIView(context: Context) -> CameraPreviewView {
+        let containerView = CameraPreviewView(frame: .zero)
         containerView.backgroundColor = .black
         containerView.accessibilityLabel = NSLocalizedString("Camera preview for text scanning", comment: "")
         containerView.isAccessibilityElement = true
@@ -193,7 +215,7 @@ struct TextScannerView: UIViewRepresentable {
 
         let previewLayer = AVCaptureVideoPreviewLayer(session: session)
         previewLayer.videoGravity = .resizeAspectFill
-        containerView.layer.addSublayer(previewLayer)
+        containerView.previewLayer = previewLayer
         context.coordinator.previewLayer = previewLayer
 
         DispatchQueue.global(qos: .userInitiated).async {
@@ -204,12 +226,11 @@ struct TextScannerView: UIViewRepresentable {
         return containerView
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {
-        context.coordinator.previewLayer?.frame = uiView.bounds
+    func updateUIView(_ uiView: CameraPreviewView, context: Context) {
         context.coordinator.isFrozen = isFrozen
     }
 
-    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+    static func dismantleUIView(_ uiView: CameraPreviewView, coordinator: Coordinator) {
         coordinator.session?.stopRunning()
     }
 
