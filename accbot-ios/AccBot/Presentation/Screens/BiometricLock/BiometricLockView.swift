@@ -4,9 +4,13 @@ import LocalAuthentication
 /// Full-screen overlay blocking app until Face ID/Touch ID succeeds
 struct BiometricLockView<Content: View>: View {
     let content: Content
+    @Environment(\.accBotColors) private var colors
     @State private var isUnlocked = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var biometricIconName = "lock.fill"
+    @State private var retryCount = 0
+    private let maxRetries = 5
 
     init(@ViewBuilder content: () -> Content) {
         self.content = content()
@@ -20,7 +24,8 @@ struct BiometricLockView<Content: View>: View {
                 lockScreen
             }
         }
-        .onAppear {
+        .task {
+            resolveBiometricIcon()
             authenticate()
         }
     }
@@ -29,52 +34,92 @@ struct BiometricLockView<Content: View>: View {
         VStack(spacing: Spacing.xxl) {
             Spacer()
 
-            Image(systemName: biometricIcon)
-                .font(.system(size: 64))
-                .foregroundColor(.accentTeal)
+            Image(systemName: biometricIconName)
+                .font(AccBotFonts.iconLarge)
+                .foregroundStyle(colors.primary)
+                .accessibilityHidden(true)
 
             Text("AccBot")
                 .font(AccBotFonts.titleLarge)
-                .foregroundColor(.accentTeal)
+                .foregroundStyle(colors.primary)
 
-            Text("Authenticate to continue")
+            Text(String(localized: "Authenticate to continue"))
                 .font(AccBotFonts.body)
-                .foregroundColor(.onSurfaceVariantColor)
+                .foregroundStyle(colors.onSurfaceVariant)
 
             if showError {
                 Text(errorMessage)
                     .font(AccBotFonts.bodySmall)
-                    .foregroundColor(.errorRed)
+                    .foregroundStyle(colors.error)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Spacing.xxl)
-            }
 
-            Button {
-                authenticate()
-            } label: {
-                Text("Try Again")
-                    .font(AccBotFonts.headline)
-                    .padding(.horizontal, Spacing.xxl)
-                    .padding(.vertical, Spacing.md)
-                    .background(Color.accentTeal)
-                    .foregroundColor(.surfaceDark)
-                    .cornerRadius(CornerRadius.sm)
+                if retryCount < maxRetries {
+                    Text(String(localized: "\(maxRetries - retryCount) attempts remaining"))
+                        .font(AccBotFonts.caption)
+                        .foregroundStyle(colors.onSurfaceVariant)
+
+                    Button {
+                        authenticate()
+                    } label: {
+                        Text(String(localized: "Try Again"))
+                            .font(AccBotFonts.headline)
+                            .padding(.horizontal, Spacing.xxl)
+                            .padding(.vertical, Spacing.md)
+                            .frame(minHeight: 44)
+                            .background(colors.primary)
+                            .foregroundStyle(colors.onPrimary)
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                    }
+                } else {
+                    Text(String(localized: "Too many biometric attempts. Use device passcode instead."))
+                        .font(AccBotFonts.bodySmall)
+                        .foregroundStyle(colors.warning)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, Spacing.xxl)
+
+                    Button {
+                        authenticate()
+                    } label: {
+                        Text(String(localized: "Use Passcode"))
+                            .font(AccBotFonts.headline)
+                            .padding(.horizontal, Spacing.xxl)
+                            .padding(.vertical, Spacing.md)
+                            .frame(minHeight: 44)
+                            .background(colors.primary)
+                            .foregroundStyle(colors.onPrimary)
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                    }
+
+                    Button {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        Text(String(localized: "Open Settings"))
+                            .font(AccBotFonts.bodySmall)
+                            .foregroundStyle(colors.primary)
+                            .frame(minHeight: 44)
+                    }
+                }
             }
-            .opacity(showError ? 1 : 0)
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.backgroundDark)
+        .background(colors.background.ignoresSafeArea())
+        .onAppear {
+            UIAccessibility.post(notification: .announcement, argument: String(localized: "Authentication required"))
+        }
     }
 
-    private var biometricIcon: String {
+    private func resolveBiometricIcon() {
         let context = LAContext()
         _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
         switch context.biometryType {
-        case .faceID: return "faceid"
-        case .touchID: return "touchid"
-        default: return "lock.fill"
+        case .faceID: biometricIconName = "faceid"
+        case .touchID: biometricIconName = "touchid"
+        default: biometricIconName = "lock.fill"
         }
     }
 
@@ -82,10 +127,15 @@ struct BiometricLockView<Content: View>: View {
         let context = LAContext()
         var error: NSError?
 
-        if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+        // After exhausting biometric retries, fall back to device passcode
+        let policy: LAPolicy = retryCount >= maxRetries
+            ? .deviceOwnerAuthentication
+            : .deviceOwnerAuthenticationWithBiometrics
+
+        if context.canEvaluatePolicy(policy, error: &error) {
             context.evaluatePolicy(
-                .deviceOwnerAuthenticationWithBiometrics,
-                localizedReason: "Unlock AccBot to access your DCA plans"
+                policy,
+                localizedReason: String(localized: "Unlock AccBot to access your DCA plans")
             ) { success, authError in
                 DispatchQueue.main.async {
                     if success {
@@ -94,13 +144,17 @@ struct BiometricLockView<Content: View>: View {
                         }
                     } else {
                         showError = true
-                        errorMessage = authError?.localizedDescription ?? "Authentication failed"
+                        retryCount += 1
+                        errorMessage = authError?.localizedDescription ?? String(localized: "Authentication failed")
                     }
                 }
             }
         } else {
-            // Biometrics not available, fall through
-            isUnlocked = true
+            // Neither biometrics nor passcode available — show error with actionable guidance
+            DispatchQueue.main.async {
+                showError = true
+                errorMessage = String(localized: "Authentication is not available. Set up Face ID, Touch ID, or a device passcode in Settings to unlock AccBot.")
+            }
         }
     }
 }

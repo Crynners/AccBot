@@ -8,20 +8,13 @@ struct PlanDetailsView: View {
     @StateObject private var viewModel: PlanDetailsViewModel
 
     @State private var showDeleteConfirmation = false
+    @State private var showDeleteTransactionsConfirmation = false
 
-    @Environment(\.isSandboxMode) private var isSandboxMode
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var colors: AccBotColors {
-        AccBotColors(isSandbox: isSandboxMode, isDark: colorScheme == .dark)
-    }
+    @Environment(\.accBotColors) private var colors
 
     init(planId: Int64) {
         self.planId = planId
-        _viewModel = StateObject(wrappedValue: PlanDetailsViewModel(
-            planId: planId,
-            dependencies: AppDependencies()
-        ))
+        _viewModel = StateObject(wrappedValue: PlanDetailsViewModel(planId: planId))
     }
 
     var body: some View {
@@ -44,32 +37,74 @@ struct PlanDetailsView: View {
         .navigationTitle(String(localized: "Plan Details"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if viewModel.plan != nil {
+            if let plan = viewModel.plan {
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        router.navigate(to: .editPlan(planId))
+                    Menu {
+                        Button {
+                            router.navigate(to: .editPlan(planId))
+                        } label: {
+                            Label(String(localized: "Edit Plan"), systemImage: "pencil")
+                        }
+
+                        Button {
+                            showDeleteTransactionsConfirmation = true
+                        } label: {
+                            Label(String(localized: "Delete All Transactions"), systemImage: "trash")
+                        }
+
+                        if plan.exchange.supportsApiImport {
+                            Button {
+                                router.navigate(to: .importCsv(planId))
+                            } label: {
+                                Label(String(localized: "Import from API"), systemImage: "square.and.arrow.down")
+                            }
+                        }
+
+                        Divider()
+
+                        Button(role: .destructive) {
+                            showDeleteConfirmation = true
+                        } label: {
+                            Label(String(localized: "Delete Plan"), systemImage: "trash")
+                        }
                     } label: {
-                        Image(systemName: "pencil")
-                            .foregroundColor(colors.primary)
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(colors.primary)
                     }
                 }
             }
         }
-        .onAppear {
+        .refreshable {
             viewModel.loadData()
         }
-        .alert(
-            String(localized: "Delete Plan"),
-            isPresented: $showDeleteConfirmation
-        ) {
-            Button(String(localized: "Cancel"), role: .cancel) {}
-            Button(String(localized: "Delete"), role: .destructive) {
-                if viewModel.deletePlan() {
-                    router.pop()
+        .onAppear {
+            viewModel.setup(dependencies)
+        }
+        .sheet(isPresented: $showDeleteConfirmation) {
+            DestructiveConfirmSheet(
+                title: String(localized: "Delete Plan"),
+                message: String(localized: "This will delete the plan and all associated transactions. Type \(viewModel.plan?.pair ?? "—") to confirm."),
+                confirmWord: viewModel.plan?.pair ?? "—",
+                confirmButtonLabel: String(localized: "Delete Plan"),
+                onConfirm: {
+                    if viewModel.deletePlan() {
+                        router.pop()
+                    }
                 }
-            }
-        } message: {
-            Text(String(localized: "Are you sure you want to delete this plan and all associated transactions? This action cannot be undone."))
+            )
+        }
+        .sheet(isPresented: $showDeleteTransactionsConfirmation) {
+            DestructiveConfirmSheet(
+                title: String(localized: "Delete All Transactions"),
+                message: String(localized: "Are you sure you want to delete all transactions for this plan? This action cannot be undone."),
+                confirmWord: viewModel.plan?.pair ?? "—",
+                confirmButtonLabel: String(localized: "Delete All"),
+                onConfirm: {
+                    if viewModel.deleteAllTransactions() {
+                        viewModel.loadData()
+                    }
+                }
+            )
         }
     }
 
@@ -87,6 +122,16 @@ struct PlanDetailsView: View {
                 // Execution info card
                 executionCard(plan)
 
+                // Performance card
+                if viewModel.totalInvested > 0 || viewModel.currentPrice != nil {
+                    performanceCard(plan)
+                }
+
+                // Balance card
+                if let balance = viewModel.exchangeBalance {
+                    balanceCard(plan, balance: balance)
+                }
+
                 // Withdrawal info
                 if plan.withdrawalEnabled {
                     withdrawalCard(plan)
@@ -95,23 +140,16 @@ struct PlanDetailsView: View {
                 // Recent transactions
                 transactionsSection
 
-                // Import history button
-                if plan.exchange.supportsApiImport {
-                    importHistoryButton(plan)
-                }
-
                 // Error message
                 if let error = viewModel.errorMessage {
-                    errorBanner(error)
+                    ErrorBanner(message: error)
                 }
-
-                // Delete button
-                deleteButton
 
                 Spacer(minLength: Spacing.xxl)
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.lg)
+            .maxFormWidth()
         }
         .background(colors.background)
     }
@@ -121,20 +159,16 @@ struct PlanDetailsView: View {
     private func planHeaderCard(_ plan: DcaPlan) -> some View {
         VStack(spacing: Spacing.lg) {
             HStack(spacing: Spacing.md) {
-                Image(plan.exchange.logoName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 48, height: 48)
-                    .clipShape(Circle())
+                CryptoIcon(symbol: plan.crypto, size: 48)
 
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(plan.pair)
                         .font(AccBotFonts.titleMedium)
-                        .foregroundColor(colors.onSurface)
+                        .foregroundStyle(colors.onSurface)
 
                     Text(plan.exchange.displayName)
                         .font(AccBotFonts.bodySmall)
-                        .foregroundColor(colors.onSurfaceVariant)
+                        .foregroundStyle(colors.onSurfaceVariant)
                 }
 
                 Spacer()
@@ -142,11 +176,11 @@ struct PlanDetailsView: View {
                 // Strategy badge
                 Text(plan.strategy.displayName)
                     .font(AccBotFonts.captionSmall)
-                    .foregroundColor(colors.primary)
+                    .foregroundStyle(colors.primary)
                     .padding(.horizontal, Spacing.sm)
                     .padding(.vertical, Spacing.xs)
                     .background(colors.primary.opacity(0.15))
-                    .cornerRadius(CornerRadius.sm)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
             }
 
             Divider().background(colors.onSurfaceVariant.opacity(0.3))
@@ -154,7 +188,7 @@ struct PlanDetailsView: View {
             HStack {
                 detailColumn(
                     label: String(localized: "Amount"),
-                    value: "\(NSDecimalNumber(decimal: plan.amount).stringValue) \(plan.fiat)"
+                    value: AccBotFormatters.formatFiat(plan.amount, symbol: plan.fiat)
                 )
                 Spacer()
                 detailColumn(
@@ -167,7 +201,7 @@ struct PlanDetailsView: View {
         }
         .padding(Spacing.lg)
         .background(colors.surface)
-        .cornerRadius(CornerRadius.md)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     // MARK: - Status Card
@@ -177,24 +211,25 @@ struct PlanDetailsView: View {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(String(localized: "Status"))
                     .font(AccBotFonts.caption)
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .foregroundStyle(colors.onSurfaceVariant)
 
                 HStack(spacing: Spacing.sm) {
                     Circle()
                         .fill(plan.isEnabled ? colors.success : colors.warning)
                         .frame(width: 10, height: 10)
+                        .accessibilityHidden(true)
 
                     Text(plan.isEnabled
                          ? String(localized: "Active")
                          : String(localized: "Paused"))
                         .font(AccBotFonts.headline)
-                        .foregroundColor(colors.onSurface)
+                        .foregroundStyle(colors.onSurface)
                 }
             }
 
             Spacer()
 
-            Toggle("", isOn: Binding(
+            Toggle(String(localized: "Enable plan"), isOn: Binding(
                 get: { plan.isEnabled },
                 set: { _ in viewModel.toggleEnabled() }
             ))
@@ -203,7 +238,7 @@ struct PlanDetailsView: View {
         }
         .padding(Spacing.lg)
         .background(colors.surface)
-        .cornerRadius(CornerRadius.md)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     // MARK: - Execution Card
@@ -212,7 +247,7 @@ struct PlanDetailsView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             Text(String(localized: "Execution"))
                 .font(AccBotFonts.headline)
-                .foregroundColor(colors.onSurface)
+                .foregroundStyle(colors.onSurface)
 
             HStack {
                 executionItem(
@@ -234,7 +269,7 @@ struct PlanDetailsView: View {
         }
         .padding(Spacing.lg)
         .background(colors.surface)
-        .cornerRadius(CornerRadius.md)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     private func executionItem(icon: String, label: String, value: String) -> some View {
@@ -242,17 +277,132 @@ struct PlanDetailsView: View {
             HStack(spacing: Spacing.xs) {
                 Image(systemName: icon)
                     .font(AccBotFonts.caption)
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .foregroundStyle(colors.onSurfaceVariant)
                 Text(label)
                     .font(AccBotFonts.caption)
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .foregroundStyle(colors.onSurfaceVariant)
             }
             Text(value)
                 .font(AccBotFonts.bodySmall)
-                .foregroundColor(colors.onSurface)
+                .foregroundStyle(colors.onSurface)
                 .lineLimit(2)
-                .minimumScaleFactor(0.8)
+                .allowsTightening(true)
         }
+    }
+
+    // MARK: - Performance Card
+
+    private func performanceCard(_ plan: DcaPlan) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text(String(localized: "Performance"))
+                .font(AccBotFonts.headline)
+                .foregroundStyle(colors.onSurface)
+
+            VStack(spacing: Spacing.sm) {
+                performanceRow(
+                    label: String(localized: "Invested"),
+                    value: formatFiat(viewModel.totalInvested, symbol: plan.fiat)
+                )
+
+                performanceRow(
+                    label: String(localized: "Accumulated"),
+                    value: formatCrypto(viewModel.totalAccumulated, symbol: plan.crypto)
+                )
+
+                performanceRow(
+                    label: String(localized: "Avg Price"),
+                    value: formatFiat(viewModel.avgPrice, symbol: plan.fiat)
+                )
+
+                performanceRow(
+                    label: String(localized: "Current Price"),
+                    value: viewModel.currentPrice.map { formatFiat($0, symbol: plan.fiat) } ?? "--"
+                )
+
+                performanceRow(
+                    label: String(localized: "Current Value"),
+                    value: viewModel.currentValue.map { formatFiat($0, symbol: plan.fiat) } ?? "--"
+                )
+
+                Divider().background(colors.onSurfaceVariant.opacity(0.3))
+
+                // ROI row
+                HStack {
+                    Text(String(localized: "ROI"))
+                        .font(AccBotFonts.body)
+                        .foregroundStyle(colors.onSurfaceVariant)
+
+                    Spacer()
+
+                    if let gainLoss = viewModel.fiatGainLoss, let roi = viewModel.roi {
+                        let isPositive = gainLoss >= 0
+                        let roiColor = isPositive ? colors.success : colors.error
+                        VStack(alignment: .trailing, spacing: Spacing.xxs) {
+                            Text(formatSignedFiat(gainLoss, symbol: plan.fiat))
+                                .font(AccBotFonts.headline)
+                                .foregroundStyle(roiColor)
+                            Text(AccBotFormatters.formatSignedPercent(roi))
+                                .font(AccBotFonts.bodySmall)
+                                .foregroundStyle(roiColor)
+                        }
+                    } else {
+                        Text("--")
+                            .font(AccBotFonts.body)
+                            .foregroundStyle(colors.onSurface)
+                    }
+                }
+            }
+        }
+        .padding(Spacing.lg)
+        .background(colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+    }
+
+    private func performanceRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(AccBotFonts.body)
+                .foregroundStyle(colors.onSurfaceVariant)
+            Spacer()
+            Text(value)
+                .font(AccBotFonts.body)
+                .foregroundStyle(colors.onSurface)
+        }
+    }
+
+    // MARK: - Balance Card
+
+    private func balanceCard(_ plan: DcaPlan, balance: Decimal) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text(String(localized: "Exchange Balance"))
+                .font(AccBotFonts.headline)
+                .foregroundStyle(colors.onSurface)
+
+            HStack {
+                Text(String(localized: "Balance"))
+                    .font(AccBotFonts.body)
+                    .foregroundStyle(colors.onSurfaceVariant)
+                Spacer()
+                Text(formatFiat(balance, symbol: plan.fiat))
+                    .font(AccBotFonts.body)
+                    .foregroundStyle(colors.onSurface)
+            }
+
+            if let days = viewModel.remainingDays, let executions = viewModel.remainingExecutions {
+                HStack {
+                    Text(String(localized: "Remaining"))
+                        .font(AccBotFonts.body)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                    Spacer()
+                    Text("\(days) \(String(localized: "days")) (\(executions) \(String(localized: "executions")))")
+                        .font(AccBotFonts.body)
+                        .foregroundStyle(colors.onSurface)
+                }
+            }
+        }
+        .padding(Spacing.lg)
+        .background(colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     // MARK: - Withdrawal Card
@@ -261,20 +411,20 @@ struct PlanDetailsView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "arrow.up.right.circle.fill")
-                    .foregroundColor(colors.primary)
+                    .foregroundStyle(colors.primary)
                 Text(String(localized: "Auto-Withdrawal"))
                     .font(AccBotFonts.headline)
-                    .foregroundColor(colors.onSurface)
+                    .foregroundStyle(colors.onSurface)
             }
 
             if let address = plan.withdrawalAddress, !address.isEmpty {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(String(localized: "Wallet Address"))
                         .font(AccBotFonts.caption)
-                        .foregroundColor(colors.onSurfaceVariant)
+                        .foregroundStyle(colors.onSurfaceVariant)
                     Text(address)
                         .font(AccBotFonts.monoSmall)
-                        .foregroundColor(colors.onSurface)
+                        .foregroundStyle(colors.onSurface)
                         .lineLimit(2)
                         .textSelection(.enabled)
                 }
@@ -282,7 +432,7 @@ struct PlanDetailsView: View {
         }
         .padding(Spacing.lg)
         .background(colors.surface)
-        .cornerRadius(CornerRadius.md)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     // MARK: - Transactions Section
@@ -292,14 +442,14 @@ struct PlanDetailsView: View {
             HStack {
                 Text(String(localized: "Recent Transactions"))
                     .font(AccBotFonts.headline)
-                    .foregroundColor(colors.onSurface)
+                    .foregroundStyle(colors.onSurface)
 
                 Spacer()
 
-                if !viewModel.recentTransactions.isEmpty {
-                    Text("\(viewModel.recentTransactions.count)")
+                if viewModel.totalTransactionCount > 0 {
+                    Text("\(viewModel.totalTransactionCount)")
                         .font(AccBotFonts.caption)
-                        .foregroundColor(colors.onSurfaceVariant)
+                        .foregroundStyle(colors.onSurfaceVariant)
                 }
             }
 
@@ -319,67 +469,28 @@ struct PlanDetailsView: View {
                             TransactionCard(transaction: tx)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityHint(String(localized: "View transaction details"))
+                    }
+                }
+
+                if let plan = viewModel.plan,
+                   viewModel.totalTransactionCount > viewModel.recentTransactions.count {
+                    Button {
+                        router.navigate(to: .history(crypto: plan.crypto, fiat: plan.fiat))
+                    } label: {
+                        HStack {
+                            Text(String(localized: "View all \(viewModel.totalTransactionCount) transactions"))
+                                .font(AccBotFonts.body)
+                            Image(systemName: "chevron.right")
+                                .font(AccBotFonts.caption)
+                        }
+                        .foregroundStyle(colors.primary)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .padding(.vertical, Spacing.sm)
                     }
                 }
             }
         }
-    }
-
-    // MARK: - Import History
-
-    private func importHistoryButton(_ plan: DcaPlan) -> some View {
-        Button {
-            router.navigate(to: .importCsv(plan.id))
-        } label: {
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: "square.and.arrow.down")
-                Text(String(localized: "Import History"))
-            }
-            .font(AccBotFonts.headline)
-            .foregroundColor(colors.primary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.md)
-            .background(colors.primary.opacity(0.1))
-            .cornerRadius(CornerRadius.md)
-            .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.md)
-                    .stroke(colors.primary.opacity(0.3), lineWidth: 1)
-            )
-        }
-    }
-
-    // MARK: - Delete Button
-
-    private var deleteButton: some View {
-        Button {
-            showDeleteConfirmation = true
-        } label: {
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: "trash")
-                Text(String(localized: "Delete Plan"))
-            }
-            .font(AccBotFonts.headline)
-            .foregroundColor(colors.error)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.md)
-            .background(colors.error.opacity(0.1))
-            .cornerRadius(CornerRadius.md)
-        }
-    }
-
-    // MARK: - Error Banner
-
-    private func errorBanner(_ message: String) -> some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(colors.error)
-            Text(message)
-                .font(AccBotFonts.bodySmall)
-                .foregroundColor(colors.error)
-        }
-        .padding(Spacing.md)
-        .background(colors.error.opacity(0.1))
-        .cornerRadius(CornerRadius.sm)
     }
 
     // MARK: - Helpers
@@ -388,11 +499,24 @@ struct PlanDetailsView: View {
         VStack(alignment: .leading, spacing: Spacing.xxs) {
             Text(label)
                 .font(AccBotFonts.caption)
-                .foregroundColor(colors.onSurfaceVariant)
+                .foregroundStyle(colors.onSurfaceVariant)
             Text(value)
                 .font(AccBotFonts.body)
-                .foregroundColor(colors.onSurface)
+                .foregroundStyle(colors.onSurface)
         }
+    }
+
+    private func formatCrypto(_ value: Decimal, symbol: String) -> String {
+        AccBotFormatters.formatCrypto(value, symbol: symbol)
+    }
+
+    private func formatFiat(_ value: Decimal, symbol: String) -> String {
+        AccBotFormatters.formatFiat(value, symbol: symbol)
+    }
+
+    private func formatSignedFiat(_ value: Decimal, symbol: String) -> String {
+        let number = NSDecimalNumber(decimal: value)
+        return "\(AccBotFormatters.signedFiat.string(from: number) ?? "0") \(symbol)"
     }
 }
 
@@ -402,5 +526,4 @@ struct PlanDetailsView: View {
     NavigationStack {
         PlanDetailsView(planId: 1)
     }
-    .preferredColorScheme(.dark)
 }

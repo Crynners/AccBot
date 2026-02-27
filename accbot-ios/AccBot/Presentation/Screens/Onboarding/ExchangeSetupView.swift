@@ -1,17 +1,20 @@
 import SwiftUI
+import UIKit
 
 /// Exchange selection and credential input during onboarding.
 struct ExchangeSetupView: View {
     let onNext: () -> Void
 
     @EnvironmentObject var dependencies: AppDependencies
+    @Environment(\.accBotColors) private var colors
     @StateObject private var viewModel = ExchangeSetupViewModel()
+    @State private var showSkipConfirmation = false
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.md), count: 3)
 
     var body: some View {
         ZStack {
-            Color.backgroundDark
+            colors.background
                 .ignoresSafeArea()
 
             ScrollView {
@@ -19,16 +22,17 @@ struct ExchangeSetupView: View {
                     // Header
                     VStack(spacing: Spacing.sm) {
                         Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 48))
-                            .foregroundColor(.accentTeal)
+                            .font(AccBotFonts.displayLarge)
+                            .foregroundStyle(colors.primary)
+                            .accessibilityHidden(true)
 
-                        Text("Connect Your Exchange")
+                        Text(String(localized: "Connect Your Exchange"))
                             .font(AccBotFonts.titleLarge)
-                            .foregroundColor(.white)
+                            .foregroundStyle(colors.onSurface)
 
-                        Text("Select an exchange and enter your API credentials to get started.")
+                        Text(String(localized: "Select an exchange and enter your API credentials to get started."))
                             .font(AccBotFonts.body)
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundStyle(colors.onSurfaceVariant)
                             .multilineTextAlignment(.center)
                     }
                     .padding(.top, Spacing.xxl)
@@ -81,29 +85,35 @@ struct ExchangeSetupView: View {
                             Button(action: onNext) {
                                 HStack(spacing: Spacing.sm) {
                                     Image(systemName: "checkmark.circle.fill")
-                                    Text("Continue")
+                                    Text(String(localized: "Continue"))
                                 }
                                 .font(AccBotFonts.headline)
-                                .foregroundColor(.backgroundDark)
+                                .foregroundStyle(colors.onPrimary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, Spacing.lg)
-                                .background(Color.accentTeal)
-                                .cornerRadius(CornerRadius.md)
+                                .background(colors.primary)
+                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
                             }
                         }
 
-                        Button(action: onNext) {
-                            Text("Skip for Now")
+                        Button { showSkipConfirmation = true } label: {
+                            Text(String(localized: "Skip for Now"))
                                 .font(AccBotFonts.headline)
-                                .foregroundColor(.accentTeal)
+                                .foregroundStyle(colors.primary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, Spacing.lg)
-                                .background(Color.surfaceDark)
-                                .cornerRadius(CornerRadius.md)
+                                .background(colors.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: CornerRadius.md)
-                                        .stroke(Color.accentTeal.opacity(0.3), lineWidth: 1)
+                                        .stroke(colors.primary.opacity(0.3), lineWidth: 1)
                                 )
+                        }
+                        .alert(String(localized: "Skip Exchange Setup?"), isPresented: $showSkipConfirmation) {
+                            Button(String(localized: "Cancel"), role: .cancel) {}
+                            Button(String(localized: "Skip")) { onNext() }
+                        } message: {
+                            Text(String(localized: "You can add exchanges later in Settings."))
                         }
                     }
                     .padding(.bottom, Spacing.xxl)
@@ -111,6 +121,7 @@ struct ExchangeSetupView: View {
                 .padding(.horizontal, Spacing.xxl)
             }
         }
+        .scrollDismissesKeyboard(.interactively)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -121,6 +132,7 @@ private struct ExchangeGridItem: View {
     let exchange: Exchange
     let isSelected: Bool
     let onTap: () -> Void
+    @Environment(\.accBotColors) private var colors
 
     var body: some View {
         Button(action: onTap) {
@@ -133,19 +145,23 @@ private struct ExchangeGridItem: View {
 
                 Text(exchange.displayName)
                     .font(AccBotFonts.caption)
-                    .foregroundColor(.white)
+                    .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.md)
             .padding(.horizontal, Spacing.xs)
-            .background(isSelected ? Color.accentTeal.opacity(0.15) : Color.surfaceDark)
-            .cornerRadius(CornerRadius.md)
+            .background(isSelected ? colors.primary.opacity(0.15) : colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: CornerRadius.md)
-                    .stroke(isSelected ? Color.accentTeal : Color.clear, lineWidth: 2)
+                    .stroke(isSelected ? colors.primary : Color.clear, lineWidth: 2)
             )
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(exchange.displayName)
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+        .accessibilityValue(isSelected ? String(localized: "Selected") : String(localized: "Not selected"))
     }
 }
 
@@ -161,42 +177,44 @@ private struct OnboardingCredentialsCard: View {
     let validationError: String?
     let isValid: Bool
     let onValidate: () -> Void
+    @Environment(\.accBotColors) private var colors
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            Text("\(exchange.displayName) API Credentials")
+            Text(String(localized: "\(exchange.displayName) API Credentials"))
                 .font(AccBotFonts.titleSmall)
-                .foregroundColor(.white)
+                .foregroundStyle(colors.onSurface)
 
-            CredentialField(label: "API Key", text: $apiKey, placeholder: "Enter your API key")
-            CredentialField(label: "API Secret", text: $apiSecret, placeholder: "Enter your API secret", isSecure: true)
+            CredentialField(label: String(localized: "API Key"), text: $apiKey, placeholder: String(localized: "Enter your API key"))
+            CredentialField(label: String(localized: "API Secret"), text: $apiSecret, placeholder: String(localized: "Enter your API secret"), isSecure: true)
 
             if exchange.requiresPassphrase {
-                CredentialField(label: "Passphrase", text: $passphrase, placeholder: "Enter your passphrase", isSecure: true)
+                CredentialField(label: String(localized: "Passphrase"), text: $passphrase, placeholder: String(localized: "Enter your passphrase"), isSecure: true)
             }
 
             if exchange.requiresClientId {
-                CredentialField(label: "Client ID", text: $clientId, placeholder: "Enter your client ID")
+                CredentialField(label: String(localized: "Client ID"), text: $clientId, placeholder: String(localized: "Enter your client ID"))
             }
 
             // Validation status
             if let error = validationError {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.errorRed)
+                        .foregroundStyle(colors.error)
+                        .accessibilityHidden(true)
                     Text(error)
                         .font(AccBotFonts.bodySmall)
-                        .foregroundColor(.errorRed)
+                        .foregroundStyle(colors.error)
                 }
             }
 
             if isValid {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.accentTeal)
-                    Text("Credentials validated successfully")
+                        .foregroundStyle(colors.primary)
+                    Text(String(localized: "Credentials validated successfully"))
                         .font(AccBotFonts.bodySmall)
-                        .foregroundColor(.accentTeal)
+                        .foregroundStyle(colors.primary)
                 }
             }
 
@@ -205,22 +223,22 @@ private struct OnboardingCredentialsCard: View {
                 HStack(spacing: Spacing.sm) {
                     if isValidating {
                         ProgressView()
-                            .tint(.backgroundDark)
+                            .tint(colors.onPrimary)
                     }
-                    Text(isValidating ? "Validating..." : "Validate & Connect")
+                    Text(isValidating ? String(localized: "Validating...") : String(localized: "Validate & Connect"))
                 }
                 .font(AccBotFonts.headline)
-                .foregroundColor(.backgroundDark)
+                .foregroundStyle(canValidate ? colors.onPrimary : colors.disabledForeground)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.md)
-                .background(canValidate ? Color.accentTeal : Color.accentTeal.opacity(0.4))
-                .cornerRadius(CornerRadius.md)
+                .background(canValidate ? colors.primary : colors.disabledBackground)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
             }
             .disabled(!canValidate)
         }
         .padding(Spacing.lg)
-        .background(Color.surfaceDark)
-        .cornerRadius(CornerRadius.md)
+        .background(colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     private var canValidate: Bool {
@@ -239,29 +257,30 @@ private struct CredentialField: View {
     @Binding var text: String
     let placeholder: String
     var isSecure: Bool = false
+    @Environment(\.accBotColors) private var colors
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(label)
                 .font(AccBotFonts.label)
-                .foregroundColor(.white.opacity(0.7))
+                .foregroundStyle(colors.onSurfaceVariant)
 
             if isSecure {
                 SecureField(placeholder, text: $text)
                     .font(AccBotFonts.mono)
-                    .foregroundColor(.white)
+                    .foregroundStyle(colors.onSurface)
                     .padding(Spacing.md)
-                    .background(Color.backgroundDark)
-                    .cornerRadius(CornerRadius.sm)
+                    .background(colors.background)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
             } else {
                 TextField(placeholder, text: $text)
                     .font(AccBotFonts.mono)
-                    .foregroundColor(.white)
+                    .foregroundStyle(colors.onSurface)
                     .padding(Spacing.md)
-                    .background(Color.backgroundDark)
-                    .cornerRadius(CornerRadius.sm)
+                    .background(colors.background)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
             }
@@ -321,10 +340,14 @@ private class ExchangeSetupViewModel: ObservableObject {
                 try credentialsStore.save(credentials, isSandbox: isSandbox)
                 isValid = true
             } else {
-                validationError = "Invalid credentials. Please check your API key and secret."
+                let errorMessage = String(localized: "Invalid credentials. Please verify your API key, secret, and required permissions (Read + Trade).")
+                validationError = errorMessage
+                UIAccessibility.post(notification: .announcement, argument: errorMessage)
             }
         } catch {
-            validationError = error.localizedDescription
+            let errorMessage = error.localizedDescription
+            validationError = errorMessage
+            UIAccessibility.post(notification: .announcement, argument: errorMessage)
         }
 
         isValidating = false

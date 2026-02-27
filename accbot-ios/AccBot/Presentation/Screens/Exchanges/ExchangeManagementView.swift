@@ -3,20 +3,9 @@ import SwiftUI
 struct ExchangeManagementView: View {
     @EnvironmentObject var dependencies: AppDependencies
     @EnvironmentObject var router: AppRouter
-    @StateObject private var viewModel: ExchangeManagementViewModel
+    @StateObject private var viewModel = ExchangeManagementViewModel()
 
-    @Environment(\.isSandboxMode) private var isSandboxMode
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var colors: AccBotColors {
-        AccBotColors(isSandbox: isSandboxMode, isDark: colorScheme == .dark)
-    }
-
-    init() {
-        _viewModel = StateObject(wrappedValue: ExchangeManagementViewModel(
-            dependencies: AppDependencies()
-        ))
-    }
+    @Environment(\.accBotColors) private var colors
 
     var body: some View {
         ScrollView {
@@ -31,11 +20,13 @@ struct ExchangeManagementView: View {
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.lg)
+            .maxFormWidth()
         }
         .background(colors.background)
         .navigationTitle(String(localized: "Exchanges"))
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
+            viewModel.setup(dependencies)
             viewModel.loadExchanges()
         }
     }
@@ -47,13 +38,13 @@ struct ExchangeManagementView: View {
             HStack {
                 Text(String(localized: "Connected"))
                     .font(AccBotFonts.titleSmall)
-                    .foregroundColor(colors.onSurface)
+                    .foregroundStyle(colors.onSurface)
 
                 Spacer()
 
                 Text("\(viewModel.connectedExchanges.count)")
                     .font(AccBotFonts.caption)
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .foregroundStyle(colors.onSurfaceVariant)
             }
 
             if viewModel.connectedExchanges.isEmpty {
@@ -64,11 +55,12 @@ struct ExchangeManagementView: View {
                 )
                 .frame(height: 150)
             } else {
-                LazyVStack(spacing: Spacing.sm) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: Spacing.sm)], spacing: Spacing.sm) {
                     ForEach(viewModel.connectedExchanges) { exchange in
-                        ExchangeCard(
+                        ExchangeTile(
                             exchange: exchange,
                             isConnected: true,
+                            colors: colors,
                             onTap: {
                                 router.navigate(to: .exchangeDetail(exchange))
                             }
@@ -85,13 +77,14 @@ struct ExchangeManagementView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             Text(String(localized: "Available"))
                 .font(AccBotFonts.titleSmall)
-                .foregroundColor(colors.onSurface)
+                .foregroundStyle(colors.onSurface)
 
-            LazyVStack(spacing: Spacing.sm) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: Spacing.sm)], spacing: Spacing.sm) {
                 ForEach(viewModel.availableExchanges) { exchange in
-                    ExchangeCard(
+                    ExchangeTile(
                         exchange: exchange,
                         isConnected: false,
+                        colors: colors,
                         onTap: {
                             router.navigate(to: .addExchange(exchange))
                         }
@@ -102,11 +95,54 @@ struct ExchangeManagementView: View {
     }
 }
 
+// MARK: - Exchange Tile (Grid item)
+
+private struct ExchangeTile: View {
+    let exchange: Exchange
+    let isConnected: Bool
+    let colors: AccBotColors
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: Spacing.sm) {
+                Image(exchange.logoName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 48, height: 48)
+                    .clipShape(Circle())
+
+                Text(exchange.displayName)
+                    .font(AccBotFonts.label)
+                    .foregroundStyle(colors.onSurface)
+                    .lineLimit(1)
+
+                HStack(spacing: 4) {
+                    Image(systemName: isConnected ? "checkmark.circle.fill" : "circle")
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(isConnected ? colors.success : colors.onSurfaceVariant)
+                        .accessibilityHidden(true)
+                    Text(isConnected
+                         ? String(localized: "Connected")
+                         : String(localized: "\(exchange.supportedCryptos.count) cryptos"))
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(isConnected ? colors.success : colors.onSurfaceVariant)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(Spacing.lg)
+            .background(colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Preview
 
 #Preview {
     NavigationStack {
         ExchangeManagementView()
     }
-    .preferredColorScheme(.dark)
 }

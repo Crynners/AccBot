@@ -2,16 +2,11 @@ import SwiftUI
 
 /// Centered loading indicator with an optional descriptive message.
 struct LoadingStateView: View {
-    let message: String?
+    let message: LocalizedStringKey?
 
-    @Environment(\.isSandboxMode) private var isSandboxMode
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accBotColors) private var colors
 
-    private var colors: AccBotColors {
-        AccBotColors(isSandbox: isSandboxMode, isDark: colorScheme == .dark)
-    }
-
-    init(message: String? = nil) {
+    init(message: LocalizedStringKey? = nil) {
         self.message = message
     }
 
@@ -20,15 +15,19 @@ struct LoadingStateView: View {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: colors.primary))
                 .scaleEffect(1.2)
+                .accessibilityLabel(Text(String(localized: "Loading")))
 
             if let message {
                 Text(message)
                     .font(AccBotFonts.bodySmall)
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .foregroundStyle(colors.onSurfaceVariant)
                     .multilineTextAlignment(.center)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            UIAccessibility.post(notification: .announcement, argument: String(localized: "Loading"))
+        }
     }
 }
 

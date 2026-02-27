@@ -1,5 +1,8 @@
 import Foundation
 import GRDB
+import os
+
+private let logger = Logger(subsystem: "com.accbot.dca", category: "DataParsing")
 
 /// GRDB Record for dca_plans table
 struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable {
@@ -23,7 +26,13 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
     // MARK: - Domain Mapping
 
     func toDomain() -> DcaPlan {
-        DcaPlan(
+        if Exchange(rawValue: exchange) == nil {
+            logger.warning("Unknown exchange rawValue '\(self.exchange)' in plan \(self.id ?? 0), defaulting to coinmate")
+        }
+        if Decimal(string: amount) == nil {
+            logger.error("Invalid amount '\(self.amount)' in plan \(self.id ?? 0)")
+        }
+        return DcaPlan(
             id: id ?? 0,
             exchange: Exchange(rawValue: exchange) ?? .coinmate,
             crypto: crypto,

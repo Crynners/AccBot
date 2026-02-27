@@ -15,6 +15,7 @@ final class DcaDatabase {
     lazy var dailyPriceDao = DailyPriceDao(dbPool: dbPool)
     lazy var notificationDao = NotificationDao(dbPool: dbPool)
     lazy var withdrawalThresholdDao = WithdrawalThresholdDao(dbPool: dbPool)
+    lazy var monthlySummaryDao = MonthlySummaryDao(dbPool: dbPool)
 
     // MARK: - Initialization
 
@@ -161,7 +162,7 @@ final class DcaDatabase {
                 t.column("type", .text).notNull()
                 t.column("title", .text).notNull()
                 t.column("message", .text).notNull()
-                t.column("planId", .integer)
+                t.column("planId", .integer).references("dca_plans", onDelete: .setNull)
                 t.column("crypto", .text)
                 t.column("exchange", .text)
                 t.column("isRead", .boolean).notNull().defaults(to: false)
@@ -171,6 +172,7 @@ final class DcaDatabase {
             try db.create(index: "idx_notif_isRead", on: "notifications", columns: ["isRead"])
             try db.create(index: "idx_notif_isArchived", on: "notifications", columns: ["isArchived"])
             try db.create(index: "idx_notif_createdAt", on: "notifications", columns: ["createdAt"])
+            try db.create(index: "idx_notifications_read_archived", on: "notifications", columns: ["isRead", "isArchived"], ifNotExists: true)
 
             // withdrawal_thresholds
             try db.create(table: "withdrawal_thresholds") { t in

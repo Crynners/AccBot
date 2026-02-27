@@ -63,6 +63,7 @@ data class DashboardUiState(
     val activePlans: List<DcaPlanWithBalance> = emptyList(),
     val isLoading: Boolean = false,
     val isPriceLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val isSandboxMode: Boolean = false,
     val runNowTriggered: Boolean = false,
     val showRunNowSheet: Boolean = false
@@ -293,6 +294,17 @@ class DashboardViewModel @Inject constructor(
         refreshPricesJob?.cancel()
         refreshPricesJob = viewModelScope.launch {
             fetchPricesForHoldings(_uiState.value.holdings)
+        }
+    }
+
+    fun refreshAll() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            marketDataService.invalidateCache()
+            loadData()
+            // Wait briefly for data to start loading, then clear refreshing state
+            kotlinx.coroutines.delay(1000)
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 

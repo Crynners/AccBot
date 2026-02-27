@@ -4,12 +4,41 @@ import LocalAuthentication
 @MainActor
 final class SettingsViewModel: ObservableObject {
     @Published var connectedExchanges: [Exchange] = []
-    @Published var showDeleteConfirmation = false
     @Published var deleteTarget: DeleteTarget?
     @Published var biometricType: BiometricType = .none
-    @Published var showLanguageRestart = false
+    @Published var activeAlert: AlertType?
+    @Published var planCount = 0
+    @Published var transactionCount = 0
+    @Published var notificationCount = 0
 
-    private let dependencies: AppDependencies
+    // Withdrawal thresholds
+    @Published var withdrawalThresholds: [WithdrawalThreshold] = []
+    @Published var availableCryptoExchangePairs: [(crypto: String, exchange: Exchange)] = []
+    @Published var showWithdrawalThresholdDialog = false
+
+    /// Stable identifiers for ForEach over crypto/exchange pairs.
+    var withdrawalPairIds: [String] {
+        availableCryptoExchangePairs.map { "\($0.crypto)_\($0.exchange.rawValue)" }
+    }
+
+    @Published var errorMessage: String?
+
+    /// Routes an error message to an alert. Call this instead of setting errorMessage directly
+    /// when the error should be shown as an alert.
+    func showError(_ message: String) {
+        activeAlert = .error(message)
+    }
+
+    private(set) var dependencies: AppDependencies?
+    private var isSetUp = false
+
+    private var deps: AppDependencies {
+        guard let d = dependencies else {
+            assertionFailure("ViewModel used before setup() — call setup() in onAppear")
+            return dependencies!
+        }
+        return d
+    }
 
     enum DeleteTarget: Identifiable {
         case plans, transactions, notifications, allData
@@ -25,19 +54,47 @@ final class SettingsViewModel: ObservableObject {
 
         var title: String {
             switch self {
-            case .plans: return "Delete All Plans"
-            case .transactions: return "Delete All Transactions"
-            case .notifications: return "Delete All Notifications"
-            case .allData: return "Delete All Data"
+            case .plans: return String(localized: "Delete All Plans")
+            case .transactions: return String(localized: "Delete All Transactions")
+            case .notifications: return String(localized: "Delete All Notifications")
+            case .allData: return String(localized: "Delete All Data")
             }
         }
 
         var message: String {
             switch self {
-            case .plans: return "This will delete all DCA plans. This action cannot be undone."
-            case .transactions: return "This will delete all transaction history. This action cannot be undone."
-            case .notifications: return "This will delete all notifications. This action cannot be undone."
-            case .allData: return "This will delete ALL data including plans, transactions, credentials, and settings. This action cannot be undone."
+            case .plans: return String(localized: "This will delete all DCA plans. This action cannot be undone.")
+            case .transactions: return String(localized: "This will delete all transaction history. This action cannot be undone.")
+            case .notifications: return String(localized: "This will delete all notifications. This action cannot be undone.")
+            case .allData: return String(localized: "This will delete ALL data including plans, transactions, credentials, and settings. This action cannot be undone.")
+            }
+        }
+    }
+
+    enum AlertType: Identifiable {
+        case deleteConfirmation
+        case languageRestart
+        case sandboxRestart(isSandbox: Bool)
+        case deleteAllDataComplete
+        case error(String)
+
+        var id: String {
+            switch self {
+            case .deleteConfirmation: return "deleteConfirmation"
+            case .languageRestart: return "languageRestart"
+            case .sandboxRestart: return "sandboxRestart"
+            case .deleteAllDataComplete: return "deleteAllDataComplete"
+            case .error: return "error"
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .deleteConfirmation: return String(localized: "Confirm Delete")
+            case .languageRestart: return String(localized: "Restart Required")
+            case .sandboxRestart: return String(localized: "Sandbox Mode")
+            case .deleteAllDataComplete: return String(localized: "Data Deleted")
+            case .error: return String(localized: "Error")
             }
         }
     }
@@ -46,15 +103,36 @@ final class SettingsViewModel: ObservableObject {
         case faceId, touchId, none
     }
 
-    init(dependencies: AppDependencies) {
+    func setup(_ dependencies: AppDependencies) {
+        guard !isSetUp else { return }
+        isSetUp = true
         self.dependencies = dependencies
-        loadConnectedExchanges()
+        loadData()
         checkBiometricType()
     }
 
+    func loadData() {
+        loadConnectedExchanges()
+        loadCounts()
+        loadWithdrawalThresholds()
+    }
+
     func loadConnectedExchanges() {
-        let isSandbox = dependencies.userPreferences.isSandboxMode()
-        connectedExchanges = dependencies.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
+        let isSandbox = deps.userPreferences.isSandboxMode()
+        connectedExchanges = deps.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
+    }
+
+    func loadCounts() {
+        let db = deps.activeDatabase
+        do {
+            planCount = try db.planDao.getAll().count
+            transactionCount = try db.transactionDao.getTotalCount()
+            notificationCount = try db.dbPool.read { db in
+                try NotificationRecord.fetchCount(db)
+            }
+        } catch {
+            showError(error.localizedDescription)
+        }
     }
 
     func checkBiometricType() {
@@ -64,7 +142,7 @@ final class SettingsViewModel: ObservableObject {
             switch context.biometryType {
             case .faceID: biometricType = .faceId
             case .touchID: biometricType = .touchId
-            default: biometricType = .none
+            @unknown default: biometricType = .none
             }
         } else {
             biometricType = .none
@@ -73,9 +151,9 @@ final class SettingsViewModel: ObservableObject {
 
     var biometricLabel: String {
         switch biometricType {
-        case .faceId: return "Face ID Lock"
-        case .touchId: return "Touch ID Lock"
-        case .none: return "Biometric Lock"
+        case .faceId: return String(localized: "Face ID Lock")
+        case .touchId: return String(localized: "Touch ID Lock")
+        case .none: return String(localized: "Biometric Lock")
         }
     }
 
@@ -89,55 +167,115 @@ final class SettingsViewModel: ObservableObject {
 
     func confirmDelete(_ target: DeleteTarget) {
         deleteTarget = target
-        showDeleteConfirmation = true
+        activeAlert = .deleteConfirmation
     }
 
     func executeDelete() {
         guard let target = deleteTarget else { return }
-        let db = dependencies.activeDatabase
+        let db = deps.activeDatabase
 
         do {
             switch target {
             case .plans:
-                try db.planDao.deleteAll()
+                try db.dbPool.write { database in
+                    try database.execute(sql: "DELETE FROM dca_plans")
+                }
             case .transactions:
-                try db.transactionDao.deleteAll()
+                try db.dbPool.write { database in
+                    try database.execute(sql: "DELETE FROM transactions")
+                }
             case .notifications:
-                try db.notificationDao.deleteAll()
+                try db.dbPool.write { database in
+                    try database.execute(sql: "DELETE FROM notifications")
+                }
             case .allData:
-                try db.planDao.deleteAll()
-                try db.transactionDao.deleteAll()
-                try db.notificationDao.deleteAll()
-                try db.withdrawalThresholdDao.deleteAll()
-                try db.exchangeBalanceDao.deleteAll()
-                try db.dailyPriceDao.deleteAll()
-                dependencies.credentialsStore.clearAllBothEnvironments()
-                dependencies.onboardingPreferences.onboardingCompleted = false
+                // Wipe all DB tables in a single transaction for consistency
+                try db.dbPool.write { database in
+                    try database.execute(sql: "DELETE FROM transactions")
+                    try database.execute(sql: "DELETE FROM withdrawals")
+                    try database.execute(sql: "DELETE FROM notifications")
+                    try database.execute(sql: "DELETE FROM withdrawal_thresholds")
+                    try database.execute(sql: "DELETE FROM exchange_balances")
+                    try database.execute(sql: "DELETE FROM daily_prices")
+                    try database.execute(sql: "DELETE FROM monthly_summaries")
+                    try database.execute(sql: "DELETE FROM dca_plans")
+                }
+                deps.credentialsStore.clearAllBothEnvironments()
+                deps.onboardingPreferences.onboardingCompleted = false
+                deleteTarget = nil
+                loadData()
+                activeAlert = .deleteAllDataComplete
+                return
             }
         } catch {
-            // Log error
+            showError(error.localizedDescription)
         }
 
         deleteTarget = nil
-        loadConnectedExchanges()
+        loadData()
+    }
+
+    func loadWithdrawalThresholds() {
+        let db = deps.activeDatabase
+        do {
+            withdrawalThresholds = try db.withdrawalThresholdDao.getAll()
+
+            let plans = try db.planDao.getAll()
+            var seen = Set<String>()
+            var pairs: [(crypto: String, exchange: Exchange)] = []
+            for plan in plans {
+                let key = "\(plan.crypto)_\(plan.exchange.rawValue)"
+                if !seen.contains(key) {
+                    seen.insert(key)
+                    pairs.append((crypto: plan.crypto, exchange: plan.exchange))
+                }
+            }
+            availableCryptoExchangePairs = pairs
+        } catch {
+            showError(error.localizedDescription)
+        }
+    }
+
+    func setWithdrawalThreshold(crypto: String, exchange: Exchange, amount: Decimal) {
+        let threshold = WithdrawalThreshold(
+            crypto: crypto,
+            exchange: exchange,
+            thresholdAmount: amount
+        )
+        do {
+            try deps.activeDatabase.withdrawalThresholdDao.upsert(threshold)
+            loadWithdrawalThresholds()
+        } catch {
+            showError(error.localizedDescription)
+        }
+    }
+
+    func removeWithdrawalThreshold(crypto: String, exchange: Exchange) {
+        do {
+            try deps.activeDatabase.withdrawalThresholdDao.delete(
+                crypto: crypto,
+                exchange: exchange
+            )
+            loadWithdrawalThresholds()
+        } catch {
+            showError(error.localizedDescription)
+        }
     }
 
     func setLanguage(_ langCode: String) {
-        dependencies.userPreferences.appLanguage = langCode
+        deps.userPreferences.appLanguage = langCode
         if !langCode.isEmpty {
             UserDefaults.standard.set([langCode], forKey: "AppleLanguages")
         } else {
             UserDefaults.standard.removeObject(forKey: "AppleLanguages")
         }
-        showLanguageRestart = true
+        activeAlert = .languageRestart
     }
 
     var lastBackgroundRunText: String {
-        guard let date = dependencies.userPreferences.lastBackgroundRun else {
-            return "Never"
+        guard let date = deps.userPreferences.lastBackgroundRun else {
+            return String(localized: "Never")
         }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
+        return AccBotFormatters.relativeDate(date)
     }
 }

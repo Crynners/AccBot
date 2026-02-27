@@ -5,6 +5,7 @@ options:
     iOS: "16.0"
   xcodeVersion: "16.0"
   generateEmptyDirectories: true
+  knownRegions: [en, cs]
 
 packages:
   GRDB:

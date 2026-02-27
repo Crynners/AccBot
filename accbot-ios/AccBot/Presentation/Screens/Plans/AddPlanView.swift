@@ -3,28 +3,18 @@ import SwiftUI
 struct AddPlanView: View {
     @EnvironmentObject var dependencies: AppDependencies
     @EnvironmentObject var router: AppRouter
-    @StateObject private var viewModel: AddPlanViewModel
+    @StateObject private var viewModel = AddPlanViewModel()
 
     @State private var showStrategyInfo = false
     @State private var showQrScanner = false
+    @State private var showDiscardAlert = false
 
-    @Environment(\.isSandboxMode) private var isSandboxMode
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var colors: AccBotColors {
-        AccBotColors(isSandbox: isSandboxMode, isDark: colorScheme == .dark)
-    }
+    @Environment(\.accBotColors) private var colors
 
     private let exchangeColumns = Array(
         repeating: GridItem(.flexible(), spacing: Spacing.md),
         count: 3
     )
-
-    init() {
-        _viewModel = StateObject(wrappedValue: AddPlanViewModel(
-            dependencies: AppDependencies()
-        ))
-    }
 
     var body: some View {
         ScrollView {
@@ -58,7 +48,7 @@ struct AddPlanView: View {
 
                     // Error message
                     if let error = viewModel.errorMessage {
-                        errorBanner(error)
+                        ErrorBanner(message: error)
                     }
 
                     // Create button
@@ -67,11 +57,51 @@ struct AddPlanView: View {
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.lg)
+            .maxFormWidth()
         }
+        .scrollDismissesKeyboard(.interactively)
         .background(colors.background)
         .navigationTitle(String(localized: "Create DCA Plan"))
         .navigationBarTitleDisplayMode(.large)
+        .navigationBarBackButtonHidden(viewModel.hasChanges)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(String(localized: "Done")) {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            }
+            if viewModel.hasChanges {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showDiscardAlert = true
+                    } label: {
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: "chevron.left")
+                                .font(AccBotFonts.headline)
+                            Text(String(localized: "Back"))
+                        }
+                    }
+                }
+            }
+        }
+        .alert(String(localized: "Discard Changes?"), isPresented: $showDiscardAlert) {
+            Button(String(localized: "Keep Editing"), role: .cancel) {}
+            Button(String(localized: "Discard"), role: .destructive) {
+                router.pop()
+            }
+        } message: {
+            Text(String(localized: "You have unsaved changes. Are you sure you want to go back?"))
+        }
         .onAppear {
+            viewModel.setup(dependencies)
+        }
+        .onChange(of: viewModel.validationHint) { _, newHint in
+            if let hint = newHint {
+                UIAccessibility.post(notification: .announcement, argument: hint)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             viewModel.loadConfiguredExchanges()
         }
         .sheet(isPresented: $showStrategyInfo) {
@@ -81,11 +111,7 @@ struct AddPlanView: View {
             QrScannerSheet(
                 title: String(localized: "Scan Wallet QR"),
                 onScanned: { code in
-                    // Strip bitcoin: prefix if present
-                    let address = code.hasPrefix("bitcoin:")
-                        ? String(code.dropFirst("bitcoin:".count)).components(separatedBy: "?").first ?? code
-                        : code
-                    viewModel.withdrawalAddress = address
+                    viewModel.withdrawalAddress = cleanQrValue(code)
                 }
             )
         }
@@ -98,16 +124,33 @@ struct AddPlanView: View {
             sectionHeader(String(localized: "Exchange"))
 
             if viewModel.availableExchanges.isEmpty {
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(colors.warning)
-                    Text(String(localized: "No exchanges configured. Add one in Settings."))
-                        .font(AccBotFonts.bodySmall)
-                        .foregroundColor(colors.warning)
+                VStack(spacing: Spacing.md) {
+                    HStack(spacing: Spacing.sm) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(colors.warning)
+                        Text(String(localized: "No exchanges configured. Add one in Settings."))
+                            .font(AccBotFonts.bodySmall)
+                            .foregroundStyle(colors.warning)
+                    }
+
+                    Button {
+                        router.navigate(to: .exchangeManagement)
+                    } label: {
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "building.columns")
+                            Text(String(localized: "Manage Exchanges"))
+                        }
+                        .font(AccBotFonts.headline)
+                        .foregroundStyle(colors.onPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Spacing.md)
+                        .background(colors.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                    }
                 }
                 .padding(Spacing.md)
                 .background(colors.warning.opacity(0.1))
-                .cornerRadius(CornerRadius.sm)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
             } else {
                 LazyVGrid(columns: exchangeColumns, spacing: Spacing.md) {
                     ForEach(viewModel.availableExchanges) { exchange in
@@ -134,20 +177,23 @@ struct AddPlanView: View {
 
                 Text(exchange.displayName)
                     .font(AccBotFonts.caption)
-                    .foregroundColor(colors.onSurface)
+                    .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.md)
             .padding(.horizontal, Spacing.xs)
             .background(isSelected ? colors.primary.opacity(0.15) : colors.surface)
-            .cornerRadius(CornerRadius.md)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: CornerRadius.md)
                     .stroke(isSelected ? colors.primary : Color.clear, lineWidth: 2)
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(exchange.displayName)
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+        .accessibilityValue(isSelected ? String(localized: "Selected") : String(localized: "Not selected"))
     }
 
     // MARK: - Crypto Selection
@@ -160,6 +206,7 @@ struct AddPlanView: View {
                 items: viewModel.availableCryptos,
                 selection: viewModel.selectedCrypto,
                 label: { $0 },
+                icon: { CryptoIcon(symbol: $0, size: 18) },
                 onSelect: { viewModel.selectedCrypto = $0 }
             )
         }
@@ -175,6 +222,7 @@ struct AddPlanView: View {
                 items: viewModel.availableFiats,
                 selection: viewModel.selectedFiat,
                 label: { $0 },
+                icon: { FiatIcon(symbol: $0, size: 18) },
                 onSelect: { viewModel.selectedFiat = $0 }
             )
         }
@@ -189,47 +237,75 @@ struct AddPlanView: View {
             HStack(spacing: Spacing.sm) {
                 TextField("0", text: $viewModel.amount)
                     .font(AccBotFonts.titleMedium)
-                    .foregroundColor(colors.onSurface)
+                    .foregroundStyle(colors.onSurface)
                     .keyboardType(.decimalPad)
                     .padding(Spacing.md)
                     .background(colors.surface)
-                    .cornerRadius(CornerRadius.sm)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CornerRadius.sm)
+                            .strokeBorder(amountIsBelowMin ? colors.error : Color.clear, lineWidth: 1)
+                    )
+                    .accessibilityLabel(String(localized: "Amount per purchase"))
+                    .onChange(of: viewModel.amount) { _, newValue in
+                        let filtered = newValue.filter { $0.isNumber || $0 == "." || $0 == "," }
+                        let normalized = filtered.replacingOccurrences(of: ",", with: ".")
+                        // Allow only one decimal separator
+                        let parts = normalized.split(separator: ".", maxSplits: 2)
+                        let sanitized = parts.count > 1
+                            ? "\(parts[0]).\(parts.dropFirst().joined())"
+                            : normalized
+                        if sanitized != newValue {
+                            viewModel.amount = sanitized
+                        }
+                    }
 
                 Text(viewModel.selectedFiat)
                     .font(AccBotFonts.headline)
-                    .foregroundColor(colors.primary)
+                    .foregroundStyle(colors.primary)
             }
 
             // Preset buttons
-            HStack(spacing: Spacing.sm) {
-                ForEach(viewModel.amountPresets, id: \.self) { preset in
-                    Button {
-                        viewModel.amount = "\(preset)"
-                    } label: {
-                        Text("\(preset)")
-                            .font(AccBotFonts.label)
-                            .foregroundColor(
-                                viewModel.amount == "\(preset)"
-                                    ? colors.background
-                                    : colors.primary
-                            )
-                            .padding(.horizontal, Spacing.md)
-                            .padding(.vertical, Spacing.sm)
-                            .background(
-                                viewModel.amount == "\(preset)"
-                                    ? colors.primary
-                                    : colors.primary.opacity(0.15)
-                            )
-                            .cornerRadius(CornerRadius.sm)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Spacing.sm) {
+                    ForEach(viewModel.amountPresets, id: \.self) { preset in
+                        let isPresetSelected = viewModel.amount == "\(preset)"
+                        Button {
+                            viewModel.amount = "\(preset)"
+                        } label: {
+                            Text("\(preset)")
+                                .font(AccBotFonts.label)
+                                .foregroundStyle(
+                                    isPresetSelected
+                                        ? colors.onPrimary
+                                        : colors.primary
+                                )
+                                .padding(.horizontal, Spacing.md)
+                                .padding(.vertical, Spacing.sm)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .background(
+                                    isPresetSelected
+                                        ? colors.primary
+                                        : colors.primary.opacity(0.15)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                        }
+                        .accessibilityAddTraits(isPresetSelected ? .isSelected : [])
                     }
                 }
             }
 
             // Min order size
             if let minDisplay = viewModel.minOrderSizeDisplay {
+                let isBelowMin: Bool = {
+                    guard let amountValue = Decimal(string: viewModel.amount),
+                          let exchange = viewModel.selectedExchange,
+                          let minSize = exchange.minOrderSize[viewModel.selectedFiat] else { return false }
+                    return amountValue > 0 && amountValue < minSize
+                }()
                 Text(String(localized: "Minimum order: \(minDisplay)"))
                     .font(AccBotFonts.caption)
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .foregroundStyle(isBelowMin ? colors.error : colors.onSurfaceVariant)
             }
         }
     }
@@ -257,8 +333,11 @@ struct AddPlanView: View {
                 } label: {
                     Image(systemName: "info.circle")
                         .font(AccBotFonts.body)
-                        .foregroundColor(colors.primary)
+                        .foregroundStyle(colors.primary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel(String(localized: "Strategy information"))
             }
 
             HStack(spacing: Spacing.sm) {
@@ -281,17 +360,20 @@ struct AddPlanView: View {
                     .font(AccBotFonts.captionSmall)
                     .lineLimit(1)
             }
-            .foregroundColor(isSelected ? colors.background : colors.onSurface)
+            .foregroundStyle(isSelected ? colors.onPrimary : colors.onSurface)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.md)
             .background(isSelected ? colors.primary : colors.surface)
-            .cornerRadius(CornerRadius.sm)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
             .overlay(
                 RoundedRectangle(cornerRadius: CornerRadius.sm)
                     .stroke(isSelected ? colors.primary : colors.onSurfaceVariant.opacity(0.3), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "\(strategy.displayName) strategy"))
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+        .accessibilityValue(isSelected ? String(localized: "Selected") : String(localized: "Not selected"))
     }
 
     private func strategyIcon(_ strategy: DcaStrategy) -> String {
@@ -310,10 +392,10 @@ struct AddPlanView: View {
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(String(localized: "Auto-Withdrawal"))
                         .font(AccBotFonts.headline)
-                        .foregroundColor(colors.onSurface)
+                        .foregroundStyle(colors.onSurface)
                     Text(String(localized: "Automatically withdraw to your wallet after purchase"))
                         .font(AccBotFonts.caption)
-                        .foregroundColor(colors.onSurfaceVariant)
+                        .foregroundStyle(colors.onSurfaceVariant)
                 }
             }
             .tint(colors.primary)
@@ -322,7 +404,7 @@ struct AddPlanView: View {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(String(localized: "Wallet Address"))
                         .font(AccBotFonts.caption)
-                        .foregroundColor(colors.onSurfaceVariant)
+                        .foregroundStyle(colors.onSurfaceVariant)
 
                     HStack(spacing: Spacing.sm) {
                         TextField(
@@ -330,31 +412,48 @@ struct AddPlanView: View {
                             text: $viewModel.withdrawalAddress
                         )
                         .font(AccBotFonts.mono)
-                        .foregroundColor(colors.onSurface)
+                        .foregroundStyle(colors.onSurface)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .padding(Spacing.md)
-                        .background(colors.surfaceVariant.opacity(0.3))
-                        .cornerRadius(CornerRadius.sm)
+                        .background(colors.surfaceVariant.opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CornerRadius.sm)
+                                .strokeBorder(
+                                    walletAddressBorderColor,
+                                    lineWidth: 1
+                                )
+                        )
+                        .accessibilityLabel(String(localized: "Wallet address"))
 
                         Button {
                             showQrScanner = true
                         } label: {
                             Image(systemName: "qrcode.viewfinder")
                                 .font(AccBotFonts.titleSmall)
-                                .foregroundColor(colors.primary)
+                                .foregroundStyle(colors.primary)
                                 .padding(Spacing.md)
+                                .frame(minWidth: 44, minHeight: 44)
                                 .background(colors.surface)
-                                .cornerRadius(CornerRadius.sm)
+                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
                         }
+                        .accessibilityLabel(String(localized: "Scan wallet QR code"))
                     }
                 }
+                // Wallet address validation hint
+                if !viewModel.withdrawalAddress.isEmpty && viewModel.withdrawalAddress.trimmingCharacters(in: .whitespaces).count < 26 {
+                    Text(String(localized: "Address looks too short"))
+                        .font(AccBotFonts.caption)
+                        .foregroundStyle(colors.warning)
+                }
+
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(Spacing.lg)
         .background(colors.surface)
-        .cornerRadius(CornerRadius.md)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     // MARK: - Monthly Cost Estimate
@@ -364,78 +463,86 @@ struct AddPlanView: View {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(String(localized: "Estimated Monthly Cost"))
                     .font(AccBotFonts.caption)
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .foregroundStyle(colors.onSurfaceVariant)
 
-                let formatted = NSDecimalNumber(decimal: estimate)
-                Text("~\(formatted.stringValue) \(viewModel.selectedFiat)")
+                Text("~\(AccBotFormatters.formatFiat(estimate, symbol: viewModel.selectedFiat))")
                     .font(AccBotFonts.titleSmall)
-                    .foregroundColor(colors.primary)
+                    .foregroundStyle(colors.primary)
             }
 
             Spacer()
 
             Image(systemName: "calendar")
                 .font(AccBotFonts.titleMedium)
-                .foregroundColor(colors.primary.opacity(0.5))
+                .foregroundStyle(colors.primary)
+                .accessibilityHidden(true)
         }
         .padding(Spacing.lg)
         .background(colors.primary.opacity(0.1))
-        .cornerRadius(CornerRadius.md)
-    }
-
-    // MARK: - Error Banner
-
-    private func errorBanner(_ message: String) -> some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(colors.error)
-            Text(message)
-                .font(AccBotFonts.bodySmall)
-                .foregroundColor(colors.error)
-        }
-        .padding(Spacing.md)
-        .background(colors.error.opacity(0.1))
-        .cornerRadius(CornerRadius.sm)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     // MARK: - Create Button
 
     private var createButton: some View {
-        Button {
-            Task {
-                let success = await viewModel.createPlan()
-                if success {
-                    router.pop()
-                }
+        VStack(spacing: Spacing.sm) {
+            if let hint = viewModel.validationHint, !viewModel.isValid {
+                Text(hint)
+                    .font(AccBotFonts.caption)
+                    .foregroundStyle(colors.warning)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-        } label: {
-            HStack(spacing: Spacing.sm) {
-                if viewModel.isSubmitting {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: colors.background))
-                        .scaleEffect(0.8)
+
+            Button {
+                Task {
+                    let success = await viewModel.createPlan()
+                    if success {
+                        router.pop()
+                    }
                 }
-                Text(viewModel.isSubmitting
-                     ? String(localized: "Creating...")
-                     : String(localized: "Create Plan"))
-                    .font(AccBotFonts.headline)
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    if viewModel.isSubmitting {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: colors.onPrimary))
+                            .scaleEffect(0.8)
+                    }
+                    Text(viewModel.isSubmitting
+                         ? String(localized: "Creating...")
+                         : String(localized: "Create Plan"))
+                        .font(AccBotFonts.headline)
+                }
+                .foregroundStyle(viewModel.isValid ? colors.onPrimary : colors.disabledForeground)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.lg)
+                .background(viewModel.isValid ? colors.primary : colors.disabledBackground)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
             }
-            .foregroundColor(colors.background)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.lg)
-            .background(viewModel.isValid ? colors.primary : colors.primary.opacity(0.4))
-            .cornerRadius(CornerRadius.md)
+            .disabled(!viewModel.isValid || viewModel.isSubmitting)
         }
-        .disabled(!viewModel.isValid || viewModel.isSubmitting)
         .padding(.bottom, Spacing.xxl)
     }
 
     // MARK: - Helpers
 
+    private var walletAddressBorderColor: Color {
+        let addr = viewModel.withdrawalAddress.trimmingCharacters(in: .whitespaces)
+        if addr.isEmpty { return Color.clear }
+        if addr.count >= 26 { return colors.success }
+        return colors.warning
+    }
+
+    private var amountIsBelowMin: Bool {
+        guard let amountValue = Decimal(string: viewModel.amount),
+              let exchange = viewModel.selectedExchange,
+              let minSize = exchange.minOrderSize[viewModel.selectedFiat] else { return false }
+        return amountValue > 0 && amountValue < minSize
+    }
+
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
             .font(AccBotFonts.headline)
-            .foregroundColor(colors.onSurface)
+            .foregroundStyle(colors.onSurface)
     }
 }
 
@@ -445,5 +552,4 @@ struct AddPlanView: View {
     NavigationStack {
         AddPlanView()
     }
-    .preferredColorScheme(.dark)
 }

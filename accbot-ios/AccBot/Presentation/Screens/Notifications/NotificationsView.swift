@@ -2,22 +2,22 @@ import SwiftUI
 
 struct NotificationsView: View {
     @EnvironmentObject var dependencies: AppDependencies
-    @StateObject private var viewModel: NotificationsViewModel
-
-    init() {
-        _viewModel = StateObject(wrappedValue: NotificationsViewModel(
-            dependencies: AppDependencies()
-        ))
-    }
+    @StateObject private var viewModel = NotificationsViewModel()
+    @Environment(\.accBotColors) private var colors
+    @State private var showDismissAllConfirmation = false
 
     var body: some View {
         VStack(spacing: 0) {
             // Active / Archive toggle
-            Picker("", selection: $viewModel.showArchive) {
-                Text("Active").tag(false)
-                Text("Archive").tag(true)
+            Picker(String(localized: "Notification filter"), selection: $viewModel.showArchive) {
+                Text(String(localized: "Active")).tag(false)
+                Text(viewModel.archivedNotifications.isEmpty
+                     ? String(localized: "Archive")
+                     : String(localized: "Archive (\(viewModel.archivedNotifications.count))")
+                ).tag(true)
             }
             .pickerStyle(.segmented)
+            .labelsHidden()
             .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.sm)
 
@@ -27,32 +27,52 @@ struct NotificationsView: View {
                 activeList
             }
         }
-        .background(Color.backgroundDark)
-        .navigationTitle("Notifications")
+        .background(colors.background)
+        .navigationTitle(String(localized: "Notifications"))
         .toolbar {
             if !viewModel.showArchive && !viewModel.activeNotifications.isEmpty {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Dismiss All") {
-                        viewModel.dismissAll()
+                    Button(String(localized: "Dismiss All")) {
+                        showDismissAllConfirmation = true
                     }
+                    .accessibilityHint(String(localized: "Archives all active notifications"))
                 }
             }
             if viewModel.showArchive && !viewModel.archivedNotifications.isEmpty {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Clear Archive") {
+                    Button(String(localized: "Clear Archive")) {
                         viewModel.showClearArchiveConfirmation = true
                     }
                 }
             }
         }
-        .alert("Clear Archive", isPresented: $viewModel.showClearArchiveConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Clear", role: .destructive) { viewModel.clearArchive() }
+        .alert(String(localized: "Clear Archive"), isPresented: $viewModel.showClearArchiveConfirmation) {
+            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Clear"), role: .destructive) { viewModel.clearArchive() }
         } message: {
-            Text("This will permanently delete all archived notifications.")
+            Text(String(localized: "This will permanently delete all archived notifications."))
+        }
+        .alert(String(localized: "Dismiss All?"), isPresented: $showDismissAllConfirmation) {
+            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Dismiss All"), role: .destructive) { viewModel.dismissAll() }
+        } message: {
+            Text(String(localized: "All active notifications will be archived."))
+        }
+        .refreshable {
+            await viewModel.refresh()
+        }
+        .alert(String(localized: "Error"), isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button(String(localized: "OK"), role: .cancel) {}
+        } message: {
+            if let msg = viewModel.errorMessage {
+                Text(msg)
+            }
         }
         .onAppear {
-            viewModel.loadData()
+            viewModel.setup(dependencies)
         }
     }
 
@@ -61,25 +81,27 @@ struct NotificationsView: View {
             if viewModel.activeNotifications.isEmpty {
                 EmptyStateView(
                     systemImage: "bell.slash",
-                    title: "No Notifications",
-                    subtitle: "DCA alerts and updates will appear here"
+                    title: String(localized: "You're all caught up!"),
+                    subtitle: String(localized: "DCA alerts and updates will appear here")
                 )
             } else {
                 List {
                     ForEach(viewModel.activeNotifications) { notification in
-                        notificationRow(notification)
-                            .swipeActions(edge: .trailing) {
-                                Button {
-                                    viewModel.archive(notification)
-                                } label: {
-                                    Label("Archive", systemImage: "archivebox")
-                                }
-                                .tint(.warningOrange)
+                        Button {
+                            viewModel.markAsRead(notification)
+                        } label: {
+                            notificationRow(notification)
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing) {
+                            Button {
+                                viewModel.archive(notification)
+                            } label: {
+                                Label(String(localized: "Archive"), systemImage: "archivebox")
                             }
-                            .listRowBackground(Color.surfaceDark)
-                            .onTapGesture {
-                                viewModel.markAsRead(notification)
-                            }
+                            .tint(colors.warning)
+                        }
+                        .listRowBackground(colors.surface)
                     }
                 }
                 .listStyle(.plain)
@@ -92,14 +114,14 @@ struct NotificationsView: View {
             if viewModel.archivedNotifications.isEmpty {
                 EmptyStateView(
                     systemImage: "archivebox",
-                    title: "No Archived Notifications",
-                    subtitle: "Dismissed notifications will appear here"
+                    title: String(localized: "Archive is empty"),
+                    subtitle: String(localized: "Dismissed notifications will appear here")
                 )
             } else {
                 List {
                     ForEach(viewModel.archivedNotifications) { notification in
                         notificationRow(notification)
-                            .listRowBackground(Color.surfaceDark)
+                            .listRowBackground(colors.surface)
                     }
                 }
                 .listStyle(.plain)
@@ -110,50 +132,62 @@ struct NotificationsView: View {
     private func notificationRow(_ notification: AppNotification) -> some View {
         HStack(spacing: Spacing.md) {
             notificationIcon(notification.type)
-                .frame(width: 32, height: 32)
+                .frame(width: 44, height: 44)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 HStack {
                     Text(notification.title)
                         .font(notification.isRead ? AccBotFonts.body : AccBotFonts.headline)
-                        .foregroundColor(.white)
+                        .foregroundStyle(colors.onSurface)
 
                     if !notification.isRead {
                         Circle()
-                            .fill(Color.accentTeal)
+                            .fill(colors.primary)
                             .frame(width: 8, height: 8)
+                            .accessibilityHidden(true)
                     }
                 }
 
                 Text(notification.message)
                     .font(AccBotFonts.bodySmall)
-                    .foregroundColor(.onSurfaceVariantColor)
+                    .foregroundStyle(colors.onSurfaceVariant)
                     .lineLimit(2)
 
                 Text(formatDate(notification.createdAt))
                     .font(AccBotFonts.captionSmall)
-                    .foregroundColor(.onSurfaceVariantColor)
+                    .foregroundStyle(colors.onSurfaceVariant)
             }
         }
         .padding(.vertical, Spacing.xs)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(notificationAccessibilityLabel(notification))
+    }
+
+    private func notificationAccessibilityLabel(_ notification: AppNotification) -> String {
+        let readPrefix = notification.isRead ? "" : "\(String(localized: "Unread")), "
+        return "\(readPrefix)\(notification.title). \(notification.message). \(formatDate(notification.createdAt))"
     }
 
     private func notificationIcon(_ type: NotificationType) -> some View {
         let (icon, color): (String, Color) = switch type {
-        case .purchase: ("checkmark.circle.fill", .accentTeal)
-        case .error: ("xmark.circle.fill", .errorRed)
-        case .lowBalance: ("exclamationmark.triangle.fill", .warningOrange)
-        case .withdrawalThreshold: ("arrow.up.forward.circle.fill", .accentTeal)
+        case .purchase: ("checkmark.circle.fill", colors.primary)
+        case .error: ("exclamationmark.circle.fill", colors.error)
+        case .lowBalance: ("exclamationmark.triangle.fill", colors.warning)
+        case .withdrawalThreshold: ("arrow.up.forward.circle.fill", colors.warning)
         }
 
-        return Image(systemName: icon)
-            .font(.title2)
-            .foregroundColor(color)
+        return ZStack {
+            RoundedRectangle(cornerRadius: CornerRadius.sm)
+                .fill(color.opacity(0.15))
+                .frame(width: 44, height: 44)
+            Image(systemName: icon)
+                .font(AccBotFonts.titleSmall)
+                .foregroundStyle(color)
+        }
     }
 
     private func formatDate(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
+        AccBotFormatters.relativeDate(date)
     }
 }

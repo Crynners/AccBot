@@ -1,18 +1,43 @@
 import SwiftUI
+import Combine
 
 /// Main tab view with 4 tabs: Dashboard, Portfolio, Notifications, Settings
 struct MainTabView: View {
     @EnvironmentObject var router: AppRouter
     @EnvironmentObject var dependencies: AppDependencies
+    @Environment(\.accBotColors) private var colors
+
+    /// Custom binding that intercepts tab selection to pop-to-root when re-selecting the active tab
+    private var tabSelection: Binding<TabItem> {
+        Binding(
+            get: { router.selectedTab },
+            set: { newTab in
+                if newTab == router.selectedTab {
+                    // Re-selecting the same tab: pop to root (standard iOS pattern)
+                    router.popToRoot()
+                } else {
+                    router.selectedTab = newTab
+                }
+            }
+        )
+    }
 
     var body: some View {
-        TabView(selection: $router.selectedTab) {
+        TabView(selection: tabSelection) {
             dashboardTab
             portfolioTab
             notificationsTab
             settingsTab
         }
-        .tint(dependencies.userPreferences.sandboxMode ? .sandboxPrimary : .accentTeal)
+        .tint(colors.primary)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
+        .onReceive(
+            dependencies.activeDatabase.notificationDao.observeUnreadCount()
+                .replaceError(with: 0)
+                .receive(on: DispatchQueue.main)
+        ) { count in
+            router.unreadNotificationCount = count
+        }
     }
 
     private var dashboardTab: some View {
@@ -23,7 +48,7 @@ struct MainTabView: View {
                 }
         }
         .tabItem {
-            Label(TabItem.dashboard.title, systemImage: TabItem.dashboard.systemImage)
+            Label(TabItem.dashboard.title, systemImage: TabItem.dashboard.systemImage(isSelected: router.selectedTab == .dashboard))
         }
         .tag(TabItem.dashboard)
     }
@@ -36,7 +61,7 @@ struct MainTabView: View {
                 }
         }
         .tabItem {
-            Label(TabItem.portfolio.title, systemImage: TabItem.portfolio.systemImage)
+            Label(TabItem.portfolio.title, systemImage: TabItem.portfolio.systemImage(isSelected: router.selectedTab == .portfolio))
         }
         .tag(TabItem.portfolio)
     }
@@ -49,9 +74,13 @@ struct MainTabView: View {
                 }
         }
         .tabItem {
-            Label(TabItem.notifications.title, systemImage: TabItem.notifications.systemImage)
+            Label(TabItem.notifications.title, systemImage: TabItem.notifications.systemImage(isSelected: router.selectedTab == .notifications))
         }
         .tag(TabItem.notifications)
+        .badge(router.unreadNotificationCount)
+        .accessibilityValue(router.unreadNotificationCount > 0
+            ? String(localized: "\(router.unreadNotificationCount) unread notifications")
+            : String(localized: "No unread notifications"))
     }
 
     private var settingsTab: some View {
@@ -62,7 +91,7 @@ struct MainTabView: View {
                 }
         }
         .tabItem {
-            Label(TabItem.settings.title, systemImage: TabItem.settings.systemImage)
+            Label(TabItem.settings.title, systemImage: TabItem.settings.systemImage(isSelected: router.selectedTab == .settings))
         }
         .tag(TabItem.settings)
     }
@@ -88,8 +117,10 @@ struct MainTabView: View {
             HistoryView(filterCrypto: crypto, filterFiat: fiat)
         case .transactionDetails(let txId):
             TransactionDetailsView(transactionId: txId)
-        default:
-            EmptyView()
+        case .backupExport:
+            BackupExportView()
+        case .backupImport:
+            BackupImportView()
         }
     }
 }

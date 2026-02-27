@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
@@ -97,6 +98,14 @@ fun DashboardScreen(
         topBar = {
             TopAppBar(
                 title = { AccBotHeaderLogo() },
+                actions = {
+                    IconButton(onClick = onNavigateToPlans) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(R.string.dashboard_add_plan)
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -190,79 +199,86 @@ fun DashboardScreen(
                 }
             }
         } else {
-            // Portrait: single column
-            LazyColumn(
+            // Portrait: single column with pull-to-refresh
+            PullToRefreshBox(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = { viewModel.refreshAll() },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                // Sandbox Mode Banner
-                if (uiState.isSandboxMode) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                     item {
-                        SandboxBanner()
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
-                }
 
-                // Holdings Pager
-                item {
-                    HoldingsPager(
-                        holdings = uiState.holdings,
-                        isPriceLoading = uiState.isPriceLoading,
-                        onRefreshPrices = { viewModel.refreshPrices() },
-                        onHoldingClick = onNavigateToPortfolio
-                    )
-                }
-
-                // My DCA Plans
-                item {
-                    SectionHeader(
-                        title = stringResource(R.string.dashboard_active_plans),
-                        action = "+",
-                        onAction = onNavigateToPlans
-                    )
-                }
-
-                if (uiState.isLoading) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                    // Sandbox Mode Banner
+                    if (uiState.isSandboxMode) {
+                        item {
+                            SandboxBanner()
                         }
                     }
-                } else if (uiState.activePlans.isEmpty()) {
+
+                    // Holdings Pager
                     item {
-                        EmptyPlansCard(onAddPlan = onNavigateToPlans)
-                    }
-                } else {
-                    items(uiState.activePlans, key = { it.plan.id }) { planWithBalance ->
-                        DcaPlanCard(
-                            planWithBalance = planWithBalance,
-                            onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
-                            onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) }
+                        HoldingsPager(
+                            holdings = uiState.holdings,
+                            isPriceLoading = uiState.isPriceLoading,
+                            onRefreshPrices = { viewModel.refreshPrices() },
+                            onHoldingClick = onNavigateToPortfolio
                         )
                     }
-                }
 
-                // Quick Actions
-                item {
-                    QuickActionsRow(
-                        onViewHistory = onNavigateToHistory,
-                        onRunNow = { viewModel.showRunNowSheet() }
-                    )
-                }
+                    // My DCA Plans
+                    item {
+                        SectionHeader(
+                            title = stringResource(R.string.dashboard_active_plans),
+                            action = "+",
+                            onAction = onNavigateToPlans
+                        )
+                    }
 
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    if (uiState.isLoading) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    } else if (uiState.activePlans.isEmpty()) {
+                        item {
+                            EmptyPlansCard(onAddPlan = onNavigateToPlans)
+                        }
+                    } else {
+                        items(uiState.activePlans, key = { it.plan.id }) { planWithBalance ->
+                            DcaPlanCard(
+                                planWithBalance = planWithBalance,
+                                onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
+                                onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) }
+                            )
+                        }
+                    }
+
+                    // Quick Actions
+                    item {
+                        QuickActionsRow(
+                            onViewHistory = onNavigateToHistory,
+                            onRunNow = { viewModel.showRunNowSheet() }
+                        )
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
             }
         }

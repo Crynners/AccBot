@@ -1,5 +1,8 @@
 import Foundation
 import GRDB
+import os
+
+private let logger = Logger(subsystem: "com.accbot.dca", category: "DataParsing")
 
 /// GRDB Record for transactions table
 struct TransactionRecord: Codable, FetchableRecord, PersistableRecord, Identifiable {
@@ -22,7 +25,22 @@ struct TransactionRecord: Codable, FetchableRecord, PersistableRecord, Identifia
     var executedAt: Double
 
     func toDomain() -> Transaction {
-        Transaction(
+        if Exchange(rawValue: exchange) == nil {
+            logger.warning("Unknown exchange rawValue '\(self.exchange)' in transaction \(self.id ?? 0), defaulting to coinmate")
+        }
+        if Decimal(string: fiatAmount) == nil {
+            logger.error("Invalid fiatAmount '\(self.fiatAmount)' in transaction \(self.id ?? 0)")
+        }
+        if Decimal(string: cryptoAmount) == nil {
+            logger.error("Invalid cryptoAmount '\(self.cryptoAmount)' in transaction \(self.id ?? 0)")
+        }
+        if Decimal(string: price) == nil {
+            logger.error("Invalid price '\(self.price)' in transaction \(self.id ?? 0)")
+        }
+        if Decimal(string: fee) == nil {
+            logger.error("Invalid fee '\(self.fee)' in transaction \(self.id ?? 0)")
+        }
+        return Transaction(
             id: id ?? 0,
             planId: planId,
             exchange: Exchange(rawValue: exchange) ?? .coinmate,

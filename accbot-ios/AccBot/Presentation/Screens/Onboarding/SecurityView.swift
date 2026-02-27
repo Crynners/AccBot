@@ -8,27 +8,29 @@ struct SecurityView: View {
     @EnvironmentObject var dependencies: AppDependencies
     @State private var biometricEnabled = false
     @State private var biometricType: BiometricType = .none
+    @Environment(\.accBotColors) private var colors
 
     var body: some View {
         ZStack {
-            Color.backgroundDark
+            colors.background
                 .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: Spacing.xxl) {
                     // Header icon
                     Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 64))
-                        .foregroundColor(.accentTeal)
+                        .font(AccBotFonts.iconLarge)
+                        .foregroundStyle(colors.primary)
+                        .accessibilityHidden(true)
                         .padding(.top, Spacing.xxxl)
 
-                    Text("Your Security Matters")
+                    Text(String(localized: "Your Security Matters"))
                         .font(AccBotFonts.titleLarge)
-                        .foregroundColor(.white)
+                        .foregroundStyle(colors.onSurface)
 
-                    Text("AccBot is designed with a decentralized, security-first architecture.")
+                    Text(String(localized: "AccBot is designed with a decentralized, security-first architecture."))
                         .font(AccBotFonts.body)
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundStyle(colors.onSurfaceVariant)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, Spacing.lg)
 
@@ -36,59 +38,76 @@ struct SecurityView: View {
                     VStack(spacing: Spacing.md) {
                         SecurityFeatureRow(
                             icon: "iphone.and.arrow.forward",
-                            title: "Local-Only Storage",
-                            description: "All data stays on your device. Nothing is sent to external servers."
+                            title: String(localized: "Local-Only Storage"),
+                            description: String(localized: "All data stays on your device. Nothing is sent to external servers.")
                         )
                         SecurityFeatureRow(
                             icon: "key.fill",
-                            title: "Keychain Encryption",
-                            description: "API credentials are encrypted using iOS Keychain with device-only access."
+                            title: String(localized: "Keychain Encryption"),
+                            description: String(localized: "API credentials are encrypted using iOS Keychain with device-only access.")
                         )
                         SecurityFeatureRow(
                             icon: "icloud.slash.fill",
-                            title: "No Cloud Backup",
-                            description: "Sensitive data is excluded from iCloud and iTunes backups."
+                            title: String(localized: "No Cloud Backup"),
+                            description: String(localized: "Sensitive data is excluded from iCloud and iTunes backups.")
                         )
                         SecurityFeatureRow(
-                            icon: "network",
-                            title: "Direct Exchange Communication",
-                            description: "AccBot communicates directly with exchanges via HTTPS. No middleman."
+                            icon: "lock.icloud",
+                            title: String(localized: "Direct Exchange Communication"),
+                            description: String(localized: "AccBot communicates directly with exchanges via HTTPS. No middleman.")
                         )
                         SecurityFeatureRow(
                             icon: "faceid",
-                            title: "Optional Biometric Lock",
-                            description: "Protect the app with Face ID or Touch ID for an extra layer of security."
+                            title: String(localized: "Optional Biometric Lock"),
+                            description: String(localized: "Protect the app with Face ID or Touch ID for an extra layer of security.")
                         )
                     }
                     .padding(.horizontal, Spacing.sm)
 
-                    // Biometric toggle
-                    if biometricType != .none {
-                        HStack {
-                            Image(systemName: biometricType == .faceID ? "faceid" : "touchid")
-                                .font(.system(size: 24))
-                                .foregroundColor(.accentTeal)
+                    // Biometric toggle — always shown, disabled when not available
+                    HStack {
+                        Image(systemName: biometricType == .faceID ? "faceid" : biometricType == .touchID ? "touchid" : "lock")
+                            .font(AccBotFonts.iconMedium)
+                            .foregroundStyle(biometricType != .none ? colors.primary : colors.onSurfaceVariant)
 
-                            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                                Text("Enable \(biometricType.displayName)")
-                                    .font(AccBotFonts.headline)
-                                    .foregroundColor(.white)
-                                Text("Require authentication to open AccBot")
-                                    .font(AccBotFonts.caption)
-                                    .foregroundColor(.white.opacity(0.6))
-                            }
-
-                            Spacer()
-
-                            Toggle("", isOn: $biometricEnabled)
-                                .tint(.accentTeal)
-                                .labelsHidden()
+                        VStack(alignment: .leading, spacing: Spacing.xxs) {
+                            Text(biometricType != .none ? String(localized: "Enable \(biometricType.displayName)") : String(localized: "Biometric Lock"))
+                                .font(AccBotFonts.headline)
+                                .foregroundStyle(colors.onSurface)
+                            Text(biometricType != .none ? String(localized: "Require authentication to open AccBot") : String(localized: "Not available on this device"))
+                                .font(AccBotFonts.caption)
+                                .foregroundStyle(colors.onSurfaceVariant)
                         }
-                        .padding(Spacing.lg)
-                        .background(Color.surfaceDark)
-                        .cornerRadius(CornerRadius.md)
-                        .padding(.horizontal, Spacing.sm)
+
+                        Spacer()
+
+                        Toggle(biometricType != .none ? String(localized: "Enable \(biometricType.displayName)") : String(localized: "Biometric Lock"), isOn: $biometricEnabled)
+                            .tint(colors.primary)
+                            .labelsHidden()
+                            .disabled(biometricType == .none)
+                            .accessibilityLabel(biometricType != .none ? String(localized: "Enable \(biometricType.displayName)") : String(localized: "Biometric Lock"))
                     }
+                    .padding(Spacing.lg)
+                    .background(colors.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+                    .padding(.horizontal, Spacing.sm)
+
+                    // Info tip card
+                    HStack(alignment: .top, spacing: Spacing.md) {
+                        Image(systemName: "lock.shield.fill")
+                            .font(AccBotFonts.titleSmall)
+                            .foregroundStyle(colors.primary)
+                            .accessibilityHidden(true)
+
+                        Text(String(localized: "Biometric authentication adds an extra layer of security to protect your API keys and settings"))
+                            .font(AccBotFonts.bodySmall)
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(Spacing.md)
+                    .background(colors.primary.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                    .padding(.horizontal, Spacing.sm)
 
                     Spacer(minLength: Spacing.xxl)
 
@@ -97,13 +116,13 @@ struct SecurityView: View {
                         dependencies.userPreferences.biometricLockEnabled = biometricEnabled
                         onNext()
                     }) {
-                        Text("I Understand, Continue")
+                        Text(String(localized: "I Understand, Continue"))
                             .font(AccBotFonts.headline)
-                            .foregroundColor(.backgroundDark)
+                            .foregroundStyle(colors.onPrimary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, Spacing.lg)
-                            .background(Color.accentTeal)
-                            .cornerRadius(CornerRadius.md)
+                            .background(colors.primary)
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
                     }
                     .padding(.bottom, Spacing.xxl)
                 }
@@ -157,28 +176,32 @@ private struct SecurityFeatureRow: View {
     let title: String
     let description: String
 
+    @Environment(\.accBotColors) private var colors
+
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
             Image(systemName: icon)
-                .font(.system(size: 22))
-                .foregroundColor(.accentTeal)
+                .font(AccBotFonts.titleMedium)
+                .foregroundStyle(colors.primary)
                 .frame(width: 36, height: 36)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(title)
                     .font(AccBotFonts.headline)
-                    .foregroundColor(.white)
+                    .foregroundStyle(colors.onSurface)
 
                 Text(description)
                     .font(AccBotFonts.bodySmall)
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundStyle(colors.onSurfaceVariant)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer()
         }
         .padding(Spacing.md)
-        .background(Color.surfaceDark)
-        .cornerRadius(CornerRadius.sm)
+        .background(colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+        .accessibilityElement(children: .combine)
     }
 }

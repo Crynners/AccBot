@@ -106,9 +106,9 @@ enum Exchange: String, Codable, CaseIterable, Hashable, Identifiable {
         [.coinmate, .binance, .kraken, .coinbase].contains(self)
     }
 
-    /// Whether exchange requires a passphrase (KuCoin)
+    /// Whether exchange requires a passphrase (KuCoin, Coinbase)
     var requiresPassphrase: Bool {
-        self == .kucoin
+        self == .kucoin || self == .coinbase
     }
 
     /// Whether exchange requires a client ID (Coinmate)

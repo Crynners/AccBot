@@ -10,19 +10,24 @@ struct AccBotApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environmentObject(dependencies)
-                .environmentObject(router)
-                .environment(\.isSandboxMode, dependencies.userPreferences.sandboxMode)
-                .preferredColorScheme(colorScheme)
-                .onChange(of: scenePhase) { newPhase in
-                    if newPhase == .active {
-                        // Layer 4: Foreground catch-up - execute due plans on app open
-                        Task {
-                            await dependencies.dcaExecutionEngine.executeDuePlans()
-                        }
+            ColorSchemeResolver {
+                RootView()
+            }
+            .environmentObject(dependencies)
+            .environmentObject(router)
+            .environment(\.isSandboxMode, dependencies.userPreferences.sandboxMode)
+            .preferredColorScheme(colorScheme)
+            .onOpenURL { url in
+                router.handleDeepLink(url)
+            }
+            .onChange(of: scenePhase) { newPhase in
+                if newPhase == .active {
+                    // Layer 4: Foreground catch-up - execute due plans on app open
+                    Task {
+                        await dependencies.dcaExecutionEngine.executeDuePlans()
                     }
                 }
+            }
         }
     }
 
@@ -32,6 +37,21 @@ struct AccBotApp: App {
         case .light: return .light
         case .system: return nil
         }
+    }
+}
+
+/// Resolves colorScheme from environment and injects AccBotColors
+struct ColorSchemeResolver<Content: View>: View {
+    @EnvironmentObject var dependencies: AppDependencies
+    @Environment(\.colorScheme) private var colorScheme
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        content()
+            .environment(\.accBotColors, AccBotColors(
+                isSandbox: dependencies.userPreferences.sandboxMode,
+                isDark: colorScheme == .dark
+            ))
     }
 }
 
@@ -66,6 +86,11 @@ struct RootView: View {
 /// Onboarding navigation flow
 struct OnboardingFlowView: View {
     @State private var path = NavigationPath()
+    @Environment(\.accBotColors) private var colors
+
+    /// Current step index (0-based) derived from the navigation path depth
+    private var currentStep: Int { path.count }
+    private let totalSteps = 5
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -82,7 +107,25 @@ struct OnboardingFlowView: View {
                         CompletionView()
                     }
                 }
+                .safeAreaInset(edge: .top) {
+                    onboardingProgressBar
+                }
         }
+    }
+
+    private var onboardingProgressBar: some View {
+        HStack(spacing: Spacing.xs) {
+            ForEach(0..<totalSteps, id: \.self) { index in
+                Capsule()
+                    .fill(index <= currentStep ? colors.primary : colors.onSurfaceVariant.opacity(0.3))
+                    .frame(height: 4)
+                    .animation(.easeInOut(duration: 0.3), value: currentStep)
+            }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.xs)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "Onboarding step \(currentStep + 1) of \(totalSteps)"))
     }
 }
 

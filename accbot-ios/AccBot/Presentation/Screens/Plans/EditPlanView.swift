@@ -21,13 +21,16 @@ struct EditPlanView: View {
 
     @State private var showStrategyInfo = false
     @State private var showQrScanner = false
+    @State private var showDiscardAlert = false
+    // Original values for change tracking
+    @State private var originalAmount: String = ""
+    @State private var originalFrequency: DcaFrequency = .daily
+    @State private var originalCronExpression: String = ""
+    @State private var originalStrategy: DcaStrategy = .classic
+    @State private var originalWithdrawalEnabled: Bool = false
+    @State private var originalWithdrawalAddress: String = ""
 
-    @Environment(\.isSandboxMode) private var isSandboxMode
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var colors: AccBotColors {
-        AccBotColors(isSandbox: isSandboxMode, isDark: colorScheme == .dark)
-    }
+    @Environment(\.accBotColors) private var colors
 
     private let amountPresets = [25, 50, 100, 250, 500]
 
@@ -45,6 +48,15 @@ struct EditPlanView: View {
         return "\(minSize) \(selectedFiat)"
     }
 
+    private var hasChanges: Bool {
+        amount != originalAmount
+            || selectedFrequency != originalFrequency
+            || cronExpression != originalCronExpression
+            || selectedStrategy != originalStrategy
+            || withdrawalEnabled != originalWithdrawalEnabled
+            || withdrawalAddress != originalWithdrawalAddress
+    }
+
     private var isValid: Bool {
         guard plan != nil else { return false }
         guard !selectedCrypto.isEmpty, !selectedFiat.isEmpty else { return false }
@@ -60,11 +72,42 @@ struct EditPlanView: View {
             return false
         }
 
-        if withdrawalEnabled && withdrawalAddress.trimmingCharacters(in: .whitespaces).isEmpty {
-            return false
+        if withdrawalEnabled {
+            let trimmed = withdrawalAddress.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.count < 26 {
+                return false
+            }
         }
 
         return true
+    }
+
+    private var validationHint: String? {
+        guard plan != nil else { return nil }
+        if amount.isEmpty {
+            return String(localized: "Enter a purchase amount")
+        }
+        guard let amountValue = Decimal(string: amount), amountValue > 0 else {
+            return String(localized: "Enter a valid amount greater than 0")
+        }
+        if let exchange = plan?.exchange,
+           let minSize = exchange.minOrderSize[selectedFiat],
+           amountValue < minSize {
+            return String(localized: "Amount below minimum order size (\(minSize) \(selectedFiat))")
+        }
+        if selectedFrequency == .custom && !CronUtils.isValid(cron: cronExpression) {
+            return String(localized: "Enter a valid cron expression for custom frequency")
+        }
+        if withdrawalEnabled {
+            let trimmed = withdrawalAddress.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty {
+                return String(localized: "Enter a withdrawal wallet address")
+            }
+            if trimmed.count < 26 {
+                return String(localized: "Wallet address is too short (minimum 26 characters)")
+            }
+        }
+        return nil
     }
 
     var body: some View {
@@ -86,6 +129,36 @@ struct EditPlanView: View {
         }
         .navigationTitle(String(localized: "Edit Plan"))
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(hasChanges)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(String(localized: "Done")) {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            }
+            if hasChanges {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showDiscardAlert = true
+                    } label: {
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: "chevron.left")
+                                .font(AccBotFonts.headline)
+                            Text(String(localized: "Back"))
+                        }
+                    }
+                }
+            }
+        }
+        .alert(String(localized: "Discard Changes?"), isPresented: $showDiscardAlert) {
+            Button(String(localized: "Keep Editing"), role: .cancel) {}
+            Button(String(localized: "Discard"), role: .destructive) {
+                router.pop()
+            }
+        } message: {
+            Text(String(localized: "You have unsaved changes. Are you sure you want to go back?"))
+        }
         .onAppear { loadPlan() }
         .sheet(isPresented: $showStrategyInfo) {
             StrategyInfoSheet()
@@ -94,10 +167,7 @@ struct EditPlanView: View {
             QrScannerSheet(
                 title: String(localized: "Scan Wallet QR"),
                 onScanned: { code in
-                    let address = code.hasPrefix("bitcoin:")
-                        ? String(code.dropFirst("bitcoin:".count)).components(separatedBy: "?").first ?? code
-                        : code
-                    withdrawalAddress = address
+                    withdrawalAddress = cleanQrValue(code)
                 }
             )
         }
@@ -113,11 +183,26 @@ struct EditPlanView: View {
                     exchangeDisplay(plan)
                 }
 
-                // Crypto selection
+                // Crypto selection (read-only in edit mode)
                 cryptoSection
+                    .disabled(true)
+                    .opacity(Opacity.disabled)
 
-                // Fiat selection
+                // Fiat selection (read-only in edit mode)
                 fiatSection
+                    .disabled(true)
+                    .opacity(Opacity.disabled)
+
+                // Info text about locked fields
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: "info.circle")
+                        .font(AccBotFonts.caption)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .accessibilityHidden(true)
+                    Text(String(localized: "Exchange, pair, and fiat currency cannot be changed"))
+                        .font(AccBotFonts.caption)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
 
                 // Amount input
                 amountSection
@@ -133,7 +218,7 @@ struct EditPlanView: View {
 
                 // Error message
                 if let error = errorMessage {
-                    errorBanner(error)
+                    ErrorBanner(message: error)
                 }
 
                 // Save button
@@ -141,7 +226,9 @@ struct EditPlanView: View {
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.lg)
+            .maxFormWidth()
         }
+        .scrollDismissesKeyboard(.interactively)
         .background(colors.background)
     }
 
@@ -158,17 +245,17 @@ struct EditPlanView: View {
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(plan.exchange.displayName)
                     .font(AccBotFonts.headline)
-                    .foregroundColor(colors.onSurface)
+                    .foregroundStyle(colors.onSurface)
                 Text(String(localized: "Exchange cannot be changed"))
                     .font(AccBotFonts.caption)
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .foregroundStyle(colors.onSurfaceVariant)
             }
 
             Spacer()
         }
         .padding(Spacing.lg)
         .background(colors.surface)
-        .cornerRadius(CornerRadius.md)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     // MARK: - Crypto Section
@@ -181,6 +268,7 @@ struct EditPlanView: View {
                 items: availableCryptos,
                 selection: selectedCrypto,
                 label: { $0 },
+                icon: { CryptoIcon(symbol: $0, size: 18) },
                 onSelect: { selectedCrypto = $0 }
             )
         }
@@ -196,6 +284,7 @@ struct EditPlanView: View {
                 items: availableFiats,
                 selection: selectedFiat,
                 label: { $0 },
+                icon: { FiatIcon(symbol: $0, size: 18) },
                 onSelect: { selectedFiat = $0 }
             )
         }
@@ -210,15 +299,30 @@ struct EditPlanView: View {
             HStack(spacing: Spacing.sm) {
                 TextField("0", text: $amount)
                     .font(AccBotFonts.titleMedium)
-                    .foregroundColor(colors.onSurface)
+                    .foregroundStyle(colors.onSurface)
                     .keyboardType(.decimalPad)
                     .padding(Spacing.md)
                     .background(colors.surface)
-                    .cornerRadius(CornerRadius.sm)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CornerRadius.sm)
+                            .strokeBorder(amountIsBelowMin ? colors.error : Color.clear, lineWidth: 1)
+                    )
+                    .onChange(of: amount) { _, newValue in
+                        let filtered = newValue.filter { $0.isNumber || $0 == "." || $0 == "," }
+                        let normalized = filtered.replacingOccurrences(of: ",", with: ".")
+                        let parts = normalized.split(separator: ".", maxSplits: 2)
+                        let sanitized = parts.count > 1
+                            ? "\(parts[0]).\(parts.dropFirst().joined())"
+                            : normalized
+                        if sanitized != newValue {
+                            amount = sanitized
+                        }
+                    }
 
                 Text(selectedFiat)
                     .font(AccBotFonts.headline)
-                    .foregroundColor(colors.primary)
+                    .foregroundStyle(colors.primary)
             }
 
             HStack(spacing: Spacing.sm) {
@@ -228,17 +332,18 @@ struct EditPlanView: View {
                     } label: {
                         Text("\(preset)")
                             .font(AccBotFonts.label)
-                            .foregroundColor(
-                                amount == "\(preset)" ? colors.background : colors.primary
+                            .foregroundStyle(
+                                amount == "\(preset)" ? colors.onPrimary : colors.primary
                             )
                             .padding(.horizontal, Spacing.md)
                             .padding(.vertical, Spacing.sm)
+                            .frame(minWidth: 44, minHeight: 44)
                             .background(
                                 amount == "\(preset)"
                                     ? colors.primary
                                     : colors.primary.opacity(0.15)
                             )
-                            .cornerRadius(CornerRadius.sm)
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
                     }
                 }
             }
@@ -246,7 +351,7 @@ struct EditPlanView: View {
             if let minDisplay = minOrderSizeDisplay {
                 Text(String(localized: "Minimum order: \(minDisplay)"))
                     .font(AccBotFonts.caption)
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .foregroundStyle(amountIsBelowMin ? colors.error : colors.onSurfaceVariant)
             }
         }
     }
@@ -272,8 +377,11 @@ struct EditPlanView: View {
                 } label: {
                     Image(systemName: "info.circle")
                         .font(AccBotFonts.body)
-                        .foregroundColor(colors.primary)
+                        .foregroundStyle(colors.primary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel(String(localized: "Strategy information"))
             }
 
             HStack(spacing: Spacing.sm) {
@@ -296,17 +404,20 @@ struct EditPlanView: View {
                     .font(AccBotFonts.captionSmall)
                     .lineLimit(1)
             }
-            .foregroundColor(isSelected ? colors.background : colors.onSurface)
+            .foregroundStyle(isSelected ? colors.onPrimary : colors.onSurface)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.md)
             .background(isSelected ? colors.primary : colors.surface)
-            .cornerRadius(CornerRadius.sm)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
             .overlay(
                 RoundedRectangle(cornerRadius: CornerRadius.sm)
                     .stroke(isSelected ? colors.primary : colors.onSurfaceVariant.opacity(0.3), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "\(strategy.displayName) strategy"))
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+        .accessibilityValue(isSelected ? String(localized: "Selected") : String(localized: "Not selected"))
     }
 
     private func strategyIcon(_ strategy: DcaStrategy) -> String {
@@ -325,10 +436,10 @@ struct EditPlanView: View {
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(String(localized: "Auto-Withdrawal"))
                         .font(AccBotFonts.headline)
-                        .foregroundColor(colors.onSurface)
+                        .foregroundStyle(colors.onSurface)
                     Text(String(localized: "Automatically withdraw to your wallet after purchase"))
                         .font(AccBotFonts.caption)
-                        .foregroundColor(colors.onSurfaceVariant)
+                        .foregroundStyle(colors.onSurfaceVariant)
                 }
             }
             .tint(colors.primary)
@@ -337,7 +448,7 @@ struct EditPlanView: View {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(String(localized: "Wallet Address"))
                         .font(AccBotFonts.caption)
-                        .foregroundColor(colors.onSurfaceVariant)
+                        .foregroundStyle(colors.onSurfaceVariant)
 
                     HStack(spacing: Spacing.sm) {
                         TextField(
@@ -345,23 +456,25 @@ struct EditPlanView: View {
                             text: $withdrawalAddress
                         )
                         .font(AccBotFonts.mono)
-                        .foregroundColor(colors.onSurface)
+                        .foregroundStyle(colors.onSurface)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .padding(Spacing.md)
                         .background(colors.surfaceVariant.opacity(0.3))
-                        .cornerRadius(CornerRadius.sm)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
 
                         Button {
                             showQrScanner = true
                         } label: {
                             Image(systemName: "qrcode.viewfinder")
                                 .font(AccBotFonts.titleSmall)
-                                .foregroundColor(colors.primary)
+                                .foregroundStyle(colors.primary)
                                 .padding(Spacing.md)
+                                .frame(minWidth: 44, minHeight: 44)
                                 .background(colors.surface)
-                                .cornerRadius(CornerRadius.sm)
+                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
                         }
+                        .accessibilityLabel(String(localized: "Scan wallet QR code"))
                     }
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -369,81 +482,98 @@ struct EditPlanView: View {
         }
         .padding(Spacing.lg)
         .background(colors.surface)
-        .cornerRadius(CornerRadius.md)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     // MARK: - Save Button
 
     private var saveButton: some View {
-        Button {
-            Task { await savePlan() }
-        } label: {
-            HStack(spacing: Spacing.sm) {
-                if isSubmitting {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: colors.background))
-                        .scaleEffect(0.8)
-                }
-                Text(isSubmitting
-                     ? String(localized: "Saving...")
-                     : String(localized: "Save Changes"))
-                    .font(AccBotFonts.headline)
+        VStack(spacing: Spacing.sm) {
+            if let hint = validationHint, !isValid {
+                Text(hint)
+                    .font(AccBotFonts.caption)
+                    .foregroundStyle(colors.warning)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .foregroundColor(colors.background)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.lg)
-            .background(isValid ? colors.primary : colors.primary.opacity(0.4))
-            .cornerRadius(CornerRadius.md)
+
+            Button {
+                Task { await savePlan() }
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    if isSubmitting {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: colors.onPrimary))
+                            .scaleEffect(0.8)
+                    }
+                    Text(isSubmitting
+                         ? String(localized: "Saving...")
+                         : String(localized: "Save Changes"))
+                        .font(AccBotFonts.headline)
+                }
+                .foregroundStyle(isValid ? colors.onPrimary : colors.disabledForeground)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.lg)
+                .background(isValid ? colors.primary : colors.disabledBackground)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+            }
+            .disabled(!isValid || isSubmitting)
         }
-        .disabled(!isValid || isSubmitting)
         .padding(.bottom, Spacing.xxl)
-    }
-
-    // MARK: - Error Banner
-
-    private func errorBanner(_ message: String) -> some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(colors.error)
-            Text(message)
-                .font(AccBotFonts.bodySmall)
-                .foregroundColor(colors.error)
-        }
-        .padding(Spacing.md)
-        .background(colors.error.opacity(0.1))
-        .cornerRadius(CornerRadius.sm)
     }
 
     // MARK: - Helpers
 
+    private var amountIsBelowMin: Bool {
+        guard let amountValue = Decimal(string: amount),
+              let exchange = plan?.exchange,
+              let minSize = exchange.minOrderSize[selectedFiat] else { return false }
+        return amountValue > 0 && amountValue < minSize
+    }
+
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
             .font(AccBotFonts.headline)
-            .foregroundColor(colors.onSurface)
+            .foregroundStyle(colors.onSurface)
     }
 
     // MARK: - Data Operations
 
     private func loadPlan() {
         isLoading = true
-        do {
-            guard let loaded = try dependencies.activeDatabase.planDao.getById(planId) else {
-                isLoading = false
-                return
+        let db = dependencies.activeDatabase
+        let id = planId
+        Task.detached {
+            do {
+                guard let loaded = try db.planDao.getById(id) else {
+                    await MainActor.run { isLoading = false }
+                    return
+                }
+                await MainActor.run {
+                    plan = loaded
+                    selectedCrypto = loaded.crypto
+                    selectedFiat = loaded.fiat
+                    amount = NSDecimalNumber(decimal: loaded.amount).stringValue
+                    selectedFrequency = loaded.frequency
+                    cronExpression = loaded.cronExpression ?? ""
+                    selectedStrategy = loaded.strategy
+                    withdrawalEnabled = loaded.withdrawalEnabled
+                    withdrawalAddress = loaded.withdrawalAddress ?? ""
+                    // Save original values for change tracking
+                    originalAmount = amount
+                    originalFrequency = selectedFrequency
+                    originalCronExpression = cronExpression
+                    originalStrategy = selectedStrategy
+                    originalWithdrawalEnabled = withdrawalEnabled
+                    originalWithdrawalAddress = withdrawalAddress
+                    isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isLoading = false
+                }
             }
-            plan = loaded
-            selectedCrypto = loaded.crypto
-            selectedFiat = loaded.fiat
-            amount = NSDecimalNumber(decimal: loaded.amount).stringValue
-            selectedFrequency = loaded.frequency
-            cronExpression = loaded.cronExpression ?? ""
-            selectedStrategy = loaded.strategy
-            withdrawalEnabled = loaded.withdrawalEnabled
-            withdrawalAddress = loaded.withdrawalAddress ?? ""
-        } catch {
-            errorMessage = error.localizedDescription
         }
-        isLoading = false
     }
 
     private func savePlan() async {
@@ -488,6 +618,7 @@ struct EditPlanView: View {
 
             try dependencies.activeDatabase.planDao.update(updatedPlan)
             isSubmitting = false
+            UIAccessibility.post(notification: .announcement, argument: String(localized: "Plan saved successfully"))
             router.pop()
         } catch {
             errorMessage = error.localizedDescription
@@ -502,5 +633,4 @@ struct EditPlanView: View {
     NavigationStack {
         EditPlanView(planId: 1)
     }
-    .preferredColorScheme(.dark)
 }

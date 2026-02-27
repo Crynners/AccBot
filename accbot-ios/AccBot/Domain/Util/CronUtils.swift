@@ -64,13 +64,122 @@ enum CronUtils {
         return getNextExecution(cron: cron) != nil
     }
 
-    /// Build a CRON expression from components
+    /// Build a CRON expression from simple components (single hour, optional single day-of-week)
     static func buildCron(minute: Int, hour: Int, dayOfWeek: Int? = nil) -> String {
         let dow = dayOfWeek.map { "\($0)" } ?? "*"
         return "\(minute) \(hour) * * \(dow)"
     }
 
+    /// Build a CRON expression from advanced components (multi-hour, days-of-week/month)
+    static func buildCronAdvanced(
+        minute: Int,
+        hours: Set<Int>,
+        daysOfWeek: Set<Int>? = nil,
+        daysOfMonth: Set<Int>? = nil
+    ) -> String? {
+        guard !hours.isEmpty else { return nil }
+
+        let minuteField = "\(minute)"
+        let hourField = hours.sorted().map { "\($0)" }.joined(separator: ",")
+
+        if let dows = daysOfWeek, !dows.isEmpty {
+            let dowField = dows.sorted().map { "\($0)" }.joined(separator: ",")
+            return "\(minuteField) \(hourField) * * \(dowField)"
+        }
+
+        if let doms = daysOfMonth, !doms.isEmpty {
+            let domField = doms.sorted().map { "\($0)" }.joined(separator: ",")
+            return "\(minuteField) \(hourField) \(domField) * *"
+        }
+
+        // Daily
+        return "\(minuteField) \(hourField) * * *"
+    }
+
+    /// Human-readable description of a CRON expression
+    static func describeCron(_ expression: String) -> String? {
+        let parts = expression.trimmingCharacters(in: .whitespaces).split(separator: " ")
+        guard parts.count == 5 else { return nil }
+
+        let minuteField = String(parts[0])
+        let hourField = String(parts[1])
+        let domField = String(parts[2])
+        let monthField = String(parts[3])
+        let dowField = String(parts[4])
+
+        guard monthField == "*" else { return nil }
+
+        let isCzech = Locale.current.language.languageCode?.identifier == "cs"
+
+        // Pattern: */N * * * * → "Every N minutes"
+        if minuteField.hasPrefix("*/"), hourField == "*", domField == "*", dowField == "*" {
+            guard let n = Int(minuteField.dropFirst(2)) else { return nil }
+            return isCzech ? "Každých \(n) minut" : "Every \(n) minutes"
+        }
+
+        // Pattern: M */N * * * → "Every N hours"
+        if hourField.hasPrefix("*/"), domField == "*", dowField == "*" {
+            guard let n = Int(hourField.dropFirst(2)) else { return nil }
+            return isCzech ? "Každých \(n) hodin" : "Every \(n) hours"
+        }
+
+        // Parse specific minutes and hours
+        guard let minutes = parseFieldValues(minuteField, range: 0...59), !minutes.isEmpty,
+              let hours = parseFieldValues(hourField, range: 0...23), !hours.isEmpty
+        else { return nil }
+
+        let minute = minutes.first!
+        let timeStrings = hours.sorted().map { String(format: "%d:%02d", $0, minute) }
+        let timeList = timeStrings.joined(separator: isCzech ? " a " : " and ")
+
+        let isDomWild = domField == "*"
+        let isDowWild = dowField == "*"
+
+        if isDomWild && isDowWild {
+            // Daily
+            return isCzech ? "Každý den v \(timeList)" : "Every day at \(timeList)"
+        }
+
+        if isDomWild && !isDowWild {
+            // Days of week
+            guard let dows = parseFieldValues(dowField, range: 0...7) else { return nil }
+            let normalizedDows = Set(dows.map { $0 == 7 ? 0 : $0 })
+            let dayNames = dayOfWeekNames(normalizedDows, czech: isCzech)
+            return isCzech ? "\(dayNames) v \(timeList)" : "\(dayNames) at \(timeList)"
+        }
+
+        if !isDomWild && isDowWild {
+            // Days of month
+            guard let doms = parseFieldValues(domField, range: 1...31) else { return nil }
+            let dayList = doms.sorted().map { "\($0)." }.joined(separator: ", ")
+            return isCzech ? "\(dayList) každého měsíce v \(timeList)" : "\(dayList) of every month at \(timeList)"
+        }
+
+        return nil
+    }
+
     // MARK: - Private
+
+    private static func parseFieldValues(_ field: String, range: ClosedRange<Int>) -> [Int]? {
+        if field.contains("-") || field.contains("/") || field.contains("*") { return nil }
+        let numbers = field.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        var result: [Int] = []
+        for num in numbers {
+            guard let n = Int(num), range.contains(n) else { return nil }
+            result.append(n)
+        }
+        return result.isEmpty ? nil : result
+    }
+
+    private static func dayOfWeekNames(_ dows: Set<Int>, czech: Bool) -> String {
+        let names: [(Int, String, String)] = [
+            (1, "Mon", "Po"), (2, "Tue", "Út"), (3, "Wed", "St"),
+            (4, "Thu", "Čt"), (5, "Fri", "Pá"), (6, "Sat", "So"), (0, "Sun", "Ne"),
+        ]
+        let selected = names.filter { dows.contains($0.0) }
+        let joined = selected.map { czech ? $0.2 : $0.1 }.joined(separator: ", ")
+        return joined
+    }
 
     private static func matches(value: Int, spec: String) -> Bool {
         if spec == "*" { return true }

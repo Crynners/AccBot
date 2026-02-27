@@ -4,9 +4,17 @@ import SwiftUI
 struct WelcomeView: View {
     let onNext: () -> Void
 
+    @State private var titleOpacity: Double = 0
+    @State private var card1Opacity: Double = 0
+    @State private var card2Opacity: Double = 0
+    @State private var card3Opacity: Double = 0
+    @State private var buttonOpacity: Double = 0
+    @Environment(\.accBotColors) private var colors
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         ZStack {
-            Color.backgroundDark
+            colors.background
                 .ignoresSafeArea()
 
             VStack(spacing: Spacing.xxxl) {
@@ -15,51 +23,83 @@ struct WelcomeView: View {
                 // App branding
                 VStack(spacing: Spacing.sm) {
                     Text("AccBot")
-                        .font(.system(size: 40, weight: .bold))
-                        .foregroundColor(.accentTeal)
+                        .font(AccBotFonts.titleLarge)
+                        .foregroundStyle(colors.primary)
 
-                    Text("Your Self-Custody DCA Companion")
+                    Text(String(localized: "Your Self-Custody DCA Companion"))
                         .font(AccBotFonts.body)
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundStyle(colors.onSurfaceVariant)
                         .multilineTextAlignment(.center)
                 }
+                .opacity(titleOpacity)
 
                 // Feature cards
                 VStack(spacing: Spacing.lg) {
                     FeatureCard(
-                        icon: "timer",
-                        title: "Auto DCA",
-                        description: "Automatically buy crypto at regular intervals with dollar cost averaging."
+                        icon: "arrow.triangle.2.circlepath",
+                        title: String(localized: "Auto DCA"),
+                        description: String(localized: "Automatically buy crypto at regular intervals with dollar cost averaging.")
                     )
+                    .opacity(card1Opacity)
+
                     FeatureCard(
-                        icon: "lock.fill",
-                        title: "Self-Custody",
-                        description: "Your keys, your crypto. All credentials stored locally on your device."
+                        icon: "shield.lefthalf.filled",
+                        title: String(localized: "Self-Custody"),
+                        description: String(localized: "Your keys, your crypto. All credentials stored locally on your device.")
                     )
+                    .opacity(card2Opacity)
+
                     FeatureCard(
                         icon: "bitcoinsign.circle",
-                        title: "Stack Sats",
-                        description: "Accumulate Bitcoin and other cryptos across multiple exchanges."
+                        title: String(localized: "Stack Sats"),
+                        description: String(localized: "Accumulate Bitcoin and other cryptos across multiple exchanges.")
                     )
+                    .opacity(card3Opacity)
                 }
 
                 Spacer()
 
                 // Get Started button
                 Button(action: onNext) {
-                    Text("Get Started")
+                    Text(String(localized: "Get Started"))
                         .font(AccBotFonts.headline)
-                        .foregroundColor(.backgroundDark)
+                        .foregroundStyle(colors.onPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Spacing.lg)
-                        .background(Color.accentTeal)
-                        .cornerRadius(CornerRadius.md)
+                        .background(colors.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
                 }
+                .opacity(buttonOpacity)
                 .padding(.bottom, Spacing.xxl)
             }
             .padding(.horizontal, Spacing.xxl)
         }
-        .navigationBarHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
+        .onAppear {
+            if reduceMotion {
+                titleOpacity = 1.0
+                card1Opacity = 1.0
+                card2Opacity = 1.0
+                card3Opacity = 1.0
+                buttonOpacity = 1.0
+            } else {
+                withAnimation(.easeIn(duration: 0.4)) {
+                    titleOpacity = 1.0
+                }
+                withAnimation(.easeIn(duration: 0.4).delay(0.2)) {
+                    card1Opacity = 1.0
+                }
+                withAnimation(.easeIn(duration: 0.4).delay(0.4)) {
+                    card2Opacity = 1.0
+                }
+                withAnimation(.easeIn(duration: 0.4).delay(0.6)) {
+                    card3Opacity = 1.0
+                }
+                withAnimation(.easeIn(duration: 0.4).delay(0.8)) {
+                    buttonOpacity = 1.0
+                }
+            }
+        }
     }
 }
 
@@ -70,28 +110,37 @@ private struct FeatureCard: View {
     let title: String
     let description: String
 
+    @Environment(\.accBotColors) private var colors
+
     var body: some View {
         HStack(spacing: Spacing.lg) {
-            Image(systemName: icon)
-                .font(.system(size: 28))
-                .foregroundColor(.accentTeal)
-                .frame(width: 44, height: 44)
+            ZStack {
+                Circle()
+                    .fill(colors.primary.opacity(0.15))
+                    .frame(width: 48, height: 48)
+                Image(systemName: icon)
+                    .font(AccBotFonts.titleMedium)
+                    .foregroundStyle(colors.primary)
+                    .accessibilityHidden(true)
+            }
+            .frame(width: 48, height: 48)
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(title)
                     .font(AccBotFonts.headline)
-                    .foregroundColor(.white)
+                    .foregroundStyle(colors.onSurface)
 
                 Text(description)
                     .font(AccBotFonts.bodySmall)
-                    .foregroundColor(.white.opacity(0.6))
-                    .lineLimit(2)
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer()
         }
         .padding(Spacing.lg)
-        .background(Color.surfaceDark)
-        .cornerRadius(CornerRadius.md)
+        .background(colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+        .accessibilityElement(children: .combine)
     }
 }

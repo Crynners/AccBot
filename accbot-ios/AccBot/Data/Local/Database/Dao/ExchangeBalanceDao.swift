@@ -42,6 +42,14 @@ final class ExchangeBalanceDao {
         }
     }
 
+    func deleteByExchange(_ exchange: Exchange) throws {
+        try dbPool.write { db in
+            _ = try ExchangeBalanceRecord
+                .filter(Column("exchange") == exchange.rawValue)
+                .deleteAll(db)
+        }
+    }
+
     func deleteAll() throws {
         try dbPool.write { db in
             _ = try ExchangeBalanceRecord.deleteAll(db)

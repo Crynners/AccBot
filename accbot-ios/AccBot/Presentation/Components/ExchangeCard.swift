@@ -7,25 +7,26 @@ struct ExchangeCard: View {
     let isConnected: Bool
     let onTap: () -> Void
 
-    @Environment(\.isSandboxMode) private var isSandboxMode
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var colors: AccBotColors {
-        AccBotColors(isSandbox: isSandboxMode, isDark: colorScheme == .dark)
-    }
+    @Environment(\.accBotColors) private var colors
 
     var body: some View {
-        Button(action: onTap) {
+        Button(action: {
+            if !UIAccessibility.isReduceMotionEnabled {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
+            onTap()
+        }) {
             HStack(spacing: Spacing.md) {
                 Image(exchange.logoName)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                     .clipShape(Circle())
+                    .accessibilityHidden(true)
 
                 Text(exchange.displayName)
                     .font(AccBotFonts.headline)
-                    .foregroundColor(colors.onSurface)
+                    .foregroundStyle(colors.onSurface)
 
                 Spacer()
 
@@ -33,27 +34,33 @@ struct ExchangeCard: View {
 
                 Image(systemName: "chevron.right")
                     .font(AccBotFonts.caption)
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .accessibilityHidden(true)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(exchange.displayName), \(isConnected ? String(localized: "Connected") : String(localized: "Not configured"))")
+            .accessibilityAddTraits(.isButton)
             .padding(Spacing.lg)
             .background(colors.surface)
-            .cornerRadius(CornerRadius.md)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
         }
         .buttonStyle(.plain)
     }
 
     private var connectionStatusDot: some View {
         HStack(spacing: Spacing.xs) {
-            Circle()
-                .fill(isConnected ? colors.success : Color.gray)
-                .frame(width: 8, height: 8)
+            Image(systemName: isConnected ? "checkmark.circle.fill" : "xmark.circle")
+                .font(AccBotFonts.caption)
+                .foregroundStyle(isConnected ? colors.success : colors.onSurfaceVariant)
+                .accessibilityHidden(true)
 
             Text(isConnected
                  ? String(localized: "Connected")
                  : String(localized: "Not configured"))
-                .font(AccBotFonts.captionSmall)
-                .foregroundColor(isConnected ? colors.success : colors.onSurfaceVariant)
+                .font(AccBotFonts.caption)
+                .foregroundStyle(isConnected ? colors.success : colors.onSurfaceVariant)
         }
+        .accessibilityElement(children: .combine)
     }
 }
 

@@ -6,6 +6,15 @@ enum TransactionStatus: String, Codable {
     case completed = "COMPLETED"
     case failed = "FAILED"
     case partial = "PARTIAL"
+
+    var displayName: String {
+        switch self {
+        case .pending: return String(localized: "Pending")
+        case .completed: return String(localized: "Completed")
+        case .failed: return String(localized: "Failed")
+        case .partial: return String(localized: "Partial")
+        }
+    }
 }
 
 /// Purchase transaction record

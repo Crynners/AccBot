@@ -35,6 +35,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.accbot.dca.BuildConfig
 import com.accbot.dca.R
+import com.accbot.dca.data.local.AppTheme
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.WithdrawalThreshold
 import java.math.BigDecimal
@@ -365,7 +366,7 @@ fun SettingsScreen(
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
-            // Battery Optimization
+            // System Settings
             item {
                 Text(
                     text = stringResource(R.string.settings_system),
@@ -388,13 +389,11 @@ fun SettingsScreen(
                     onClick = {
                         try {
                             if (uiState.isBatteryOptimized) {
-                                // Not yet whitelisted -> show system exemption dialog
                                 val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                                     data = Uri.parse("package:${context.packageName}")
                                 }
                                 context.startActivity(intent)
                             } else {
-                                // Already whitelisted -> open general battery settings so user can review
                                 context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                             }
                         } catch (_: Exception) {
@@ -405,6 +404,14 @@ fun SettingsScreen(
                             }
                         }
                     }
+                )
+            }
+
+            // Theme Picker
+            item {
+                ThemePickerCard(
+                    selectedTheme = uiState.appTheme,
+                    onThemeSelected = viewModel::setAppTheme
                 )
             }
 
@@ -422,11 +429,63 @@ fun SettingsScreen(
                 )
             }
 
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            // Notifications section
+            item {
+                Text(
+                    text = stringResource(R.string.settings_notifications_section),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            item {
+                NotificationToggleCard(
+                    title = stringResource(R.string.settings_notifications_master),
+                    subtitle = stringResource(R.string.settings_notifications_master_subtitle),
+                    icon = Icons.Default.Notifications,
+                    isEnabled = uiState.notificationsEnabled,
+                    onToggle = viewModel::setNotificationsEnabled
+                )
+            }
+
+            if (uiState.notificationsEnabled) {
+                item {
+                    NotificationToggleCard(
+                        title = stringResource(R.string.settings_notifications_purchase),
+                        subtitle = stringResource(R.string.settings_notifications_purchase_subtitle),
+                        icon = Icons.Default.CheckCircle,
+                        isEnabled = uiState.purchaseNotificationsEnabled,
+                        onToggle = viewModel::setPurchaseNotificationsEnabled
+                    )
+                }
+                item {
+                    NotificationToggleCard(
+                        title = stringResource(R.string.settings_notifications_error),
+                        subtitle = stringResource(R.string.settings_notifications_error_subtitle),
+                        icon = Icons.Default.Error,
+                        isEnabled = uiState.errorNotificationsEnabled,
+                        onToggle = viewModel::setErrorNotificationsEnabled
+                    )
+                }
+                item {
+                    NotificationToggleCard(
+                        title = stringResource(R.string.settings_notifications_weekly),
+                        subtitle = stringResource(R.string.settings_notifications_weekly_subtitle),
+                        icon = Icons.Default.Summarize,
+                        isEnabled = uiState.weeklySummaryEnabled,
+                        onToggle = viewModel::setWeeklySummaryEnabled
+                    )
+                }
+            }
+
             item {
                 SettingsCard(
-                    title = stringResource(R.string.settings_notifications),
-                    subtitle = stringResource(R.string.settings_notifications_subtitle),
-                    icon = Icons.Default.Notifications,
+                    title = stringResource(R.string.settings_notifications_system),
+                    subtitle = stringResource(R.string.settings_notifications_system_subtitle),
+                    icon = Icons.Default.Settings,
                     onClick = {
                         val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                             putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
@@ -974,6 +1033,94 @@ private fun WithdrawalThresholdDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.common_cancel))
             }
+        }
+    )
+}
+
+@Composable
+internal fun ThemePickerCard(
+    selectedTheme: AppTheme,
+    onThemeSelected: (AppTheme) -> Unit
+) {
+    val accent = successColor()
+    val haptic = LocalHapticFeedback.current
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Palette,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.settings_theme),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                AppTheme.entries.forEachIndexed { index, theme ->
+                    SegmentedButton(
+                        selected = selectedTheme == theme,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onThemeSelected(theme)
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = AppTheme.entries.size),
+                        colors = SegmentedButtonDefaults.colors(
+                            activeContainerColor = accent.copy(alpha = 0.15f),
+                            activeContentColor = accent
+                        )
+                    ) {
+                        Text(
+                            text = when (theme) {
+                                AppTheme.DARK -> stringResource(R.string.settings_theme_dark)
+                                AppTheme.LIGHT -> stringResource(R.string.settings_theme_light)
+                                AppTheme.SYSTEM -> stringResource(R.string.settings_theme_system)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun NotificationToggleCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    val accent = successColor()
+    val haptic = LocalHapticFeedback.current
+    SettingsCardBase(
+        title = title,
+        subtitle = subtitle,
+        icon = icon,
+        iconTint = if (isEnabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+        trailing = {
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggle(it)
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = accent,
+                    checkedTrackColor = accent.copy(alpha = 0.5f)
+                )
+            )
         }
     )
 }

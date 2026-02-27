@@ -4,10 +4,10 @@ struct HistoryView: View {
     @EnvironmentObject var dependencies: AppDependencies
     @EnvironmentObject var router: AppRouter
     @StateObject private var viewModel: HistoryViewModel
+    @Environment(\.accBotColors) private var colors
 
     init(filterCrypto: String? = nil, filterFiat: String? = nil) {
         _viewModel = StateObject(wrappedValue: HistoryViewModel(
-            dependencies: AppDependencies(),
             filterCrypto: filterCrypto,
             filterFiat: filterFiat
         ))
@@ -15,45 +15,74 @@ struct HistoryView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if viewModel.isLoading && viewModel.transactions.isEmpty {
-                LoadingStateView(message: "Loading transactions...")
-            } else if viewModel.transactions.isEmpty {
-                EmptyStateView(
-                    systemImage: "clock.arrow.circlepath",
-                    title: "No Transactions",
-                    subtitle: "Your DCA purchase history will appear here"
-                )
-            } else {
-                transactionList
+            // Active filter chips
+            if viewModel.hasActiveFilters {
+                activeFilterChips
             }
-        }
-        .background(Color.backgroundDark)
-        .navigationTitle("History")
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Button {
-                        viewModel.showFilterSheet = true
-                    } label: {
-                        Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
-                    }
+
+            if viewModel.isLoading && viewModel.transactions.isEmpty {
+                LoadingStateView(message: String(localized: "Loading transactions..."))
+            } else if viewModel.transactions.isEmpty {
+                VStack(spacing: Spacing.lg) {
+                    EmptyStateView(
+                        systemImage: viewModel.hasActiveFilters ? "doc.text.magnifyingglass" : "clock.arrow.circlepath",
+                        title: viewModel.hasActiveFilters
+                            ? String(localized: "No Matching Transactions")
+                            : String(localized: "No Transactions"),
+                        subtitle: viewModel.hasActiveFilters
+                            ? String(localized: "Try adjusting your filters")
+                            : String(localized: "Your DCA purchase history will appear here")
+                    )
 
                     if viewModel.hasActiveFilters {
                         Button {
                             viewModel.clearFilters()
                         } label: {
-                            Label("Clear Filters", systemImage: "xmark.circle")
+                            Text(String(localized: "Clear Filters"))
+                                .font(AccBotFonts.headline)
+                                .foregroundStyle(colors.primary)
                         }
                     }
+                }
+            } else {
+                transactionList
+            }
+        }
+        .background(colors.background)
+        .navigationTitle(String(localized: "History"))
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                HStack(spacing: Spacing.sm) {
+                    // Sort button with menu
+                    sortMenu
 
+                    // Filter button with badge
+                    Button {
+                        viewModel.showFilterSheet = true
+                    } label: {
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                            if viewModel.hasActiveFilters {
+                                Circle()
+                                    .fill(colors.error)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 2, y: -2)
+                            }
+                        }
+                    }
+                    .accessibilityLabel(String(localized: "Filter transactions"))
+                    .accessibilityHint(viewModel.hasActiveFilters
+                        ? String(localized: "\(viewModel.activeFilters.count) filters active")
+                        : "")
+
+                    // Export button
                     Button {
                         viewModel.exportCsv()
                     } label: {
-                        Label("Export CSV", systemImage: "square.and.arrow.up")
+                        Image(systemName: "square.and.arrow.up")
                     }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
+                    .accessibilityLabel(String(localized: "Export transactions"))
+}
             }
         }
         .sheet(isPresented: $viewModel.showFilterSheet) {
@@ -61,94 +90,207 @@ struct HistoryView: View {
         }
         .sheet(isPresented: $viewModel.showExportSheet) {
             if let url = viewModel.csvFileUrl {
-                ShareSheet(items: [url])
+                ShareSheet(activityItems: [url])
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if viewModel.showUndoSnackbar {
+                UndoSnackbar(
+                    message: String(localized: "Transaction deleted"),
+                    onUndo: { viewModel.undoDelete() }
+                )
+                .padding(.horizontal, Spacing.lg)
+                .padding(.bottom, Spacing.xxl)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.easeInOut(duration: 0.3), value: viewModel.showUndoSnackbar)
+            }
+        }
+        .alert(String(localized: "Delete Transaction?"), isPresented: $viewModel.showDeleteConfirmation) {
+            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Delete"), role: .destructive) {
+                viewModel.executeDelete()
+            }
+        } message: {
+            if let tx = viewModel.transactionToDelete {
+                Text(String(localized: "Delete \(tx.crypto)/\(tx.fiat) transaction from \(tx.executedAt.formatted(date: .abbreviated, time: .shortened))?"))
+            }
+        }
+        .alert(String(localized: "Error"), isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button(String(localized: "OK"), role: .cancel) {}
+        } message: {
+            if let msg = viewModel.errorMessage {
+                Text(msg)
             }
         }
         .onAppear {
-            viewModel.loadData()
+            viewModel.setup(dependencies)
         }
     }
+
+    // MARK: - Active Filter Chips
+
+    private var activeFilterChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Spacing.sm) {
+                ForEach(viewModel.activeFilters) { filter in
+                    HStack(spacing: 4) {
+                        Text(filter.label)
+                            .font(AccBotFonts.caption)
+                        Button {
+                            viewModel.clearFilter(filter)
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(AccBotFonts.captionSmall)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .accessibilityLabel(String(localized: "Remove \(filter.label) filter"))
+                    }
+                    .padding(.horizontal, Spacing.md)
+                    .background(colors.primary.opacity(0.2))
+                    .foregroundStyle(colors.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl))
+                }
+
+                Button(String(localized: "Clear All")) {
+                    viewModel.clearFilters()
+                }
+                .font(AccBotFonts.caption)
+                .foregroundStyle(colors.onSurfaceVariant)
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.sm)
+        }
+        .background(colors.surface)
+    }
+
+    // MARK: - Sort Menu
+
+    private var sortMenu: some View {
+        Menu {
+            ForEach(HistoryViewModel.SortOption.allCases, id: \.self) { option in
+                Button {
+                    viewModel.setSortOption(option)
+                } label: {
+                    HStack {
+                        Text(option.localizedName)
+                        if viewModel.sortOption == option {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
+        }
+        .accessibilityLabel(String(localized: "Sort: \(viewModel.sortOption.localizedName)"))
+    }
+
+    // MARK: - Transaction List
 
     private var transactionList: some View {
         List {
             ForEach(viewModel.transactions) { tx in
-                TransactionCard(transaction: tx)
-                    .onTapGesture {
-                        router.navigate(to: .transactionDetails(tx.id))
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button {
+                    router.navigate(to: .transactionDetails(tx.id))
+                } label: {
+                    TransactionCard(transaction: tx)
+                }
+                .buttonStyle(.plain)
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             viewModel.deleteTransaction(tx)
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label(String(localized: "Delete"), systemImage: "trash")
                         }
                     }
-                    .listRowBackground(Color.surfaceDark)
+                    .listRowBackground(colors.surface)
                     .onAppear {
-                        // Pagination: load more when reaching end
                         if tx.id == viewModel.transactions.last?.id {
                             viewModel.loadNextPage()
                         }
                     }
             }
+
+            if viewModel.hasMore {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: colors.primary))
+                    Spacer()
+                }
+                .listRowBackground(colors.background)
+            } else if !viewModel.transactions.isEmpty {
+                Text(String(localized: "\(viewModel.transactions.count) transactions"))
+                    .font(AccBotFonts.caption)
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(colors.background)
+            }
         }
         .listStyle(.plain)
     }
 
+    // MARK: - Filter Sheet
+
     private var filterSheet: some View {
         NavigationStack {
             Form {
-                Section("Cryptocurrency") {
-                    Picker("Crypto", selection: $viewModel.filterCrypto) {
-                        Text("All").tag(nil as String?)
-                        ForEach(["BTC", "ETH", "SOL", "ADA", "DOT", "LTC"], id: \.self) { crypto in
+                Section(String(localized: "Cryptocurrency")) {
+                    Picker(String(localized: "Crypto"), selection: $viewModel.filterCrypto) {
+                        Text(String(localized: "All")).tag(nil as String?)
+                        ForEach(viewModel.availableCryptos, id: \.self) { crypto in
                             Text(crypto).tag(crypto as String?)
                         }
                     }
                 }
 
-                Section("Exchange") {
-                    Picker("Exchange", selection: $viewModel.filterExchange) {
-                        Text("All").tag(nil as Exchange?)
+                Section(String(localized: "Exchange")) {
+                    Picker(String(localized: "Exchange"), selection: $viewModel.filterExchange) {
+                        Text(String(localized: "All")).tag(nil as Exchange?)
                         ForEach(Exchange.allCases) { exchange in
                             Text(exchange.displayName).tag(exchange as Exchange?)
                         }
                     }
                 }
 
-                Section("Status") {
-                    Picker("Status", selection: $viewModel.filterStatus) {
-                        Text("All").tag(nil as TransactionStatus?)
-                        Text("Completed").tag(TransactionStatus.completed as TransactionStatus?)
-                        Text("Failed").tag(TransactionStatus.failed as TransactionStatus?)
-                        Text("Pending").tag(TransactionStatus.pending as TransactionStatus?)
+                Section(String(localized: "Status")) {
+                    Picker(String(localized: "Status"), selection: $viewModel.filterStatus) {
+                        Text(String(localized: "All")).tag(nil as TransactionStatus?)
+                        Text(String(localized: "Completed")).tag(TransactionStatus.completed as TransactionStatus?)
+                        Text(String(localized: "Failed")).tag(TransactionStatus.failed as TransactionStatus?)
+                        Text(String(localized: "Pending")).tag(TransactionStatus.pending as TransactionStatus?)
                     }
                 }
 
-                Section("Date Range") {
-                    DatePicker("From", selection: Binding(
+                Section(String(localized: "Date Range")) {
+                    DatePicker(String(localized: "From"), selection: Binding(
                         get: { viewModel.filterDateFrom ?? Date.distantPast },
                         set: { viewModel.filterDateFrom = $0 }
-                    ), displayedComponents: .date)
+                    ), in: ...( viewModel.filterDateTo ?? Date()), displayedComponents: .date)
 
-                    DatePicker("To", selection: Binding(
+                    DatePicker(String(localized: "To"), selection: Binding(
                         get: { viewModel.filterDateTo ?? Date() },
                         set: { viewModel.filterDateTo = $0 }
-                    ), displayedComponents: .date)
+                    ), in: (viewModel.filterDateFrom ?? .distantPast)...Date(), displayedComponents: .date)
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Color.backgroundDark)
-            .navigationTitle("Filters")
+            .background(colors.background)
+            .navigationTitle(String(localized: "Filters"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(String(localized: "Cancel")) {
                         viewModel.showFilterSheet = false
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
+                    Button(String(localized: "Apply")) {
                         viewModel.showFilterSheet = false
                         viewModel.loadData()
                     }
@@ -157,15 +299,4 @@ struct HistoryView: View {
         }
         .presentationDetents([.medium, .large])
     }
-}
-
-/// UIActivityViewController wrapper for sharing
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

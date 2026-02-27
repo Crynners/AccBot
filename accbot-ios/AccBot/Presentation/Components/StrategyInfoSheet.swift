@@ -4,12 +4,7 @@ import SwiftUI
 /// multiplier tier tables.
 struct StrategyInfoSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.isSandboxMode) private var isSandboxMode
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var colors: AccBotColors {
-        AccBotColors(isSandbox: isSandboxMode, isDark: colorScheme == .dark)
-    }
+    @Environment(\.accBotColors) private var colors
 
     var body: some View {
         NavigationStack {
@@ -29,7 +24,7 @@ struct StrategyInfoSheet: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(String(localized: "Done")) { dismiss() }
-                        .foregroundColor(colors.primary)
+                        .foregroundStyle(colors.primary)
                 }
             }
         }
@@ -112,23 +107,25 @@ struct StrategyInfoSheet: View {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: icon)
                     .font(AccBotFonts.titleSmall)
-                    .foregroundColor(colors.primary)
+                    .foregroundStyle(colors.primary)
+                    .accessibilityHidden(true)
 
                 Text(name)
                     .font(AccBotFonts.titleSmall)
-                    .foregroundColor(colors.onSurface)
+                    .foregroundStyle(colors.onSurface)
             }
+            .accessibilityElement(children: .combine)
 
             Text(description)
                 .font(AccBotFonts.bodySmall)
-                .foregroundColor(colors.onSurfaceVariant)
+                .foregroundStyle(colors.onSurfaceVariant)
         }
     }
 
     private func infoText(_ text: String) -> some View {
         Text(text)
             .font(AccBotFonts.bodySmall)
-            .foregroundColor(colors.onSurface.opacity(0.8))
+            .foregroundStyle(colors.onSurfaceVariant)
     }
 
     private func tierTable(columns: [String], rows: [[String]]) -> some View {
@@ -138,13 +135,16 @@ struct StrategyInfoSheet: View {
                 ForEach(columns.indices, id: \.self) { index in
                     Text(columns[index])
                         .font(AccBotFonts.captionSmall)
-                        .foregroundColor(colors.primary)
+                        .foregroundStyle(colors.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, Spacing.sm)
                         .padding(.horizontal, Spacing.sm)
                 }
             }
             .background(colors.surfaceVariant.opacity(0.3))
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(String(localized: "Table header: \(columns.joined(separator: ", "))"))
+            .accessibilityAddTraits(.isHeader)
 
             // Data rows
             ForEach(rows.indices, id: \.self) { rowIndex in
@@ -152,7 +152,7 @@ struct StrategyInfoSheet: View {
                     ForEach(rows[rowIndex].indices, id: \.self) { colIndex in
                         Text(rows[rowIndex][colIndex])
                             .font(AccBotFonts.caption)
-                            .foregroundColor(colors.onSurface)
+                            .foregroundStyle(colors.onSurface)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, Spacing.sm)
                             .padding(.horizontal, Spacing.sm)
@@ -163,9 +163,15 @@ struct StrategyInfoSheet: View {
                     ? Color.clear
                     : colors.surfaceVariant.opacity(0.15)
                 )
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(
+                    rows[rowIndex].enumerated().map { index, value in
+                        "\(columns[index]): \(value)"
+                    }.joined(separator: ", ")
+                )
             }
         }
-        .cornerRadius(CornerRadius.sm)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
         .overlay(
             RoundedRectangle(cornerRadius: CornerRadius.sm)
                 .strokeBorder(colors.onSurfaceVariant.opacity(0.2), lineWidth: 1)
@@ -177,5 +183,4 @@ struct StrategyInfoSheet: View {
 
 #Preview {
     StrategyInfoSheet()
-        .preferredColorScheme(.dark)
 }

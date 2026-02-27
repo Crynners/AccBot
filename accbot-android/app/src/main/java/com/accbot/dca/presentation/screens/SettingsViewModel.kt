@@ -14,6 +14,7 @@ import com.accbot.dca.data.local.MonthlySummaryDao
 import com.accbot.dca.data.local.NotificationDao
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.TransactionDao
+import com.accbot.dca.data.local.AppTheme
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.data.local.WithdrawalDao
 import com.accbot.dca.data.local.WithdrawalThresholdDao
@@ -46,7 +47,12 @@ data class SettingsUiState(
     val availableCryptoExchangePairs: List<Pair<String, Exchange>> = emptyList(),
     val dcaPlanCount: Int = 0,
     val transactionCount: Int = 0,
-    val notificationCount: Int = 0
+    val notificationCount: Int = 0,
+    val appTheme: AppTheme = AppTheme.DARK,
+    val notificationsEnabled: Boolean = true,
+    val purchaseNotificationsEnabled: Boolean = true,
+    val errorNotificationsEnabled: Boolean = true,
+    val weeklySummaryEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -95,7 +101,12 @@ class SettingsViewModel @Inject constructor(
                 isSandboxMode = isSandbox,
                 lowBalanceThresholdDays = userPreferences.getLowBalanceThresholdDays(),
                 languageTag = userPreferences.getLanguageTag(),
-                isBiometricLockEnabled = userPreferences.isBiometricLockEnabled()
+                isBiometricLockEnabled = userPreferences.isBiometricLockEnabled(),
+                appTheme = userPreferences.getAppTheme(),
+                notificationsEnabled = userPreferences.areNotificationsEnabled(),
+                purchaseNotificationsEnabled = userPreferences.arePurchaseNotificationsEnabled(),
+                errorNotificationsEnabled = userPreferences.areErrorNotificationsEnabled(),
+                weeklySummaryEnabled = userPreferences.areWeeklySummaryNotificationsEnabled()
             )
         }
     }
@@ -153,6 +164,31 @@ class SettingsViewModel @Inject constructor(
     fun setBiometricLockEnabled(enabled: Boolean) {
         userPreferences.setBiometricLockEnabled(enabled)
         _uiState.update { it.copy(isBiometricLockEnabled = enabled) }
+    }
+
+    fun setAppTheme(theme: AppTheme) {
+        userPreferences.setAppTheme(theme)
+        _uiState.update { it.copy(appTheme = theme) }
+    }
+
+    fun setNotificationsEnabled(enabled: Boolean) {
+        userPreferences.setNotificationsEnabled(enabled)
+        _uiState.update { it.copy(notificationsEnabled = enabled) }
+    }
+
+    fun setPurchaseNotificationsEnabled(enabled: Boolean) {
+        userPreferences.setPurchaseNotificationsEnabled(enabled)
+        _uiState.update { it.copy(purchaseNotificationsEnabled = enabled) }
+    }
+
+    fun setErrorNotificationsEnabled(enabled: Boolean) {
+        userPreferences.setErrorNotificationsEnabled(enabled)
+        _uiState.update { it.copy(errorNotificationsEnabled = enabled) }
+    }
+
+    fun setWeeklySummaryEnabled(enabled: Boolean) {
+        userPreferences.setWeeklySummaryNotificationsEnabled(enabled)
+        _uiState.update { it.copy(weeklySummaryEnabled = enabled) }
     }
 
     fun setLanguage(tag: String) {

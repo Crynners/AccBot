@@ -6,34 +6,43 @@ struct SplashView: View {
 
     @State private var logoScale: CGFloat = 0.5
     @State private var subtitleOpacity: Double = 0.0
+    @Environment(\.accBotColors) private var colors
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
-            Color.backgroundDark
+            colors.background
                 .ignoresSafeArea()
 
             VStack(spacing: Spacing.lg) {
-                Text("AccBot")
-                    .font(.system(size: 48, weight: .bold))
-                    .foregroundColor(.accentTeal)
+                Text(String(localized: "AccBot DCA"))
+                    .font(AccBotFonts.displayLarge)
+                    .foregroundStyle(colors.primary)
                     .scaleEffect(logoScale)
 
-                Text("Self-Custody DCA")
+                Text(String(localized: "Stack Sats. Stay Humble."))
                     .font(AccBotFonts.titleSmall)
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundStyle(colors.onSurfaceVariant)
                     .opacity(subtitleOpacity)
             }
         }
         .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
+            if reduceMotion {
                 logoScale = 1.0
-            }
-            withAnimation(.easeIn(duration: 0.8).delay(0.4)) {
                 subtitleOpacity = 1.0
+            } else {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
+                    logoScale = 1.0
+                }
+                withAnimation(.easeIn(duration: 0.8).delay(0.4)) {
+                    subtitleOpacity = 1.0
+                }
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                onFinished()
-            }
+        }
+        .task {
+            let delay: Double = reduceMotion ? 0.5 : 1.5
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            onFinished()
         }
     }
 }

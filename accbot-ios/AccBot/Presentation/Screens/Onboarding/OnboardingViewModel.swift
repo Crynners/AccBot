@@ -21,6 +21,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var isValidating = false
     @Published var validationError: String?
     @Published var isValid = false
+    @Published var errorMessage: String?
 
     // MARK: - Dependencies
     private let dependencies: AppDependencies
@@ -136,7 +137,7 @@ class OnboardingViewModel: ObservableObject {
         do {
             try dependencies.activeDatabase.planDao.insert(plan)
         } catch {
-            // Plan creation failed; user can retry from the dashboard
+            errorMessage = String(localized: "Failed to create plan: \(error.localizedDescription)")
         }
     }
 

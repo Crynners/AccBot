@@ -760,6 +760,31 @@
     <string name="settings_delete_notifications_dialog_title">Smazat historii oznámení?</string>
     <string name="settings_delete_notifications_dialog_text">Trvale se smaže všech %1$d oznámení. Tuto akci nelze vrátit zpět.</string>
 
+    <!-- Theme Picker -->
+    <string name="settings_theme">Motiv</string>
+    <string name="settings_theme_dark">Tmavý</string>
+    <string name="settings_theme_light">Světlý</string>
+    <string name="settings_theme_system">Systém</string>
+
+    <!-- Notification Sub-toggles -->
+    <string name="settings_notifications_section">OZNÁMENÍ</string>
+    <string name="settings_notifications_master">Oznámení</string>
+    <string name="settings_notifications_master_subtitle">Povolit push oznámení</string>
+    <string name="settings_notifications_purchase">Upozornění na nákupy</string>
+    <string name="settings_notifications_purchase_subtitle">Oznámit dokončené DCA nákupy</string>
+    <string name="settings_notifications_error">Upozornění na chyby</string>
+    <string name="settings_notifications_error_subtitle">Oznámit chyby při DCA</string>
+    <string name="settings_notifications_weekly">Týdenní souhrn</string>
+    <string name="settings_notifications_weekly_subtitle">Týdenní souhrn portfolia</string>
+    <string name="settings_notifications_system">Systémová nastavení</string>
+    <string name="settings_notifications_system_subtitle">Správa kanálů oznámení</string>
+
+    <!-- Preset Amount Buttons -->
+    <string name="add_plan_preset_amount">Rychlé částky</string>
+
+    <!-- Swipe to archive -->
+    <string name="notifications_swipe_archive">Archivovat</string>
+
     <!-- Accessibility -->
     <string name="a11y_retry">Opakovat</string>
 </resources>

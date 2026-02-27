@@ -3,26 +3,28 @@ import SwiftUI
 // MARK: - AccBot Color Palette
 
 extension Color {
-    // Production colors
-    static let accentTeal = Color(hex: 0x4ECCA3)
-    static let accentTealVariant = Color(hex: 0x3BA67D)
-    static let secondaryBlue = Color(hex: 0x0F3460)
+    // Production colors — WCAG AA compliant (≥4.5:1 contrast with white text on colored backgrounds)
+    static let accentTeal = Color(hex: 0x208464)       // 4.67:1 with white — WCAG AA pass
+    static let accentTealVariant = Color(hex: 0x1B7357) // 5.77:1 with white — WCAG AA pass
+    /// Lighter teal for text on dark backgrounds (≥4.5:1 contrast on #1A1A2E)
+    static let accentTealLight = Color(hex: 0x5CCFAB)
     static let backgroundDark = Color(hex: 0x16213E)
     static let surfaceDark = Color(hex: 0x1A1A2E)
     static let surfaceVariantDark = Color(hex: 0x0F3460)
-    static let onSurfaceVariantColor = Color(hex: 0xA0A0A0)
-    static let errorRed = Color(hex: 0xE94560)
+    /// Secondary text on dark surfaces — WCAG AA compliant (≥4.5:1 on #1A1A2E)
+    static let onSurfaceVariantColor = Color(hex: 0xD0D0D0)
+    /// Raw warning orange for dark-mode decorative use only — use `AccBotColors.warning` for themed usage
     static let warningOrange = Color(hex: 0xFFA726)
 
-    // Sandbox colors (orange instead of green)
-    static let sandboxPrimary = Color(hex: 0xFFA726)
-    static let sandboxPrimaryVariant = Color(hex: 0xE65100)
+    // Sandbox colors — WCAG AA compliant (≥4.5:1 contrast with white text)
+    static let sandboxPrimary = Color(hex: 0x9C6900)       // 4.69:1 with white — WCAG AA pass
+    static let sandboxPrimaryVariant = Color(hex: 0x855A00) // 5.87:1 with white — WCAG AA pass
 
     // Light mode backgrounds
     static let backgroundLight = Color(hex: 0xF5F5F5)
     static let onBackgroundLight = Color(hex: 0x1A1A2E)
     static let surfaceVariantLight = Color(hex: 0xE0E0E0)
-    static let onSurfaceVariantLight = Color(hex: 0x666666)
+    static let onSurfaceVariantLight = Color(hex: 0x49454F)
 
     init(hex: UInt, alpha: Double = 1.0) {
         self.init(
@@ -45,6 +47,19 @@ extension EnvironmentValues {
     var isSandboxMode: Bool {
         get { self[SandboxModeKey.self] }
         set { self[SandboxModeKey.self] = newValue }
+    }
+}
+
+// MARK: - AccBotColors Environment Key
+
+private struct AccBotColorsKey: EnvironmentKey {
+    static let defaultValue = AccBotColors(isSandbox: false, isDark: false)
+}
+
+extension EnvironmentValues {
+    var accBotColors: AccBotColors {
+        get { self[AccBotColorsKey.self] }
+        set { self[AccBotColorsKey.self] = newValue }
     }
 }
 
@@ -86,32 +101,37 @@ struct AccBotColors {
         isDark ? .onSurfaceVariantColor : .onSurfaceVariantLight
     }
 
-    var error: Color { .errorRed }
+    /// Text/icon color for use on primary-colored backgrounds (buttons, badges).
+    /// Uses white in both modes for maximum contrast on darker teal/orange.
+    var onPrimary: Color {
+        .white
+    }
+
+    var error: Color {
+        isDark ? Color(hex: 0xFF6B81) : Color(hex: 0xC62828)
+    }
 
     var success: Color {
-        isSandbox ? .sandboxPrimary : .accentTeal
+        isDark ? Color(hex: 0x66BB6A) : Color(hex: 0x2E7D32)
     }
 
-    var warning: Color { .warningOrange }
-}
-
-// MARK: - Theme Environment Object
-
-@MainActor
-final class ThemeManager: ObservableObject {
-    @Published var isSandboxMode: Bool = false
-    @Published var appTheme: AppTheme = .system
-
-    var isDark: Bool {
-        switch appTheme {
-        case .dark: return true
-        case .light: return false
-        case .system: return true // Default; actual check happens in view
-        }
+    var warning: Color {
+        isDark ? Color(hex: 0xFFA726) : Color(hex: 0xE65100)
     }
 
-    var colors: AccBotColors {
-        AccBotColors(isSandbox: isSandboxMode, isDark: isDark)
+    /// Primary-derived text color with sufficient contrast in both modes (≥4.5:1)
+    var primaryText: Color {
+        isDark ? (isSandbox ? .sandboxPrimary : .accentTealLight) : primaryVariant
+    }
+
+    /// Explicit disabled background for buttons — WCAG AA 3:1 against background.
+    var disabledBackground: Color {
+        surfaceVariant
+    }
+
+    /// Explicit disabled foreground for text on disabled buttons — WCAG AA 3:1.
+    var disabledForeground: Color {
+        onSurfaceVariant
     }
 }
 
@@ -142,9 +162,17 @@ enum Spacing {
     static let xxxl: CGFloat = 32
 }
 
+// MARK: - Opacity Constants
+
+enum Opacity {
+    static let disabled: Double = 0.5
+    static let divider: Double = 0.7
+}
+
 // MARK: - Corner Radius Constants
 
 enum CornerRadius {
+    static let xxs: CGFloat = 2
     static let sm: CGFloat = 8
     static let md: CGFloat = 12
     static let lg: CGFloat = 16
@@ -154,18 +182,42 @@ enum CornerRadius {
 // MARK: - View Modifiers
 
 struct CardModifier: ViewModifier {
-    let isDark: Bool
+    @Environment(\.accBotColors) private var colors
 
     func body(content: Content) -> some View {
         content
             .padding(Spacing.lg)
-            .background(isDark ? Color.surfaceDark : Color.white)
-            .cornerRadius(CornerRadius.md)
+            .background(colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 }
 
 extension View {
-    func cardStyle(isDark: Bool = true) -> some View {
-        modifier(CardModifier(isDark: isDark))
+    func cardStyle() -> some View {
+        modifier(CardModifier())
+    }
+
+    func maxFormWidth() -> some View {
+        frame(maxWidth: 700)
+            .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Primary Button Style
+
+struct PrimaryButtonStyle: ButtonStyle {
+    @Environment(\.accBotColors) private var colors
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(AccBotFonts.headline)
+            .foregroundStyle(isEnabled ? colors.onPrimary : colors.disabledForeground)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.lg)
+            .background(isEnabled ? colors.primary : colors.disabledBackground)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }

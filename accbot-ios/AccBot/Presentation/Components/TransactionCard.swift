@@ -5,12 +5,7 @@ import SwiftUI
 struct TransactionCard: View {
     let transaction: Transaction
 
-    @Environment(\.isSandboxMode) private var isSandboxMode
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var colors: AccBotColors {
-        AccBotColors(isSandbox: isSandboxMode, isDark: colorScheme == .dark)
-    }
+    @Environment(\.accBotColors) private var colors
 
     var body: some View {
         HStack(spacing: Spacing.md) {
@@ -18,10 +13,12 @@ struct TransactionCard: View {
             pairAndExchange
             Spacer()
             amountsAndDate
+            chevron
         }
+        .accessibilityElement(children: .combine)
         .padding(Spacing.lg)
         .background(colors.surface)
-        .cornerRadius(CornerRadius.md)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     // MARK: - Status Icon
@@ -30,29 +27,30 @@ struct TransactionCard: View {
         ZStack {
             Circle()
                 .fill(statusColor.opacity(0.15))
-                .frame(width: 40, height: 40)
+                .frame(width: 44, height: 44)
 
             Image(systemName: statusSystemImage)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(statusColor)
+                .font(AccBotFonts.headline)
+                .foregroundStyle(statusColor)
         }
+        .accessibilityLabel(transaction.status.displayName)
     }
 
     private var statusColor: Color {
         switch transaction.status {
         case .completed: return colors.success
         case .failed: return colors.error
-        case .pending: return colors.warning
+        case .pending: return colors.primary
         case .partial: return colors.warning
         }
     }
 
     private var statusSystemImage: String {
         switch transaction.status {
-        case .completed: return "checkmark"
-        case .failed: return "xmark"
-        case .pending: return "clock"
-        case .partial: return "exclamationmark.triangle"
+        case .completed: return "checkmark.circle.fill"
+        case .failed: return "exclamationmark.circle.fill"
+        case .pending: return "clock.fill"
+        case .partial: return "minus.circle.fill"
         }
     }
 
@@ -62,12 +60,34 @@ struct TransactionCard: View {
         VStack(alignment: .leading, spacing: Spacing.xxs) {
             Text(transaction.pair)
                 .font(AccBotFonts.headline)
-                .foregroundColor(colors.onSurface)
+                .foregroundStyle(colors.onSurface)
 
             Text(transaction.exchange.displayName)
                 .font(AccBotFonts.caption)
-                .foregroundColor(colors.onSurfaceVariant)
+                .foregroundStyle(colors.onSurfaceVariant)
+
+            if transaction.status == .failed, let error = transaction.errorMessage {
+                Text(error)
+                    .font(AccBotFonts.captionSmall)
+                    .foregroundStyle(colors.error)
+                    .lineLimit(2)
+            }
+            if let warning = transaction.warningMessage {
+                Text(warning)
+                    .font(AccBotFonts.captionSmall)
+                    .foregroundStyle(colors.warning)
+                    .lineLimit(2)
+            }
         }
+    }
+
+    // MARK: - Chevron
+
+    private var chevron: some View {
+        Image(systemName: "chevron.right")
+            .font(AccBotFonts.caption)
+            .foregroundStyle(colors.onSurfaceVariant)
+            .accessibilityHidden(true)
     }
 
     // MARK: - Amounts & Date
@@ -76,30 +96,30 @@ struct TransactionCard: View {
         VStack(alignment: .trailing, spacing: Spacing.xxs) {
             Text(formattedFiatAmount)
                 .font(AccBotFonts.bodySmall)
-                .foregroundColor(colors.onSurface)
+                .foregroundStyle(colors.onSurface)
+                .lineLimit(1)
+                .allowsTightening(true)
 
             if transaction.status == .completed || transaction.status == .partial {
                 Text(formattedCryptoAmount)
                     .font(AccBotFonts.caption)
-                    .foregroundColor(colors.primary)
+                    .foregroundStyle(colors.primary)
             }
 
             Text(formattedDate)
                 .font(AccBotFonts.captionSmall)
-                .foregroundColor(colors.onSurfaceVariant)
+                .foregroundStyle(colors.onSurfaceVariant)
         }
     }
 
     // MARK: - Formatting
 
     private var formattedFiatAmount: String {
-        let amount = NSDecimalNumber(decimal: transaction.fiatAmount)
-        return "\(amount.stringValue) \(transaction.fiat)"
+        "-\(AccBotFormatters.formatFiat(transaction.fiatAmount, symbol: transaction.fiat))"
     }
 
     private var formattedCryptoAmount: String {
-        let amount = NSDecimalNumber(decimal: transaction.cryptoAmount)
-        return "+\(amount.stringValue) \(transaction.crypto)"
+        "+\(AccBotFormatters.formatCrypto(transaction.cryptoAmount, symbol: transaction.crypto))"
     }
 
     private var formattedDate: String {

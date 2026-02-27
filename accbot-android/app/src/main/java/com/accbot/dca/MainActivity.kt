@@ -22,6 +22,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -94,8 +95,14 @@ class MainActivity : AppCompatActivity() {
             val isSandboxMode = userPreferences.isSandboxMode()
             var isUnlocked by rememberSaveable { mutableStateOf(false) }
             val biometricEnabled = userPreferences.isBiometricLockEnabled()
+            val appTheme = userPreferences.getAppTheme()
+            val darkTheme = when (appTheme) {
+                com.accbot.dca.data.local.AppTheme.DARK -> true
+                com.accbot.dca.data.local.AppTheme.LIGHT -> false
+                com.accbot.dca.data.local.AppTheme.SYSTEM -> isSystemInDarkTheme()
+            }
 
-            AccBotTheme(isSandboxMode = isSandboxMode) {
+            AccBotTheme(darkTheme = darkTheme, isSandboxMode = isSandboxMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

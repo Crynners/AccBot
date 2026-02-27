@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.accbot.dca.R
@@ -194,11 +195,9 @@ fun NotificationsScreen(
                     item { Spacer(modifier = Modifier.height(8.dp)) }
 
                     items(notifications, key = { it.id }) { notification ->
-                        NotificationItem(
+                        SwipeToDismissNotification(
                             notification = notification,
-                            onClick = {
-                                viewModel.archiveNotification(notification.id)
-                            },
+                            onArchive = { viewModel.archiveNotification(notification.id) },
                             modifier = Modifier.animateItem()
                         )
                     }
@@ -207,6 +206,61 @@ fun NotificationsScreen(
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeToDismissNotification(
+    notification: AppNotification,
+    onArchive: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    @Suppress("DEPRECATION")
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                onArchive()
+                true
+            } else {
+                false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = modifier,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(successColor().copy(alpha = 0.8f))
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.notifications_swipe_archive),
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Default.Archive,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                }
+            }
+        },
+        enableDismissFromStartToEnd = false
+    ) {
+        NotificationItem(
+            notification = notification,
+            onClick = onArchive
+        )
     }
 }
 

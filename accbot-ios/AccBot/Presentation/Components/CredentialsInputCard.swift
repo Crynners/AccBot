@@ -5,7 +5,7 @@ import SwiftUI
 /// exchange requirements. Includes a validate button with loading state.
 struct CredentialsInputCard: View {
     let exchange: Exchange
-    let onValidate: (ExchangeCredentials) -> Void
+    let onValidate: (ExchangeCredentials) async -> Void
 
     @State private var apiKey = ""
     @State private var apiSecret = ""
@@ -14,13 +14,9 @@ struct CredentialsInputCard: View {
     @State private var isLoading = false
     @State private var showApiKey = false
     @State private var showApiSecret = false
+    @FocusState private var focusedField: String?
 
-    @Environment(\.isSandboxMode) private var isSandboxMode
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var colors: AccBotColors {
-        AccBotColors(isSandbox: isSandboxMode, isDark: colorScheme == .dark)
-    }
+    @Environment(\.accBotColors) private var colors
 
     private var isFormValid: Bool {
         let base = !apiKey.trimmingCharacters(in: .whitespaces).isEmpty
@@ -36,10 +32,12 @@ struct CredentialsInputCard: View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             Text(String(localized: "API Credentials"))
                 .font(AccBotFonts.headline)
-                .foregroundColor(colors.onSurface)
+                .foregroundStyle(colors.onSurface)
+                .accessibilityAddTraits(.isHeader)
 
             credentialField(
                 label: String(localized: "API Key"),
+                fieldId: "apiKey",
                 text: $apiKey,
                 isSecure: !showApiKey,
                 toggleVisibility: $showApiKey
@@ -47,6 +45,7 @@ struct CredentialsInputCard: View {
 
             credentialField(
                 label: String(localized: "API Secret"),
+                fieldId: "apiSecret",
                 text: $apiSecret,
                 isSecure: !showApiSecret,
                 toggleVisibility: $showApiSecret
@@ -55,6 +54,7 @@ struct CredentialsInputCard: View {
             if exchange.requiresPassphrase {
                 credentialField(
                     label: String(localized: "Passphrase"),
+                    fieldId: "passphrase",
                     text: $passphrase,
                     isSecure: true,
                     toggleVisibility: nil
@@ -64,6 +64,7 @@ struct CredentialsInputCard: View {
             if exchange.requiresClientId {
                 credentialField(
                     label: String(localized: "Client ID"),
+                    fieldId: "clientId",
                     text: $clientId,
                     isSecure: false,
                     toggleVisibility: nil
@@ -74,13 +75,14 @@ struct CredentialsInputCard: View {
         }
         .padding(Spacing.lg)
         .background(colors.surface)
-        .cornerRadius(CornerRadius.md)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     // MARK: - Field
 
     private func credentialField(
         label: String,
+        fieldId: String,
         text: Binding<String>,
         isSecure: Bool,
         toggleVisibility: Binding<Bool>?
@@ -88,7 +90,7 @@ struct CredentialsInputCard: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(label)
                 .font(AccBotFonts.caption)
-                .foregroundColor(colors.onSurfaceVariant)
+                .foregroundStyle(colors.onSurfaceVariant)
 
             HStack(spacing: Spacing.sm) {
                 Group {
@@ -98,8 +100,10 @@ struct CredentialsInputCard: View {
                         TextField("", text: text)
                     }
                 }
+                .focused($focusedField, equals: fieldId)
+                .accessibilityLabel(label)
                 .font(AccBotFonts.mono)
-                .foregroundColor(colors.onSurface)
+                .foregroundStyle(colors.onSurface)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
 
@@ -109,13 +113,25 @@ struct CredentialsInputCard: View {
                     } label: {
                         Image(systemName: toggleVisibility.wrappedValue ? "eye.slash" : "eye")
                             .font(AccBotFonts.bodySmall)
-                            .foregroundColor(colors.onSurfaceVariant)
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel(toggleVisibility.wrappedValue
+                        ? String(localized: "Hide \(label)")
+                        : String(localized: "Show \(label)"))
                 }
             }
             .padding(Spacing.md)
-            .background(colors.surfaceVariant.opacity(0.3))
-            .cornerRadius(CornerRadius.sm)
+            .background(colors.surfaceVariant.opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.sm)
+                    .strokeBorder(
+                        focusedField == fieldId ? colors.primary : Color.clear,
+                        lineWidth: 2
+                    )
+            )
         }
     }
 
@@ -135,25 +151,28 @@ struct CredentialsInputCard: View {
                     ? clientId.trimmingCharacters(in: .whitespaces)
                     : nil
             )
-            onValidate(credentials)
-            isLoading = false
+            Task {
+                await onValidate(credentials)
+                isLoading = false
+            }
         } label: {
             HStack(spacing: Spacing.sm) {
                 if isLoading {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .progressViewStyle(CircularProgressViewStyle(tint: colors.onPrimary))
                         .scaleEffect(0.8)
+                        .accessibilityLabel(String(localized: "Validating credentials"))
                 }
                 Text(isLoading
                      ? String(localized: "Validating...")
                      : String(localized: "Validate & Save"))
                     .font(AccBotFonts.headline)
             }
-            .foregroundColor(.white)
+            .foregroundStyle(isFormValid ? colors.onPrimary : colors.disabledForeground)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.md)
-            .background(isFormValid ? colors.primary : colors.primary.opacity(0.4))
-            .cornerRadius(CornerRadius.sm)
+            .background(isFormValid ? colors.primary : colors.surfaceVariant)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
         }
         .disabled(!isFormValid || isLoading)
     }
@@ -176,9 +195,9 @@ struct CredentialsInputCard: View {
 #Preview {
     ScrollView {
         VStack(spacing: Spacing.lg) {
-            CredentialsInputCard(exchange: .binance, onValidate: { _ in })
-            CredentialsInputCard(exchange: .kucoin, onValidate: { _ in })
-            CredentialsInputCard(exchange: .coinmate, onValidate: { _ in })
+            CredentialsInputCard(exchange: .binance) { _ in }
+            CredentialsInputCard(exchange: .kucoin) { _ in }
+            CredentialsInputCard(exchange: .coinmate) { _ in }
         }
         .padding()
     }

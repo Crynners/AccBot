@@ -7,10 +7,12 @@ struct CompletionView: View {
     @State private var checkmarkScale: CGFloat = 0.0
     @State private var checkmarkOpacity: Double = 0.0
     @State private var contentOpacity: Double = 0.0
+    @Environment(\.accBotColors) private var colors
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
-            Color.backgroundDark
+            colors.background
                 .ignoresSafeArea()
 
             VStack(spacing: Spacing.xxxl) {
@@ -18,59 +20,77 @@ struct CompletionView: View {
 
                 // Success checkmark animation
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundColor(.accentTeal)
+                    .font(AccBotFonts.iconXL)
+                    .foregroundStyle(colors.primary)
                     .scaleEffect(checkmarkScale)
                     .opacity(checkmarkOpacity)
 
                 // Title and subtitle
                 VStack(spacing: Spacing.sm) {
-                    Text("You're All Set!")
+                    Text(String(localized: "You're All Set!"))
                         .font(AccBotFonts.titleLarge)
-                        .foregroundColor(.white)
+                        .foregroundStyle(colors.onSurface)
 
-                    Text("AccBot is ready to start stacking sats for you.")
+                    Text(String(localized: "AccBot is ready to start stacking sats for you."))
                         .font(AccBotFonts.body)
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundStyle(colors.onSurfaceVariant)
                         .multilineTextAlignment(.center)
                 }
                 .opacity(contentOpacity)
 
                 // Next steps card
                 VStack(alignment: .leading, spacing: Spacing.lg) {
-                    Text("Next Steps")
+                    Text(String(localized: "Next Steps"))
                         .font(AccBotFonts.titleSmall)
-                        .foregroundColor(.white)
+                        .foregroundStyle(colors.onSurface)
 
                     NextStepRow(
                         icon: "play.circle.fill",
-                        text: "Your DCA plan will execute automatically"
+                        text: "Start DCA — Run your first purchase"
                     )
                     NextStepRow(
-                        icon: "iphone",
-                        text: "Open the app daily for reliable iOS execution"
+                        icon: "slider.horizontal.3",
+                        text: "Fine Tune Settings — Adjust your preferences"
                     )
                     NextStepRow(
-                        icon: "plus.circle.fill",
-                        text: "Add more plans in Dashboard"
+                        icon: "bell.fill",
+                        text: "Stay Informed — Get alerts on DCA events"
                     )
                 }
                 .padding(Spacing.lg)
-                .background(Color.surfaceDark)
-                .cornerRadius(CornerRadius.md)
+                .background(colors.surface)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+                .opacity(contentOpacity)
+
+                // Pro Tip card
+                HStack(alignment: .top, spacing: Spacing.md) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(AccBotFonts.iconSmall)
+                        .foregroundStyle(colors.primary)
+                        .frame(width: 24)
+                        .accessibilityHidden(true)
+
+                    Text(String(localized: "Pro tip: For reliable DCA execution on iOS, open AccBot at least once a day so background tasks can run on schedule."))
+                        .font(AccBotFonts.bodySmall)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
+                .accessibilityElement(children: .combine)
+                .padding(Spacing.lg)
+                .background(colors.primary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
                 .opacity(contentOpacity)
 
                 Spacer()
 
-                // Go to Dashboard button
+                // Start Stacking button
                 Button(action: completeOnboarding) {
-                    Text("Go to Dashboard")
+                    Text(String(localized: "Start Stacking"))
                         .font(AccBotFonts.headline)
-                        .foregroundColor(.backgroundDark)
+                        .foregroundStyle(colors.onPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Spacing.lg)
-                        .background(Color.accentTeal)
-                        .cornerRadius(CornerRadius.md)
+                        .background(colors.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
                 }
                 .opacity(contentOpacity)
                 .padding(.bottom, Spacing.xxl)
@@ -79,12 +99,18 @@ struct CompletionView: View {
         }
         .navigationBarBackButtonHidden(true)
         .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.6).delay(0.2)) {
+            if reduceMotion {
                 checkmarkScale = 1.0
                 checkmarkOpacity = 1.0
-            }
-            withAnimation(.easeIn(duration: 0.6).delay(0.6)) {
                 contentOpacity = 1.0
+            } else {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.6).delay(0.2)) {
+                    checkmarkScale = 1.0
+                    checkmarkOpacity = 1.0
+                }
+                withAnimation(.easeIn(duration: 0.6).delay(0.6)) {
+                    contentOpacity = 1.0
+                }
             }
         }
     }
@@ -98,20 +124,24 @@ struct CompletionView: View {
 
 private struct NextStepRow: View {
     let icon: String
-    let text: String
+    let text: LocalizedStringKey
+
+    @Environment(\.accBotColors) private var colors
 
     var body: some View {
         HStack(spacing: Spacing.md) {
             Image(systemName: icon)
-                .font(.system(size: 20))
-                .foregroundColor(.accentTeal)
+                .font(AccBotFonts.iconSmall)
+                .foregroundStyle(colors.primary)
                 .frame(width: 28)
+                .accessibilityHidden(true)
 
             Text(text)
                 .font(AccBotFonts.body)
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundStyle(colors.onSurfaceVariant)
 
             Spacer()
         }
+        .accessibilityElement(children: .combine)
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 
 @MainActor
 class AddPlanViewModel: ObservableObject {
@@ -19,14 +20,25 @@ class AddPlanViewModel: ObservableObject {
 
     // MARK: - Private
 
-    private let dependencies: AppDependencies
+    private(set) var dependencies: AppDependencies?
+    private var isSetUp = false
+
+    private var deps: AppDependencies {
+        guard let d = dependencies else {
+            assertionFailure("ViewModel used before setup() — call setup() in onAppear")
+            return dependencies!
+        }
+        return d
+    }
     private var configuredExchanges: [Exchange] = []
 
     let amountPresets = [25, 50, 100, 250, 500]
 
     // MARK: - Init
 
-    init(dependencies: AppDependencies) {
+    func setup(_ dependencies: AppDependencies) {
+        guard !isSetUp else { return }
+        isSetUp = true
         self.dependencies = dependencies
         loadConfiguredExchanges()
     }
@@ -68,6 +80,10 @@ class AddPlanViewModel: ObservableObject {
         return amountValue * executionsPerMonth
     }
 
+    var hasChanges: Bool {
+        selectedExchange != nil || !amount.isEmpty || withdrawalEnabled || !withdrawalAddress.isEmpty
+    }
+
     var isValid: Bool {
         guard selectedExchange != nil else { return false }
         guard !selectedCrypto.isEmpty, !selectedFiat.isEmpty else { return false }
@@ -85,19 +101,51 @@ class AddPlanViewModel: ObservableObject {
             return false
         }
 
-        // Withdrawal requires address
-        if withdrawalEnabled && withdrawalAddress.trimmingCharacters(in: .whitespaces).isEmpty {
-            return false
+        // Withdrawal requires a valid address (minimum 26 characters for crypto addresses)
+        if withdrawalEnabled {
+            let trimmed = withdrawalAddress.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.count < 26 {
+                return false
+            }
         }
 
         return true
     }
 
+    /// Returns a user-facing hint explaining why the form is invalid, or nil if valid.
+    var validationHint: String? {
+        guard selectedExchange != nil else { return nil } // don't show hint until exchange picked
+        if amount.isEmpty {
+            return String(localized: "Enter a purchase amount")
+        }
+        guard let amountValue = Decimal(string: amount), amountValue > 0 else {
+            return String(localized: "Enter a valid amount greater than 0")
+        }
+        if let exchange = selectedExchange,
+           let minSize = exchange.minOrderSize[selectedFiat],
+           amountValue < minSize {
+            return String(localized: "Amount below minimum order size (\(minSize) \(selectedFiat))")
+        }
+        if selectedFrequency == .custom && !CronUtils.isValid(cron: cronExpression) {
+            return String(localized: "Enter a valid cron expression for custom frequency")
+        }
+        if withdrawalEnabled {
+            let trimmed = withdrawalAddress.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty {
+                return String(localized: "Enter a withdrawal wallet address")
+            }
+            if trimmed.count < 26 {
+                return String(localized: "Wallet address is too short (minimum 26 characters)")
+            }
+        }
+        return nil
+    }
+
     // MARK: - Methods
 
     func loadConfiguredExchanges() {
-        let isSandbox = dependencies.userPreferences.sandboxMode
-        configuredExchanges = dependencies.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
+        let isSandbox = deps.userPreferences.sandboxMode
+        configuredExchanges = deps.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
 
         // Auto-select first exchange if only one configured
         if configuredExchanges.count == 1 {
@@ -155,13 +203,19 @@ class AddPlanViewModel: ObservableObject {
                 nextExecutionAt: nextExecution
             )
 
-            try dependencies.activeDatabase.planDao.insert(plan)
+            try deps.activeDatabase.planDao.insert(plan)
             isSubmitting = false
+            announceForVoiceOver(String(localized: "DCA plan created successfully"))
             return true
         } catch {
             errorMessage = error.localizedDescription
             isSubmitting = false
+            announceForVoiceOver(String(localized: "Error: \(error.localizedDescription)"))
             return false
         }
+    }
+
+    private func announceForVoiceOver(_ message: String) {
+        UIAccessibility.post(notification: .announcement, argument: message)
     }
 }

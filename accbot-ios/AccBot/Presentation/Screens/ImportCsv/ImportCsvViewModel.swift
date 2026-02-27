@@ -9,53 +9,109 @@ final class ImportCsvViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isComplete = false
     @Published var importMode: ImportMode = .csv
+    @Published var isPreviewing = false
+    @Published var newTransactionCount = 0
+    @Published var skippedTransactionCount = 0
+    @Published var cachedPlan: DcaPlan?
+    private var parsedTransactions: [Transaction] = []
 
     private let planId: Int64
-    private let dependencies: AppDependencies
+    private(set) var dependencies: AppDependencies?
+    private var isSetUp = false
+    private var importTask: Task<Void, Never>?
+
+    private var deps: AppDependencies {
+        guard let d = dependencies else {
+            assertionFailure("ViewModel used before setup() — call setup() in onAppear")
+            return dependencies!
+        }
+        return d
+    }
 
     enum ImportMode: String, CaseIterable {
         case csv = "CSV File"
         case api = "Exchange API"
+
+        var localizedName: String {
+            String(localized: String.LocalizationValue(rawValue))
+        }
     }
 
-    init(planId: Int64, dependencies: AppDependencies) {
+    init(planId: Int64) {
         self.planId = planId
+    }
+
+    deinit {
+        importTask?.cancel()
+    }
+
+    func setup(_ dependencies: AppDependencies) {
+        guard !isSetUp else { return }
+        isSetUp = true
         self.dependencies = dependencies
+        loadPlan()
+    }
+
+    private func loadPlan() {
+        cachedPlan = try? deps.activeDatabase.planDao.getById(planId)
     }
 
     var plan: DcaPlan? {
-        try? dependencies.activeDatabase.planDao.getById(planId)
+        cachedPlan
     }
 
     func importFromCsv(url: URL) {
+        do {
+            let data = try String(contentsOf: url, encoding: .utf8)
+            importFromCsvData(data)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func importFromCsvData(_ data: String) {
         guard let plan = plan else { return }
-        isImporting = true
         errorMessage = nil
-        importedCount = 0
+        parsedTransactions = []
 
         Task {
             do {
-                let data = try String(contentsOf: url, encoding: .utf8)
                 let lines = data.components(separatedBy: .newlines)
                     .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
 
                 // Skip header
                 let dataLines = Array(lines.dropFirst())
-                totalCount = dataLines.count
 
-                for (index, line) in dataLines.enumerated() {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+
+                // Get existing order IDs to detect duplicates
+                let existingOrderIds = Set(
+                    try deps.activeDatabase.transactionDao.getExchangeOrderIdsByPlan(plan.id)
+                )
+
+                var newTxs: [Transaction] = []
+                var skipped = 0
+
+                for line in dataLines {
                     let columns = parseCsvLine(line)
                     guard columns.count >= 6 else { continue }
+
+                    let orderId = columns[5]
+                    if !orderId.isEmpty && existingOrderIds.contains(orderId) {
+                        skipped += 1
+                        continue
+                    }
 
                     // Coinmate CSV format: Date, Type, Amount, Price, Fee, OrderId
                     let dateStr = columns[0]
                     let amount = Decimal(string: columns[2]) ?? 0
                     let price = Decimal(string: columns[3]) ?? 0
                     let fee = Decimal(string: columns[4]) ?? 0
-
-                    let formatter = DateFormatter()
-                    formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-                    let date = formatter.date(from: dateStr) ?? Date()
+                    guard let date = formatter.date(from: dateStr) else {
+                        skipped += 1
+                        continue
+                    }
 
                     let tx = Transaction(
                         planId: plan.id,
@@ -68,18 +124,39 @@ final class ImportCsvViewModel: ObservableObject {
                         fee: fee,
                         feeAsset: plan.fiat,
                         status: .completed,
-                        exchangeOrderId: columns.count > 5 ? columns[5] : nil,
+                        exchangeOrderId: orderId.isEmpty ? nil : orderId,
                         executedAt: date
                     )
 
-                    try dependencies.activeDatabase.transactionDao.insert(tx)
-                    importedCount += 1
-                    progress = Double(index + 1) / Double(totalCount)
+                    newTxs.append(tx)
                 }
 
-                isComplete = true
+                parsedTransactions = newTxs
+                newTransactionCount = newTxs.count
+                skippedTransactionCount = skipped
+                totalCount = newTxs.count + skipped
+                isPreviewing = true
             } catch {
                 errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    func confirmImport() {
+        guard !parsedTransactions.isEmpty else { return }
+        isImporting = true
+        isPreviewing = false
+        importedCount = 0
+
+        Task {
+            do {
+                let count = try deps.activeDatabase.transactionDao.insertBatch(parsedTransactions)
+                importedCount = count
+                progress = 1.0
+                parsedTransactions = []
+                isComplete = true
+            } catch {
+                errorMessage = String(localized: "Import failed: \(error.localizedDescription). No transactions were imported.")
             }
             isImporting = false
         }
@@ -87,9 +164,9 @@ final class ImportCsvViewModel: ObservableObject {
 
     func importFromApi() {
         guard let plan = plan else { return }
-        let isSandbox = dependencies.userPreferences.isSandboxMode()
-        guard let credentials = dependencies.credentialsStore.get(for: plan.exchange, isSandbox: isSandbox) else {
-            errorMessage = "No credentials found for \(plan.exchange.displayName)"
+        let isSandbox = deps.userPreferences.isSandboxMode()
+        guard let credentials = deps.credentialsStore.get(for: plan.exchange, isSandbox: isSandbox) else {
+            errorMessage = String(localized: "No credentials found for \(plan.exchange.displayName)")
             return
         }
 
@@ -97,13 +174,17 @@ final class ImportCsvViewModel: ObservableObject {
         errorMessage = nil
         importedCount = 0
 
-        Task {
+        importTask = Task {
             do {
-                let api = dependencies.exchangeApiFactory.create(credentials: credentials)
+                let api = deps.exchangeApiFactory.create(credentials: credentials, isSandbox: isSandbox)
                 var since: Date? = nil
                 var hasMore = true
+                var pageCount = 0
+                let maxPages = 500
 
-                while hasMore {
+                while hasMore && pageCount < maxPages {
+                    guard !Task.isCancelled else { break }
+                    pageCount += 1
                     let page = try await api.getTradeHistory(
                         crypto: plan.crypto,
                         fiat: plan.fiat,
@@ -111,6 +192,7 @@ final class ImportCsvViewModel: ObservableObject {
                         limit: 100
                     )
 
+                    var pageTxs: [Transaction] = []
                     for trade in page.trades where trade.side == "BUY" {
                         let tx = Transaction(
                             planId: plan.id,
@@ -126,8 +208,19 @@ final class ImportCsvViewModel: ObservableObject {
                             exchangeOrderId: trade.orderId,
                             executedAt: trade.timestamp
                         )
-                        try dependencies.activeDatabase.transactionDao.insert(tx)
-                        importedCount += 1
+                        pageTxs.append(tx)
+                    }
+
+                    if !pageTxs.isEmpty {
+                        let count = try deps.activeDatabase.transactionDao.insertBatch(pageTxs)
+                        importedCount += count
+                    }
+
+                    // Update progress
+                    if !page.hasMore || pageCount >= maxPages {
+                        progress = 1.0
+                    } else {
+                        progress = Double(pageCount) / Double(maxPages)
                     }
 
                     hasMore = page.hasMore

@@ -1,45 +1,57 @@
 import SwiftUI
 
 /// Centered empty-state placeholder with an SF Symbol icon, title,
-/// and optional subtitle. Used when lists or data sets are empty.
+/// optional subtitle, and optional action button. Used when lists or data sets are empty.
 struct EmptyStateView: View {
     let systemImage: String
     let title: String
     let subtitle: String?
+    let actionTitle: String?
+    let action: (() -> Void)?
 
-    @Environment(\.isSandboxMode) private var isSandboxMode
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accBotColors) private var colors
 
-    private var colors: AccBotColors {
-        AccBotColors(isSandbox: isSandboxMode, isDark: colorScheme == .dark)
-    }
-
-    init(systemImage: String, title: String, subtitle: String? = nil) {
+    init(systemImage: String, title: String, subtitle: String? = nil,
+         actionTitle: String? = nil, action: (() -> Void)? = nil) {
         self.systemImage = systemImage
         self.title = title
         self.subtitle = subtitle
+        self.actionTitle = actionTitle
+        self.action = action
     }
 
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Image(systemName: systemImage)
-                .font(.system(size: 48))
-                .foregroundColor(colors.onSurfaceVariant.opacity(0.5))
+                .font(AccBotFonts.displayLarge)
+                .foregroundStyle(colors.onSurfaceVariant)
+                .accessibilityHidden(true)
 
             Text(title)
                 .font(AccBotFonts.titleSmall)
-                .foregroundColor(colors.onSurface)
+                .foregroundStyle(colors.onSurface)
                 .multilineTextAlignment(.center)
+                .accessibilityAddTraits(.isHeader)
 
             if let subtitle {
                 Text(subtitle)
                     .font(AccBotFonts.bodySmall)
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .foregroundStyle(colors.onSurfaceVariant)
                     .multilineTextAlignment(.center)
             }
+
+            if let actionTitle, let action {
+                Button(action: action) {
+                    Text(actionTitle)
+                        .font(AccBotFonts.headline)
+                        .foregroundStyle(colors.primary)
+                }
+                .accessibilityLabel(actionTitle)
+            }
         }
-        .padding(Spacing.xxxl)
+        .padding(Spacing.xxl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
     }
 }
 

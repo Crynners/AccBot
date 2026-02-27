@@ -5,15 +5,20 @@ import SwiftUI
 struct NotificationBadge: View {
     let count: Int
 
+    @Environment(\.accBotColors) private var colors
+
     var body: some View {
         if count > 0 {
             Text(displayText)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.white)
-                .frame(minWidth: 18, minHeight: 18)
-                .padding(.horizontal, count > 99 ? 4 : 2)
-                .background(Color.errorRed)
+                .font(AccBotFonts.captionSmall)
+                .foregroundStyle(colors.onPrimary)
+                .frame(minWidth: 20, minHeight: 20)
+                .padding(.horizontal, count > 99 ? Spacing.xs : Spacing.xxs)
+                .background(colors.error)
                 .clipShape(Capsule())
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+                .accessibilityLabel(String(localized: "\(count) unread notifications"))
         }
     }
 
@@ -29,7 +34,8 @@ struct NotificationBadgeModifier: ViewModifier {
     func body(content: Content) -> some View {
         content.overlay(alignment: .topTrailing) {
             NotificationBadge(count: count)
-                .offset(x: 8, y: -8)
+                .alignmentGuide(.top) { $0[.bottom] - 8 }
+                .alignmentGuide(.trailing) { $0[.leading] + 8 }
         }
     }
 }
@@ -47,22 +53,22 @@ extension View {
     HStack(spacing: Spacing.xxxl) {
         Image(systemName: "bell")
             .font(.title2)
-            .foregroundColor(.white)
+            .foregroundStyle(.white)
             .notificationBadge(3)
 
         Image(systemName: "bell")
             .font(.title2)
-            .foregroundColor(.white)
+            .foregroundStyle(.white)
             .notificationBadge(42)
 
         Image(systemName: "bell")
             .font(.title2)
-            .foregroundColor(.white)
+            .foregroundStyle(.white)
             .notificationBadge(150)
 
         Image(systemName: "bell")
             .font(.title2)
-            .foregroundColor(.white)
+            .foregroundStyle(.white)
             .notificationBadge(0)
     }
     .padding(Spacing.xxxl)

@@ -106,6 +106,15 @@ final class TransactionDao {
         }
     }
 
+    func getDistinctCryptos() throws -> [String] {
+        try dbPool.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT DISTINCT crypto FROM transactions ORDER BY crypto
+                """)
+            return rows.map { $0["crypto"] }
+        }
+    }
+
     func getDistinctPairs() throws -> [(crypto: String, fiat: String)] {
         try dbPool.read { db in
             let rows = try Row.fetchAll(db, sql: """
