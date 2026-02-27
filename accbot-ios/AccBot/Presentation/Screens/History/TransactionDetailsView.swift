@@ -39,7 +39,7 @@ struct TransactionDetailsView: View {
                     subtitle: String(localized: "This transaction may have been deleted.")
                 )
             } else {
-                LoadingStateView(message: String(localized: "Loading transaction..."))
+                LoadingStateView(message: "Loading transaction...")
             }
         }
         .background(colors.background)

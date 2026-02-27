@@ -1,5 +1,6 @@
 import Foundation
 import Compression
+import zlib
 
 enum CreateBackupResult {
     case success(envelopeJson: String, suggestedFileName: String, payloadSizeBytes: Int)

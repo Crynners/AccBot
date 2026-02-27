@@ -19,7 +19,7 @@ struct PortfolioView: View {
         ScrollView {
             Group {
                 if viewModel.isLoading {
-                    LoadingStateView(message: String(localized: "Loading portfolio..."))
+                    LoadingStateView(message: "Loading portfolio...")
                         .padding(.horizontal, Spacing.lg)
                 } else if viewModel.pages.isEmpty {
                     EmptyStateView(

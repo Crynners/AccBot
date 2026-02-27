@@ -15,7 +15,7 @@ struct DashboardView: View {
     var body: some View {
         Group {
             if viewModel.isLoading {
-                LoadingStateView(message: String(localized: "Loading dashboard..."))
+                LoadingStateView(message: "Loading dashboard...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(colors.background)
             } else {
