@@ -34,8 +34,7 @@ final class SettingsViewModel: ObservableObject {
 
     private var deps: AppDependencies {
         guard let d = dependencies else {
-            assertionFailure("ViewModel used before setup() — call setup() in onAppear")
-            return dependencies!
+            preconditionFailure("ViewModel used before setup() — call setup() in onAppear")
         }
         return d
     }
@@ -273,7 +272,7 @@ final class SettingsViewModel: ObservableObject {
     }
 
     var lastBackgroundRunText: String {
-        guard let date = deps.userPreferences.lastBackgroundRun else {
+        guard let date = dependencies?.userPreferences.lastBackgroundRun else {
             return String(localized: "Never")
         }
         return AccBotFormatters.relativeDate(date)
