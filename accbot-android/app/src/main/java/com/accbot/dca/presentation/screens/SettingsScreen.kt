@@ -22,6 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -342,15 +347,15 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item { Spacer(modifier = Modifier.height(8.dp)) }
-
-            // Exchange Accounts section
+            // ── GENERAL ──────────────────────────────────────────────
             item {
                 Text(
-                    text = stringResource(R.string.settings_exchange_accounts),
+                    text = stringResource(R.string.settings_general),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier
+                        .padding(top = 8.dp, bottom = 8.dp)
+                        .semantics { heading() }
                 )
             }
 
@@ -360,51 +365,6 @@ fun SettingsScreen(
                     subtitle = stringResource(R.string.settings_exchanges_connected, uiState.configuredExchanges.size),
                     icon = Icons.Default.AccountBalance,
                     onClick = { onNavigateToExchanges?.invoke() }
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // Battery Optimization
-            item {
-                Text(
-                    text = stringResource(R.string.settings_system),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.settings_battery_optimization),
-                    subtitle = if (uiState.isBatteryOptimized) {
-                        stringResource(R.string.settings_battery_disabled)
-                    } else {
-                        stringResource(R.string.settings_battery_unrestricted)
-                    },
-                    icon = Icons.Default.BatteryChargingFull,
-                    showWarning = uiState.isBatteryOptimized,
-                    onClick = {
-                        try {
-                            if (uiState.isBatteryOptimized) {
-                                // Not yet whitelisted -> show system exemption dialog
-                                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                    data = Uri.parse("package:${context.packageName}")
-                                }
-                                context.startActivity(intent)
-                            } else {
-                                // Already whitelisted -> open general battery settings so user can review
-                                context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                            }
-                        } catch (_: Exception) {
-                            try {
-                                context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                            } catch (_: Exception) {
-                                scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.settings_battery_open_failed)) }
-                            }
-                        }
-                    }
                 )
             }
 
@@ -436,15 +396,46 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.settings_battery_optimization),
+                    subtitle = if (uiState.isBatteryOptimized) {
+                        stringResource(R.string.settings_battery_disabled)
+                    } else {
+                        stringResource(R.string.settings_battery_unrestricted)
+                    },
+                    icon = Icons.Default.BatteryChargingFull,
+                    showWarning = uiState.isBatteryOptimized,
+                    onClick = {
+                        try {
+                            if (uiState.isBatteryOptimized) {
+                                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                    data = Uri.parse("package:${context.packageName}")
+                                }
+                                context.startActivity(intent)
+                            } else {
+                                context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                            }
+                        } catch (_: Exception) {
+                            try {
+                                context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                            } catch (_: Exception) {
+                                scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.settings_battery_open_failed)) }
+                            }
+                        }
+                    }
+                )
+            }
 
-            // DCA Alerts
+            // ── ALERTS & SECURITY ──────────────────────────────────
             item {
                 Text(
-                    text = stringResource(R.string.settings_dca_alerts),
+                    text = stringResource(R.string.settings_alerts_security),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier
+                        .padding(top = 24.dp, bottom = 8.dp)
+                        .semantics { heading() }
                 )
             }
 
@@ -463,18 +454,6 @@ fun SettingsScreen(
                     subtitle = stringResource(R.string.settings_withdrawal_alert_subtitle),
                     icon = Icons.AutoMirrored.Filled.CallMade,
                     onClick = { showWithdrawalThresholdDialog = true }
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // Security
-            item {
-                Text(
-                    text = stringResource(R.string.settings_security),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
 
@@ -515,15 +494,15 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // Backup & Restore
+            // ── DATA ───────────────────────────────────────────────
             item {
                 Text(
-                    text = stringResource(R.string.backup_section_title),
+                    text = stringResource(R.string.settings_data),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier
+                        .padding(top = 24.dp, bottom = 8.dp)
+                        .semantics { heading() }
                 )
             }
 
@@ -545,15 +524,15 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // About
+            // ── ABOUT ──────────────────────────────────────────────
             item {
                 Text(
                     text = stringResource(R.string.settings_about),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier
+                        .padding(top = 24.dp, bottom = 8.dp)
+                        .semantics { heading() }
                 )
             }
 
@@ -581,18 +560,6 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // Developer Options
-            item {
-                Text(
-                    text = stringResource(R.string.settings_developer),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
             item {
                 SandboxToggleCard(
                     isEnabled = uiState.isSandboxMode,
@@ -600,15 +567,14 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // Danger Zone (collapsible)
+            // ── DANGER ZONE (collapsible) ──────────────────────────
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { dangerZoneExpanded = !dangerZoneExpanded }
-                        .padding(bottom = 8.dp),
+                        .padding(top = 24.dp, bottom = 8.dp)
+                        .semantics { heading() },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -694,9 +660,10 @@ fun SettingsScreen(
 
             // Version info
             item {
-                Spacer(modifier = Modifier.height(24.dp))
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -779,6 +746,7 @@ internal fun SettingsCardBase(
     subtitleColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
     containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
     onClick: (() -> Unit)? = null,
+    cardModifier: Modifier = Modifier,
     trailing: @Composable () -> Unit = {
         Icon(
             imageVector = Icons.Default.ChevronRight,
@@ -790,6 +758,7 @@ internal fun SettingsCardBase(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .then(cardModifier)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
@@ -880,13 +849,16 @@ internal fun BiometricToggleCard(
         subtitle = stringResource(R.string.biometric_lock_subtitle),
         icon = Icons.Default.Fingerprint,
         iconTint = if (isEnabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onToggle(!isEnabled)
+        },
+        cardModifier = Modifier.semantics(mergeDescendants = true) { role = Role.Switch },
         trailing = {
             Switch(
                 checked = isEnabled,
-                onCheckedChange = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onToggle(!isEnabled)
-                },
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = accent,
                     checkedTrackColor = accent.copy(alpha = 0.5f)
@@ -996,13 +968,16 @@ internal fun SandboxToggleCard(
         titleColor = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurface,
         subtitleColor = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurfaceVariant,
         containerColor = if (isEnabled) Warning.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onToggle()
+        },
+        cardModifier = Modifier.semantics(mergeDescendants = true) { role = Role.Switch },
         trailing = {
             Switch(
                 checked = isEnabled,
-                onCheckedChange = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onToggle()
-                },
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Warning,
                     checkedTrackColor = Warning.copy(alpha = 0.5f)

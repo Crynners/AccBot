@@ -165,6 +165,9 @@
     <string name="backup_no_passphrase">Please enter a password or generate a seed</string>
     <string name="backup_items_count">%1$d items</string>
 
+    <string name="settings_general">GENERAL</string>
+    <string name="settings_alerts_security">ALERTS &amp; SECURITY</string>
+    <string name="settings_data">DATA</string>
     <string name="settings_about">ABOUT</string>
     <string name="settings_documentation">Documentation</string>
     <string name="settings_documentation_subtitle">View setup guides and API docs</string>
@@ -707,6 +710,7 @@
     <string name="notifications_empty_title">No notifications yet</string>
     <string name="notifications_empty_description">Notifications about purchases, errors and warnings will appear here</string>
     <string name="notifications_mark_all_read">Mark all as read</string>
+    <string name="notifications_delete_all">Delete all</string>
 
     <!-- Withdrawal threshold -->
     <string name="settings_withdrawal_alert">Withdrawal Alert</string>

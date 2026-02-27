@@ -166,6 +166,9 @@
     <string name="backup_no_passphrase">Zadejte heslo nebo vygenerujte seed</string>
     <string name="backup_items_count">%1$d položek</string>
 
+    <string name="settings_general">OBECNÉ</string>
+    <string name="settings_alerts_security">UPOZORNĚNÍ A ZABEZPEČENÍ</string>
+    <string name="settings_data">DATA</string>
     <string name="settings_about">O APLIKACI</string>
     <string name="settings_documentation">Dokumentace</string>
     <string name="settings_documentation_subtitle">Návody a API dokumentace</string>
@@ -709,6 +712,7 @@
     <string name="notifications_empty_title">Zatím žádná oznámení</string>
     <string name="notifications_empty_description">Oznámení o nákupech, chybách a upozorněních se zobrazí zde</string>
     <string name="notifications_mark_all_read">Označit vše jako přečtené</string>
+    <string name="notifications_delete_all">Smazat vše</string>
 
     <!-- Withdrawal threshold -->
     <string name="settings_withdrawal_alert">Upozornění na výběr</string>
