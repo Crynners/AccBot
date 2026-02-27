@@ -20,7 +20,11 @@
     for (var i = 0; i < els.length; i++) {
       var key = els[i].getAttribute('data-i18n');
       if (translations[key]) {
-        els[i].textContent = translations[key];
+        if (translations[key].indexOf('<') !== -1) {
+          els[i].innerHTML = translations[key];
+        } else {
+          els[i].textContent = translations[key];
+        }
       }
     }
     var placeholders = document.querySelectorAll('[data-i18n-placeholder]');

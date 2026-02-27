@@ -17,12 +17,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -67,6 +67,7 @@ fun DashboardScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToPlanDetails: ((Long) -> Unit)? = null,
     onNavigateToPortfolio: ((String, String) -> Unit)? = null,
+    onNavigateToExchangeDetail: ((String) -> Unit)? = null,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -98,14 +99,6 @@ fun DashboardScreen(
         topBar = {
             TopAppBar(
                 title = { AccBotHeaderLogo() },
-                actions = {
-                    IconButton(onClick = onNavigateToPlans) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = stringResource(R.string.dashboard_add_plan)
-                        )
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -139,6 +132,12 @@ fun DashboardScreen(
                         isPriceLoading = uiState.isPriceLoading,
                         onRefreshPrices = { viewModel.refreshPrices() },
                         onHoldingClick = onNavigateToPortfolio,
+                        onImportViaApi = onNavigateToExchangeDetail?.let { nav ->
+                            {
+                                val exchanges = uiState.activePlans.map { it.plan.exchange.name }.distinct()
+                                if (exchanges.size == 1) nav(exchanges.first()) else nav("")
+                            }
+                        },
                         compact = true
                     )
 
@@ -199,86 +198,85 @@ fun DashboardScreen(
                 }
             }
         } else {
-            // Portrait: single column with pull-to-refresh
-            PullToRefreshBox(
-                isRefreshing = uiState.isRefreshing,
-                onRefresh = { viewModel.refreshAll() },
+            // Portrait: single column
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                // Sandbox Mode Banner
+                if (uiState.isSandboxMode) {
                     item {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        SandboxBanner()
                     }
+                }
 
-                    // Sandbox Mode Banner
-                    if (uiState.isSandboxMode) {
-                        item {
-                            SandboxBanner()
-                        }
-                    }
-
-                    // Holdings Pager
-                    item {
-                        HoldingsPager(
-                            holdings = uiState.holdings,
-                            isPriceLoading = uiState.isPriceLoading,
-                            onRefreshPrices = { viewModel.refreshPrices() },
-                            onHoldingClick = onNavigateToPortfolio
-                        )
-                    }
-
-                    // My DCA Plans
-                    item {
-                        SectionHeader(
-                            title = stringResource(R.string.dashboard_active_plans),
-                            action = "+",
-                            onAction = onNavigateToPlans
-                        )
-                    }
-
-                    if (uiState.isLoading) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
+                // Holdings Pager
+                item {
+                    HoldingsPager(
+                        holdings = uiState.holdings,
+                        isPriceLoading = uiState.isPriceLoading,
+                        onRefreshPrices = { viewModel.refreshPrices() },
+                        onHoldingClick = onNavigateToPortfolio,
+                        onImportViaApi = onNavigateToExchangeDetail?.let { nav ->
+                            {
+                                val exchanges = uiState.activePlans.map { it.plan.exchange.name }.distinct()
+                                if (exchanges.size == 1) nav(exchanges.first()) else nav("")
                             }
                         }
-                    } else if (uiState.activePlans.isEmpty()) {
-                        item {
-                            EmptyPlansCard(onAddPlan = onNavigateToPlans)
-                        }
-                    } else {
-                        items(uiState.activePlans, key = { it.plan.id }) { planWithBalance ->
-                            DcaPlanCard(
-                                planWithBalance = planWithBalance,
-                                onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
-                                onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) }
-                            )
+                    )
+                }
+
+                // My DCA Plans
+                item {
+                    SectionHeader(
+                        title = stringResource(R.string.dashboard_active_plans),
+                        action = "+",
+                        onAction = onNavigateToPlans
+                    )
+                }
+
+                if (uiState.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
                         }
                     }
-
-                    // Quick Actions
+                } else if (uiState.activePlans.isEmpty()) {
                     item {
-                        QuickActionsRow(
-                            onViewHistory = onNavigateToHistory,
-                            onRunNow = { viewModel.showRunNowSheet() }
+                        EmptyPlansCard(onAddPlan = onNavigateToPlans)
+                    }
+                } else {
+                    items(uiState.activePlans, key = { it.plan.id }) { planWithBalance ->
+                        DcaPlanCard(
+                            planWithBalance = planWithBalance,
+                            onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
+                            onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) }
                         )
                     }
+                }
 
-                    item {
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
+                // Quick Actions
+                item {
+                    QuickActionsRow(
+                        onViewHistory = onNavigateToHistory,
+                        onRunNow = { viewModel.showRunNowSheet() }
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
@@ -391,6 +389,7 @@ internal fun HoldingsPager(
     isPriceLoading: Boolean,
     onRefreshPrices: () -> Unit,
     onHoldingClick: ((String, String) -> Unit)? = null,
+    onImportViaApi: (() -> Unit)? = null,
     compact: Boolean = false
 ) {
     val successCol = successColor()
@@ -427,6 +426,18 @@ internal fun HoldingsPager(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (onImportViaApi != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(onClick = onImportViaApi) {
+                        Icon(
+                            Icons.Default.CloudDownload,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.import_api_title))
+                    }
+                }
             }
         }
         return
@@ -437,7 +448,7 @@ internal fun HoldingsPager(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {
+            .clickable(role = Role.Button) {
                 val holding = holdings.getOrNull(pagerState.currentPage) ?: return@clickable
                 onHoldingClick?.invoke(holding.crypto, holding.fiat)
             },
@@ -463,8 +474,7 @@ internal fun HoldingsPager(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 IconButton(
-                    onClick = onRefreshPrices,
-                    modifier = Modifier.size(32.dp)
+                    onClick = onRefreshPrices
                 ) {
                     if (isPriceLoading) {
                         CircularProgressIndicator(
@@ -697,7 +707,7 @@ internal fun DcaPlanCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )

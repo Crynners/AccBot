@@ -24,11 +24,36 @@
   <header class="site-header scrolled">
     <div class="header-inner">
       <a href="index.html" class="logo">
-        <svg width="32" height="32" viewBox="0 0 54 54" fill="none">
-          <circle cx="27" cy="27" r="27" fill="#4ECCA3"/>
-          <path d="M29.38,47.95v4.73h-4.05v-4.67c-1.7,-0.19 -3.43,-0.59 -5.16,-1.22l1,-4c1.57,0.57 3.19,1.05 4.84,1.05 2.03,0 3.08,-0.73 3.08,-1.95 0,-1.14 -0.89,-1.84 -3.08,-2.57 -3.43,-1.16 -5.56,-2.78 -5.56,-5.97 0,-2.86 2,-5.13 5.43,-5.84v-4.38h4.05v4.4c1.4,0.19 2.54,0.49 3.67,0.86l-0.84,3.86c-1.22,-0.43 -2.51,-0.86 -4.08,-0.86 -2.19,0 -2.86,0.92 -2.86,1.76 0,1 0.97,1.65 3.4,2.57 3.65,1.3 5.24,3.05 5.24,6.02 0,2.95 -2.08,5.32 -5.89,5.97z" fill="#1A1A2E" transform="translate(0,-13)"/>
-        </svg>
-        AccBot
+        <span class="logo-text">Acc<span class="logo-btc"><span class="logo-icon">
+          <svg width="48" height="48" viewBox="86 86 340 340" fill="none">
+            <defs>
+              <linearGradient id="hdrFade" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="white"/>
+                <stop offset="28%" stop-color="white"/>
+                <stop offset="40%" stop-color="black"/>
+                <stop offset="60%" stop-color="black"/>
+                <stop offset="72%" stop-color="white"/>
+                <stop offset="100%" stop-color="white"/>
+              </linearGradient>
+              <mask id="hdrMask">
+                <rect x="86" y="86" width="340" height="340" fill="url(#hdrFade)"/>
+              </mask>
+              <clipPath id="hdrClip"><circle cx="256" cy="256" r="138"/></clipPath>
+            </defs>
+            <g mask="url(#hdrMask)">
+              <circle cx="256" cy="256" r="170" fill="none" stroke="#4ECCA3" stroke-width="8" opacity="0.3"/>
+              <circle cx="256" cy="256" r="140" fill="#4ECCA3" fill-opacity="0.05" stroke="#4ECCA3" stroke-width="4"/>
+              <g clip-path="url(#hdrClip)">
+                <rect x="126" y="280" width="50" height="200" rx="6" fill="#4ECCA3" opacity="0.3"/>
+                <rect x="196" y="230" width="50" height="250" rx="6" fill="#4ECCA3" opacity="0.5"/>
+                <rect x="266" y="170" width="50" height="310" rx="6" fill="#4ECCA3" opacity="0.7"/>
+                <rect x="336" y="100" width="50" height="380" rx="6" fill="#4ECCA3" opacity="0.9"/>
+              </g>
+              <circle cx="256" cy="256" r="85" fill="#16213E" stroke="#4ECCA3" stroke-width="4"/>
+              <circle cx="256" cy="256" r="72" fill="none" stroke="#4ECCA3" stroke-width="2" stroke-dasharray="8 8" opacity="0.6"/>
+            </g>
+          </svg>
+        </span>&#x20bf;</span>ot</span>
       </a>
 
       <nav>
@@ -59,7 +84,8 @@
       <div class="container">
         <div class="privacy-content">
           <h1 data-i18n="privacy_title">Privacy Policy</h1>
-          <p class="updated" data-i18n="privacy_last_updated">Last updated: February 2026</p>
+          <p class="updated" data-i18n="privacy_effective_date">Effective date: February 26, 2026</p>
+          <p class="updated" data-i18n="privacy_last_updated">Last updated: February 26, 2026</p>
 
           <p data-i18n="privacy_intro">AccBot ("the App") is a self-custody cryptocurrency DCA (Dollar Cost Averaging) tool developed by Crynners. This privacy policy explains how the App handles your data.</p>
 
@@ -73,10 +99,28 @@
             <li data-i18n="privacy_stored_item2">DCA plan configurations (crypto pair, amount, frequency, strategy)</li>
             <li data-i18n="privacy_stored_item3">Transaction history (purchase records from your DCA executions)</li>
             <li data-i18n="privacy_stored_item4">App preferences and settings</li>
+            <li data-i18n="privacy_stored_item5">Withdrawal history (records of crypto withdrawals to your wallets)</li>
+            <li data-i18n="privacy_stored_item6">Exchange balance snapshots (cached account balances for portfolio display)</li>
+            <li data-i18n="privacy_stored_item7">Cached market price data (cryptocurrency prices fetched from third-party APIs)</li>
+            <li data-i18n="privacy_stored_item8">Notification history (records of app notifications and alerts)</li>
           </ul>
 
           <h2 data-i18n="privacy_network_title">Network Communication</h2>
-          <p data-i18n="privacy_network_text">The App communicates directly with cryptocurrency exchanges via HTTPS to execute trades and retrieve market data. No data is sent to any other server. There are no analytics, tracking, or advertising services.</p>
+          <p data-i18n="privacy_network_intro">The App communicates with the following external services via HTTPS. All connections are encrypted in transit. No personal data is intentionally sent; however, your device's IP address is exposed to these services as part of normal network communication.</p>
+          <p><strong data-i18n="privacy_network_exchanges">Cryptocurrency Exchanges:</strong> <span data-i18n="privacy_network_exchanges_text">The App connects directly to exchanges you configure (e.g. Coinmate, Binance, Kraken, KuCoin, Bitfinex, Huobi, Coinbase) to execute trades, retrieve balances, and fetch order data. Only your API credentials and trade parameters are sent.</span></p>
+          <p><strong data-i18n="privacy_network_market">Market Data Providers:</strong> <span data-i18n="privacy_network_market_text">The App fetches cryptocurrency prices and market data from CoinGecko (coingecko.com), CryptoCompare (cryptocompare.com), and Alternative.me (alternative.me) for the Fear & Greed Index. No personal data or API credentials are sent to these services — only standard HTTPS requests for public market data.</span></p>
+          <p><strong data-i18n="privacy_network_mlkit">Google ML Kit (on-device):</strong> <span data-i18n="privacy_network_mlkit_text">The App uses Google ML Kit for barcode scanning and text recognition. ML Kit processes data on-device, but the SDK may send diagnostic data to Google, including device information, app info, per-installation identifiers, and performance metrics. This data is not used for advertising or user profiling. This data collection is managed by Google and is described in <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>.</span></p>
+
+          <h2 data-i18n="privacy_security_title">Data Security</h2>
+          <p data-i18n="privacy_security_text">AccBot employs multiple layers of security to protect your data:</p>
+          <ul>
+            <li data-i18n="privacy_security_item1">Exchange API credentials are encrypted using AES-256-GCM with keys stored in the hardware-backed Android Keystore</li>
+            <li data-i18n="privacy_security_item2">Sensitive app preferences are stored using EncryptedSharedPreferences</li>
+            <li data-i18n="privacy_security_item3">All network communication uses HTTPS encryption in transit</li>
+            <li data-i18n="privacy_security_item4">All app data is stored in app-private storage, inaccessible to other applications</li>
+            <li data-i18n="privacy_security_item5">Optional biometric authentication (fingerprint or face recognition) adds an additional layer of access protection</li>
+            <li data-i18n="privacy_security_item6">Exported backups are encrypted with a user-chosen password using AES-256-GCM</li>
+          </ul>
 
           <h2 data-i18n="privacy_permissions_title">Permissions</h2>
           <ul>
@@ -85,22 +129,48 @@
             <li data-i18n="privacy_perm_battery">Battery optimization exemption: Required for reliable background execution of scheduled DCA purchases</li>
             <li data-i18n="privacy_perm_alarm">Exact alarms: Required for precise scheduling of DCA purchase executions</li>
             <li data-i18n="privacy_perm_foreground">Foreground service: Required to monitor and execute DCA plans in the background</li>
+            <li data-i18n="privacy_perm_notifications">Notifications: Used to inform you about DCA execution results, errors, and plan status updates</li>
+            <li data-i18n="privacy_perm_network">Network state: Used to check internet connectivity before attempting trade executions</li>
+            <li data-i18n="privacy_perm_boot">Boot completed: Allows the App to reschedule DCA plans after device restart</li>
+            <li data-i18n="privacy_perm_wakelock">Wake lock: Ensures the device stays awake long enough to complete trade executions</li>
           </ul>
 
           <h2 data-i18n="privacy_thirdparty_title">Third-Party Services</h2>
-          <p data-i18n="privacy_thirdparty_text">AccBot does not integrate any third-party analytics, advertising, or tracking services. The only external communication is with cryptocurrency exchanges that you explicitly connect.</p>
+          <p data-i18n="privacy_thirdparty_text">AccBot does not integrate any third-party analytics, advertising, or tracking services. The App communicates with the following third-party services:</p>
+          <ul>
+            <li data-i18n="privacy_thirdparty_exchanges">Cryptocurrency exchanges (Coinmate, Binance, Kraken, KuCoin, Bitfinex, Huobi, Coinbase) — only those you explicitly connect, for trade execution and balance retrieval</li>
+            <li data-i18n="privacy_thirdparty_coingecko">CoinGecko — for cryptocurrency price data and market information</li>
+            <li data-i18n="privacy_thirdparty_cryptocompare">CryptoCompare — for cryptocurrency price data and all-time high tracking</li>
+            <li data-i18n="privacy_thirdparty_alternative">Alternative.me — for the Fear & Greed Index used in the Fear & Greed DCA strategy</li>
+            <li data-i18n="privacy_thirdparty_mlkit">Google ML Kit — on-device barcode scanning and text recognition. ML Kit may collect diagnostic data as described in <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>. This data is not used for advertising or user profiling.</li>
+          </ul>
 
           <h2 data-i18n="privacy_deletion_title">Data Deletion</h2>
-          <p data-i18n="privacy_deletion_text">All data can be deleted by using the "Delete All Data" option in Settings, or by uninstalling the App. Since no data is stored externally, uninstallation removes all traces of your data.</p>
+          <p data-i18n="privacy_deletion_text">AccBot does not require user registration or user accounts. All data can be deleted by using the "Delete All Data" option in Settings, or by uninstalling the App. Since no data is stored externally, uninstallation removes all traces of your data.</p>
 
           <h2 data-i18n="privacy_children_title">Children's Privacy</h2>
           <p data-i18n="privacy_children_text">AccBot is not intended for use by children under 18. The App facilitates cryptocurrency trading which is subject to age restrictions in most jurisdictions.</p>
+
+          <h2 data-i18n="privacy_biometric_title">Biometric Authentication</h2>
+          <p data-i18n="privacy_biometric_text">AccBot offers an optional biometric lock (fingerprint or face recognition) to protect access to the App. Biometric data is handled entirely by the Android operating system and is never accessed, stored, or transmitted by AccBot. The App only receives a success/failure result from the system biometric prompt.</p>
+
+          <h2 data-i18n="privacy_backup_title">Backup and Export</h2>
+          <p data-i18n="privacy_backup_text">AccBot allows you to export encrypted backups of your data, including DCA plans, transaction history, and optionally your exchange API credentials. Backup files are encrypted with a password you choose using AES-256-GCM encryption. Backup files are saved to your device's local storage and are never uploaded to any server by the App. You are responsible for the security of exported backup files.</p>
+
+          <h2 data-i18n="privacy_retention_title">Data Retention</h2>
+          <p data-i18n="privacy_retention_text">All data is stored locally on your device for as long as the App is installed. There are no server-side retention policies because no data is stored on external servers. You can delete specific data (individual DCA plans, transaction history) within the App, or use "Delete All Data" in Settings to erase everything. Uninstalling the App permanently removes all locally stored data.</p>
+
+          <h2 data-i18n="privacy_rights_title">Your Rights</h2>
+          <p data-i18n="privacy_rights_text">Because AccBot stores all data locally on your device and does not collect personal data on any server, you have full control over your data at all times. You can view, export, or delete any data through the App's interface. If you are in the EU (GDPR) or California (CCPA), please note that AccBot does not process personal data on external servers, so typical data subject access requests do not apply. For any privacy concerns, please contact us.</p>
+
+          <h2 data-i18n="privacy_international_title">International Data Transfer</h2>
+          <p data-i18n="privacy_international_text">When AccBot communicates with cryptocurrency exchanges and market data providers, your requests are sent to servers that may be located in various countries worldwide. These connections are encrypted via HTTPS. AccBot does not control the location of third-party servers. Please review the privacy policies of the exchanges and services you use.</p>
 
           <h2 data-i18n="privacy_changes_title">Changes to This Policy</h2>
           <p data-i18n="privacy_changes_text">Any changes to this privacy policy will be published in the app's source code repository and reflected on this page.</p>
 
           <h2 data-i18n="privacy_contact_title">Contact</h2>
-          <p data-i18n="privacy_contact_text">For questions about this privacy policy or the App, please open an issue on our GitHub repository.</p>
+          <p data-i18n="privacy_contact_text">For questions about this privacy policy or the App, you can reach us at crynners@gmail.com or open an issue on our GitHub repository.</p>
 
           <a href="index.html" class="privacy-back-link">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>

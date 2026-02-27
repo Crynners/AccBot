@@ -149,7 +149,8 @@ private fun SeedWordInputField(
         )
         ExposedDropdownMenu(
             expanded = expanded && suggestions.isNotEmpty(),
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            matchTextFieldWidth = false
         ) {
             suggestions.forEach { suggestion ->
                 DropdownMenuItem(

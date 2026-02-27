@@ -2,7 +2,9 @@ package com.accbot.dca.data.local
 
 import androidx.room.withTransaction
 import com.accbot.dca.domain.model.*
+import com.accbot.dca.domain.util.CronUtils
 import java.math.BigDecimal
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -146,22 +148,37 @@ class BackupDataRestorer @Inject constructor(
 
     // Backup → Entity mapping (all with id=0 for Room auto-generate)
 
-    private fun BackupPlan.toEntity() = DcaPlanEntity(
-        id = 0,
-        exchange = Exchange.valueOf(exchange),
-        crypto = crypto,
-        fiat = fiat,
-        amount = BigDecimal(amount),
-        frequency = DcaFrequency.valueOf(frequency),
-        cronExpression = cronExpression,
-        strategy = DcaStrategy.fromString(strategy),
-        isEnabled = isEnabled,
-        withdrawalEnabled = withdrawalEnabled,
-        withdrawalAddress = withdrawalAddress,
-        createdAt = Instant.ofEpochMilli(createdAt),
-        lastExecutedAt = lastExecutedAt?.let { Instant.ofEpochMilli(it) },
-        nextExecutionAt = nextExecutionAt?.let { Instant.ofEpochMilli(it) }
-    )
+    private fun BackupPlan.toEntity(): DcaPlanEntity {
+        val now = Instant.now()
+        val freq = DcaFrequency.valueOf(frequency)
+        val restoredNext = nextExecutionAt?.let { Instant.ofEpochMilli(it) }
+
+        val effectiveNext = if (restoredNext != null && restoredNext.isAfter(now)) {
+            restoredNext // still in the future — keep it
+        } else if (cronExpression != null) {
+            CronUtils.getNextExecution(cronExpression, now)
+                ?: now.plus(Duration.ofMinutes(freq.intervalMinutes.takeIf { it > 0 } ?: 1440))
+        } else {
+            now.plus(Duration.ofMinutes(freq.intervalMinutes))
+        }
+
+        return DcaPlanEntity(
+            id = 0,
+            exchange = Exchange.valueOf(exchange),
+            crypto = crypto,
+            fiat = fiat,
+            amount = BigDecimal(amount),
+            frequency = freq,
+            cronExpression = cronExpression,
+            strategy = DcaStrategy.fromString(strategy),
+            isEnabled = isEnabled,
+            withdrawalEnabled = withdrawalEnabled,
+            withdrawalAddress = withdrawalAddress,
+            createdAt = Instant.ofEpochMilli(createdAt),
+            lastExecutedAt = lastExecutedAt?.let { Instant.ofEpochMilli(it) },
+            nextExecutionAt = effectiveNext
+        )
+    }
 
     private fun BackupTransaction.toEntity(remappedPlanId: Long) = TransactionEntity(
         id = 0,

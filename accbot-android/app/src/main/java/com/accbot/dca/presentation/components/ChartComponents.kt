@@ -15,8 +15,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,7 +53,6 @@ import java.time.format.DateTimeFormatter
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberShowOnPress
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
-import com.patrykandpatrick.vico.compose.common.insets
 import com.patrykandpatrick.vico.core.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
 
@@ -105,7 +104,7 @@ private fun LegendItem(color: Color, label: String, enabled: Boolean = true, onC
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(4.dp)
     ) {
         Box(
@@ -129,7 +128,7 @@ private fun LegendItem(color: Color, label: String, enabled: Boolean = true, onC
  * Portfolio line chart with dual Y-axis support.
  * Left axis (start): portfolio value, cost basis, crypto price (all in fiat).
  * Right axis (end): accumulated crypto (in crypto units, e.g. BTC).
- * Tooltip shows only values for currently visible series.
+ * Scrubbing fires onScrub to update KPI cards above the chart.
  */
 @Composable
 fun PortfolioLineChart(
@@ -183,7 +182,7 @@ fun PortfolioLineChart(
     val xLabels = remember(chartData, zoomLevel) {
         val formatter = when (zoomLevel) {
             is ChartZoomLevel.Overview -> DateTimeFormatter.ofPattern("MMM yyyy")
-            is ChartZoomLevel.Year -> DateTimeFormatter.ofPattern("MMM")
+            is ChartZoomLevel.Year -> DateTimeFormatter.ofPattern("d MMM")
             is ChartZoomLevel.Month -> DateTimeFormatter.ofPattern("d")
         }
         chartData.map { LocalDate.ofEpochDay(it.epochDay).format(formatter) }
@@ -192,7 +191,7 @@ fun PortfolioLineChart(
     val xAxisSpacing = remember(chartData.size, zoomLevel) {
         when (zoomLevel) {
             is ChartZoomLevel.Overview -> maxOf(1, chartData.size / 6)
-            is ChartZoomLevel.Year -> 1
+            is ChartZoomLevel.Year -> maxOf(1, chartData.size / 8)
             is ChartZoomLevel.Month -> maxOf(1, chartData.size / 7)
         }
     }
@@ -227,78 +226,21 @@ fun PortfolioLineChart(
         if (isEmpty()) add(hiddenLine)
     }
 
-    // Tap-to-inspect marker with conditional tooltip content
-    val labelColor = MaterialTheme.colorScheme.onSurface
-    val surfaceContainerColor = MaterialTheme.colorScheme.surfaceContainer
+    // Tap-to-inspect marker — scrub fires onScrub to update KPI cards, no tooltip text
     val indicatorComponent = rememberShapeComponent(
         fill = fill(chartAccentColor),
         shape = CorneredShape.Pill
     )
-    val tooltipCurrency = fiatSymbol.ifEmpty { unitSuffix }
 
     val marker = rememberDefaultCartesianMarker(
-        label = rememberTextComponent(
-            color = labelColor,
-            textSize = 11.sp,
-            lineCount = 8,
-            background = rememberShapeComponent(
-                fill = fill(surfaceContainerColor),
-                shape = CorneredShape.rounded(allPercent = 8)
-            ),
-            padding = insets(10.dp, 6.dp)
-        ),
-        labelPosition = DefaultCartesianMarker.LabelPosition.AroundPoint,
+        label = rememberTextComponent(),
         valueFormatter = DefaultCartesianMarker.ValueFormatter { _, targets ->
             val points = targets.filterIsInstance<LineCartesianLayerMarkerTarget>()
                 .flatMap { it.points }
             val xIndex = points.firstOrNull()?.entry?.x?.toInt()
                 ?.coerceIn(0, chartData.size - 1)
-            val dataPoint = xIndex?.let { chartData[it] }
-
             if (xIndex != null) onScrub(xIndex)
-
-            if (dataPoint != null) {
-                val date = LocalDate.ofEpochDay(dataPoint.epochDay)
-                    .format(DateTimeFormatter.ofPattern("d MMM yyyy"))
-
-                val text = buildString {
-                    append(date)
-                    append("\n")
-                    if (0 in visibleSeries) {
-                        val v = when (denominationMode) {
-                            DenominationMode.FIAT -> "${NumberFormatters.fiat(dataPoint.portfolioValue)} $tooltipCurrency"
-                            DenominationMode.CRYPTO -> "${NumberFormatters.crypto(dataPoint.cumulativeCrypto)} $cryptoSymbol"
-                        }
-                        append("\n$v")
-                    }
-                    if (1 in visibleSeries) {
-                        val v = when (denominationMode) {
-                            DenominationMode.FIAT -> "${NumberFormatters.fiat(dataPoint.totalInvested)} $tooltipCurrency"
-                            DenominationMode.CRYPTO -> "${NumberFormatters.crypto(dataPoint.investedEquivCrypto)} $cryptoSymbol"
-                        }
-                        append("\n$v")
-                    }
-                    if (0 in visibleSeries) {
-                        val isPositive = dataPoint.roiAbsolute >= BigDecimal.ZERO
-                        val sign = if (isPositive) "+" else ""
-                        append("\nROI: $sign${NumberFormatters.percent(dataPoint.roiPercent)}% ($sign${NumberFormatters.fiat(dataPoint.roiAbsolute)} $tooltipCurrency)")
-                    }
-                    if (2 in visibleSeries && dataPoint.price > BigDecimal.ZERO) {
-                        append("\n$cryptoSymbol: ${NumberFormatters.fiat(dataPoint.price)} $tooltipCurrency")
-                    }
-                    if (3 in visibleSeries && dataPoint.cumulativeCrypto > BigDecimal.ZERO) {
-                        append("\n${NumberFormatters.crypto(dataPoint.cumulativeCrypto)} $cryptoSymbol")
-                    }
-                }
-
-                android.text.SpannableStringBuilder(text).apply {
-                    setSpan(
-                        android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
-                        0, date.length,
-                        android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                }
-            } else ""
+            ""
         },
         indicator = { indicatorComponent },
         indicatorSize = 8.dp,

@@ -22,6 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -35,7 +40,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.accbot.dca.BuildConfig
 import com.accbot.dca.R
-import com.accbot.dca.data.local.AppTheme
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.WithdrawalThreshold
 import java.math.BigDecimal
@@ -343,15 +347,15 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item { Spacer(modifier = Modifier.height(8.dp)) }
-
-            // Exchange Accounts section
+            // ── GENERAL ──────────────────────────────────────────────
             item {
                 Text(
-                    text = stringResource(R.string.settings_exchange_accounts),
+                    text = stringResource(R.string.settings_general),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier
+                        .padding(top = 8.dp, bottom = 8.dp)
+                        .semantics { heading() }
                 )
             }
 
@@ -364,15 +368,31 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // System Settings
             item {
-                Text(
-                    text = stringResource(R.string.settings_system),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                val languageLabel = when (uiState.languageTag) {
+                    "en" -> stringResource(R.string.settings_language_english)
+                    "cs" -> stringResource(R.string.settings_language_czech)
+                    else -> stringResource(R.string.settings_language_system_default)
+                }
+                SettingsCard(
+                    title = stringResource(R.string.settings_language),
+                    subtitle = languageLabel,
+                    icon = Icons.Default.Language,
+                    onClick = { showLanguageDialog = true }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.settings_notifications),
+                    subtitle = stringResource(R.string.settings_notifications_subtitle),
+                    icon = Icons.Default.Notifications,
+                    onClick = {
+                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        }
+                        context.startActivity(intent)
+                    }
                 )
             }
 
@@ -407,103 +427,15 @@ fun SettingsScreen(
                 )
             }
 
-            // Theme Picker
-            item {
-                ThemePickerCard(
-                    selectedTheme = uiState.appTheme,
-                    onThemeSelected = viewModel::setAppTheme
-                )
-            }
-
-            item {
-                val languageLabel = when (uiState.languageTag) {
-                    "en" -> stringResource(R.string.settings_language_english)
-                    "cs" -> stringResource(R.string.settings_language_czech)
-                    else -> stringResource(R.string.settings_language_system_default)
-                }
-                SettingsCard(
-                    title = stringResource(R.string.settings_language),
-                    subtitle = languageLabel,
-                    icon = Icons.Default.Language,
-                    onClick = { showLanguageDialog = true }
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // Notifications section
+            // ── ALERTS & SECURITY ──────────────────────────────────
             item {
                 Text(
-                    text = stringResource(R.string.settings_notifications_section),
+                    text = stringResource(R.string.settings_alerts_security),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
-            item {
-                NotificationToggleCard(
-                    title = stringResource(R.string.settings_notifications_master),
-                    subtitle = stringResource(R.string.settings_notifications_master_subtitle),
-                    icon = Icons.Default.Notifications,
-                    isEnabled = uiState.notificationsEnabled,
-                    onToggle = viewModel::setNotificationsEnabled
-                )
-            }
-
-            if (uiState.notificationsEnabled) {
-                item {
-                    NotificationToggleCard(
-                        title = stringResource(R.string.settings_notifications_purchase),
-                        subtitle = stringResource(R.string.settings_notifications_purchase_subtitle),
-                        icon = Icons.Default.CheckCircle,
-                        isEnabled = uiState.purchaseNotificationsEnabled,
-                        onToggle = viewModel::setPurchaseNotificationsEnabled
-                    )
-                }
-                item {
-                    NotificationToggleCard(
-                        title = stringResource(R.string.settings_notifications_error),
-                        subtitle = stringResource(R.string.settings_notifications_error_subtitle),
-                        icon = Icons.Default.Error,
-                        isEnabled = uiState.errorNotificationsEnabled,
-                        onToggle = viewModel::setErrorNotificationsEnabled
-                    )
-                }
-                item {
-                    NotificationToggleCard(
-                        title = stringResource(R.string.settings_notifications_weekly),
-                        subtitle = stringResource(R.string.settings_notifications_weekly_subtitle),
-                        icon = Icons.Default.Summarize,
-                        isEnabled = uiState.weeklySummaryEnabled,
-                        onToggle = viewModel::setWeeklySummaryEnabled
-                    )
-                }
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.settings_notifications_system),
-                    subtitle = stringResource(R.string.settings_notifications_system_subtitle),
-                    icon = Icons.Default.Settings,
-                    onClick = {
-                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                        }
-                        context.startActivity(intent)
-                    }
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // DCA Alerts
-            item {
-                Text(
-                    text = stringResource(R.string.settings_dca_alerts),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier
+                        .padding(top = 24.dp, bottom = 8.dp)
+                        .semantics { heading() }
                 )
             }
 
@@ -522,18 +454,6 @@ fun SettingsScreen(
                     subtitle = stringResource(R.string.settings_withdrawal_alert_subtitle),
                     icon = Icons.AutoMirrored.Filled.CallMade,
                     onClick = { showWithdrawalThresholdDialog = true }
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // Security
-            item {
-                Text(
-                    text = stringResource(R.string.settings_security),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
 
@@ -574,15 +494,15 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // Backup & Restore
+            // ── DATA ───────────────────────────────────────────────
             item {
                 Text(
-                    text = stringResource(R.string.backup_section_title),
+                    text = stringResource(R.string.settings_data),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier
+                        .padding(top = 24.dp, bottom = 8.dp)
+                        .semantics { heading() }
                 )
             }
 
@@ -604,15 +524,15 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // About
+            // ── ABOUT ──────────────────────────────────────────────
             item {
                 Text(
                     text = stringResource(R.string.settings_about),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier
+                        .padding(top = 24.dp, bottom = 8.dp)
+                        .semantics { heading() }
                 )
             }
 
@@ -640,18 +560,6 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // Developer Options
-            item {
-                Text(
-                    text = stringResource(R.string.settings_developer),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
             item {
                 SandboxToggleCard(
                     isEnabled = uiState.isSandboxMode,
@@ -659,15 +567,14 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // Danger Zone (collapsible)
+            // ── DANGER ZONE (collapsible) ──────────────────────────
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { dangerZoneExpanded = !dangerZoneExpanded }
-                        .padding(bottom = 8.dp),
+                        .padding(top = 24.dp, bottom = 8.dp)
+                        .semantics { heading() },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -753,9 +660,10 @@ fun SettingsScreen(
 
             // Version info
             item {
-                Spacer(modifier = Modifier.height(24.dp))
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -838,6 +746,7 @@ internal fun SettingsCardBase(
     subtitleColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
     containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
     onClick: (() -> Unit)? = null,
+    cardModifier: Modifier = Modifier,
     trailing: @Composable () -> Unit = {
         Icon(
             imageVector = Icons.Default.ChevronRight,
@@ -849,6 +758,7 @@ internal fun SettingsCardBase(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .then(cardModifier)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
@@ -939,13 +849,16 @@ internal fun BiometricToggleCard(
         subtitle = stringResource(R.string.biometric_lock_subtitle),
         icon = Icons.Default.Fingerprint,
         iconTint = if (isEnabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onToggle(!isEnabled)
+        },
+        cardModifier = Modifier.semantics(mergeDescendants = true) { role = Role.Switch },
         trailing = {
             Switch(
                 checked = isEnabled,
-                onCheckedChange = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onToggle(!isEnabled)
-                },
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = accent,
                     checkedTrackColor = accent.copy(alpha = 0.5f)
@@ -1038,94 +951,6 @@ private fun WithdrawalThresholdDialog(
 }
 
 @Composable
-internal fun ThemePickerCard(
-    selectedTheme: AppTheme,
-    onThemeSelected: (AppTheme) -> Unit
-) {
-    val accent = successColor()
-    val haptic = LocalHapticFeedback.current
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Palette,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = stringResource(R.string.settings_theme),
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                AppTheme.entries.forEachIndexed { index, theme ->
-                    SegmentedButton(
-                        selected = selectedTheme == theme,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onThemeSelected(theme)
-                        },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = AppTheme.entries.size),
-                        colors = SegmentedButtonDefaults.colors(
-                            activeContainerColor = accent.copy(alpha = 0.15f),
-                            activeContentColor = accent
-                        )
-                    ) {
-                        Text(
-                            text = when (theme) {
-                                AppTheme.DARK -> stringResource(R.string.settings_theme_dark)
-                                AppTheme.LIGHT -> stringResource(R.string.settings_theme_light)
-                                AppTheme.SYSTEM -> stringResource(R.string.settings_theme_system)
-                            }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-internal fun NotificationToggleCard(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isEnabled: Boolean,
-    onToggle: (Boolean) -> Unit
-) {
-    val accent = successColor()
-    val haptic = LocalHapticFeedback.current
-    SettingsCardBase(
-        title = title,
-        subtitle = subtitle,
-        icon = icon,
-        iconTint = if (isEnabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-        trailing = {
-            Switch(
-                checked = isEnabled,
-                onCheckedChange = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onToggle(it)
-                },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = accent,
-                    checkedTrackColor = accent.copy(alpha = 0.5f)
-                )
-            )
-        }
-    )
-}
-
-@Composable
 internal fun SandboxToggleCard(
     isEnabled: Boolean,
     onToggle: () -> Unit
@@ -1143,13 +968,16 @@ internal fun SandboxToggleCard(
         titleColor = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurface,
         subtitleColor = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurfaceVariant,
         containerColor = if (isEnabled) Warning.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onToggle()
+        },
+        cardModifier = Modifier.semantics(mergeDescendants = true) { role = Role.Switch },
         trailing = {
             Switch(
                 checked = isEnabled,
-                onCheckedChange = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onToggle()
-                },
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Warning,
                     checkedTrackColor = Warning.copy(alpha = 0.5f)

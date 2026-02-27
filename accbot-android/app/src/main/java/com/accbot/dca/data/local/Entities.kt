@@ -286,6 +286,7 @@ data class NotificationEntity(
     val exchange: Exchange? = null,
     val isRead: Boolean = false,
     val isArchived: Boolean = false,
+    val systemNotificationId: Int? = null,
     val createdAt: Instant = Instant.now()
 )
 

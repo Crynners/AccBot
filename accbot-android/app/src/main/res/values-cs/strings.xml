@@ -157,17 +157,18 @@
     <string name="backup_preview_thresholds">Prahové hodnoty výběrů: %1$d</string>
     <string name="backup_restore_button">Obnovit</string>
     <string name="backup_restore_warning">Data ze zálohy budou přidána k aktuálním datům. Stávající data nebudou smazána.</string>
-    <string name="backup_restore_mode_merge">Sloučit</string>
-    <string name="backup_restore_mode_replace">Nahradit vše</string>
-    <string name="backup_restore_warning_merge">Data ze zálohy budou sloučena s aktuálními daty. Duplicitní plány a transakce budou aktualizovány, nové položky přidány.</string>
-    <string name="backup_restore_warning_replace">Všechna stávající data budou smazána a nahrazena zálohou. Tuto operaci nelze vrátit!</string>
+    <string name="backup_restore_warning_replace">Obnova nahradí všechna stávající data obsahem zálohy.</string>
     <string name="backup_restoring">Obnovuji zálohu…</string>
+    <string name="backup_decrypting">Dešifruji…</string>
     <string name="backup_restore_success">Záloha obnovena úspěšně. Aplikace se restartuje.</string>
     <string name="backup_restore_error">Obnova zálohy se nezdařila</string>
     <string name="backup_credentials_require_encryption">Při zahrnutí přístupových údajů je nutné šifrování</string>
     <string name="backup_no_passphrase">Zadejte heslo nebo vygenerujte seed</string>
     <string name="backup_items_count">%1$d položek</string>
 
+    <string name="settings_general">OBECNÉ</string>
+    <string name="settings_alerts_security">UPOZORNĚNÍ A ZABEZPEČENÍ</string>
+    <string name="settings_data">DATA</string>
     <string name="settings_about">O APLIKACI</string>
     <string name="settings_documentation">Dokumentace</string>
     <string name="settings_documentation_subtitle">Návody a API dokumentace</string>
@@ -393,6 +394,8 @@
     <string name="credentials_api_secret">API tajný klíč</string>
     <string name="credentials_passphrase">Heslo</string>
     <string name="credentials_toggle_visibility">Přepnout viditelnost</string>
+    <string name="credentials_show_password">Zobrazit heslo</string>
+    <string name="credentials_hide_password">Skrýt heslo</string>
     <string name="credentials_required_for">Vyžadováno pro %1$s</string>
     <string name="credentials_stored_locally">Přihlašovací údaje uloženy lokálně se šifrováním</string>
     <string name="credentials_encrypted_aes">Šifrováno lokálně pomocí AES-256</string>
@@ -710,13 +713,10 @@
     <string name="notifications_title">Oznámení</string>
     <string name="notifications_empty_title">Zatím žádná oznámení</string>
     <string name="notifications_empty_description">Oznámení o nákupech, chybách a upozorněních se zobrazí zde</string>
-    <string name="notifications_dismiss_all">Zamítnout vše</string>
-    <string name="notifications_archive">Archiv</string>
-    <string name="notifications_clear_archive">Vymazat archiv</string>
-    <string name="notifications_archive_empty_title">Žádná archivovaná oznámení</string>
-    <string name="notifications_archive_empty_description">Zamítnutá oznámení se zobrazí zde</string>
-    <string name="notifications_clear_archive_dialog_title">Vymazat archiv?</string>
-    <string name="notifications_clear_archive_dialog_text">Trvale se smažou všechna archivovaná oznámení. Tuto akci nelze vrátit zpět.</string>
+    <string name="notifications_mark_all_read">Označit vše jako přečtené</string>
+    <string name="notifications_delete_all">Smazat vše</string>
+    <string name="notification_state_read">Přečtené</string>
+    <string name="notification_state_unread">Nepřečtené</string>
 
     <!-- Withdrawal threshold -->
     <string name="settings_withdrawal_alert">Upozornění na výběr</string>

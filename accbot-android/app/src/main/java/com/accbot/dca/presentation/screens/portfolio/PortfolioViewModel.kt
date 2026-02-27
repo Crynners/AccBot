@@ -13,6 +13,7 @@ import com.accbot.dca.domain.usecase.ChartZoomLevel
 import com.accbot.dca.domain.usecase.SyncDailyPricesUseCase
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -113,6 +114,8 @@ class PortfolioViewModel @Inject constructor(
 
                 updateNavigationState()
                 syncPricesAndLoadChart()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -153,6 +156,8 @@ class PortfolioViewModel @Inject constructor(
                     )
                 }
                 updateNavigationState()
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) { }
         }
     }
@@ -321,6 +326,8 @@ class PortfolioViewModel @Inject constructor(
             _uiState.update { it.copy(isPriceSyncing = true) }
             try {
                 syncDailyPricesUseCase.sync()
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
             }
             _uiState.update { it.copy(isPriceSyncing = false) }
@@ -425,6 +432,8 @@ class PortfolioViewModel @Inject constructor(
             } catch (e: OutOfMemoryError) {
                 Log.e("PortfolioVM", "OOM calculating chart data", e)
                 _uiState.update { it.copy(isChartLoading = false, error = "Not enough memory for chart") }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("PortfolioVM", "Error loading chart data", e)
                 _uiState.update { it.copy(isChartLoading = false) }

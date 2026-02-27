@@ -63,8 +63,12 @@ import com.accbot.dca.presentation.screens.backup.BackupImportScreen
 import com.accbot.dca.presentation.screens.portfolio.PortfolioScreen
 import com.accbot.dca.presentation.screens.splash.SplashScreen
 import com.accbot.dca.presentation.ui.theme.AccBotTheme
+import com.accbot.dca.data.local.NotificationDao
+import com.accbot.dca.service.NotificationService
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -75,6 +79,11 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var userPreferences: UserPreferences
+
+    @Inject
+    lateinit var notificationDao: NotificationDao
+
+    val pendingTab = MutableStateFlow<Int?>(null)
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -90,6 +99,8 @@ class MainActivity : AppCompatActivity() {
 
         // Request battery optimization exemption for reliable background execution
         requestBatteryOptimizationExemption()
+
+        handleNotificationIntent(intent)
 
         setContent {
             val isSandboxMode = userPreferences.isSandboxMode()
@@ -117,11 +128,27 @@ class MainActivity : AppCompatActivity() {
                             isOnboardingCompleted = onboardingPreferences.isOnboardingCompleted(),
                             onOnboardingComplete = {
                                 onboardingPreferences.setOnboardingCompleted(true)
-                            }
+                            },
+                            pendingTab = pendingTab
                         )
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleNotificationIntent(intent)
+    }
+
+    private fun handleNotificationIntent(intent: Intent?) {
+        val notificationId = intent?.getLongExtra(NotificationService.EXTRA_NOTIFICATION_ID, -1) ?: -1
+        if (notificationId > 0) {
+            lifecycleScope.launch {
+                notificationDao.markAsRead(notificationId)
+            }
+            pendingTab.value = 2 // Notifications tab
         }
     }
 
@@ -155,7 +182,8 @@ class MainActivity : AppCompatActivity() {
 @Composable
 fun AccBotApp(
     isOnboardingCompleted: Boolean,
-    onOnboardingComplete: () -> Unit
+    onOnboardingComplete: () -> Unit,
+    pendingTab: MutableStateFlow<Int?> = MutableStateFlow(null)
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -177,6 +205,15 @@ fun AccBotApp(
     val coroutineScope = rememberCoroutineScope()
     val onTabSelected: (Int) -> Unit = { index ->
         coroutineScope.launch { pagerState.animateScrollToPage(index) }
+    }
+
+    // Navigate to tab when triggered by notification tap
+    val pendingTabValue by pendingTab.collectAsState()
+    LaunchedEffect(pendingTabValue) {
+        pendingTabValue?.let { tab ->
+            pagerState.animateScrollToPage(tab)
+            pendingTab.value = null
+        }
     }
 
     NavHost(
@@ -482,7 +519,14 @@ private fun MainTabPage(
             onNavigateToPlanDetails = { planId ->
                 navController.navigate(Screen.PlanDetails.createRoute(planId))
             },
-            onNavigateToPortfolio = { _, _ -> onSwitchToTab(1) }
+            onNavigateToPortfolio = { _, _ -> onSwitchToTab(1) },
+            onNavigateToExchangeDetail = { exchangeName ->
+                if (exchangeName.isNotEmpty()) {
+                    navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName))
+                } else {
+                    navController.navigate(Screen.ExchangeManagement.route)
+                }
+            }
         )
         1 -> PortfolioScreen(
             onNavigateBack = { onSwitchToTab(0) },

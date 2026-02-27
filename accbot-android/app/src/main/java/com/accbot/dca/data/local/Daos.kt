@@ -193,9 +193,6 @@ interface TransactionDao {
     @Query("SELECT exchangeOrderId FROM transactions WHERE planId = :planId AND exchangeOrderId IS NOT NULL")
     suspend fun getExchangeOrderIdsByPlan(planId: Long): List<String>
 
-    @Query("SELECT MAX(executedAt) FROM transactions WHERE planId = :planId AND status = 'COMPLETED'")
-    suspend fun getLatestTransactionTimestamp(planId: Long): Long?
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransaction(transaction: TransactionEntity): Long
 
@@ -378,32 +375,29 @@ interface DailyPriceDao {
 
 @Dao
 interface NotificationDao {
-    @Query("SELECT * FROM notifications WHERE isArchived = 0 ORDER BY createdAt DESC")
+    @Query("SELECT * FROM notifications ORDER BY createdAt DESC")
     fun getActiveNotifications(): Flow<List<NotificationEntity>>
-
-    @Query("SELECT * FROM notifications WHERE isArchived = 1 ORDER BY createdAt DESC")
-    fun getArchivedNotifications(): Flow<List<NotificationEntity>>
 
     @Query("SELECT COUNT(*) FROM notifications WHERE isRead = 0")
     fun getUnreadCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM notifications WHERE isArchived = 1")
-    fun getArchivedCount(): Flow<Int>
+    @Query("UPDATE notifications SET isRead = 1 WHERE id = :id")
+    suspend fun markAsRead(id: Long)
 
-    @Query("UPDATE notifications SET isArchived = 1, isRead = 1 WHERE id = :id")
-    suspend fun archiveNotification(id: Long)
+    @Query("UPDATE notifications SET isRead = 1 WHERE isRead = 0")
+    suspend fun markAllAsRead()
 
-    @Query("UPDATE notifications SET isArchived = 1, isRead = 1 WHERE isArchived = 0")
-    suspend fun archiveAllNotifications()
-
-    @Query("DELETE FROM notifications WHERE isArchived = 1")
-    suspend fun deleteArchivedNotifications()
+    @Query("DELETE FROM notifications WHERE id = :id")
+    suspend fun deleteNotification(id: Long)
 
     @Insert
     suspend fun insert(notification: NotificationEntity): Long
 
     @Query("SELECT COUNT(*) FROM notifications")
     suspend fun getNotificationCount(): Int
+
+    @Query("SELECT systemNotificationId FROM notifications WHERE id = :id")
+    suspend fun getSystemNotificationId(id: Long): Int?
 
     @Query("DELETE FROM notifications")
     suspend fun deleteAllNotifications()

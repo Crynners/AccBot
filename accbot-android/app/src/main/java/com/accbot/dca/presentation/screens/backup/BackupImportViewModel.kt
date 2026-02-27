@@ -34,7 +34,8 @@ data class BackupImportUiState(
     val seedWords: List<String> = List(12) { "" },
     val preview: BackupPreview? = null,
     val payload: BackupPayload? = null,
-    val restoreMode: RestoreMode = RestoreMode.Merge,
+    val restoreMode: RestoreMode = RestoreMode.Replace,
+    val isParsing: Boolean = false,
     val isRestoring: Boolean = false,
     val restoreSuccess: Boolean = false,
     val error: String? = null
@@ -63,10 +64,6 @@ class BackupImportViewModel @Inject constructor(
 
     fun setPassphrase(passphrase: String) {
         _uiState.update { it.copy(passphrase = passphrase, error = null) }
-    }
-
-    fun setRestoreMode(mode: RestoreMode) {
-        _uiState.update { it.copy(restoreMode = mode) }
     }
 
     fun setInputMode(mode: EncryptionMode) {
@@ -113,6 +110,7 @@ class BackupImportViewModel @Inject constructor(
     }
 
     private fun tryParsePreview(json: String, passphrase: String) {
+        _uiState.update { it.copy(isParsing = true, error = null) }
         viewModelScope.launch(Dispatchers.Default) {
             when (val result = restoreBackupUseCase.parseAndPreview(json, passphrase)) {
                 is RestoreBackupResult.PreviewReady -> {
@@ -122,6 +120,7 @@ class BackupImportViewModel @Inject constructor(
                             preview = result.preview,
                             payload = result.payload,
                             isEncrypted = false,
+                            isParsing = false,
                             error = null
                         )
                     }
@@ -132,15 +131,16 @@ class BackupImportViewModel @Inject constructor(
                             it.copy(
                                 wizardStep = ImportWizardStep.ENTER_PASSWORD,
                                 isEncrypted = true,
+                                isParsing = false,
                                 error = if (result.message == "Wrong password or seed") result.message else null
                             )
                         }
                     } else {
-                        _uiState.update { it.copy(error = result.message) }
+                        _uiState.update { it.copy(isParsing = false, error = result.message) }
                     }
                 }
                 is RestoreBackupResult.RestoreComplete -> {
-                    // Not expected here
+                    _uiState.update { it.copy(isParsing = false) }
                 }
             }
         }
