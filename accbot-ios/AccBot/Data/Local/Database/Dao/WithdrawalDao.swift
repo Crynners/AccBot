@@ -32,9 +32,9 @@ final class WithdrawalDao {
     @discardableResult
     func insert(_ withdrawal: Withdrawal) throws -> Int64 {
         try dbPool.write { db in
-            var record = WithdrawalRecord.fromDomain(withdrawal)
+            let record = WithdrawalRecord.fromDomain(withdrawal)
             try record.insert(db)
-            return record.id!
+            return db.lastInsertedRowID
         }
     }
 

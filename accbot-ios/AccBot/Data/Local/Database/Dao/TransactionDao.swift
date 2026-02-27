@@ -131,9 +131,9 @@ final class TransactionDao {
     @discardableResult
     func insert(_ transaction: Transaction) throws -> Int64 {
         try dbPool.write { db in
-            var record = TransactionRecord.fromDomain(transaction)
+            let record = TransactionRecord.fromDomain(transaction)
             try record.insert(db)
-            return record.id!
+            return db.lastInsertedRowID
         }
     }
 

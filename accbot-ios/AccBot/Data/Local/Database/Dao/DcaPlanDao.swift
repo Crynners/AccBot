@@ -70,9 +70,9 @@ final class DcaPlanDao {
     @discardableResult
     func insert(_ plan: DcaPlan) throws -> Int64 {
         try dbPool.write { db in
-            var record = DcaPlanRecord.fromDomain(plan)
+            let record = DcaPlanRecord.fromDomain(plan)
             try record.insert(db)
-            return record.id!
+            return db.lastInsertedRowID
         }
     }
 

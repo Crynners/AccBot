@@ -46,9 +46,9 @@ final class NotificationDao {
     @discardableResult
     func insert(_ notification: AppNotification) throws -> Int64 {
         try dbPool.write { db in
-            var record = NotificationRecord.fromDomain(notification)
+            let record = NotificationRecord.fromDomain(notification)
             try record.insert(db)
-            return record.id!
+            return db.lastInsertedRowID
         }
     }
 
