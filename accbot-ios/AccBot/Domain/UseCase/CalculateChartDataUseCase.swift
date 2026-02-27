@@ -13,13 +13,6 @@ struct ChartDataPoint {
     var price: Decimal = 0
 }
 
-/// Hierarchical zoom levels for the portfolio chart.
-enum ChartZoomLevel {
-    case overview
-    case year(Int)
-    case month(year: Int, month: Int)
-}
-
 /// Computes chart data for portfolio performance with hierarchical zoom levels.
 /// Overview and Year: monthly aggregation. Month: daily points.
 final class CalculateChartDataUseCase {

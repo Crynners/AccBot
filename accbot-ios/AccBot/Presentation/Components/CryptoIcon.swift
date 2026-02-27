@@ -311,7 +311,7 @@ struct CryptoIcon: View {
     }
 
     /// Helper for Canvas stroke options
-    private struct StrokeOptions: Sendable {
+    fileprivate struct StrokeOptions: Sendable {
         let lineCap: CGLineCap
         let lineJoin: CGLineJoin
 
