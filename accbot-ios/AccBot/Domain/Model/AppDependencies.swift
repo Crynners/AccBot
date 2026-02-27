@@ -69,7 +69,8 @@ final class AppDependencies: ObservableObject {
         self.notificationService = notificationService
         self.dcaExecutionEngine = dcaExecutionEngine
 
-        // Forward nested ObservableObject changes so SwiftUI re-renders
+        // Forward onboardingPreferences changes so RootView re-renders
+        // when onboarding completes (rare event, no perf concern).
         onboardingPreferences.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)

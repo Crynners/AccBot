@@ -5,22 +5,33 @@ import Combine
 /// Uses a manual ZStack + CustomTabBar instead of native TabView to avoid
 /// known SwiftUI TabView + NavigationStack lifecycle bugs and to provide
 /// a custom animated tab bar design.
+///
+/// Each tab is lazily created on first visit via `LazyTab`, so only the
+/// active tab's view hierarchy is fully computed. Once created, tabs stay
+/// alive (opacity-hidden) to preserve their NavigationStack state.
 struct MainTabView: View {
     @EnvironmentObject var router: AppRouter
     @EnvironmentObject var dependencies: AppDependencies
     @Environment(\.accBotColors) private var colors
 
+    /// Tracks which tabs have been visited at least once.
+    @State private var loadedTabs: Set<TabItem> = [.dashboard]
+
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                dashboardTab
-                    .opacity(router.selectedTab == .dashboard ? 1 : 0)
-                portfolioTab
-                    .opacity(router.selectedTab == .portfolio ? 1 : 0)
-                notificationsTab
-                    .opacity(router.selectedTab == .notifications ? 1 : 0)
-                settingsTab
-                    .opacity(router.selectedTab == .settings ? 1 : 0)
+                LazyTab(tab: .dashboard, selectedTab: router.selectedTab, loadedTabs: $loadedTabs) {
+                    dashboardTab
+                }
+                LazyTab(tab: .portfolio, selectedTab: router.selectedTab, loadedTabs: $loadedTabs) {
+                    portfolioTab
+                }
+                LazyTab(tab: .notifications, selectedTab: router.selectedTab, loadedTabs: $loadedTabs) {
+                    notificationsTab
+                }
+                LazyTab(tab: .settings, selectedTab: router.selectedTab, loadedTabs: $loadedTabs) {
+                    settingsTab
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -45,6 +56,7 @@ struct MainTabView: View {
             dependencies.activeDatabase.notificationDao.observeUnreadCount()
                 .replaceError(with: 0)
                 .receive(on: DispatchQueue.main)
+                .removeDuplicates()
         ) { count in
             router.unreadNotificationCount = count
         }
@@ -111,6 +123,36 @@ struct MainTabView: View {
             BackupExportView()
         case .backupImport:
             BackupImportView()
+        }
+    }
+}
+
+// MARK: - Lazy Tab
+
+/// Lazily creates a tab's content on first selection and keeps it alive
+/// (but hidden) once created. This avoids computing all 4 heavy view
+/// hierarchies (NavigationStack + ViewModel + DB observations) on startup.
+private struct LazyTab<Content: View>: View {
+    let tab: TabItem
+    let selectedTab: TabItem
+    @Binding var loadedTabs: Set<TabItem>
+    @ViewBuilder let content: () -> Content
+
+    private var isSelected: Bool { tab == selectedTab }
+
+    var body: some View {
+        Group {
+            if loadedTabs.contains(tab) {
+                content()
+            }
+        }
+        .opacity(isSelected ? 1 : 0)
+        .allowsHitTesting(isSelected)
+        .accessibilityHidden(!isSelected)
+        .onChange(of: selectedTab) { newTab in
+            if newTab == tab {
+                loadedTabs.insert(tab)
+            }
         }
     }
 }

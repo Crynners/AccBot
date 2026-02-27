@@ -63,12 +63,27 @@ final class CoinmateApi: ExchangeApi {
                 fee = details.totalFee
                 fillingPrice = details.weightedAvgPrice
             } else {
+                // Trade details not found — return as pending so the exact
+                // amounts can be resolved later instead of guessing.
+                guard let currentPrice = await getCurrentPrice(crypto: crypto, fiat: fiat),
+                      currentPrice > 0 else {
+                    return .success(Transaction(
+                        planId: 0,
+                        exchange: .coinmate,
+                        crypto: crypto,
+                        fiat: fiat,
+                        fiatAmount: fiatAmount,
+                        cryptoAmount: 0,
+                        price: 0,
+                        fee: 0,
+                        feeAsset: fiat,
+                        status: .pending,
+                        exchangeOrderId: orderId
+                    ))
+                }
                 fee = roundDecimal(fiatAmount * takerFeeRate, scale: 2)
-                let currentPrice = await getCurrentPrice(crypto: crypto, fiat: fiat) ?? 1
                 let netFiatAmount = fiatAmount - fee
-                cryptoAmount = currentPrice > 0
-                    ? roundDecimal(netFiatAmount / currentPrice, scale: 8)
-                    : 0
+                cryptoAmount = roundDecimal(netFiatAmount / currentPrice, scale: 8)
                 fillingPrice = currentPrice
             }
 

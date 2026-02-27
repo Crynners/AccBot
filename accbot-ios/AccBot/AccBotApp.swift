@@ -23,8 +23,17 @@ struct AccBotApp: App {
             .onChange(of: scenePhase) { newPhase in
                 if newPhase == .active {
                     // Layer 4: Foreground catch-up - execute due plans on app open
+                    // Throttle: skip if last execution was less than 5 minutes ago
+                    let now = Date()
+                    if let last = dependencies.userPreferences.lastBackgroundRun,
+                       now.timeIntervalSince(last) < 300 {
+                        return
+                    }
                     Task {
                         await dependencies.dcaExecutionEngine.executeDuePlans()
+                        await MainActor.run {
+                            dependencies.userPreferences.lastBackgroundRun = now
+                        }
                     }
                 }
             }
