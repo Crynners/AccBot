@@ -69,8 +69,10 @@ final class HistoryViewModel: ObservableObject {
     deinit {
         undoTask?.cancel()
         // Commit any pending soft-deleted transaction so it doesn't get lost
-        if let tx = undoTransaction, let deps = dependencies {
-            try? deps.activeDatabase.transactionDao.delete(id: tx.id)
+        MainActor.assumeIsolated {
+            if let tx = undoTransaction, let deps = dependencies {
+                try? deps.activeDatabase.transactionDao.delete(id: tx.id)
+            }
         }
     }
 

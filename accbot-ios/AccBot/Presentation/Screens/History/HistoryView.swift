@@ -21,7 +21,7 @@ struct HistoryView: View {
             }
 
             if viewModel.isLoading && viewModel.transactions.isEmpty {
-                LoadingStateView(message: String(localized: "Loading transactions..."))
+                LoadingStateView(message: "Loading transactions...")
             } else if viewModel.transactions.isEmpty {
                 VStack(spacing: Spacing.lg) {
                     EmptyStateView(
