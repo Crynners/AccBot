@@ -115,9 +115,14 @@ final class HistoryViewModel: ObservableObject {
                 offset: currentPage * pageSize
             )
 
-            var allTxs = transactions + newTxs
-            // Apply sort
-            allTxs = applySorting(allTxs)
+            let allTxs: [Transaction]
+            if sortOption == .dateNewest {
+                // DB already returns results sorted by executedAt desc — no re-sort needed
+                allTxs = transactions + newTxs
+            } else {
+                // Non-default sort: merge and re-sort
+                allTxs = applySorting(transactions + newTxs)
+            }
 
             transactions = allTxs
             hasMore = newTxs.count >= pageSize

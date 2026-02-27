@@ -96,7 +96,7 @@ final class PortfolioViewModel: ObservableObject {
     struct ChartPoint: Identifiable {
         var id: String { "\(series.rawValue)-\(date.timeIntervalSince1970)" }
         let date: Date
-        let value: Decimal
+        let value: Double   // pre-converted from Decimal to avoid repeated conversion during Chart rendering
         let series: ChartSeries
     }
 
@@ -267,6 +267,23 @@ final class PortfolioViewModel: ObservableObject {
 
     // MARK: - Private
 
+    private let maxChartPoints = 200
+
+    private func downsample(_ points: [ChartPoint]) -> [ChartPoint] {
+        guard points.count > maxChartPoints else { return points }
+        // Group by series, downsample each independently
+        let grouped = Dictionary(grouping: points) { $0.series }
+        return grouped.values.flatMap { seriesPoints -> [ChartPoint] in
+            guard seriesPoints.count > maxChartPoints else { return seriesPoints }
+            let sorted = seriesPoints.sorted { $0.date < $1.date }
+            let bucketSize = Double(sorted.count) / Double(maxChartPoints)
+            return (0..<maxChartPoints).map { i in
+                let endIdx = min(Int(Double(i + 1) * bucketSize) - 1, sorted.count - 1)
+                return sorted[endIdx]  // last point in bucket preserves running total
+            }
+        }
+    }
+
     private func loadPageData() async {
         guard let page = currentPage else { return }
 
@@ -395,10 +412,10 @@ final class PortfolioViewModel: ObservableObject {
                     case .accumulatedCrypto:
                         value = accumulatedByIndex[index]
                     }
-                    allChartData.append(ChartPoint(date: tx.executedAt, value: value, series: series))
+                    allChartData.append(ChartPoint(date: tx.executedAt, value: NSDecimalNumber(decimal: value).doubleValue, series: series))
                 }
             }
-            chartData = allChartData
+            chartData = downsample(allChartData)
             lastLoadedAt = Date()
         } catch {
             resetStats()

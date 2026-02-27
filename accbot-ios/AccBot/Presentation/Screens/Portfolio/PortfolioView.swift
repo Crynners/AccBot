@@ -10,6 +10,7 @@ struct PortfolioView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var selectedDate: Date?
     @State private var lastHapticTime: Date = .distantPast
+    @State private var sortedPointsBySeries: [PortfolioViewModel.ChartSeries: [PortfolioViewModel.ChartPoint]] = [:]
 
     private var isLandscape: Bool {
         verticalSizeClass == .compact
@@ -194,9 +195,18 @@ struct PortfolioView: View {
 
     private var scrubbedKpi: PortfolioViewModel.KpiSnapshot? {
         guard let date = selectedDate, !viewModel.kpiSnapshots.isEmpty else { return nil }
-        return viewModel.kpiSnapshots.min(by: {
-            abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date))
-        })
+        let snapshots = viewModel.kpiSnapshots
+        let target = date.timeIntervalSince1970
+        // Binary search for closest date (kpiSnapshots are sorted chronologically)
+        var lo = 0, hi = snapshots.count - 1
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            if snapshots[mid].date.timeIntervalSince1970 < target { lo = mid + 1 }
+            else { hi = mid }
+        }
+        let candidates = [max(0, lo - 1), min(lo, snapshots.count - 1)]
+        return candidates.map { snapshots[$0] }
+            .min(by: { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) })
     }
 
     private var isScrubbing: Bool { selectedDate != nil }
@@ -371,13 +381,13 @@ struct PortfolioView: View {
                     ForEach(viewModel.chartData) { point in
                         LineMark(
                             x: .value("Date", point.date),
-                            y: .value("Value", NSDecimalNumber(decimal: point.value).doubleValue)
+                            y: .value("Value", point.value)
                         )
                         .foregroundStyle(by: .value("Series", point.series.localizedName))
 
                         AreaMark(
                             x: .value("Date", point.date),
-                            y: .value("Value", NSDecimalNumber(decimal: point.value).doubleValue)
+                            y: .value("Value", point.value)
                         )
                         .foregroundStyle(by: .value("Series", point.series.localizedName))
                         .opacity(0.1)
@@ -404,6 +414,9 @@ struct PortfolioView: View {
                         let generator = UIImpactFeedbackGenerator(style: .light)
                         generator.impactOccurred()
                     }
+                }
+                .onChange(of: viewModel.chartData.count) { _ in
+                    sortedPointsBySeries = Dictionary(grouping: viewModel.chartData) { $0.series }
                 }
                 .chartXAxis {
                     AxisMarks(values: .automatic) { _ in
@@ -435,10 +448,20 @@ struct PortfolioView: View {
     // MARK: - Scrub Tooltip
 
     private func nearestChartPoints(to date: Date) -> [PortfolioViewModel.ChartPoint]? {
-        let grouped = Dictionary(grouping: viewModel.chartData) { $0.series }
         var result = [PortfolioViewModel.ChartPoint]()
-        for (_, points) in grouped {
-            if let nearest = points.min(by: { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }) {
+        let target = date.timeIntervalSince1970
+        for (_, points) in sortedPointsBySeries {
+            guard !points.isEmpty else { continue }
+            // Binary search for closest date
+            var lo = 0, hi = points.count - 1
+            while lo < hi {
+                let mid = (lo + hi) / 2
+                if points[mid].date.timeIntervalSince1970 < target { lo = mid + 1 }
+                else { hi = mid }
+            }
+            // Check lo and lo-1 for closest
+            let candidates = [max(0, lo - 1), lo].map { points[min($0, points.count - 1)] }
+            if let nearest = candidates.min(by: { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }) {
                 result.append(nearest)
             }
         }
@@ -471,8 +494,8 @@ struct PortfolioView: View {
         )
     }
 
-    private func formatTooltipValue(_ value: Decimal) -> String {
-        AccBotFormatters.formatTooltip(value)
+    private func formatTooltipValue(_ value: Double) -> String {
+        AccBotFormatters.formatTooltip(Decimal(value))
     }
 
     // MARK: - Interactive Legend

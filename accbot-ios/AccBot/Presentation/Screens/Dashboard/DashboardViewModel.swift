@@ -116,49 +116,59 @@ final class DashboardViewModel: ObservableObject {
 
     func loadHoldings() async {
         do {
-            let db = deps.activeDatabase
-            let pairs = try db.transactionDao.getDistinctPairs()
-            var holdingsResult: [HoldingInfo] = []
+            let summaries = try deps.activeDatabase.transactionDao.getHoldingSummaries()
+            guard !summaries.isEmpty else {
+                holdings = []
+                return
+            }
 
-            for pair in pairs {
-                let transactions = try db.transactionDao.getCompletedTransactions(
-                    crypto: pair.crypto, fiat: pair.fiat
-                )
-                guard !transactions.isEmpty else { continue }
-
-                let totalCrypto = transactions.reduce(Decimal.zero) { $0 + $1.cryptoAmount }
-                let totalInvested = transactions.reduce(Decimal.zero) { $0 + $1.fiatAmount }
-                let avgPrice = totalCrypto > 0
-                    ? totalInvested / totalCrypto
-                    : Decimal.zero
-
-                // Try to get current price for ROI
-                let currentPrice = await withTimeoutOrNil(seconds: 10) {
-                    await self.deps.marketDataService.getCurrentPrice(
-                        crypto: pair.crypto, fiat: pair.fiat
-                    )
+            // Fetch current prices for all pairs in parallel
+            var priceCache: [String: Decimal?] = [:]
+            await withTaskGroup(of: (String, Decimal?).self) { group in
+                for summary in summaries {
+                    let key = "\(summary.crypto)/\(summary.fiat)"
+                    group.addTask {
+                        let price = await withTimeoutOrNil(seconds: 10) {
+                            await self.deps.marketDataService.getCurrentPrice(
+                                crypto: summary.crypto, fiat: summary.fiat
+                            )
+                        }
+                        return (key, price)
+                    }
                 }
-                let currentValue = currentPrice.map { totalCrypto * $0 }
-                let roi: Decimal? = if let cv = currentValue, totalInvested > 0 {
-                    ((cv - totalInvested) / totalInvested) * 100
+                for await (key, price) in group {
+                    priceCache[key] = price
+                }
+            }
+
+            // Build holdings from summaries + cached prices
+            var holdingsResult: [HoldingInfo] = []
+            for summary in summaries {
+                let key = "\(summary.crypto)/\(summary.fiat)"
+                let avgPrice = summary.totalCrypto > 0
+                    ? summary.totalInvested / summary.totalCrypto
+                    : Decimal.zero
+                let currentPrice = priceCache[key] ?? nil
+                let currentValue = currentPrice.map { summary.totalCrypto * $0 }
+                let roi: Decimal? = if let cv = currentValue, summary.totalInvested > 0 {
+                    ((cv - summary.totalInvested) / summary.totalInvested) * 100
                 } else {
                     nil
                 }
-
-                let fiatGainLoss: Decimal? = if let cv = currentValue, totalInvested > 0 {
-                    cv - totalInvested
+                let fiatGainLoss: Decimal? = if let cv = currentValue, summary.totalInvested > 0 {
+                    cv - summary.totalInvested
                 } else {
                     nil
                 }
 
                 holdingsResult.append(HoldingInfo(
-                    id: "\(pair.crypto)/\(pair.fiat)",
-                    crypto: pair.crypto,
-                    fiat: pair.fiat,
-                    totalCrypto: totalCrypto,
-                    totalInvested: totalInvested,
+                    id: key,
+                    crypto: summary.crypto,
+                    fiat: summary.fiat,
+                    totalCrypto: summary.totalCrypto,
+                    totalInvested: summary.totalInvested,
                     avgPrice: avgPrice,
-                    transactionCount: transactions.count,
+                    transactionCount: summary.txCount,
                     roi: roi,
                     currentValue: currentValue,
                     currentPrice: currentPrice,
@@ -203,38 +213,44 @@ final class DashboardViewModel: ObservableObject {
         let isSandbox = deps.userPreferences.sandboxMode
         let thresholdDays = deps.userPreferences.lowBalanceThresholdDays
 
-        // Cache fetched balances to avoid duplicate API calls for same exchange+currency
-        var balanceCache: [String: Decimal?] = [:]
+        // Collect unique balance keys to fetch
+        var keysToFetch = Set<String>()
+        for plan in enabledPlans {
+            keysToFetch.insert("\(plan.exchange.rawValue)_\(plan.fiat)")
+            keysToFetch.insert("\(plan.exchange.rawValue)_\(plan.crypto)")
+        }
 
+        // Fetch all balances in parallel
+        var balanceCache: [String: Decimal?] = [:]
+        await withTaskGroup(of: (String, Decimal?).self) { group in
+            for key in keysToFetch {
+                let parts = key.split(separator: "_", maxSplits: 1)
+                let exchange = Exchange(rawValue: String(parts[0]))!
+                let currency = String(parts[1])
+                group.addTask {
+                    let balance = await self.fetchBalance(exchange: exchange, currency: currency, isSandbox: isSandbox)
+                    return (key, balance)
+                }
+            }
+            for await (key, balance) in group {
+                balanceCache[key] = balance
+            }
+        }
+
+        guard !Task.isCancelled else { return }
+
+        // Build result from cache (no more awaits)
         var result: [PlanWithBalance] = []
 
         for plan in plans {
-            guard !Task.isCancelled else { return }
             guard plan.isEnabled else {
                 result.append(PlanWithBalance(plan: plan))
                 continue
             }
 
-            // Fetch fiat balance
             let fiatKey = "\(plan.exchange.rawValue)_\(plan.fiat)"
-            if balanceCache[fiatKey] == nil {
-                balanceCache[fiatKey] = await fetchBalance(
-                    exchange: plan.exchange,
-                    currency: plan.fiat,
-                    isSandbox: isSandbox
-                )
-            }
-            let fiatBalance = balanceCache[fiatKey] ?? nil
-
-            // Fetch crypto balance for withdrawal threshold check
             let cryptoKey = "\(plan.exchange.rawValue)_\(plan.crypto)"
-            if balanceCache[cryptoKey] == nil {
-                balanceCache[cryptoKey] = await fetchBalance(
-                    exchange: plan.exchange,
-                    currency: plan.crypto,
-                    isSandbox: isSandbox
-                )
-            }
+            let fiatBalance = balanceCache[fiatKey] ?? nil
             let cryptoBalance = balanceCache[cryptoKey] ?? nil
 
             // Check withdrawal threshold

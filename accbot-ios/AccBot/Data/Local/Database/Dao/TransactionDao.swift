@@ -126,6 +126,33 @@ final class TransactionDao {
         }
     }
 
+    func getHoldingSummaries(fiat: String? = nil) throws -> [(crypto: String, fiat: String, totalCrypto: Decimal, totalInvested: Decimal, txCount: Int)] {
+        try dbPool.read { db in
+            var sql = """
+                SELECT crypto, fiat,
+                       SUM(CAST(cryptoAmount AS REAL)) as totalCrypto,
+                       SUM(CAST(fiatAmount AS REAL)) as totalInvested,
+                       COUNT(*) as txCount
+                FROM transactions
+                WHERE status IN ('COMPLETED', 'PARTIAL')
+                """
+            var args: [any DatabaseValueConvertible] = []
+            if let fiat {
+                sql += " AND fiat = ?"
+                args.append(fiat)
+            }
+            sql += " GROUP BY crypto, fiat ORDER BY crypto, fiat"
+            let rows = try Row.fetchAll(db, sql: sql, arguments: StatementArguments(args))
+            return rows.map {
+                (crypto: $0["crypto"] as String,
+                 fiat: $0["fiat"] as String,
+                 totalCrypto: Decimal(($0["totalCrypto"] as Double?) ?? 0),
+                 totalInvested: Decimal(($0["totalInvested"] as Double?) ?? 0),
+                 txCount: $0["txCount"] as Int)
+            }
+        }
+    }
+
     // MARK: - Mutations
 
     @discardableResult
