@@ -51,7 +51,7 @@ func cleanQrValue(_ raw: String) -> String {
 /// `UIViewRepresentable.updateUIView` is only called on SwiftUI state changes,
 /// NOT on UIKit layout changes — so on initial sheet presentation (especially
 /// on iPad) the preview layer would stay at `.zero` frame = black screen.
-private class CameraPreviewView: UIView {
+class CameraPreviewView: UIView {
     var previewLayer: AVCaptureVideoPreviewLayer? {
         didSet {
             oldValue?.removeFromSuperlayer()
