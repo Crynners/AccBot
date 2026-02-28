@@ -10,15 +10,10 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            exchangeAccountsSection
-            systemSection
-            dcaAlertsSection
-            backgroundSection
-            securitySection
-            backupSection
+            generalSection
+            alertsAndSecuritySection
+            dataSection
             aboutSection
-            linksSection
-            developerSection
             dangerZoneSection
         }
         .scrollContentBackground(.hidden)
@@ -66,30 +61,11 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Exchange Accounts
+    // MARK: - General
 
-    private var exchangeAccountsSection: some View {
+    private var generalSection: some View {
         Section {
-            if viewModel.connectedExchanges.isEmpty {
-                Text(String(localized: "No exchanges connected"))
-                    .foregroundStyle(colors.onSurfaceVariant)
-            } else {
-                ForEach(viewModel.connectedExchanges, id: \.self) { exchange in
-                    HStack {
-                        Image(exchange.logoName)
-                            .resizable()
-                            .frame(width: 24, height: 24)
-                        Text(exchange.displayName)
-                        Spacer()
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(AccBotFonts.caption)
-                            .foregroundStyle(colors.success)
-                            .accessibilityLabel(String(localized: "Connected"))
-                    }
-                    .listRowBackground(colors.surface)
-                }
-            }
-
+            // Manage Exchanges
             Button {
                 router.navigate(to: .exchangeManagement)
             } label: {
@@ -105,15 +81,8 @@ struct SettingsView: View {
                 }
             }
             .listRowBackground(colors.surface)
-        } header: {
-            Text(String(localized: "Exchange Accounts"))
-        }
-    }
 
-    // MARK: - System
-
-    private var systemSection: some View {
-        Section {
+            // Theme
             Picker(String(localized: "Theme"), selection: $dependencies.userPreferences.appTheme) {
                 ForEach(AppTheme.allCases, id: \.self) { theme in
                     Text(theme.displayName).tag(theme)
@@ -121,6 +90,7 @@ struct SettingsView: View {
             }
             .listRowBackground(colors.surface)
 
+            // Language
             Menu {
                 Button(String(localized: "System Default")) { viewModel.setLanguage("") }
                 Button(String(localized: "English")) { viewModel.setLanguage("en") }
@@ -136,8 +106,46 @@ struct SettingsView: View {
             .accessibilityLabel(String(localized: "Select language"))
             .accessibilityValue(languageDisplayName)
             .listRowBackground(colors.surface)
+
+            // Notifications toggle + system settings
+            HStack {
+                Toggle(String(localized: "Notifications"), isOn: $dependencies.userPreferences.notificationsEnabled)
+                Button {
+                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.forward.square")
+                        .foregroundStyle(colors.primary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(String(localized: "Open notification settings"))
+            }
+            .listRowBackground(colors.surface)
+
+            // Background execution info
+            HStack {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(colors.warning)
+                    .accessibilityHidden(true)
+                Text(String(localized: "iOS executes DCA plans approximately. Open the app daily for reliable execution."))
+                    .font(AccBotFonts.bodySmall)
+                    .foregroundStyle(colors.onSurfaceVariant)
+            }
+            .listRowBackground(colors.surface)
+
+            HStack {
+                Text(String(localized: "Last Background Run"))
+                Spacer()
+                Text(viewModel.lastBackgroundRunText)
+                    .foregroundStyle(colors.onSurfaceVariant)
+            }
+            .listRowBackground(colors.surface)
         } header: {
-            Text(String(localized: "System"))
+            Text(String(localized: "General"))
+                .accessibilityAddTraits(.isHeader)
         }
     }
 
@@ -159,27 +167,11 @@ struct SettingsView: View {
         return formatter.string(from: Date())
     }
 
-    // MARK: - DCA Alerts
+    // MARK: - Alerts & Security
 
-    private var dcaAlertsSection: some View {
+    private var alertsAndSecuritySection: some View {
         Section {
-            HStack {
-                Toggle(String(localized: "Notifications"), isOn: $dependencies.userPreferences.notificationsEnabled)
-                Button {
-                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
-                } label: {
-                    Image(systemName: "arrow.up.forward.square")
-                        .foregroundStyle(colors.primary)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(String(localized: "Open notification settings"))
-            }
-            .listRowBackground(colors.surface)
-
+            // Notification sub-toggles (only when notifications enabled)
             if dependencies.userPreferences.notificationsEnabled {
                 Toggle(isOn: $dependencies.userPreferences.purchaseNotifications) {
                     VStack(alignment: .leading, spacing: Spacing.xxs) {
@@ -212,6 +204,7 @@ struct SettingsView: View {
                 .listRowBackground(colors.surface)
             }
 
+            // Low Balance Warning
             HStack {
                 Text(String(localized: "Low Balance Warning"))
                 Spacer()
@@ -234,6 +227,7 @@ struct SettingsView: View {
             .accessibilityHint(String(localized: "Adjustable, from 1 to 14 days"))
             .listRowBackground(colors.surface)
 
+            // Withdrawal Thresholds
             Button {
                 viewModel.loadWithdrawalThresholds()
                 showWithdrawalSheet = true
@@ -247,41 +241,8 @@ struct SettingsView: View {
                 }
             }
             .listRowBackground(colors.surface)
-        } header: {
-            Text(String(localized: "DCA Alerts"))
-        }
-    }
 
-    // MARK: - Background Execution
-
-    private var backgroundSection: some View {
-        Section {
-            HStack {
-                Image(systemName: "info.circle")
-                    .foregroundStyle(colors.warning)
-                    .accessibilityHidden(true)
-                Text(String(localized: "iOS executes DCA plans approximately. Open the app daily for reliable execution."))
-                    .font(AccBotFonts.bodySmall)
-                    .foregroundStyle(colors.onSurfaceVariant)
-            }
-            .listRowBackground(colors.surface)
-
-            HStack {
-                Text(String(localized: "Last Background Run"))
-                Spacer()
-                Text(viewModel.lastBackgroundRunText)
-                    .foregroundStyle(colors.onSurfaceVariant)
-            }
-            .listRowBackground(colors.surface)
-        } header: {
-            Text(String(localized: "Background Execution"))
-        }
-    }
-
-    // MARK: - Security
-
-    private var securitySection: some View {
-        Section {
+            // Biometric Lock
             if viewModel.biometricType != .none {
                 Toggle(isOn: Binding(
                     get: { dependencies.userPreferences.biometricLockEnabled },
@@ -309,13 +270,14 @@ struct SettingsView: View {
                 .listRowBackground(colors.surface)
             }
         } header: {
-            Text(String(localized: "Security"))
+            Text(String(localized: "Alerts & Security"))
+                .accessibilityAddTraits(.isHeader)
         }
     }
 
-    // MARK: - Backup & Restore
+    // MARK: - Data
 
-    private var backupSection: some View {
+    private var dataSection: some View {
         Section {
             Button {
                 router.navigate(to: .backupExport)
@@ -343,7 +305,8 @@ struct SettingsView: View {
             }
             .listRowBackground(colors.surface)
         } header: {
-            Text(String(localized: "Backup & Restore"))
+            Text(String(localized: "Data"))
+                .accessibilityAddTraits(.isHeader)
         }
     }
 
@@ -351,6 +314,49 @@ struct SettingsView: View {
 
     private var aboutSection: some View {
         Section {
+            if let docsUrl = URL(string: "https://github.com/crynners/AccBot") {
+                Link(destination: docsUrl) {
+                    HStack {
+                        Label(String(localized: "Documentation"), systemImage: "book")
+                        Spacer()
+                        Image(systemName: "arrow.up.forward.square")
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .font(AccBotFonts.captionSmall)
+                    }
+                }
+                .listRowBackground(colors.surface)
+            }
+
+            if let issuesUrl = URL(string: "https://github.com/crynners/AccBot/issues") {
+                Link(destination: issuesUrl) {
+                    HStack {
+                        Label(String(localized: "Report Issue"), systemImage: "ladybug")
+                        Spacer()
+                        Image(systemName: "arrow.up.forward.square")
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .font(AccBotFonts.captionSmall)
+                    }
+                }
+                .listRowBackground(colors.surface)
+            }
+
+            Toggle(String(localized: "Sandbox Mode"), isOn: Binding(
+                get: { dependencies.userPreferences.sandboxMode },
+                set: { newValue in
+                    dependencies.userPreferences.sandboxMode = newValue
+                    viewModel.activeAlert = .sandboxRestart(isSandbox: newValue)
+                }
+            ))
+            .tint(colors.warning)
+            .listRowBackground(colors.surface)
+
+            if dependencies.userPreferences.sandboxMode {
+                Text(String(localized: "Using testnet APIs. No real funds will be used."))
+                    .font(AccBotFonts.caption)
+                    .foregroundStyle(colors.warning)
+                    .listRowBackground(colors.surface)
+            }
+
             HStack {
                 Text(String(localized: "Version"))
                 Spacer()
@@ -383,65 +389,7 @@ struct SettingsView: View {
                 .listRowBackground(colors.surface)
         } header: {
             Text(String(localized: "About"))
-        }
-    }
-
-    // MARK: - Links
-
-    private var linksSection: some View {
-        Section {
-            if let docsUrl = URL(string: "https://github.com/crynners/AccBot") {
-                Link(destination: docsUrl) {
-                    HStack {
-                        Label(String(localized: "Documentation"), systemImage: "book")
-                        Spacer()
-                        Image(systemName: "arrow.up.forward.square")
-                            .foregroundStyle(colors.onSurfaceVariant)
-                            .font(AccBotFonts.captionSmall)
-                    }
-                }
-                .listRowBackground(colors.surface)
-            }
-
-            if let issuesUrl = URL(string: "https://github.com/crynners/AccBot/issues") {
-                Link(destination: issuesUrl) {
-                    HStack {
-                        Label(String(localized: "Report Issue"), systemImage: "ladybug")
-                        Spacer()
-                        Image(systemName: "arrow.up.forward.square")
-                            .foregroundStyle(colors.onSurfaceVariant)
-                            .font(AccBotFonts.captionSmall)
-                    }
-                }
-                .listRowBackground(colors.surface)
-            }
-        } header: {
-            Text(String(localized: "Help"))
-        }
-    }
-
-    // MARK: - Developer
-
-    private var developerSection: some View {
-        Section {
-            Toggle(String(localized: "Sandbox Mode"), isOn: Binding(
-                get: { dependencies.userPreferences.sandboxMode },
-                set: { newValue in
-                    dependencies.userPreferences.sandboxMode = newValue
-                    viewModel.activeAlert = .sandboxRestart(isSandbox: newValue)
-                }
-            ))
-            .tint(colors.warning)
-            .listRowBackground(colors.surface)
-
-            if dependencies.userPreferences.sandboxMode {
-                Text(String(localized: "Using testnet APIs. No real funds will be used."))
-                    .font(AccBotFonts.caption)
-                    .foregroundStyle(colors.warning)
-                    .listRowBackground(colors.surface)
-            }
-        } header: {
-            Text(String(localized: "Developer"))
+                .accessibilityAddTraits(.isHeader)
         }
     }
 
@@ -514,6 +462,7 @@ struct SettingsView: View {
             } label: {
                 Label(String(localized: "Danger Zone"), systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(colors.error)
+                    .accessibilityAddTraits(.isHeader)
             }
             .tint(colors.error)
             .listRowBackground(colors.surface)

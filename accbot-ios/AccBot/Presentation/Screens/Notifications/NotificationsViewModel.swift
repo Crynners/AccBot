@@ -3,11 +3,9 @@ import Combine
 
 @MainActor
 final class NotificationsViewModel: ObservableObject {
-    @Published var activeNotifications: [AppNotification] = []
-    @Published var archivedNotifications: [AppNotification] = []
-    @Published var showArchive = false
+    @Published var notifications: [AppNotification] = []
     @Published var unreadCount = 0
-    @Published var showClearArchiveConfirmation = false
+    @Published var showDeleteAllConfirmation = false
     @Published var errorMessage: String?
 
     private var cancellables = Set<AnyCancellable>()
@@ -31,18 +29,16 @@ final class NotificationsViewModel: ObservableObject {
 
     func loadData() {
         do {
-            activeNotifications = try deps.activeDatabase.notificationDao.getActive()
-            archivedNotifications = try deps.activeDatabase.notificationDao.getArchived()
+            notifications = try deps.activeDatabase.notificationDao.getAll()
             unreadCount = try deps.activeDatabase.notificationDao.getUnreadCount()
         } catch {
-            activeNotifications = []
-            archivedNotifications = []
+            notifications = []
             errorMessage = error.localizedDescription
         }
     }
 
     private func observeNotifications() {
-        deps.activeDatabase.notificationDao.observeActive()
+        deps.activeDatabase.notificationDao.observeAll()
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { completion in
@@ -53,7 +49,7 @@ final class NotificationsViewModel: ObservableObject {
                     }
                 },
                 receiveValue: { [weak self] notifications in
-                    self?.activeNotifications = notifications
+                    self?.notifications = notifications
                 }
             )
             .store(in: &cancellables)
@@ -85,43 +81,29 @@ final class NotificationsViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
-        // Archived list not observed — reload manually
-        loadArchivedNotifications()
     }
 
-    func archive(_ notification: AppNotification) {
+    func markAllAsRead() {
         do {
-            try deps.activeDatabase.notificationDao.archive(id: notification.id)
+            try deps.activeDatabase.notificationDao.markAllAsRead()
         } catch {
             errorMessage = error.localizedDescription
         }
-        // Active list updates via observer; reload archived list
-        loadArchivedNotifications()
     }
 
-    func dismissAll() {
+    func deleteNotification(_ notification: AppNotification) {
         do {
-            try deps.activeDatabase.notificationDao.archiveAll()
+            try deps.activeDatabase.notificationDao.delete(id: notification.id)
         } catch {
             errorMessage = error.localizedDescription
         }
-        loadArchivedNotifications()
     }
 
-    func clearArchive() {
+    func deleteAll() {
         do {
-            try deps.activeDatabase.notificationDao.clearArchive()
+            try deps.activeDatabase.notificationDao.deleteAllRead()
         } catch {
             errorMessage = error.localizedDescription
-        }
-        loadArchivedNotifications()
-    }
-
-    private func loadArchivedNotifications() {
-        do {
-            archivedNotifications = try deps.activeDatabase.notificationDao.getArchived()
-        } catch {
-            archivedNotifications = []
         }
     }
 }

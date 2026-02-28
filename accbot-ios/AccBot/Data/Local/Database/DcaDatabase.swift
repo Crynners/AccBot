@@ -183,6 +183,12 @@ final class DcaDatabase {
             }
         }
 
+        // Delete previously archived notifications so they don't reappear
+        // after removing the archive UI
+        migrator.registerMigration("v2_remove_archived_notifications") { db in
+            try db.execute(sql: "DELETE FROM notifications WHERE isArchived = 1")
+        }
+
         try migrator.migrate(dbPool)
     }
 }

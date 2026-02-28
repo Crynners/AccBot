@@ -12,20 +12,9 @@ final class NotificationDao {
 
     // MARK: - Queries
 
-    func getActive() throws -> [AppNotification] {
+    func getAll() throws -> [AppNotification] {
         try dbPool.read { db in
             try NotificationRecord
-                .filter(Column("isArchived") == false)
-                .order(Column("createdAt").desc)
-                .fetchAll(db)
-                .map { $0.toDomain() }
-        }
-    }
-
-    func getArchived() throws -> [AppNotification] {
-        try dbPool.read { db in
-            try NotificationRecord
-                .filter(Column("isArchived") == true)
                 .order(Column("createdAt").desc)
                 .fetchAll(db)
                 .map { $0.toDomain() }
@@ -36,7 +25,6 @@ final class NotificationDao {
         try dbPool.read { db in
             try NotificationRecord
                 .filter(Column("isRead") == false)
-                .filter(Column("isArchived") == false)
                 .fetchCount(db)
         }
     }
@@ -63,30 +51,22 @@ final class NotificationDao {
 
     func markAllAsRead() throws {
         try dbPool.write { db in
-            try db.execute(sql: "UPDATE notifications SET isRead = 1 WHERE isArchived = 0")
+            try db.execute(sql: "UPDATE notifications SET isRead = 1 WHERE isRead = 0")
         }
     }
 
-    func archive(id: Int64) throws {
+    func delete(id: Int64) throws {
         try dbPool.write { db in
             try db.execute(
-                sql: "UPDATE notifications SET isArchived = 1, isRead = 1 WHERE id = ?",
+                sql: "DELETE FROM notifications WHERE id = ?",
                 arguments: [id]
             )
         }
     }
 
-    func archiveAll() throws {
+    func deleteAllRead() throws {
         try dbPool.write { db in
-            try db.execute(sql: "UPDATE notifications SET isArchived = 1, isRead = 1 WHERE isArchived = 0")
-        }
-    }
-
-    func clearArchive() throws {
-        try dbPool.write { db in
-            _ = try NotificationRecord
-                .filter(Column("isArchived") == true)
-                .deleteAll(db)
+            try db.execute(sql: "DELETE FROM notifications WHERE isRead = 1")
         }
     }
 
@@ -98,10 +78,9 @@ final class NotificationDao {
 
     // MARK: - Observation
 
-    func observeActive() -> DatabasePublishers.Value<[AppNotification]> {
+    func observeAll() -> DatabasePublishers.Value<[AppNotification]> {
         ValueObservation.tracking { db in
             try NotificationRecord
-                .filter(Column("isArchived") == false)
                 .order(Column("createdAt").desc)
                 .fetchAll(db)
                 .map { $0.toDomain() }
@@ -113,7 +92,6 @@ final class NotificationDao {
         ValueObservation.tracking { db in
             try NotificationRecord
                 .filter(Column("isRead") == false)
-                .filter(Column("isArchived") == false)
                 .fetchCount(db)
         }
         .publisher(in: dbPool, scheduling: .immediate)

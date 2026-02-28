@@ -138,12 +138,37 @@ struct DashboardView: View {
             Text(String(localized: "Total Accumulated"))
                 .font(AccBotFonts.titleSmall)
                 .foregroundStyle(colors.onSurface)
+                .accessibilityAddTraits(.isHeader)
 
             EmptyStateView(
                 systemImage: "chart.pie",
                 title: String(localized: "No Holdings Yet"),
                 subtitle: String(localized: "Your portfolio will appear here after your first DCA purchase")
             )
+
+            if !viewModel.plans.isEmpty {
+                Button {
+                    let exchanges = Set(viewModel.plans.map(\.exchange))
+                    if exchanges.count == 1, let exchange = exchanges.first {
+                        router.navigate(to: .exchangeDetail(exchange))
+                    } else {
+                        router.navigate(to: .exchangeManagement)
+                    }
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        Image(systemName: "icloud.and.arrow.down")
+                        Text(String(localized: "Import via API"))
+                    }
+                    .font(AccBotFonts.headline)
+                    .foregroundStyle(colors.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.md)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CornerRadius.sm)
+                            .stroke(colors.primary, lineWidth: 1.5)
+                    )
+                }
+            }
         }
     }
 
@@ -155,6 +180,7 @@ struct DashboardView: View {
                 Text(String(localized: "Total Accumulated"))
                     .font(AccBotFonts.titleSmall)
                     .foregroundStyle(colors.onSurface)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button {
                     viewModel.refreshPrices()
@@ -292,6 +318,7 @@ struct DashboardView: View {
                 Text(String(localized: "My DCA Plans"))
                     .font(AccBotFonts.titleSmall)
                     .foregroundStyle(colors.onSurface)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button {
                     router.navigate(to: .addPlan)

@@ -4,62 +4,62 @@ struct NotificationsView: View {
     @EnvironmentObject var dependencies: AppDependencies
     @StateObject private var viewModel = NotificationsViewModel()
     @Environment(\.accBotColors) private var colors
-    @State private var showDismissAllConfirmation = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Active / Archive toggle
-            Picker(String(localized: "Notification filter"), selection: $viewModel.showArchive) {
-                Text(String(localized: "Active")).tag(false)
-                Text(viewModel.archivedNotifications.isEmpty
-                     ? String(localized: "Archive")
-                     : String(localized: "Archive (\(viewModel.archivedNotifications.count))")
-                ).tag(true)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .padding(.horizontal, Spacing.lg)
-            .padding(.vertical, Spacing.sm)
-
-            if viewModel.showArchive {
-                archiveList
+        Group {
+            if viewModel.notifications.isEmpty {
+                EmptyStateView(
+                    systemImage: "bell.slash",
+                    title: String(localized: "You're all caught up!"),
+                    subtitle: String(localized: "DCA alerts and updates will appear here")
+                )
             } else {
-                activeList
+                List {
+                    ForEach(viewModel.notifications) { notification in
+                        Button {
+                            viewModel.markAsRead(notification)
+                        } label: {
+                            notificationRow(notification)
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                viewModel.deleteNotification(notification)
+                            } label: {
+                                Label(String(localized: "Delete"), systemImage: "trash")
+                            }
+                        }
+                        .listRowBackground(
+                            notification.isRead ? colors.surface : colors.primary.opacity(0.08)
+                        )
+                        .accessibilityValue(notification.isRead
+                            ? String(localized: "Read")
+                            : String(localized: "Unread"))
+                    }
+                }
+                .listStyle(.plain)
             }
         }
         .background(colors.background)
         .navigationTitle(String(localized: "Notifications"))
         .toolbar {
-            if !viewModel.showArchive && !viewModel.activeNotifications.isEmpty {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(String(localized: "Dismiss All")) {
-                        showDismissAllConfirmation = true
+            ToolbarItem(placement: .primaryAction) {
+                if viewModel.unreadCount > 0 {
+                    Button(String(localized: "Mark All Read")) {
+                        viewModel.markAllAsRead()
                     }
-                    .accessibilityHint(String(localized: "Archives all active notifications"))
-                }
-            }
-            if viewModel.showArchive && !viewModel.archivedNotifications.isEmpty {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(String(localized: "Clear Archive")) {
-                        viewModel.showClearArchiveConfirmation = true
+                } else if !viewModel.notifications.isEmpty {
+                    Button(String(localized: "Delete All")) {
+                        viewModel.showDeleteAllConfirmation = true
                     }
                 }
             }
         }
-        .alert(String(localized: "Clear Archive"), isPresented: $viewModel.showClearArchiveConfirmation) {
+        .alert(String(localized: "Delete All?"), isPresented: $viewModel.showDeleteAllConfirmation) {
             Button(String(localized: "Cancel"), role: .cancel) {}
-            Button(String(localized: "Clear"), role: .destructive) { viewModel.clearArchive() }
+            Button(String(localized: "Delete All"), role: .destructive) { viewModel.deleteAll() }
         } message: {
-            Text(String(localized: "This will permanently delete all archived notifications."))
-        }
-        .alert(String(localized: "Dismiss All?"), isPresented: $showDismissAllConfirmation) {
-            Button(String(localized: "Cancel"), role: .cancel) {}
-            Button(String(localized: "Dismiss All"), role: .destructive) { viewModel.dismissAll() }
-        } message: {
-            Text(String(localized: "All active notifications will be archived."))
-        }
-        .refreshable {
-            await viewModel.refresh()
+            Text(String(localized: "This will permanently delete all read notifications."))
         }
         .alert(String(localized: "Error"), isPresented: Binding(
             get: { viewModel.errorMessage != nil },
@@ -71,61 +71,11 @@ struct NotificationsView: View {
                 Text(msg)
             }
         }
+        .refreshable {
+            await viewModel.refresh()
+        }
         .onAppear {
             viewModel.setup(dependencies)
-        }
-    }
-
-    private var activeList: some View {
-        Group {
-            if viewModel.activeNotifications.isEmpty {
-                EmptyStateView(
-                    systemImage: "bell.slash",
-                    title: String(localized: "You're all caught up!"),
-                    subtitle: String(localized: "DCA alerts and updates will appear here")
-                )
-            } else {
-                List {
-                    ForEach(viewModel.activeNotifications) { notification in
-                        Button {
-                            viewModel.markAsRead(notification)
-                        } label: {
-                            notificationRow(notification)
-                        }
-                        .buttonStyle(.plain)
-                        .swipeActions(edge: .trailing) {
-                            Button {
-                                viewModel.archive(notification)
-                            } label: {
-                                Label(String(localized: "Archive"), systemImage: "archivebox")
-                            }
-                            .tint(colors.warning)
-                        }
-                        .listRowBackground(colors.surface)
-                    }
-                }
-                .listStyle(.plain)
-            }
-        }
-    }
-
-    private var archiveList: some View {
-        Group {
-            if viewModel.archivedNotifications.isEmpty {
-                EmptyStateView(
-                    systemImage: "archivebox",
-                    title: String(localized: "Archive is empty"),
-                    subtitle: String(localized: "Dismissed notifications will appear here")
-                )
-            } else {
-                List {
-                    ForEach(viewModel.archivedNotifications) { notification in
-                        notificationRow(notification)
-                            .listRowBackground(colors.surface)
-                    }
-                }
-                .listStyle(.plain)
-            }
         }
     }
 

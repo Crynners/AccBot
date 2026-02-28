@@ -34,6 +34,26 @@ struct MainTabView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 30)
+                    .onEnded { value in
+                        let h = value.translation.width
+                        let v = value.translation.height
+                        guard abs(h) > abs(v) * 1.5, abs(h) > 50 else { return }
+
+                        let current = router.selectedTab.rawValue
+                        let next = h < 0
+                            ? min(current + 1, TabItem.allCases.count - 1)
+                            : max(current - 1, 0)
+                        guard next != current,
+                              let newTab = TabItem(rawValue: next) else { return }
+
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            router.selectedTab = newTab
+                        }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+            )
 
             CustomTabBar(
                 selectedTab: $router.selectedTab,
