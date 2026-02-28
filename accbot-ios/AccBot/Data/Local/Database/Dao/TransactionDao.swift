@@ -257,6 +257,13 @@ final class TransactionDao {
 
     // MARK: - Observation
 
+    func observeCount() -> DatabasePublishers.Value<Int> {
+        ValueObservation.tracking { db in
+            try TransactionRecord.fetchCount(db)
+        }
+        .publisher(in: dbPool, scheduling: .immediate)
+    }
+
     func observeAll() -> DatabasePublishers.Value<[Transaction]> {
         ValueObservation.tracking { db in
             try TransactionRecord

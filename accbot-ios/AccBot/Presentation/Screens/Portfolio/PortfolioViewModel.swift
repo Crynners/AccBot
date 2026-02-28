@@ -84,6 +84,7 @@ final class PortfolioViewModel: ObservableObject {
         }
         return d
     }
+    private var cancellables = Set<AnyCancellable>()
     private var activeTask: Task<Void, Never>?
     var lastLoadedAt: Date?
     private var priceCache: [String: (price: Decimal, fetchedAt: Date)] = [:]
@@ -133,6 +134,22 @@ final class PortfolioViewModel: ObservableObject {
         guard !isSetUp else { return }
         isSetUp = true
         self.dependencies = dependencies
+        observeTransactions()
+    }
+
+    private func observeTransactions() {
+        deps.activeDatabase.transactionDao.observeCount()
+            .removeDuplicates()
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] _ in
+                    self?.activeTask?.cancel()
+                    self?.activeTask = Task { await self?.loadData() }
+                }
+            )
+            .store(in: &cancellables)
     }
 
     func loadData() async {

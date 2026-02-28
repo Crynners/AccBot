@@ -81,6 +81,7 @@ final class DashboardViewModel: ObservableObject {
         self.dependencies = dependencies
         loadData()
         observePlans()
+        observeTransactions()
     }
 
     func loadData() {
@@ -201,6 +202,20 @@ final class DashboardViewModel: ObservableObject {
                     self?.balanceTask = Task { [weak self] in
                         await self?.fetchBalancesForPlans()
                     }
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func observeTransactions() {
+        deps.activeDatabase.transactionDao.observeCount()
+            .removeDuplicates()
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] _ in
+                    Task { await self?.loadHoldings() }
                 }
             )
             .store(in: &cancellables)

@@ -125,11 +125,10 @@ final class CoinmateApi: ExchangeApi {
             if json["error"] as? Bool == true { return nil }
 
             guard let dataObj = json["data"] as? [String: Any],
-                  let currencyData = dataObj[currency] as? [String: Any],
-                  let available = currencyData["available"] as? String
+                  let currencyData = dataObj[currency] as? [String: Any]
             else { return nil }
 
-            return Decimal(string: available)
+            return jsonDecimalOptional(currencyData, key: "available")
         } catch {
             return nil
         }
@@ -143,11 +142,10 @@ final class CoinmateApi: ExchangeApi {
 
             if json["error"] as? Bool == true { return nil }
 
-            guard let dataObj = json["data"] as? [String: Any],
-                  let last = dataObj["last"] as? String
+            guard let dataObj = json["data"] as? [String: Any]
             else { return nil }
 
-            return Decimal(string: last)
+            return jsonDecimalOptional(dataObj, key: "last")
         } catch {
             return nil
         }
@@ -234,15 +232,20 @@ final class CoinmateApi: ExchangeApi {
 
         var trades: [HistoricalTrade] = []
         for trade in dataArray {
-            let tradeType = trade["type"] as? String ?? ""
+            let tradeType = jsonString(trade, key: "type")
             let side = tradeType == "BUY" ? "BUY" : "SELL"
-            let amount = Decimal(string: trade["amount"] as? String ?? "0") ?? 0
-            let price = Decimal(string: trade["price"] as? String ?? "0") ?? 0
-            let fee = Decimal(string: trade["fee"] as? String ?? "0") ?? 0
-            let timestampMs = trade["createdTimestamp"] as? Int64 ?? 0
+            let amount = jsonDecimal(trade, key: "amount")
+            let price = jsonDecimal(trade, key: "price")
+            let fee = jsonDecimal(trade, key: "fee")
+            let timestampMs = jsonInt64(trade, key: "createdTimestamp")
+
+            let orderId: String = {
+                let oid = jsonString(trade, key: "orderId")
+                return oid.isEmpty ? jsonString(trade, key: "transactionId") : oid
+            }()
 
             trades.append(HistoricalTrade(
-                orderId: trade["orderId"] as? String ?? trade["transactionId"] as? String ?? "",
+                orderId: orderId,
                 timestamp: Date(timeIntervalSince1970: Double(timestampMs) / 1000.0),
                 crypto: crypto,
                 fiat: fiat,
@@ -298,12 +301,12 @@ final class CoinmateApi: ExchangeApi {
                 var found = false
 
                 for trade in dataArray {
-                    let tradeOrderId = trade["orderId"] as? String ?? ""
+                    let tradeOrderId = jsonString(trade, key: "orderId")
                     if tradeOrderId == orderId {
                         found = true
-                        let amount = Decimal(string: trade["amount"] as? String ?? "0") ?? 0
-                        let price = Decimal(string: trade["price"] as? String ?? "0") ?? 0
-                        let fee = Decimal(string: trade["fee"] as? String ?? "0") ?? 0
+                        let amount = jsonDecimal(trade, key: "amount")
+                        let price = jsonDecimal(trade, key: "price")
+                        let fee = jsonDecimal(trade, key: "fee")
                         totalAmount += amount
                         totalFee += fee
                         totalCost += amount * price

@@ -174,9 +174,9 @@ final class KrakenApi: ExchangeApi {
                 let status = order["status"] as? String ?? ""
 
                 if status == "closed" {
-                    let volExec = Decimal(string: order["vol_exec"] as? String ?? "0") ?? 0
-                    let cost = Decimal(string: order["cost"] as? String ?? "0") ?? 0
-                    let fee = Decimal(string: order["fee"] as? String ?? "0") ?? 0
+                    let volExec = jsonDecimal(order, key: "vol_exec")
+                    let cost = jsonDecimal(order, key: "cost")
+                    let fee = jsonDecimal(order, key: "fee")
                     let price = volExec > 0
                         ? roundDecimal(cost / volExec, scale: 8)
                         : Decimal.zero
@@ -211,9 +211,9 @@ final class KrakenApi: ExchangeApi {
             let status = order["status"] as? String ?? ""
 
             if status == "closed" {
-                let volExec = Decimal(string: order["vol_exec"] as? String ?? "0") ?? 0
-                let cost = Decimal(string: order["cost"] as? String ?? "0") ?? 0
-                let fee = Decimal(string: order["fee"] as? String ?? "0") ?? 0
+                let volExec = jsonDecimal(order, key: "vol_exec")
+                let cost = jsonDecimal(order, key: "cost")
+                let fee = jsonDecimal(order, key: "fee")
                 let price = volExec > 0
                     ? roundDecimal(cost / volExec, scale: 8)
                     : Decimal.zero
@@ -247,11 +247,9 @@ final class KrakenApi: ExchangeApi {
             guard let result = json["result"] as? [String: Any] else { return nil }
 
             // Try direct match first, then try Kraken-prefixed codes
-            for (key, value) in result {
+            for (key, _) in result {
                 if mapAssetCode(key) == currency || key == currency {
-                    if let valueStr = value as? String {
-                        return Decimal(string: valueStr)
-                    }
+                    return jsonDecimalOptional(result, key: key)
                 }
             }
             return nil
@@ -309,17 +307,18 @@ final class KrakenApi: ExchangeApi {
         for (tradeId, tradeValue) in tradesObj {
             guard let trade = tradeValue as? [String: Any] else { continue }
 
-            let type = trade["type"] as? String ?? ""
+            let type = jsonString(trade, key: "type")
             if type != "buy" { continue }
 
-            let vol = Decimal(string: trade["vol"] as? String ?? "0") ?? 0
-            let cost = Decimal(string: trade["cost"] as? String ?? "0") ?? 0
-            let fee = Decimal(string: trade["fee"] as? String ?? "0") ?? 0
-            let price = Decimal(string: trade["price"] as? String ?? "0") ?? 0
-            let time = trade["time"] as? Double ?? 0
+            let vol = jsonDecimal(trade, key: "vol")
+            let cost = jsonDecimal(trade, key: "cost")
+            let fee = jsonDecimal(trade, key: "fee")
+            let price = jsonDecimal(trade, key: "price")
+            let time = jsonDouble(trade, key: "time")
 
+            let ordertxid = jsonString(trade, key: "ordertxid")
             trades.append(HistoricalTrade(
-                orderId: trade["ordertxid"] as? String ?? tradeId,
+                orderId: ordertxid.isEmpty ? tradeId : ordertxid,
                 timestamp: Date(timeIntervalSince1970: time),
                 crypto: crypto,
                 fiat: fiat,
@@ -383,10 +382,6 @@ final class KrakenApi: ExchangeApi {
             throw NetworkError.decodingError("Invalid JSON")
         }
         return json
-    }
-
-    private func decimalToPlainString(_ value: Decimal) -> String {
-        NSDecimalNumber(decimal: value).stringValue
     }
 
     private func roundDecimal(_ value: Decimal, scale: Int) -> Decimal {

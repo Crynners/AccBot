@@ -180,9 +180,9 @@ final class CoinbaseApi: ExchangeApi {
                 let status = order["status"] as? String ?? ""
 
                 if status == "FILLED" {
-                    let filledSize = Decimal(string: order["filled_size"] as? String ?? "0") ?? 0
-                    let avgPrice = Decimal(string: order["average_filled_price"] as? String ?? "0") ?? 0
-                    let totalFees = Decimal(string: order["total_fees"] as? String ?? "0") ?? 0
+                    let filledSize = jsonDecimal(order, key: "filled_size")
+                    let avgPrice = jsonDecimal(order, key: "average_filled_price")
+                    let totalFees = jsonDecimal(order, key: "total_fees")
                     let cost = (filledSize > 0 && avgPrice > 0)
                         ? roundDecimal(filledSize * avgPrice, scale: 8)
                         : Decimal.zero
@@ -214,9 +214,9 @@ final class CoinbaseApi: ExchangeApi {
             let status = order["status"] as? String ?? ""
 
             if status == "FILLED" {
-                let filledSize = Decimal(string: order["filled_size"] as? String ?? "0") ?? 0
-                let avgPrice = Decimal(string: order["average_filled_price"] as? String ?? "0") ?? 0
-                let totalFees = Decimal(string: order["total_fees"] as? String ?? "0") ?? 0
+                let filledSize = jsonDecimal(order, key: "filled_size")
+                let avgPrice = jsonDecimal(order, key: "average_filled_price")
+                let totalFees = jsonDecimal(order, key: "total_fees")
                 let cost = (filledSize > 0 && avgPrice > 0)
                     ? roundDecimal(filledSize * avgPrice, scale: 8)
                     : Decimal.zero
@@ -250,11 +250,10 @@ final class CoinbaseApi: ExchangeApi {
             guard let accounts = json["accounts"] as? [[String: Any]] else { return nil }
 
             for account in accounts {
-                if account["currency"] as? String == currency {
-                    guard let availableBalance = account["available_balance"] as? [String: Any],
-                          let value = availableBalance["value"] as? String
+                if jsonString(account, key: "currency") == currency {
+                    guard let availableBalance = account["available_balance"] as? [String: Any]
                     else { return nil }
-                    return Decimal(string: value)
+                    return jsonDecimalOptional(availableBalance, key: "value")
                 }
             }
             return nil
@@ -270,8 +269,7 @@ final class CoinbaseApi: ExchangeApi {
             let headers = getHeaders(path: path)
             let (data, _) = try await client.get(url: "\(baseUrl)\(path)", headers: headers)
             let json = try parseJson(data)
-            guard let priceStr = json["price"] as? String else { return nil }
-            return Decimal(string: priceStr)
+            return jsonDecimalOptional(json, key: "price")
         } catch {
             return nil
         }
@@ -293,13 +291,13 @@ final class CoinbaseApi: ExchangeApi {
         iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
         for fill in fills {
-            let side = fill["side"] as? String ?? ""
+            let side = jsonString(fill, key: "side")
             if side != "BUY" { continue }
 
-            let size = Decimal(string: fill["size"] as? String ?? "0") ?? 0
-            let price = Decimal(string: fill["price"] as? String ?? "0") ?? 0
-            let commission = Decimal(string: fill["commission"] as? String ?? "0") ?? 0
-            let tradeTime = fill["trade_time"] as? String ?? ""
+            let size = jsonDecimal(fill, key: "size")
+            let price = jsonDecimal(fill, key: "price")
+            let commission = jsonDecimal(fill, key: "commission")
+            let tradeTime = jsonString(fill, key: "trade_time")
 
             let timestamp = iso8601Formatter.date(from: tradeTime) ?? Date()
 
@@ -307,7 +305,7 @@ final class CoinbaseApi: ExchangeApi {
             if let since = since, timestamp <= since { continue }
 
             trades.append(HistoricalTrade(
-                orderId: fill["trade_id"] as? String ?? fill["order_id"] as? String ?? "",
+                orderId: { let tid = jsonString(fill, key: "trade_id"); return tid.isEmpty ? jsonString(fill, key: "order_id") : tid }(),
                 timestamp: timestamp,
                 crypto: crypto,
                 fiat: fiat,

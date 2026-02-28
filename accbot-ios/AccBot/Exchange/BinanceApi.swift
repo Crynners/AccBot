@@ -82,8 +82,8 @@ final class BinanceApi: ExchangeApi {
                 return .error(message: msg, retryable: false)
             }
 
-            let executedQty = Decimal(string: json["executedQty"] as? String ?? "0") ?? 0
-            let cummulativeQuoteQty = Decimal(string: json["cummulativeQuoteQty"] as? String ?? "0") ?? 0
+            let executedQty = jsonDecimal(json, key: "executedQty")
+            let cummulativeQuoteQty = jsonDecimal(json, key: "cummulativeQuoteQty")
             let avgPrice = executedQty > 0
                 ? roundDecimal(cummulativeQuoteQty / executedQty, scale: 8)
                 : Decimal.zero
@@ -92,10 +92,10 @@ final class BinanceApi: ExchangeApi {
             var feeAsset = ""
             if let fills = json["fills"] as? [[String: Any]] {
                 for fill in fills {
-                    let commission = Decimal(string: fill["commission"] as? String ?? "0") ?? 0
+                    let commission = jsonDecimal(fill, key: "commission")
                     totalFee += commission
                     if feeAsset.isEmpty {
-                        feeAsset = fill["commissionAsset"] as? String ?? ""
+                        feeAsset = jsonString(fill, key: "commissionAsset")
                     }
                 }
             }
@@ -137,8 +137,8 @@ final class BinanceApi: ExchangeApi {
 
             guard let balances = json["balances"] as? [[String: Any]] else { return nil }
             for balance in balances {
-                if balance["asset"] as? String == currency {
-                    return Decimal(string: balance["free"] as? String ?? "")
+                if jsonString(balance, key: "asset") == currency {
+                    return jsonDecimalOptional(balance, key: "free")
                 }
             }
             return nil
@@ -152,7 +152,7 @@ final class BinanceApi: ExchangeApi {
             let symbol = "\(crypto)\(fiat)"
             let (data, _) = try await client.get(url: "\(baseUrl)/api/v3/ticker/price?symbol=\(symbol)")
             let json = try parseJson(data)
-            return Decimal(string: json["price"] as? String ?? "")
+            return jsonDecimalOptional(json, key: "price")
         } catch {
             return nil
         }
@@ -259,12 +259,12 @@ final class BinanceApi: ExchangeApi {
         var trades: [HistoricalTrade] = []
         for trade in jsonArray {
             let isBuyer = trade["isBuyer"] as? Bool ?? false
-            let qty = Decimal(string: trade["qty"] as? String ?? "0") ?? 0
-            let price = Decimal(string: trade["price"] as? String ?? "0") ?? 0
-            let quoteQty = Decimal(string: trade["quoteQty"] as? String ?? "0") ?? 0
-            let commission = Decimal(string: trade["commission"] as? String ?? "0") ?? 0
-            let commissionAsset = trade["commissionAsset"] as? String ?? ""
-            let tradeTime = trade["time"] as? Int64 ?? 0
+            let qty = jsonDecimal(trade, key: "qty")
+            let price = jsonDecimal(trade, key: "price")
+            let quoteQty = jsonDecimal(trade, key: "quoteQty")
+            let commission = jsonDecimal(trade, key: "commission")
+            let commissionAsset = jsonString(trade, key: "commissionAsset")
+            let tradeTime = jsonInt64(trade, key: "time")
 
             trades.append(HistoricalTrade(
                 orderId: "\(trade["id"] ?? "")",
