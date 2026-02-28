@@ -668,7 +668,7 @@
 "Successfully Connected" = "Úspěšně připojeno";
 "You are now connected to %@" = "Nyní jste připojeni k %@";
 "Import Transaction History" = "Importovat historii transakcí";
-"Scan Credential QR" = "Skenovat QR přihlašovacích údajů";
+"Scan Credential" = "Skenovat přihlašovací údaj";
 "Instructions" = "Instrukce";
 "Success" = "Úspěch";
 "Enter your passphrase" = "Zadejte heslo";

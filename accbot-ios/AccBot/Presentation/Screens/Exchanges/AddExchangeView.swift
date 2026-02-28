@@ -119,7 +119,7 @@ struct AddExchangeView: View {
         }
         .sheet(isPresented: $showQrScanner) {
             QrScannerSheet(
-                title: String(localized: "Scan Credential QR"),
+                title: String(localized: "Scan Credential"),
                 onScanned: { code in
                     handleQrScan(code)
                 }

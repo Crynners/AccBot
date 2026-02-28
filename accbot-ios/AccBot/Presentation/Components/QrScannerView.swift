@@ -581,7 +581,9 @@ struct MultiFieldScannerSheet: View {
                         }
                     }
                 }
-                .frame(height: max(UIScreen.main.bounds.height * 0.35, 260))
+                .frame(height: scanMode == .text
+                    ? max(UIScreen.main.bounds.height * 0.25, 200)
+                    : max(UIScreen.main.bounds.height * 0.35, 260))
 
                 // Field assignment area
                 fieldAssignmentArea
@@ -689,6 +691,7 @@ struct MultiFieldScannerSheet: View {
                         .padding(.horizontal, Spacing.lg)
                     }
                 }
+                .frame(maxHeight: .infinity)
             }
         }
         .frame(maxHeight: .infinity)
