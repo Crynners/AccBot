@@ -242,6 +242,32 @@ fun EditPlanScreen(
                         }
                     }
 
+                    // Target Amount (optional goal)
+                    item {
+                        Text(
+                            text = stringResource(R.string.plan_target_amount),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = uiState.targetAmount,
+                            onValueChange = viewModel::setTargetAmount,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.plan_target_amount)) },
+                            placeholder = { Text(stringResource(R.string.plan_target_amount_hint)) },
+                            suffix = { Text(uiState.crypto) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            singleLine = true,
+                            supportingText = {
+                                Text(
+                                    text = stringResource(R.string.plan_target_amount_description),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        )
+                    }
+
                     // Auto-withdrawal toggle
                     item {
                         Row(

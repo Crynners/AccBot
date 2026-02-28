@@ -73,6 +73,9 @@
     <string name="run_now_title">Run Now</string>
     <string name="run_now_all_plans">All plans</string>
     <string name="run_now_confirm">Run %1$d plan(s)</string>
+    <string name="dashboard_portfolio_total">Total Portfolio</string>
+    <string name="dashboard_portfolio_total_value">Value</string>
+    <string name="dashboard_portfolio_total_invested">Invested</string>
     <string name="dashboard_roi">ROI %1$s</string>
     <string name="dashboard_less_than_1_hour">&lt; 1 hour</string>
     <plurals name="dashboard_hours">
@@ -195,6 +198,10 @@
     <string name="settings_language_system_default">System default</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_czech">Čeština</string>
+    <string name="settings_theme">App Theme</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_system">System default</string>
     <string name="settings_notifications">Manage Notifications</string>
     <string name="settings_notifications_subtitle">Configure notification channels and sounds</string>
 
@@ -229,6 +236,7 @@
     <string name="history_filter_date_range">Date Range</string>
     <string name="history_filter_date_from">From</string>
     <string name="history_filter_date_to">To</string>
+    <string name="history_search">Search transactions…</string>
     <string name="history_filter_date_select">Select date</string>
 
     <!-- Add Plan Screen -->
@@ -320,6 +328,7 @@
     <string name="chart_period_roi">%1$s in %2$s</string>
     <string name="chart_crypto_price">%1$s Price</string>
     <string name="chart_accumulated_crypto">Accum. %1$s</string>
+    <string name="chart_avg_buy_price">Avg Buy Price</string>
     <string name="chart_explore">Explore history:</string>
 
     <!-- Exchange Management Screen -->
@@ -754,6 +763,30 @@
     <string name="settings_delete_transactions_dialog_text">This will permanently delete all %1$d transactions. Your portfolio data will be lost. This action cannot be undone.</string>
     <string name="settings_delete_notifications_dialog_title">Delete Notification History?</string>
     <string name="settings_delete_notifications_dialog_text">This will permanently delete all %1$d notifications. This action cannot be undone.</string>
+
+    <!-- Notification Info -->
+    <string name="notification_info_title">Notification Settings</string>
+    <string name="notification_info_body">AccBot uses 4 notification channels. In Android settings, you can customize each channel individually:\n\n• DCA Service — background service status\n• Purchase Notifications — successful trades\n• Error Notifications — failed trades\n• Low Balance Warnings — balance alerts\n\nFor each channel, you can set custom sound, vibration, and Do Not Disturb exceptions.</string>
+    <string name="notification_info_open_settings">Open Settings</string>
+
+    <!-- Changelog -->
+    <string name="changelog_whats_new">What\'s New</string>
+    <string name="changelog_got_it">Got it</string>
+    <string name="settings_changelog_subtitle">See release notes and new features</string>
+    <string name="changelog_title_2_2_1">Version 2.2.1</string>
+    <string name="changelog_2_2_1_feature_1">Goal tracking — set a target crypto amount for your DCA plan</string>
+    <string name="changelog_2_2_1_feature_2">Theme selection — choose Dark, Light, or System</string>
+    <string name="changelog_2_2_1_feature_3">Total portfolio summary on Dashboard</string>
+    <string name="changelog_2_2_1_feature_4">Transaction history search</string>
+    <string name="changelog_2_2_1_feature_5">Notification channel info in Settings</string>
+    <string name="changelog_2_2_1_feature_6">What\'s New screen after updates</string>
+
+    <!-- Goal Tracking -->
+    <string name="plan_target_amount">Target Amount (optional)</string>
+    <string name="plan_target_amount_hint">e.g. 0.1</string>
+    <string name="plan_target_amount_description">Shows a progress bar on the dashboard to visualize your goal</string>
+    <string name="dashboard_goal_progress">%1$s / %2$s %3$s (%4$s%%)</string>
+    <string name="dashboard_goal_reached">Goal reached!</string>
 
     <!-- Accessibility -->
     <string name="a11y_retry">Retry</string>
