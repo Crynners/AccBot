@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 
 /// Collects all app data (DB + preferences) into a BackupPayload.
 final class BackupDataCollector {
@@ -88,21 +87,11 @@ final class BackupDataCollector {
     // MARK: - Private helpers
 
     private func getAllNotifications() throws -> [AppNotification] {
-        try database.dbPool.read { db in
-            try NotificationRecord
-                .order(Column("createdAt").desc)
-                .fetchAll(db)
-                .map { $0.toDomain() }
-        }
+        try database.notificationDao.getAll()
     }
 
     private func getAllWithdrawals() throws -> [Withdrawal] {
-        try database.dbPool.read { db in
-            try WithdrawalRecord
-                .order(Column("createdAt").desc)
-                .fetchAll(db)
-                .map { $0.toDomain() }
-        }
+        try database.withdrawalDao.getAll()
     }
 }
 

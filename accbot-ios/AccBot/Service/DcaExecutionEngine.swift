@@ -11,6 +11,7 @@ final class DcaExecutionEngine {
     private let exchangeApiFactory: ExchangeApiFactory
     private let notificationService: NotificationService
     private let marketDataService: MarketDataService
+    private let strategyMultiplierUseCase: CalculateStrategyMultiplierUseCase
     private let logger = Logger(subsystem: "com.accbot.dca", category: "DcaExecutionEngine")
 
     private let maxAttempts = 3
@@ -32,6 +33,7 @@ final class DcaExecutionEngine {
         self.exchangeApiFactory = exchangeApiFactory
         self.notificationService = notificationService
         self.marketDataService = marketDataService
+        self.strategyMultiplierUseCase = CalculateStrategyMultiplierUseCase(marketDataService: marketDataService)
     }
 
     private var activeDb: DcaDatabase {
@@ -273,46 +275,7 @@ final class DcaExecutionEngine {
         crypto: String,
         fiat: String
     ) async -> StrategyMultiplierResult {
-        switch strategy {
-        case .classic:
-            return StrategyMultiplierResult(multiplier: 1.0, reason: "Classic DCA", marketData: nil)
-
-        case .athBased(let tiers):
-            guard let currentPrice = await marketDataService.getCurrentPrice(crypto: crypto, fiat: fiat),
-                  let ath = await marketDataService.getAllTimeHigh(crypto: crypto, fiat: fiat),
-                  ath > 0
-            else {
-                return StrategyMultiplierResult(multiplier: 1.0, reason: "ATH data unavailable, using 1.0x", marketData: nil)
-            }
-            let distance = 1.0 - (NSDecimalNumber(decimal: currentPrice).doubleValue / NSDecimalNumber(decimal: ath).doubleValue)
-            for tier in tiers {
-                if Float(distance) <= tier.maxDistancePercent {
-                    return StrategyMultiplierResult(
-                        multiplier: tier.multiplier,
-                        reason: String(format: "%.0f%% from ATH → %.1fx", distance * 100, tier.multiplier),
-                        marketData: MarketData(currentPrice: currentPrice, allTimeHigh: ath, fearGreedIndex: nil)
-                    )
-                }
-            }
-            let lastTier = tiers.last ?? AthTier(maxDistancePercent: 1.0, multiplier: 3.0)
-            return StrategyMultiplierResult(multiplier: lastTier.multiplier, reason: "Max ATH distance", marketData: nil)
-
-        case .fearAndGreed(let tiers):
-            guard let index = await marketDataService.getFearGreedIndex() else {
-                return StrategyMultiplierResult(multiplier: 1.0, reason: "Fear & Greed unavailable, using 1.0x", marketData: nil)
-            }
-            for tier in tiers {
-                if index <= tier.maxIndex {
-                    return StrategyMultiplierResult(
-                        multiplier: tier.multiplier,
-                        reason: "F&G \(index) → \(tier.multiplier)x",
-                        marketData: MarketData(currentPrice: 0, allTimeHigh: nil, fearGreedIndex: index)
-                    )
-                }
-            }
-            let lastTier = tiers.last ?? FearGreedTier(maxIndex: 100, multiplier: 0.25)
-            return StrategyMultiplierResult(multiplier: lastTier.multiplier, reason: "Max greed", marketData: nil)
-        }
+        await strategyMultiplierUseCase.invoke(strategy: strategy, crypto: crypto, fiat: fiat)
     }
 
     private func checkWithdrawalThreshold(plan: DcaPlan, api: ExchangeApi) async {

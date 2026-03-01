@@ -1,7 +1,7 @@
 import Foundation
 
 /// Transaction status
-enum TransactionStatus: String, Codable {
+enum TransactionStatus: String, Codable, Sendable {
     case pending = "PENDING"
     case completed = "COMPLETED"
     case failed = "FAILED"
@@ -18,7 +18,7 @@ enum TransactionStatus: String, Codable {
 }
 
 /// Purchase transaction record
-struct Transaction: Identifiable, Equatable {
+struct Transaction: Identifiable, Equatable, Sendable {
     let id: Int64
     let planId: Int64
     let exchange: Exchange

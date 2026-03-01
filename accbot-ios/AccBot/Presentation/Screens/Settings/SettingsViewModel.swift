@@ -126,9 +126,7 @@ final class SettingsViewModel: ObservableObject {
         do {
             planCount = try db.planDao.getAll().count
             transactionCount = try db.transactionDao.getTotalCount()
-            notificationCount = try db.dbPool.read { db in
-                try NotificationRecord.fetchCount(db)
-            }
+            notificationCount = try db.notificationDao.getAll().count
         } catch {
             showError(error.localizedDescription)
         }
@@ -176,29 +174,20 @@ final class SettingsViewModel: ObservableObject {
         do {
             switch target {
             case .plans:
-                try db.dbPool.write { database in
-                    try database.execute(sql: "DELETE FROM dca_plans")
-                }
+                try db.planDao.deleteAll()
             case .transactions:
-                try db.dbPool.write { database in
-                    try database.execute(sql: "DELETE FROM transactions")
-                }
+                try db.transactionDao.deleteAll()
             case .notifications:
-                try db.dbPool.write { database in
-                    try database.execute(sql: "DELETE FROM notifications")
-                }
+                try db.notificationDao.deleteAll()
             case .allData:
-                // Wipe all DB tables in a single transaction for consistency
-                try db.dbPool.write { database in
-                    try database.execute(sql: "DELETE FROM transactions")
-                    try database.execute(sql: "DELETE FROM withdrawals")
-                    try database.execute(sql: "DELETE FROM notifications")
-                    try database.execute(sql: "DELETE FROM withdrawal_thresholds")
-                    try database.execute(sql: "DELETE FROM exchange_balances")
-                    try database.execute(sql: "DELETE FROM daily_prices")
-                    try database.execute(sql: "DELETE FROM monthly_summaries")
-                    try database.execute(sql: "DELETE FROM dca_plans")
-                }
+                try db.transactionDao.deleteAll()
+                try db.withdrawalDao.deleteAll()
+                try db.notificationDao.deleteAll()
+                try db.withdrawalThresholdDao.deleteAll()
+                try db.exchangeBalanceDao.deleteAll()
+                try db.dailyPriceDao.deleteAll()
+                try db.monthlySummaryDao.deleteAll()
+                try db.planDao.deleteAll()
                 deps.credentialsStore.clearAllBothEnvironments()
                 deps.onboardingPreferences.onboardingCompleted = false
                 deleteTarget = nil

@@ -128,11 +128,9 @@ final class TransactionDao {
 
     func getHoldingSummaries(fiat: String? = nil) throws -> [(crypto: String, fiat: String, totalCrypto: Decimal, totalInvested: Decimal, txCount: Int)] {
         try dbPool.read { db in
+            // Fetch raw TEXT values and aggregate in Swift to avoid CAST(... AS REAL) precision loss
             var sql = """
-                SELECT crypto, fiat,
-                       SUM(CAST(cryptoAmount AS REAL)) as totalCrypto,
-                       SUM(CAST(fiatAmount AS REAL)) as totalInvested,
-                       COUNT(*) as txCount
+                SELECT crypto, fiat, cryptoAmount, fiatAmount
                 FROM transactions
                 WHERE status IN ('COMPLETED', 'PARTIAL')
                 """
@@ -141,26 +139,36 @@ final class TransactionDao {
                 sql += " AND fiat = ?"
                 args.append(fiat)
             }
-            sql += " GROUP BY crypto, fiat ORDER BY crypto, fiat"
+            sql += " ORDER BY crypto, fiat"
             let rows = try Row.fetchAll(db, sql: sql, arguments: StatementArguments(args))
-            return rows.map {
-                (crypto: $0["crypto"] as String,
-                 fiat: $0["fiat"] as String,
-                 totalCrypto: Decimal(($0["totalCrypto"] as Double?) ?? 0),
-                 totalInvested: Decimal(($0["totalInvested"] as Double?) ?? 0),
-                 txCount: $0["txCount"] as Int)
+
+            // Group and sum with Decimal precision
+            var groups: [String: (crypto: String, fiat: String, totalCrypto: Decimal, totalInvested: Decimal, txCount: Int)] = [:]
+            for row in rows {
+                let crypto: String = row["crypto"]
+                let fiat: String = row["fiat"]
+                let key = "\(crypto)/\(fiat)"
+                let cryptoAmount = Decimal(string: row["cryptoAmount"] as String? ?? "0") ?? 0
+                let fiatAmount = Decimal(string: row["fiatAmount"] as String? ?? "0") ?? 0
+                var entry = groups[key] ?? (crypto: crypto, fiat: fiat, totalCrypto: 0, totalInvested: 0, txCount: 0)
+                entry.totalCrypto += cryptoAmount
+                entry.totalInvested += fiatAmount
+                entry.txCount += 1
+                groups[key] = entry
             }
+            return groups.values.sorted { "\($0.crypto)/\($0.fiat)" < "\($1.crypto)/\($1.fiat)" }
         }
     }
 
     func getAccumulatedCryptoByPlan(_ planId: Int64) throws -> Decimal {
         try dbPool.read { db in
-            let row = try Row.fetchOne(db, sql: """
-                SELECT COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) as total
-                FROM transactions
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT cryptoAmount FROM transactions
                 WHERE planId = ? AND status = 'COMPLETED'
                 """, arguments: [planId])
-            return Decimal(row?["total"] as Double? ?? 0)
+            return rows.reduce(Decimal.zero) { sum, row in
+                sum + (Decimal(string: row["cryptoAmount"] as String? ?? "0") ?? 0)
+            }
         }
     }
 

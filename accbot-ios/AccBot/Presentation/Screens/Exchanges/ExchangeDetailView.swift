@@ -35,6 +35,8 @@ struct ExchangeDetailView: View {
     @State private var importProgress: String = ""
     @State private var showImportResult = false
     @State private var importResultMessage = ""
+    @State private var showImportConfig = false
+    @State private var importSinceDate: Date?
 
     @Environment(\.accBotColors) private var colors
 
@@ -138,6 +140,11 @@ struct ExchangeDetailView: View {
             Button(String(localized: "OK")) {}
         } message: {
             Text(importResultMessage)
+        }
+        .sheet(isPresented: $showImportConfig) {
+            ImportConfigSheet(sinceDate: $importSinceDate) {
+                Task { await importFromApi(sinceDate: importSinceDate) }
+            }
         }
     }
 
@@ -545,7 +552,7 @@ struct ExchangeDetailView: View {
 
     private var importFromApiCard: some View {
         Button {
-            Task { await importFromApi() }
+            showImportConfig = true
         } label: {
             HStack(spacing: Spacing.md) {
                 Image(systemName: "cloud.fill")
@@ -878,7 +885,7 @@ struct ExchangeDetailView: View {
         isValidating = false
     }
 
-    private func importFromApi() async {
+    private func importFromApi(sinceDate: Date? = nil) async {
         guard !plans.isEmpty else { return }
         let isSandbox = dependencies.userPreferences.sandboxMode
 
@@ -901,17 +908,18 @@ struct ExchangeDetailView: View {
         var totalImported = 0
         var totalSkipped = 0
 
-        for plan in plans {
-            let importUseCase = ImportTradeHistoryUseCase(
-                transactionDao: dependencies.activeDatabase.transactionDao
-            )
+        let importUseCase = ImportTradeHistoryUseCase(
+            transactionDao: dependencies.activeDatabase.transactionDao
+        )
 
+        for plan in plans {
             let stream = importUseCase.importFromApi(
                 api: api,
                 planId: plan.id,
                 crypto: plan.crypto,
                 fiat: plan.fiat,
-                exchange: exchange
+                exchange: exchange,
+                sinceDate: sinceDate
             )
 
             for await progress in stream {

@@ -15,6 +15,13 @@ final class DashboardViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var runResultMessage: String?
 
+    // Market Pulse
+    @Published var fearGreedValue: Int?
+    @Published var fearGreedLabel: String?
+    @Published var athData: [AthCryptoInfo] = []
+    @Published var isMarketPulseExpanded: Bool = true
+    @Published var showMarketPulse: Bool = true
+
     private var cancellables = Set<AnyCancellable>()
     private var balanceTask: Task<Void, Never>?
     private var loadTask: Task<Void, Never>?
@@ -23,8 +30,7 @@ final class DashboardViewModel: ObservableObject {
 
     private var deps: AppDependencies {
         guard let d = dependencies else {
-            assertionFailure("ViewModel used before setup() — call setup() in onAppear")
-            return dependencies!
+            preconditionFailure("ViewModel used before setup() — call setup() in onAppear")
         }
         return d
     }
@@ -78,25 +84,32 @@ final class DashboardViewModel: ObservableObject {
         let fiatGainLoss: Decimal?
     }
 
+    struct AthCryptoInfo: Identifiable {
+        var id: String { crypto }
+        let crypto: String
+        let currentPrice: Decimal
+        let ath: Decimal
+        let athDistancePercent: Int  // 0-100, how far below ATH
+    }
+
     func setup(_ dependencies: AppDependencies) {
         guard !isSetUp else { return }
         isSetUp = true
         self.dependencies = dependencies
+        showMarketPulse = dependencies.userPreferences.marketPulseEnabled
+        isMarketPulseExpanded = dependencies.userPreferences.marketPulseExpanded
         loadData()
         observePlans()
         observeTransactions()
+        observeMarketPulsePreference()
     }
 
     func loadData() {
         loadTask?.cancel()
         loadTask = Task {
             isLoading = true
-            await loadPlans()
-            await loadHoldings()
+            await loadDataAsync()
             isLoading = false
-            announceForVoiceOver(String(localized: "Dashboard loaded"))
-            // Fetch balances in background after initial load
-            await fetchBalancesForPlans()
         }
     }
 
@@ -105,6 +118,9 @@ final class DashboardViewModel: ObservableObject {
         await loadHoldings()
         announceForVoiceOver(String(localized: "Dashboard loaded"))
         await fetchBalancesForPlans()
+        if showMarketPulse {
+            await fetchMarketData()
+        }
     }
 
     func loadPlans() async {
@@ -201,6 +217,9 @@ final class DashboardViewModel: ObservableObject {
                 receiveValue: { [weak self] plans in
                     self?.plans = plans
                     self?.plansWithBalance = plans.map { PlanWithBalance(plan: $0) }
+                    // Filter ATH data to only include cryptos from current plans
+                    let activeCryptos = Set(plans.map(\.crypto))
+                    self?.athData.removeAll { !activeCryptos.contains($0.crypto) }
                     self?.balanceTask?.cancel()
                     self?.balanceTask = Task { [weak self] in
                         await self?.fetchBalancesForPlans()
@@ -389,9 +408,75 @@ final class DashboardViewModel: ObservableObject {
         Task {
             await loadHoldings()
             await fetchBalancesForPlans()
+            if showMarketPulse {
+                await fetchMarketData()
+            }
             isRefreshingPrices = false
             announceForVoiceOver(String(localized: "Prices refreshed"))
         }
+    }
+
+    // MARK: - Market Pulse
+
+    func fetchMarketData() async {
+        // Fetch Fear & Greed Index
+        let fgValue = await withTimeoutOrNil(seconds: 10) {
+            await self.deps.marketDataService.getFearGreedIndex()
+        }
+        if let fgValue {
+            fearGreedValue = fgValue
+            fearGreedLabel = FearGreedClassification.label(for: fgValue)
+        }
+
+        // Collect unique crypto/fiat pairs from plans and fetch ATH data in parallel
+        let uniquePairs = Array(Set(plans.map { "\($0.crypto)/\($0.fiat)" }))
+
+        let newAthData: [AthCryptoInfo] = await withTaskGroup(of: AthCryptoInfo?.self) { group in
+            for pairKey in uniquePairs {
+                let parts = pairKey.split(separator: "/")
+                let crypto = String(parts[0])
+                let fiat = String(parts[1])
+                group.addTask {
+                    async let athFetch = withTimeoutOrNil(seconds: 10) {
+                        await self.deps.marketDataService.getAllTimeHigh(crypto: crypto, fiat: fiat)
+                    }
+                    async let priceFetch = withTimeoutOrNil(seconds: 10) {
+                        await self.deps.marketDataService.getCurrentPrice(crypto: crypto, fiat: fiat)
+                    }
+                    let ath = await athFetch
+                    let price = await priceFetch
+                    guard let ath, let price, ath > 0 else { return nil }
+                    let distance = NSDecimalNumber(decimal: (ath - price) / ath * 100).intValue
+                    return AthCryptoInfo(
+                        crypto: crypto,
+                        currentPrice: price,
+                        ath: ath,
+                        athDistancePercent: max(0, min(100, distance))
+                    )
+                }
+            }
+            var results: [AthCryptoInfo] = []
+            for await info in group {
+                if let info { results.append(info) }
+            }
+            return results
+        }
+
+        athData = newAthData.sorted { $0.crypto < $1.crypto }
+    }
+
+    func toggleMarketPulseExpanded() {
+        isMarketPulseExpanded.toggle()
+        dependencies?.userPreferences.marketPulseExpanded = isMarketPulseExpanded
+    }
+
+    private func observeMarketPulsePreference() {
+        deps.userPreferences.$marketPulseEnabled
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] enabled in
+                self?.showMarketPulse = enabled
+            }
+            .store(in: &cancellables)
     }
 
     func announceForVoiceOver(_ message: String) {

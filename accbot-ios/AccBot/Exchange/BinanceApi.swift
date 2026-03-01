@@ -13,7 +13,15 @@ final class BinanceApi: ExchangeApi {
     /// Offset in ms: serverTime - localTime
     private var timeOffset: Int64 = 0
     private var timeSynced = false
-    private let syncLock = NSLock()
+
+    /// Actor-based guard to ensure only one time sync runs at a time (NSLock is unsafe across await).
+    private actor TimeSyncGuard {
+        private var synced = false
+
+        func markSynced() { synced = true }
+        func isSynced() -> Bool { synced }
+    }
+    private let syncGuard = TimeSyncGuard()
 
     init(credentials: ExchangeCredentials, isSandbox: Bool, client: NetworkClient) {
         self.credentials = credentials
@@ -25,18 +33,14 @@ final class BinanceApi: ExchangeApi {
     // MARK: - Time Sync
 
     private func ensureTimeSynced() async {
-        if !timeSynced {
-            syncLock.lock()
-            defer { syncLock.unlock() }
-            if !timeSynced {
-                await syncServerTime()
-                if timeOffset == 0 {
-                    try? await Task.sleep(nanoseconds: 500_000_000)
-                    await syncServerTime()
-                }
-                timeSynced = true
-            }
+        guard !await syncGuard.isSynced() else { return }
+        await syncServerTime()
+        if timeOffset == 0 {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            await syncServerTime()
         }
+        timeSynced = true
+        await syncGuard.markSynced()
     }
 
     private func syncServerTime() async {
@@ -283,30 +287,4 @@ final class BinanceApi: ExchangeApi {
         return TradeHistoryPage(trades: trades, hasMore: trades.count >= limit)
     }
 
-    // MARK: - Private
-
-    private func parseJson(_ data: Data) throws -> [String: Any] {
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw NetworkError.decodingError("Invalid JSON")
-        }
-        return json
-    }
-
-    private func formatDecimal(_ value: Decimal, scale: Int) -> String {
-        let handler = NSDecimalNumberHandler(
-            roundingMode: .down, scale: Int16(scale),
-            raiseOnExactness: false, raiseOnOverflow: false,
-            raiseOnUnderflow: false, raiseOnDivideByZero: false
-        )
-        return NSDecimalNumber(decimal: value).rounding(accordingToBehavior: handler).stringValue
-    }
-
-    private func roundDecimal(_ value: Decimal, scale: Int) -> Decimal {
-        let handler = NSDecimalNumberHandler(
-            roundingMode: .plain, scale: Int16(scale),
-            raiseOnExactness: false, raiseOnOverflow: false,
-            raiseOnUnderflow: false, raiseOnDivideByZero: false
-        )
-        return NSDecimalNumber(decimal: value).rounding(accordingToBehavior: handler).decimalValue
-    }
 }

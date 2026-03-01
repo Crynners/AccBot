@@ -64,7 +64,7 @@ final class Bip39WordList {
     func getSuggestions(prefix: String, limit: Int = 5) -> [String] {
         guard !prefix.isEmpty else { return [] }
         let lower = prefix.lowercased()
-        return words.filter { $0.hasPrefix(lower) }.prefix(limit).map { $0 }
+        return Array(words.filter { $0.hasPrefix(lower) }.prefix(limit))
     }
 
     func entropyToWords(_ entropy: Data) -> [String] {

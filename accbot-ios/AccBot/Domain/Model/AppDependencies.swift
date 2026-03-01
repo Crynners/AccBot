@@ -6,6 +6,10 @@ import SwiftUI
 /// Injected via @EnvironmentObject from the root AccBotApp.
 @MainActor
 final class AppDependencies: ObservableObject {
+    /// Shared instance for background tasks (avoids creating duplicate DatabasePools).
+    /// Set by AccBotApp on launch, read by DcaBackgroundService.
+    static var shared: AppDependencies?
+
     let database: DcaDatabase
     let sandboxDatabase: DcaDatabase
     let credentialsStore: CredentialsStore

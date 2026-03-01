@@ -1,6 +1,7 @@
 import Foundation
 
 /// Non-sensitive settings stored in UserDefaults (same as Android SharedPreferences)
+@MainActor
 final class UserPreferences: ObservableObject {
     private let defaults: UserDefaults
     private let suiteName = "com.accbot.dca.preferences"
@@ -57,6 +58,16 @@ final class UserPreferences: ObservableObject {
         didSet { defaults.set(lowBalanceThresholdDays, forKey: Keys.lowBalanceThresholdDays) }
     }
 
+    // MARK: - Market Pulse
+
+    @Published var marketPulseEnabled: Bool {
+        didSet { defaults.set(marketPulseEnabled, forKey: Keys.marketPulseEnabled) }
+    }
+
+    @Published var marketPulseExpanded: Bool {
+        didSet { defaults.set(marketPulseExpanded, forKey: Keys.marketPulseExpanded) }
+    }
+
     // MARK: - Changelog
 
     @Published var lastSeenBuildNumber: Int {
@@ -87,6 +98,8 @@ final class UserPreferences: ObservableObject {
         self.appLanguage = defaults.string(forKey: Keys.appLanguage) ?? ""
         self.biometricLockEnabled = defaults.bool(forKey: Keys.biometricLockEnabled)
         self.sandboxMode = defaults.bool(forKey: Keys.sandboxMode)
+        self.marketPulseEnabled = defaults.object(forKey: Keys.marketPulseEnabled) as? Bool ?? true
+        self.marketPulseExpanded = defaults.object(forKey: Keys.marketPulseExpanded) as? Bool ?? true
         self.lowBalanceThresholdDays = max(1, min(14, defaults.object(forKey: Keys.lowBalanceThresholdDays) as? Int ?? 2))
         self.lastSeenBuildNumber = defaults.integer(forKey: Keys.lastSeenBuildNumber)
         let bgTimestamp = defaults.double(forKey: Keys.lastBackgroundRun)
@@ -106,6 +119,8 @@ final class UserPreferences: ObservableObject {
         static let appLanguage = "appLanguage"
         static let biometricLockEnabled = "biometricLockEnabled"
         static let sandboxMode = "sandboxMode"
+        static let marketPulseEnabled = "marketPulseEnabled"
+        static let marketPulseExpanded = "marketPulseExpanded"
         static let lowBalanceThresholdDays = "lowBalanceThresholdDays"
         static let lastSeenBuildNumber = "lastSeenBuildNumber"
         static let lastBackgroundRun = "lastBackgroundRun"

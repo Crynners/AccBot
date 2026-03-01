@@ -43,8 +43,7 @@ final class HistoryViewModel: ObservableObject {
 
     private var deps: AppDependencies {
         guard let d = dependencies else {
-            assertionFailure("ViewModel used before setup() — call setup() in onAppear")
-            return dependencies!
+            preconditionFailure("ViewModel used before setup() — call setup() in onAppear")
         }
         return d
     }

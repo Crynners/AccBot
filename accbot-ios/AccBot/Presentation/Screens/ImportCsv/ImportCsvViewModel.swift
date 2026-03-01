@@ -9,6 +9,8 @@ final class ImportCsvViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isComplete = false
     @Published var importMode: ImportMode = .csv
+    @Published var showImportConfig = false
+    @Published var sinceDate: Date?
     @Published var isPreviewing = false
     @Published var newTransactionCount = 0
     @Published var skippedTransactionCount = 0
@@ -22,8 +24,7 @@ final class ImportCsvViewModel: ObservableObject {
 
     private var deps: AppDependencies {
         guard let d = dependencies else {
-            assertionFailure("ViewModel used before setup() — call setup() in onAppear")
-            return dependencies!
+            preconditionFailure("ViewModel used before setup() — call setup() in onAppear")
         }
         return d
     }
@@ -175,62 +176,37 @@ final class ImportCsvViewModel: ObservableObject {
         importedCount = 0
 
         importTask = Task {
-            do {
-                let api = deps.exchangeApiFactory.create(credentials: credentials, isSandbox: isSandbox)
-                var since: Date? = nil
-                var hasMore = true
-                var pageCount = 0
-                let maxPages = 500
+            let api = deps.exchangeApiFactory.create(credentials: credentials, isSandbox: isSandbox)
+            let importUseCase = ImportTradeHistoryUseCase(
+                transactionDao: deps.activeDatabase.transactionDao
+            )
 
-                while hasMore && pageCount < maxPages {
-                    guard !Task.isCancelled else { break }
-                    pageCount += 1
-                    let page = try await api.getTradeHistory(
-                        crypto: plan.crypto,
-                        fiat: plan.fiat,
-                        since: since,
-                        limit: 100
-                    )
+            let stream = importUseCase.importFromApi(
+                api: api,
+                planId: plan.id,
+                crypto: plan.crypto,
+                fiat: plan.fiat,
+                exchange: plan.exchange,
+                sinceDate: sinceDate
+            )
 
-                    var pageTxs: [Transaction] = []
-                    for trade in page.trades where trade.side == "BUY" {
-                        let tx = Transaction(
-                            planId: plan.id,
-                            exchange: plan.exchange,
-                            crypto: plan.crypto,
-                            fiat: plan.fiat,
-                            fiatAmount: trade.fiatAmount,
-                            cryptoAmount: trade.cryptoAmount,
-                            price: trade.price,
-                            fee: trade.fee,
-                            feeAsset: trade.feeAsset,
-                            status: .completed,
-                            exchangeOrderId: trade.orderId,
-                            executedAt: trade.timestamp
-                        )
-                        pageTxs.append(tx)
-                    }
-
-                    if !pageTxs.isEmpty {
-                        let count = try deps.activeDatabase.transactionDao.insertBatch(pageTxs)
-                        importedCount += count
-                    }
-
-                    // Update progress
-                    if !page.hasMore || pageCount >= maxPages {
-                        progress = 1.0
-                    } else {
-                        progress = Double(pageCount) / Double(maxPages)
-                    }
-
-                    hasMore = page.hasMore
-                    since = page.trades.last?.timestamp
+            for await event in stream {
+                switch event {
+                case .fetching(_, let totalFetched):
+                    // Approximate progress based on fetched count
+                    progress = min(0.9, Double(totalFetched) / 500.0)
+                case .complete(let imported, let skipped):
+                    importedCount = imported
+                    skippedTransactionCount = skipped
+                    progress = 1.0
+                    isComplete = true
+                case .error(let message):
+                    errorMessage = message
+                default:
+                    break
                 }
-
-                isComplete = true
-            } catch {
-                errorMessage = error.localizedDescription
             }
+
             isImporting = false
         }
     }

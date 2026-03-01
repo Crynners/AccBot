@@ -117,7 +117,7 @@ final class CalculatePortfolioUseCase {
         }
         .map { (ym, txs) in
             let totalInvested = txs.reduce(Decimal.zero) { $0 + $1.fiatAmount }
-            let totalCrypto = txs.filter { $0.crypto == "BTC" }.reduce(Decimal.zero) { $0 + $1.cryptoAmount }
+            let totalCrypto = txs.reduce(Decimal.zero) { $0 + $1.cryptoAmount }
 
             let sampleDate = txs.first!.executedAt
             let displayMonth = monthFormatter.string(from: sampleDate)

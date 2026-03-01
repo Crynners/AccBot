@@ -14,7 +14,8 @@ struct ChartDataPoint {
 }
 
 /// Computes chart data for portfolio performance with hierarchical zoom levels.
-/// Overview and Year: monthly aggregation. Month: daily points.
+/// Adaptive aggregation: daily (<3 months), weekly (3-12 months / Year zoom), monthly (>12 months).
+/// Month zoom: always daily points.
 final class CalculateChartDataUseCase {
     private let dailyPriceDao: DailyPriceDao
 
@@ -71,14 +72,14 @@ final class CalculateChartDataUseCase {
             txIndex += 1
         }
 
-        let emitMonthly = isMonthlyEmission(zoomLevel)
+        let mode = aggregationMode(zoomLevel, startDay: startDay, endDay: endDay)
         var result: [ChartDataPoint] = []
         var lastKnownPrice: Decimal?
         var pendingDay: Int64 = 0
         var pendingCrypto: Decimal = 0
         var pendingInvested: Decimal = 0
         var pendingPrice: Decimal?
-        var pendingMonth: Int? // year*100+month
+        var pendingBucket: Int? // bucket key (yearMonth or yearWeek)
 
         var currentDay = startDay
         while currentDay <= endDay {
@@ -95,26 +96,29 @@ final class CalculateChartDataUseCase {
             if let price = price {
                 lastKnownPrice = price
 
-                if emitMonthly {
-                    let currentMonth = Self.yearMonth(fromEpochDay: currentDay)
-                    if let pm = pendingMonth, currentMonth != pm, let pp = pendingPrice {
+                switch mode {
+                case .daily:
+                    result.append(buildPoint(epochDay: currentDay, crypto: cumulativeCrypto, invested: cumulativeInvested, price: price))
+                case .weekly, .monthly:
+                    let currentBucket = mode == .weekly
+                        ? Self.yearWeek(fromEpochDay: currentDay)
+                        : Self.yearMonth(fromEpochDay: currentDay)
+                    if let pb = pendingBucket, currentBucket != pb, let pp = pendingPrice {
                         result.append(buildPoint(epochDay: pendingDay, crypto: pendingCrypto, invested: pendingInvested, price: pp))
                     }
                     pendingDay = currentDay
                     pendingCrypto = cumulativeCrypto
                     pendingInvested = cumulativeInvested
                     pendingPrice = price
-                    pendingMonth = Self.yearMonth(fromEpochDay: currentDay)
-                } else {
-                    result.append(buildPoint(epochDay: currentDay, crypto: cumulativeCrypto, invested: cumulativeInvested, price: price))
+                    pendingBucket = currentBucket
                 }
             }
 
             currentDay += 1
         }
 
-        // Flush last pending monthly point
-        if emitMonthly, let pp = pendingPrice {
+        // Flush last pending bucket point
+        if mode != .daily, let pp = pendingPrice {
             result.append(buildPoint(epochDay: pendingDay, crypto: pendingCrypto, invested: pendingInvested, price: pp))
         }
 
@@ -169,13 +173,13 @@ final class CalculateChartDataUseCase {
             }
         }
 
-        let emitMonthly = isMonthlyEmission(zoomLevel)
+        let mode = aggregationMode(zoomLevel, startDay: startDay, endDay: endDay)
         var result: [ChartDataPoint] = []
         var pendingDay: Int64 = 0
         var pendingValue: Decimal = 0
         var pendingInvested: Decimal = 0
         var hasPending = false
-        var pendingMonth: Int?
+        var pendingBucket: Int?
 
         var currentDay = startDay
         while currentDay <= endDay {
@@ -204,25 +208,28 @@ final class CalculateChartDataUseCase {
             }
 
             if anyPrice {
-                if emitMonthly {
-                    let cm = Self.yearMonth(fromEpochDay: currentDay)
-                    if let pm = pendingMonth, cm != pm, hasPending {
+                switch mode {
+                case .daily:
+                    result.append(buildAggregatePoint(epochDay: currentDay, value: totalValue, invested: totalInvested))
+                case .weekly, .monthly:
+                    let currentBucket = mode == .weekly
+                        ? Self.yearWeek(fromEpochDay: currentDay)
+                        : Self.yearMonth(fromEpochDay: currentDay)
+                    if let pb = pendingBucket, currentBucket != pb, hasPending {
                         result.append(buildAggregatePoint(epochDay: pendingDay, value: pendingValue, invested: pendingInvested))
                     }
                     pendingDay = currentDay
                     pendingValue = totalValue
                     pendingInvested = totalInvested
                     hasPending = true
-                    pendingMonth = cm
-                } else {
-                    result.append(buildAggregatePoint(epochDay: currentDay, value: totalValue, invested: totalInvested))
+                    pendingBucket = currentBucket
                 }
             }
 
             currentDay += 1
         }
 
-        if emitMonthly, hasPending {
+        if mode != .daily, hasPending {
             result.append(buildAggregatePoint(epochDay: pendingDay, value: pendingValue, invested: pendingInvested))
         }
 
@@ -301,11 +308,51 @@ final class CalculateChartDataUseCase {
         })).sorted()
     }
 
-    private func isMonthlyEmission(_ zoomLevel: ChartZoomLevel) -> Bool {
+    enum AggregationMode {
+        case daily
+        case weekly
+        case monthly
+    }
+
+    /// Determine aggregation granularity based on zoom level and data span.
+    /// Shared logic — also used by PortfolioViewModel for chart point bucketing.
+    static func aggregationMode(zoomLevel: ChartZoomLevel, spanDays: Int64) -> AggregationMode {
         switch zoomLevel {
-        case .overview, .year: return true
-        case .month: return false
+        case .month:
+            return .daily
+        case .year:
+            return .weekly
+        case .overview:
+            let spanMonths = spanDays / 30
+            if spanMonths < 3 {
+                return .daily
+            } else if spanMonths <= 12 {
+                return .weekly
+            } else {
+                return .monthly
+            }
         }
+    }
+
+    /// Compute bucket key for a given date based on aggregation mode.
+    static func bucketKey(for date: Date, mode: AggregationMode) -> Int {
+        let cal = Calendar.current
+        switch mode {
+        case .daily:
+            return 0 // not used for daily
+        case .weekly:
+            let yearForWeek = cal.component(.yearForWeekOfYear, from: date)
+            let weekOfYear = cal.component(.weekOfYear, from: date)
+            return yearForWeek * 100 + weekOfYear
+        case .monthly:
+            let year = cal.component(.year, from: date)
+            let month = cal.component(.month, from: date)
+            return year * 100 + month
+        }
+    }
+
+    private func aggregationMode(_ zoomLevel: ChartZoomLevel, startDay: Int64, endDay: Int64) -> AggregationMode {
+        Self.aggregationMode(zoomLevel: zoomLevel, spanDays: endDay - startDay)
     }
 
     static func epochDay(from date: Date) -> Int64 {
@@ -320,6 +367,14 @@ final class CalculateChartDataUseCase {
         let date = Date(timeIntervalSince1970: Double(day) * 86400)
         let cal = Calendar.current
         return cal.component(.year, from: date) * 100 + cal.component(.month, from: date)
+    }
+
+    private static func yearWeek(fromEpochDay day: Int64) -> Int {
+        let date = Date(timeIntervalSince1970: Double(day) * 86400)
+        let cal = Calendar.current
+        let yearForWeek = cal.component(.yearForWeekOfYear, from: date)
+        let weekOfYear = cal.component(.weekOfYear, from: date)
+        return yearForWeek * 100 + weekOfYear
     }
 
     private func safeDiv(_ a: Decimal, by b: Decimal, scale: Int) -> Decimal {

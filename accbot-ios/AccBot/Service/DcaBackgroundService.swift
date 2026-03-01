@@ -25,7 +25,7 @@ final class DcaBackgroundService {
         scheduleAppRefresh()
 
         // Execute due plans (runtime ~30s, enough for 1-2 API calls)
-        let deps = await MainActor.run { AppDependencies() }
+        let deps = await MainActor.run { AppDependencies.shared ?? AppDependencies() }
         await deps.dcaExecutionEngine.executeDuePlans()
 
         // Update last background run timestamp
@@ -50,7 +50,7 @@ final class DcaBackgroundService {
         // Schedule next processing task
         scheduleProcessingTask()
 
-        let deps = await MainActor.run { AppDependencies() }
+        let deps = await MainActor.run { AppDependencies.shared ?? AppDependencies() }
 
         // Resolve pending transactions
         await deps.dcaExecutionEngine.executeDuePlans()

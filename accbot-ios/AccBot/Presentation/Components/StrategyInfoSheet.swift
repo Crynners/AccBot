@@ -89,13 +89,13 @@ struct StrategyInfoSheet: View {
                     String(localized: "Sentiment"),
                     String(localized: "Multiplier")
                 ],
-                rows: [
-                    ["0 - 24", String(localized: "Extreme Fear"), "2.5x"],
-                    ["25 - 44", String(localized: "Fear"), "1.5x"],
-                    ["45 - 54", String(localized: "Neutral"), "1.0x"],
-                    ["55 - 74", String(localized: "Greed"), "0.5x"],
-                    ["75 - 100", String(localized: "Extreme Greed"), "0.25x"],
-                ]
+                rows: defaultFearGreedTiers.enumerated().map { index, tier in
+                    [
+                        FearGreedClassification.rangeString(tierIndex: index),
+                        FearGreedClassification.label(for: tier.maxIndex),
+                        "\(String(format: "%.1f", tier.multiplier))x"
+                    ]
+                }
             )
         }
     }

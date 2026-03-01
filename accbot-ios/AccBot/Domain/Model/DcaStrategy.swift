@@ -1,47 +1,69 @@
 import Foundation
 
 /// ATH distance tier configuration
-struct AthTier: Codable, Equatable {
+struct AthTier: Codable, Equatable, Sendable {
     let maxDistancePercent: Float
     let multiplier: Float
 }
 
-/// Default ATH tiers:
-/// - 0-10% below ATH: buy 50% (market is hot)
-/// - 10-30% below: buy 100% (normal)
-/// - 30-50% below: buy 150%
-/// - 50-70% below: buy 200%
-/// - 70%+ below: buy 300% (maximum opportunity)
+/// Default ATH tiers (even 20-point bands):
+/// - 0-20% below ATH: buy 50% (market is hot)
+/// - 20-40% below: buy 100% (normal)
+/// - 40-60% below: buy 150%
+/// - 60-80% below: buy 200%
+/// - 80%+ below: buy 300% (maximum opportunity)
 let defaultAthTiers: [AthTier] = [
-    AthTier(maxDistancePercent: 0.10, multiplier: 0.5),
-    AthTier(maxDistancePercent: 0.30, multiplier: 1.0),
-    AthTier(maxDistancePercent: 0.50, multiplier: 1.5),
-    AthTier(maxDistancePercent: 0.70, multiplier: 2.0),
+    AthTier(maxDistancePercent: 0.20, multiplier: 0.5),
+    AthTier(maxDistancePercent: 0.40, multiplier: 1.0),
+    AthTier(maxDistancePercent: 0.60, multiplier: 1.5),
+    AthTier(maxDistancePercent: 0.80, multiplier: 2.0),
     AthTier(maxDistancePercent: 1.00, multiplier: 3.0),
 ]
 
 /// Fear & Greed index tier configuration
-struct FearGreedTier: Codable, Equatable {
+struct FearGreedTier: Codable, Equatable, Sendable {
     let maxIndex: Int
     let multiplier: Float
 }
 
-/// Default Fear & Greed tiers:
-/// - Extreme Fear (0-24): buy 250%
-/// - Fear (25-44): buy 150%
-/// - Neutral (45-54): buy 100%
-/// - Greed (55-74): buy 50%
-/// - Extreme Greed (75-100): buy 25%
+/// Single source of truth for Fear & Greed classification.
+/// Used by DashboardViewModel, DashboardView, and StrategyInfoSheet.
+enum FearGreedClassification {
+    /// Localized sentiment label for an F&G index value
+    static func label(for value: Int) -> String {
+        switch value {
+        case 0...19: return String(localized: "Extreme Fear")
+        case 20...39: return String(localized: "Fear")
+        case 40...59: return String(localized: "Neutral")
+        case 60...79: return String(localized: "Greed")
+        default: return String(localized: "Extreme Greed")
+        }
+    }
+
+    /// Range string for tier at given index in defaultFearGreedTiers
+    static func rangeString(tierIndex: Int) -> String {
+        let tier = defaultFearGreedTiers[tierIndex]
+        let lower = tierIndex == 0 ? 0 : defaultFearGreedTiers[tierIndex - 1].maxIndex + 1
+        return "\(lower) - \(tier.maxIndex)"
+    }
+}
+
+/// Default Fear & Greed tiers (even 20-point bands):
+/// - Extreme Fear (0-19): buy 250%
+/// - Fear (20-39): buy 150%
+/// - Neutral (40-59): buy 100%
+/// - Greed (60-79): buy 50%
+/// - Extreme Greed (80-100): buy 25%
 let defaultFearGreedTiers: [FearGreedTier] = [
-    FearGreedTier(maxIndex: 24, multiplier: 2.5),
-    FearGreedTier(maxIndex: 44, multiplier: 1.5),
-    FearGreedTier(maxIndex: 54, multiplier: 1.0),
-    FearGreedTier(maxIndex: 74, multiplier: 0.5),
+    FearGreedTier(maxIndex: 19, multiplier: 2.5),
+    FearGreedTier(maxIndex: 39, multiplier: 1.5),
+    FearGreedTier(maxIndex: 59, multiplier: 1.0),
+    FearGreedTier(maxIndex: 79, multiplier: 0.5),
     FearGreedTier(maxIndex: 100, multiplier: 0.25),
 ]
 
 /// DCA Strategy types with their configurations
-enum DcaStrategy: Equatable {
+enum DcaStrategy: Equatable, Sendable {
     case classic
     case athBased(tiers: [AthTier] = defaultAthTiers)
     case fearAndGreed(tiers: [FearGreedTier] = defaultFearGreedTiers)

@@ -4,7 +4,11 @@ import SwiftUI
 @main
 struct AccBotApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var dependencies = AppDependencies()
+    @StateObject private var dependencies = {
+        let deps = AppDependencies()
+        AppDependencies.shared = deps
+        return deps
+    }()
     @StateObject private var router = AppRouter()
     @Environment(\.scenePhase) var scenePhase
 

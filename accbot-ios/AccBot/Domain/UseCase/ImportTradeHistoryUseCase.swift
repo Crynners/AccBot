@@ -24,7 +24,8 @@ final class ImportTradeHistoryUseCase {
         planId: Int64,
         crypto: String,
         fiat: String,
-        exchange: Exchange
+        exchange: Exchange,
+        sinceDate: Date? = nil
     ) -> AsyncStream<ApiImportProgress> {
         AsyncStream { continuation in
             Task {
@@ -33,7 +34,7 @@ final class ImportTradeHistoryUseCase {
                     let latestDate = try transactionDao.getLatestTransactionTimestamp(planId)
 
                     var allTrades: [HistoricalTrade] = []
-                    var cursor = latestDate
+                    var cursor = sinceDate ?? latestDate
                     var page = 0
                     let maxPages = 10_000
 
@@ -51,12 +52,24 @@ final class ImportTradeHistoryUseCase {
                         let buyTrades = result.trades.filter { $0.side == "BUY" }
                         allTrades.append(contentsOf: buyTrades)
 
+                        let previousCursor = cursor
                         if let latest = result.trades.map(\.timestamp).max() {
                             cursor = latest
                         }
 
+                        // Break if cursor didn't advance (prevents infinite loop on buggy APIs)
+                        if cursor == previousCursor && result.hasMore {
+                            self.logger.warning("Cursor stagnation detected at page \(page), breaking")
+                            break
+                        }
+
                         if !result.hasMore || page >= maxPages { break }
                     } while true
+
+                    // Filter by sinceDate if provided
+                    if let sinceDate = sinceDate {
+                        allTrades.removeAll { $0.timestamp < sinceDate }
+                    }
 
                     if allTrades.isEmpty {
                         continuation.yield(.complete(imported: 0, skipped: 0))

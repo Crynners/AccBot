@@ -375,21 +375,4 @@ final class KrakenApi: ExchangeApi {
         return true
     }
 
-    // MARK: - Private Helpers
-
-    private func parseJson(_ data: Data) throws -> [String: Any] {
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw NetworkError.decodingError("Invalid JSON")
-        }
-        return json
-    }
-
-    private func roundDecimal(_ value: Decimal, scale: Int) -> Decimal {
-        let handler = NSDecimalNumberHandler(
-            roundingMode: .plain, scale: Int16(scale),
-            raiseOnExactness: false, raiseOnOverflow: false,
-            raiseOnUnderflow: false, raiseOnDivideByZero: false
-        )
-        return NSDecimalNumber(decimal: value).rounding(accordingToBehavior: handler).decimalValue
-    }
 }

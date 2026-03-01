@@ -16,7 +16,10 @@ final class ExchangeApiFactory {
 
         switch credentials.exchange {
         case .coinmate:
-            return CoinmateApi(credentials: credentials, isSandbox: sandboxMode, client: networkClient)
+            guard let api = CoinmateApi(credentials: credentials, isSandbox: sandboxMode, client: networkClient) else {
+                return StubExchangeApi(exchange: .coinmate)
+            }
+            return api
         case .binance:
             return BinanceApi(credentials: credentials, isSandbox: sandboxMode, client: networkClient)
         case .kraken:
@@ -31,4 +34,21 @@ final class ExchangeApiFactory {
             return HuobiApi(credentials: credentials, isSandbox: sandboxMode)
         }
     }
+}
+
+/// Fallback API that returns errors for all operations.
+/// Used when an exchange API fails to initialize (e.g. missing clientId for Coinmate).
+private struct StubExchangeApi: ExchangeApi {
+    let exchange: Exchange
+
+    func marketBuy(crypto: String, fiat: String, fiatAmount: Decimal) async -> DcaResult {
+        .error(message: "Exchange API not configured", retryable: false)
+    }
+    func getBalance(currency: String) async -> Decimal? { nil }
+    func getCurrentPrice(crypto: String, fiat: String) async -> Decimal? { nil }
+    func withdraw(crypto: String, amount: Decimal, address: String) async throws -> String {
+        throw ExchangeError.apiError("Exchange API not configured")
+    }
+    func getWithdrawalFee(crypto: String) async -> Decimal? { nil }
+    func validateCredentials() async throws -> Bool { false }
 }

@@ -1,7 +1,7 @@
 import Foundation
 
 /// DCA purchase frequency options
-enum DcaFrequency: String, Codable, CaseIterable {
+enum DcaFrequency: String, Codable, CaseIterable, Sendable {
     case every15Min = "EVERY_15_MIN"
     case hourly = "HOURLY"
     case every4Hours = "EVERY_4_HOURS"

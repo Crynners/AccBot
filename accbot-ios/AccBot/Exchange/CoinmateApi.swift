@@ -15,14 +15,15 @@ final class CoinmateApi: ExchangeApi {
     /// Coinmate taker fee: 0.35%
     private let takerFeeRate: Decimal = Decimal(string: "0.0035")!
 
-    init(credentials: ExchangeCredentials, isSandbox: Bool, client: NetworkClient) {
+    init?(credentials: ExchangeCredentials, isSandbox: Bool, client: NetworkClient) {
+        guard let id = credentials.clientId else {
+            assertionFailure("Coinmate requires clientId in credentials")
+            return nil
+        }
         self.credentials = credentials
         self.isSandbox = isSandbox
         self.client = client
         self.baseUrl = ExchangeConfig.baseUrl(for: .coinmate, isSandbox: isSandbox)
-        guard let id = credentials.clientId else {
-            fatalError("Coinmate requires clientId in credentials")
-        }
         self.clientId = id
     }
 
@@ -332,35 +333,4 @@ final class CoinmateApi: ExchangeApi {
         return CryptoUtils.hmacSha256Hex(message: message, secret: credentials.apiSecret).uppercased()
     }
 
-    private func parseJson(_ data: Data) throws -> [String: Any] {
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw NetworkError.decodingError("Invalid JSON")
-        }
-        return json
-    }
-
-    private func formatDecimal(_ value: Decimal, scale: Int) -> String {
-        let handler = NSDecimalNumberHandler(
-            roundingMode: .down,
-            scale: Int16(scale),
-            raiseOnExactness: false,
-            raiseOnOverflow: false,
-            raiseOnUnderflow: false,
-            raiseOnDivideByZero: false
-        )
-        let number = NSDecimalNumber(decimal: value)
-        return number.rounding(accordingToBehavior: handler).stringValue
-    }
-
-    private func roundDecimal(_ value: Decimal, scale: Int) -> Decimal {
-        let handler = NSDecimalNumberHandler(
-            roundingMode: .plain,
-            scale: Int16(scale),
-            raiseOnExactness: false,
-            raiseOnOverflow: false,
-            raiseOnUnderflow: false,
-            raiseOnDivideByZero: false
-        )
-        return NSDecimalNumber(decimal: value).rounding(accordingToBehavior: handler).decimalValue
-    }
 }

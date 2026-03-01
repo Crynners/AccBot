@@ -97,6 +97,11 @@ struct ImportCsvView: View {
                 break
             }
         }
+        .sheet(isPresented: $viewModel.showImportConfig) {
+            ImportConfigSheet(sinceDate: $viewModel.sinceDate) {
+                viewModel.importFromApi()
+            }
+        }
     }
 
     private var importActionView: some View {
@@ -139,7 +144,7 @@ struct ImportCsvView: View {
                 .padding(.vertical, Spacing.xxl)
 
                 Button {
-                    viewModel.importFromApi()
+                    viewModel.showImportConfig = true
                 } label: {
                     Label(String(localized: "Import from API"), systemImage: "arrow.down.circle")
                         .font(AccBotFonts.headline)
@@ -262,5 +267,77 @@ struct ImportCsvView: View {
             }
         }
         .padding(.vertical, Spacing.xxl)
+    }
+}
+
+// MARK: - Import Config Sheet
+
+struct ImportConfigSheet: View {
+    @Binding var sinceDate: Date?
+    let onConfirm: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.accBotColors) private var colors
+    @State private var useDateFilter = false
+    @State private var selectedDate = Date()
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: Spacing.lg) {
+                Toggle(String(localized: "Filter by date"), isOn: $useDateFilter)
+                    .padding(.horizontal, Spacing.lg)
+
+                if useDateFilter {
+                    DatePicker(
+                        String(localized: "Import since"),
+                        selection: $selectedDate,
+                        in: ...Date(),
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.graphical)
+                    .padding(.horizontal, Spacing.lg)
+                } else {
+                    VStack(spacing: Spacing.sm) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(AccBotFonts.displayLarge)
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .accessibilityHidden(true)
+                        Text(String(localized: "All history will be imported"))
+                            .font(AccBotFonts.body)
+                            .foregroundStyle(colors.onSurfaceVariant)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.xxl)
+                }
+
+                Spacer()
+
+                Button {
+                    sinceDate = useDateFilter ? selectedDate : nil
+                    dismiss()
+                    onConfirm()
+                } label: {
+                    Text(String(localized: "Start Import"))
+                        .font(AccBotFonts.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Spacing.md)
+                        .background(colors.primary)
+                        .foregroundStyle(colors.onPrimary)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                }
+                .padding(.horizontal, Spacing.lg)
+            }
+            .padding(.top, Spacing.lg)
+            .background(colors.background)
+            .navigationTitle(String(localized: "Import Configuration"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(String(localized: "Cancel")) {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }

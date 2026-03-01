@@ -79,8 +79,7 @@ final class PortfolioViewModel: ObservableObject {
 
     private var deps: AppDependencies {
         guard let d = dependencies else {
-            assertionFailure("ViewModel used before setup() — call setup() in onAppear")
-            return dependencies!
+            preconditionFailure("ViewModel used before setup() — call setup() in onAppear")
         }
         return d
     }
@@ -285,20 +284,33 @@ final class PortfolioViewModel: ObservableObject {
 
     // MARK: - Private
 
-    private let maxChartPoints = 200
+    private func adaptiveAggregate(_ points: [ChartPoint]) -> [ChartPoint] {
+        guard !points.isEmpty else { return points }
 
-    private func downsample(_ points: [ChartPoint]) -> [ChartPoint] {
-        guard points.count > maxChartPoints else { return points }
-        // Group by series, downsample each independently
+        let dates = points.map(\.date)
+        guard let minDate = dates.min(), let maxDate = dates.max() else { return points }
+        let spanDays = Int64(maxDate.timeIntervalSince(minDate) / 86400)
+
+        let mode = CalculateChartDataUseCase.aggregationMode(zoomLevel: zoomLevel, spanDays: spanDays)
+        if mode == .daily { return points }
+
+        // Group by series, aggregate each independently — last point per bucket wins
         let grouped = Dictionary(grouping: points) { $0.series }
         return grouped.values.flatMap { seriesPoints -> [ChartPoint] in
-            guard seriesPoints.count > maxChartPoints else { return seriesPoints }
             let sorted = seriesPoints.sorted { $0.date < $1.date }
-            let bucketSize = Double(sorted.count) / Double(maxChartPoints)
-            return (0..<maxChartPoints).map { i in
-                let endIdx = min(Int(Double(i + 1) * bucketSize) - 1, sorted.count - 1)
-                return sorted[endIdx]  // last point in bucket preserves running total
+            var result: [ChartPoint] = []
+            var currentBucketKey = -1
+
+            for point in sorted {
+                let key = CalculateChartDataUseCase.bucketKey(for: point.date, mode: mode)
+                if key != currentBucketKey {
+                    currentBucketKey = key
+                    result.append(point)
+                } else {
+                    result[result.count - 1] = point
+                }
             }
+            return result
         }
     }
 
@@ -437,7 +449,7 @@ final class PortfolioViewModel: ObservableObject {
                     allChartData.append(ChartPoint(date: tx.executedAt, value: NSDecimalNumber(decimal: value).doubleValue, series: series))
                 }
             }
-            chartData = downsample(allChartData)
+            chartData = adaptiveAggregate(allChartData)
             lastLoadedAt = Date()
         } catch {
             resetStats()

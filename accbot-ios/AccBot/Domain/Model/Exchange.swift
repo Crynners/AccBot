@@ -9,7 +9,7 @@ enum SandboxSupport: String, Codable {
 }
 
 /// Supported cryptocurrency exchanges
-enum Exchange: String, Codable, CaseIterable, Hashable, Identifiable {
+enum Exchange: String, Codable, CaseIterable, Hashable, Identifiable, Sendable {
     case coinmate = "COINMATE"
     case binance = "BINANCE"
     case kraken = "KRAKEN"
@@ -123,6 +123,6 @@ enum ExchangeFilter {
         if isSandboxMode {
             return Exchange.allCases.filter { $0.supportsSandbox }
         }
-        return Exchange.allCases.map { $0 }
+        return Array(Exchange.allCases)
     }
 }

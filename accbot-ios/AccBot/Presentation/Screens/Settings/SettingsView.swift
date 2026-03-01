@@ -98,6 +98,17 @@ struct SettingsView: View {
             }
             .listRowBackground(colors.surface)
 
+            // Market Pulse
+            Toggle(isOn: $dependencies.userPreferences.marketPulseEnabled) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text(String(localized: "Market Pulse"))
+                    Text(String(localized: "Show market indicators on dashboard"))
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
+            }
+            .listRowBackground(colors.surface)
+
             // Language
             Menu {
                 Button(String(localized: "System Default")) { viewModel.setLanguage("") }

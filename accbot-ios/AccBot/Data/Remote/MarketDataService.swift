@@ -1,7 +1,8 @@
 import Foundation
 
-/// CoinGecko + Fear & Greed Index API service
-final class MarketDataService {
+/// CoinGecko + Fear & Greed Index API service.
+/// Uses actor isolation for thread-safe cache access (called concurrently via withTaskGroup).
+actor MarketDataService {
     private let client: NetworkClient
     private let coingeckoBase = "https://api.coingecko.com/api/v3"
     private let fearGreedBase = "https://api.alternative.me/fng"

@@ -172,7 +172,9 @@ final class NetworkClient {
     }
 
     private func urlEncode(_ string: String) -> String {
-        string.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? string
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: "&=+")
+        return string.addingPercentEncoding(withAllowedCharacters: allowed) ?? string
     }
 }
 

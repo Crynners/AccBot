@@ -65,7 +65,7 @@ final class CalculateStrategyMultiplierUseCase {
         let sortedTiers = tiers.sorted { $0.maxIndex < $1.maxIndex }
         let multiplier = sortedTiers.first(where: { index <= $0.maxIndex })?.multiplier ?? 1.0
 
-        let classification = classifyFearGreed(index)
+        let classification = FearGreedClassification.label(for: index)
         logger.info("Fear & Greed: Index is \(index) (\(classification)), multiplier: \(multiplier)")
 
         return StrategyMultiplierResult(
@@ -81,15 +81,5 @@ final class CalculateStrategyMultiplierUseCase {
             return "normal amount"
         }
         return "\(pct)% of base"
-    }
-
-    private func classifyFearGreed(_ index: Int) -> String {
-        switch index {
-        case 0...24: return "Extreme Fear"
-        case 25...44: return "Fear"
-        case 45...54: return "Neutral"
-        case 55...74: return "Greed"
-        default: return "Extreme Greed"
-        }
     }
 }

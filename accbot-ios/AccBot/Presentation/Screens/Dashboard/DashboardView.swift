@@ -86,6 +86,10 @@ struct DashboardView: View {
                 SandboxBanner()
             }
 
+            if viewModel.showMarketPulse && (viewModel.fearGreedValue != nil || !viewModel.athData.isEmpty) {
+                marketPulseCard
+            }
+
             if viewModel.holdings.isEmpty {
                 holdingsEmptyState
             } else {
@@ -105,6 +109,11 @@ struct DashboardView: View {
         VStack(spacing: Spacing.sm) {
             if colors.isSandbox {
                 SandboxBanner()
+                    .padding(.horizontal, Spacing.lg)
+            }
+
+            if viewModel.showMarketPulse && (viewModel.fearGreedValue != nil || !viewModel.athData.isEmpty) {
+                marketPulseCard
                     .padding(.horizontal, Spacing.lg)
             }
 
@@ -308,6 +317,161 @@ struct DashboardView: View {
         .padding(Spacing.lg)
         .background(colors.surface)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+    }
+
+    // MARK: - Market Pulse Card
+
+    private var marketPulseCard: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            // Header
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    viewModel.toggleMarketPulseExpanded()
+                }
+            } label: {
+                HStack {
+                    Text(String(localized: "Market Pulse"))
+                        .font(AccBotFonts.titleSmall)
+                        .foregroundStyle(colors.onSurface)
+                    Spacer()
+                    Image(systemName: viewModel.isMarketPulseExpanded ? "chevron.up" : "chevron.down")
+                        .font(AccBotFonts.caption)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(viewModel.isMarketPulseExpanded
+                ? String(localized: "Double tap to collapse")
+                : String(localized: "Double tap to expand"))
+
+            // Fear & Greed section
+            if let fgValue = viewModel.fearGreedValue {
+                VStack(spacing: Spacing.xs) {
+                    if viewModel.isMarketPulseExpanded {
+                        Text(String(localized: "Fear & Greed"))
+                            .font(AccBotFonts.caption)
+                            .foregroundStyle(colors.onSurfaceVariant)
+
+                        HStack {
+                            Text(String(localized: "Fear"))
+                                .font(AccBotFonts.captionSmall)
+                                .foregroundStyle(colors.onSurfaceVariant)
+                            Spacer()
+                            Text("\(fgValue) — \(viewModel.fearGreedLabel ?? "")")
+                                .font(AccBotFonts.headline)
+                                .foregroundStyle(FearGreedColors.color(for: fgValue))
+                            Spacer()
+                            Text(String(localized: "Greed"))
+                                .font(AccBotFonts.captionSmall)
+                                .foregroundStyle(colors.onSurfaceVariant)
+                        }
+                    }
+
+                    // Gauge bar
+                    fearGreedGauge(value: fgValue)
+                }
+            }
+
+            // ATH Distance section
+            if !viewModel.athData.isEmpty {
+                VStack(spacing: Spacing.xs) {
+                    if viewModel.isMarketPulseExpanded {
+                        // Labels for each crypto
+                        HStack {
+                            Text("0")
+                                .font(AccBotFonts.captionSmall)
+                                .foregroundStyle(colors.onSurfaceVariant)
+                            Spacer()
+                            ForEach(viewModel.athData) { info in
+                                Text("\(info.crypto) -\(info.athDistancePercent)%")
+                                    .font(AccBotFonts.headline)
+                                    .foregroundStyle(colors.primary)
+                            }
+                            Spacer()
+                            Text(String(localized: "ATH"))
+                                .font(AccBotFonts.captionSmall)
+                                .foregroundStyle(colors.onSurfaceVariant)
+                        }
+                    }
+
+                    // ATH gauge with triangles
+                    athDistanceGauge(data: viewModel.athData)
+
+                    if viewModel.isMarketPulseExpanded {
+                        Text(String(localized: "ATH Distance"))
+                            .font(AccBotFonts.caption)
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+        }
+        .padding(Spacing.lg)
+        .background(colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+        .animation(.easeInOut(duration: 0.25), value: viewModel.isMarketPulseExpanded)
+    }
+
+    private func fearGreedGauge(value: Int) -> some View {
+        VStack(spacing: 2) {
+            // 5 colored segments
+            HStack(spacing: 2) {
+                ForEach(FearGreedColors.gaugeColors.indices, id: \.self) { i in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(FearGreedColors.gaugeColors[i])
+                        .frame(height: 8)
+                }
+            }
+
+            // Triangle indicator
+            GeometryReader { geo in
+                let position = CGFloat(value) / 100.0 * geo.size.width
+                Canvas { context, size in
+                    var path = Path()
+                    path.move(to: CGPoint(x: position - 5, y: 0))
+                    path.addLine(to: CGPoint(x: position + 5, y: 0))
+                    path.addLine(to: CGPoint(x: position, y: 7))
+                    path.closeSubpath()
+                    context.fill(path, with: .color(FearGreedColors.color(for: value)))
+                }
+            }
+            .frame(height: 8)
+        }
+    }
+
+    private func athDistanceGauge(data: [DashboardViewModel.AthCryptoInfo]) -> some View {
+        VStack(spacing: 2) {
+            // Gradient bar from price (left) to ATH (right)
+            HStack(spacing: 0) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(
+                        LinearGradient(
+                            colors: [colors.primary.opacity(0.3), colors.primary],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(height: 8)
+            }
+
+            // Triangle indicators (pointing up)
+            GeometryReader { geo in
+                Canvas { context, size in
+                    for info in data {
+                        // Position: 0% distance = ATH (right), 100% distance = 0 (left)
+                        let position = CGFloat(100 - info.athDistancePercent) / 100.0 * size.width
+                        var path = Path()
+                        path.move(to: CGPoint(x: position - 5, y: 7))
+                        path.addLine(to: CGPoint(x: position + 5, y: 7))
+                        path.addLine(to: CGPoint(x: position, y: 0))
+                        path.closeSubpath()
+                        context.fill(path, with: .color(colors.primary))
+                    }
+                }
+            }
+            .frame(height: 8)
+        }
     }
 
     // MARK: - Plans Section

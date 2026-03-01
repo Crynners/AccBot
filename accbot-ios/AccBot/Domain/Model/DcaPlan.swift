@@ -1,7 +1,7 @@
 import Foundation
 
 /// DCA Plan configuration - stored locally only
-struct DcaPlan: Identifiable, Equatable {
+struct DcaPlan: Identifiable, Equatable, Sendable {
     let id: Int64
     let exchange: Exchange
     let crypto: String

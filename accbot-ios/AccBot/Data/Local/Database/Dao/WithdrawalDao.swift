@@ -10,6 +10,15 @@ final class WithdrawalDao {
         self.dbPool = dbPool
     }
 
+    func getAll() throws -> [Withdrawal] {
+        try dbPool.read { db in
+            try WithdrawalRecord
+                .order(Column("createdAt").desc)
+                .fetchAll(db)
+                .map { $0.toDomain() }
+        }
+    }
+
     func getByPlanId(_ planId: Int64) throws -> [Withdrawal] {
         try dbPool.read { db in
             try WithdrawalRecord

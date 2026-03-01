@@ -8,14 +8,14 @@ final class DcaDatabase {
 
     // MARK: - DAOs
 
-    lazy var planDao = DcaPlanDao(dbPool: dbPool)
-    lazy var transactionDao = TransactionDao(dbPool: dbPool)
-    lazy var withdrawalDao = WithdrawalDao(dbPool: dbPool)
-    lazy var exchangeBalanceDao = ExchangeBalanceDao(dbPool: dbPool)
-    lazy var dailyPriceDao = DailyPriceDao(dbPool: dbPool)
-    lazy var notificationDao = NotificationDao(dbPool: dbPool)
-    lazy var withdrawalThresholdDao = WithdrawalThresholdDao(dbPool: dbPool)
-    lazy var monthlySummaryDao = MonthlySummaryDao(dbPool: dbPool)
+    let planDao: DcaPlanDao
+    let transactionDao: TransactionDao
+    let withdrawalDao: WithdrawalDao
+    let exchangeBalanceDao: ExchangeBalanceDao
+    let dailyPriceDao: DailyPriceDao
+    let notificationDao: NotificationDao
+    let withdrawalThresholdDao: WithdrawalThresholdDao
+    let monthlySummaryDao: MonthlySummaryDao
 
     // MARK: - Initialization
 
@@ -27,6 +27,14 @@ final class DcaDatabase {
             dbPool = try DatabasePool(path: ":memory:")
         }
         try runMigrations()
+        planDao = DcaPlanDao(dbPool: dbPool)
+        transactionDao = TransactionDao(dbPool: dbPool)
+        withdrawalDao = WithdrawalDao(dbPool: dbPool)
+        exchangeBalanceDao = ExchangeBalanceDao(dbPool: dbPool)
+        dailyPriceDao = DailyPriceDao(dbPool: dbPool)
+        notificationDao = NotificationDao(dbPool: dbPool)
+        withdrawalThresholdDao = WithdrawalThresholdDao(dbPool: dbPool)
+        monthlySummaryDao = MonthlySummaryDao(dbPool: dbPool)
     }
 
     /// Standard production database

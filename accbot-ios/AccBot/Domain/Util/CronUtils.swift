@@ -4,7 +4,9 @@ import Foundation
 /// Supports subset: minute hour day-of-month month day-of-week
 enum CronUtils {
 
-    /// Calculate next execution time from a CRON expression
+    /// Calculate next execution time from a CRON expression.
+    /// Uses an optimized algorithm that skips ahead by day/hour when fields don't match,
+    /// instead of brute-force minute-by-minute iteration.
     static func getNextExecution(cron: String, from: Date = Date()) -> Date? {
         let parts = cron.trimmingCharacters(in: .whitespaces).split(separator: " ")
         guard parts.count == 5 else { return nil }
@@ -18,8 +20,10 @@ enum CronUtils {
         let calendar = Calendar.current
         var candidate = calendar.date(byAdding: .minute, value: 1, to: from)!
 
-        // Try up to 366 days ahead
-        for _ in 0..<(366 * 24 * 60) {
+        // Try up to 366 days ahead with smart skipping
+        let maxDate = calendar.date(byAdding: .day, value: 366, to: from)!
+
+        while candidate <= maxDate {
             let components = calendar.dateComponents([.minute, .hour, .day, .month, .weekday], from: candidate)
             guard let minute = components.minute,
                   let hour = components.hour,
@@ -31,14 +35,38 @@ enum CronUtils {
                 continue
             }
 
-            // Weekday: cron uses 0=Sun, Calendar uses 1=Sun
             let cronWeekday = weekday - 1
 
-            if matches(value: minute, spec: minuteSpec) &&
-               matches(value: hour, spec: hourSpec) &&
-               matches(value: day, spec: daySpec) &&
-               matches(value: month, spec: monthSpec) &&
-               matches(value: cronWeekday, spec: weekdaySpec) {
+            // Skip entire month if month doesn't match
+            if !matches(value: month, spec: monthSpec) {
+                candidate = calendar.date(byAdding: .month, value: 1, to:
+                    calendar.date(from: DateComponents(
+                        year: components.year, month: month, day: 1, hour: 0, minute: 0
+                    ))!
+                )!
+                continue
+            }
+
+            // Skip entire day if day-of-month or day-of-week doesn't match
+            if !matches(value: day, spec: daySpec) || !matches(value: cronWeekday, spec: weekdaySpec) {
+                candidate = calendar.date(byAdding: .day, value: 1, to:
+                    calendar.startOfDay(for: candidate)
+                )!
+                continue
+            }
+
+            // Skip to next hour if hour doesn't match
+            if !matches(value: hour, spec: hourSpec) {
+                candidate = calendar.date(byAdding: .hour, value: 1, to:
+                    calendar.date(from: DateComponents(
+                        year: components.year, month: month, day: day, hour: hour, minute: 0
+                    ))!
+                )!
+                continue
+            }
+
+            // Check minute
+            if matches(value: minute, spec: minuteSpec) {
                 return candidate
             }
 

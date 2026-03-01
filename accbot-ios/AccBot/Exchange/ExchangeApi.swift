@@ -51,6 +51,35 @@ extension ExchangeApi {
     }
 }
 
+/// Shared helpers used by all exchange API implementations.
+/// Extracted from per-class copies of parseJson/formatDecimal/roundDecimal.
+extension ExchangeApi {
+    func parseJson(_ data: Data) throws -> [String: Any] {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw NetworkError.decodingError("Invalid JSON")
+        }
+        return json
+    }
+
+    func formatDecimal(_ value: Decimal, scale: Int) -> String {
+        let handler = NSDecimalNumberHandler(
+            roundingMode: .down, scale: Int16(scale),
+            raiseOnExactness: false, raiseOnOverflow: false,
+            raiseOnUnderflow: false, raiseOnDivideByZero: false
+        )
+        return NSDecimalNumber(decimal: value).rounding(accordingToBehavior: handler).stringValue
+    }
+
+    func roundDecimal(_ value: Decimal, scale: Int) -> Decimal {
+        let handler = NSDecimalNumberHandler(
+            roundingMode: .plain, scale: Int16(scale),
+            raiseOnExactness: false, raiseOnOverflow: false,
+            raiseOnUnderflow: false, raiseOnDivideByZero: false
+        )
+        return NSDecimalNumber(decimal: value).rounding(accordingToBehavior: handler).decimalValue
+    }
+}
+
 enum ExchangeError: LocalizedError {
     case unsupportedOperation(String)
     case invalidCredentials
