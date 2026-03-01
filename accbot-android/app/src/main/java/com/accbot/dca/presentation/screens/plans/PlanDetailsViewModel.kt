@@ -256,9 +256,9 @@ class PlanDetailsViewModel @Inject constructor(
     }
 
     fun confirmImport() {
+        val sinceMillis = _uiState.value.importSinceMillis
         _uiState.update { it.copy(showImportDialog = false) }
-        val sinceDate = _uiState.value.importSinceMillis?.let { Instant.ofEpochMilli(it) }
-        importViaApi(sinceDate)
+        importViaApi(sinceMillis?.let { Instant.ofEpochMilli(it) })
     }
 
     fun importViaApi(sinceDate: Instant? = null) {

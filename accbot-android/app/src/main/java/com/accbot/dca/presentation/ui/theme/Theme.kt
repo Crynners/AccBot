@@ -10,6 +10,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -170,7 +171,15 @@ fun accentColor(): Color = MaterialTheme.colorScheme.primary
 
 /**
  * Returns the appropriate success color based on sandbox mode and light/dark theme.
- * Use this instead of hardcoded `Success` constant.
+ * Distinct from accentColor() so success states (positive ROI, goals) are visually
+ * distinguishable from primary UI accents.
  */
 @Composable
-fun successColor(): Color = MaterialTheme.colorScheme.primary
+fun successColor(): Color = if (LocalSandboxMode.current) {
+    MaterialTheme.colorScheme.primary // Orange in sandbox
+} else {
+    if (MaterialTheme.colorScheme.background.luminance() > 0.5f)
+        Color(0xFF2E7D32) // Material Green 800 for light theme
+    else
+        Success // Original green for dark theme
+}
