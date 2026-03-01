@@ -40,9 +40,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.accbot.dca.BuildConfig
 import com.accbot.dca.R
+import com.accbot.dca.data.local.AppTheme
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.WithdrawalThreshold
 import java.math.BigDecimal
+import com.accbot.dca.presentation.changelog.ChangelogData
+import com.accbot.dca.presentation.components.ChangelogSheet
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -65,11 +68,14 @@ fun SettingsScreen(
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var showLowBalanceDialog by rememberSaveable { mutableStateOf(false) }
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
+    var showThemeDialog by rememberSaveable { mutableStateOf(false) }
+    var showNotificationInfoDialog by rememberSaveable { mutableStateOf(false) }
     var showWithdrawalThresholdDialog by rememberSaveable { mutableStateOf(false) }
     var showDeletePlansDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteTransactionsDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteNotificationsDialog by rememberSaveable { mutableStateOf(false) }
     var dangerZoneExpanded by rememberSaveable { mutableStateOf(false) }
+    var showChangelog by rememberSaveable { mutableStateOf(false) }
 
     // Refresh non-reactive data (battery, exchange count, data counts) when returning
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -197,6 +203,82 @@ fun SettingsScreen(
                     Text(stringResource(R.string.common_cancel))
                 }
             }
+        )
+    }
+
+    // Theme picker dialog
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            title = { Text(stringResource(R.string.settings_theme)) },
+            text = {
+                Column {
+                    LanguageOption(
+                        label = stringResource(R.string.settings_theme_system),
+                        isSelected = uiState.appTheme == AppTheme.SYSTEM,
+                        onClick = {
+                            viewModel.setTheme(AppTheme.SYSTEM)
+                            showThemeDialog = false
+                        }
+                    )
+                    LanguageOption(
+                        label = stringResource(R.string.settings_theme_dark),
+                        isSelected = uiState.appTheme == AppTheme.DARK,
+                        onClick = {
+                            viewModel.setTheme(AppTheme.DARK)
+                            showThemeDialog = false
+                        }
+                    )
+                    LanguageOption(
+                        label = stringResource(R.string.settings_theme_light),
+                        isSelected = uiState.appTheme == AppTheme.LIGHT,
+                        onClick = {
+                            viewModel.setTheme(AppTheme.LIGHT)
+                            showThemeDialog = false
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showThemeDialog = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+
+    // Notification info dialog
+    if (showNotificationInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showNotificationInfoDialog = false },
+            title = { Text(stringResource(R.string.notification_info_title)) },
+            text = {
+                Text(stringResource(R.string.notification_info_body))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                    }
+                    context.startActivity(intent)
+                    showNotificationInfoDialog = false
+                }) {
+                    Text(stringResource(R.string.notification_info_open_settings))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNotificationInfoDialog = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+
+    // Changelog bottom sheet (from Settings)
+    if (showChangelog) {
+        ChangelogSheet(
+            entries = ChangelogData.entries,
+            onDismiss = { showChangelog = false }
         )
     }
 
@@ -383,7 +465,21 @@ fun SettingsScreen(
             }
 
             item {
+                val themeLabel = when (uiState.appTheme) {
+                    AppTheme.DARK -> stringResource(R.string.settings_theme_dark)
+                    AppTheme.LIGHT -> stringResource(R.string.settings_theme_light)
+                    AppTheme.SYSTEM -> stringResource(R.string.settings_theme_system)
+                }
                 SettingsCard(
+                    title = stringResource(R.string.settings_theme),
+                    subtitle = themeLabel,
+                    icon = Icons.Default.Palette,
+                    onClick = { showThemeDialog = true }
+                )
+            }
+
+            item {
+                SettingsCardBase(
                     title = stringResource(R.string.settings_notifications),
                     subtitle = stringResource(R.string.settings_notifications_subtitle),
                     icon = Icons.Default.Notifications,
@@ -392,6 +488,20 @@ fun SettingsScreen(
                             putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                         }
                         context.startActivity(intent)
+                    },
+                    trailing = {
+                        IconButton(onClick = { showNotificationInfoDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.HelpOutline,
+                                contentDescription = stringResource(R.string.notification_info_title),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 )
             }
@@ -533,6 +643,15 @@ fun SettingsScreen(
                     modifier = Modifier
                         .padding(top = 24.dp, bottom = 8.dp)
                         .semantics { heading() }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.changelog_whats_new),
+                    subtitle = stringResource(R.string.settings_changelog_subtitle),
+                    icon = Icons.Default.NewReleases,
+                    onClick = { showChangelog = true }
                 )
             }
 

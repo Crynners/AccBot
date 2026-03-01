@@ -341,6 +341,25 @@ fun AddPlanScreen(
                     )
                 }
 
+                // Target Amount (optional goal)
+                SectionTitle(stringResource(R.string.plan_target_amount))
+                OutlinedTextField(
+                    value = uiState.targetAmount,
+                    onValueChange = viewModel::setTargetAmount,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.plan_target_amount)) },
+                    placeholder = { Text(stringResource(R.string.plan_target_amount_hint)) },
+                    suffix = { Text(uiState.selectedCrypto) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    supportingText = {
+                        Text(
+                            text = stringResource(R.string.plan_target_amount_description),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                )
+
                 // Error Message
                 if (uiState.errorMessage != null) {
                     Text(

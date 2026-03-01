@@ -3,6 +3,9 @@ package com.accbot.dca.data.local
 import android.content.Context
 import android.content.SharedPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,10 +32,12 @@ class UserPreferences @Inject constructor(
 
     // ==================== Theme ====================
 
-    /**
-     * Get app theme preference.
-     */
-    fun getAppTheme(): AppTheme {
+    private val _appThemeFlow = MutableStateFlow(readAppTheme())
+
+    /** Observable theme state — emits immediately when theme changes. */
+    val appThemeFlow: StateFlow<AppTheme> = _appThemeFlow.asStateFlow()
+
+    private fun readAppTheme(): AppTheme {
         val themeName = prefs.getString(KEY_APP_THEME, AppTheme.DARK.name)
         return try {
             AppTheme.valueOf(themeName ?: AppTheme.DARK.name)
@@ -42,10 +47,16 @@ class UserPreferences @Inject constructor(
     }
 
     /**
+     * Get app theme preference.
+     */
+    fun getAppTheme(): AppTheme = _appThemeFlow.value
+
+    /**
      * Set app theme preference.
      */
     fun setAppTheme(theme: AppTheme) {
         prefs.edit().putString(KEY_APP_THEME, theme.name).apply()
+        _appThemeFlow.value = theme
     }
 
     // ==================== Notifications ====================
@@ -143,6 +154,16 @@ class UserPreferences @Inject constructor(
         prefs.edit().putBoolean(KEY_BIOMETRIC_LOCK_ENABLED, enabled).apply()
     }
 
+    // ==================== Changelog ====================
+
+    fun getLastSeenVersionCode(): Int {
+        return prefs.getInt(KEY_LAST_SEEN_VERSION_CODE, 0)
+    }
+
+    fun setLastSeenVersionCode(code: Int) {
+        prefs.edit().putInt(KEY_LAST_SEEN_VERSION_CODE, code).apply()
+    }
+
     // ==================== Sandbox Mode ====================
 
     /**
@@ -173,5 +194,6 @@ class UserPreferences @Inject constructor(
         private const val KEY_SANDBOX_MODE = "sandbox_mode"
         private const val KEY_BIOMETRIC_LOCK_ENABLED = "biometric_lock_enabled"
         private const val KEY_LOW_BALANCE_THRESHOLD_DAYS = "low_balance_threshold_days"
+        private const val KEY_LAST_SEEN_VERSION_CODE = "last_seen_version_code"
     }
 }

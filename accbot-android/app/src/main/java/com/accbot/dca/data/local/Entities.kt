@@ -143,7 +143,8 @@ data class DcaPlanEntity(
     val withdrawalAddress: String? = null,
     val createdAt: Instant = Instant.now(),
     val lastExecutedAt: Instant? = null,
-    val nextExecutionAt: Instant? = null
+    val nextExecutionAt: Instant? = null,
+    val targetAmount: BigDecimal? = null
 )
 
 /**

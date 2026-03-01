@@ -59,7 +59,8 @@ class BackupDataRestorer @Inject constructor(
                                 withdrawalAddress = entity.withdrawalAddress,
                                 cronExpression = entity.cronExpression,
                                 lastExecutedAt = entity.lastExecutedAt,
-                                nextExecutionAt = entity.nextExecutionAt
+                                nextExecutionAt = entity.nextExecutionAt,
+                                targetAmount = entity.targetAmount
                             ))
                             planIdMap[plan.id] = match.id
                         } else {
@@ -176,7 +177,8 @@ class BackupDataRestorer @Inject constructor(
             withdrawalAddress = withdrawalAddress,
             createdAt = Instant.ofEpochMilli(createdAt),
             lastExecutedAt = lastExecutedAt?.let { Instant.ofEpochMilli(it) },
-            nextExecutionAt = effectiveNext
+            nextExecutionAt = effectiveNext,
+            targetAmount = targetAmount?.let { BigDecimal(it) }
         )
     }
 

@@ -45,6 +45,7 @@ data class SettingsUiState(
     val isBiometricLockEnabled: Boolean = false,
     val withdrawalThresholds: List<WithdrawalThreshold> = emptyList(),
     val availableCryptoExchangePairs: List<Pair<String, Exchange>> = emptyList(),
+    val appTheme: AppTheme = AppTheme.DARK,
     val dcaPlanCount: Int = 0,
     val transactionCount: Int = 0,
     val notificationCount: Int = 0,
@@ -101,12 +102,8 @@ class SettingsViewModel @Inject constructor(
                 isSandboxMode = isSandbox,
                 lowBalanceThresholdDays = userPreferences.getLowBalanceThresholdDays(),
                 languageTag = userPreferences.getLanguageTag(),
-                isBiometricLockEnabled = userPreferences.isBiometricLockEnabled(),
                 appTheme = userPreferences.getAppTheme(),
-                notificationsEnabled = userPreferences.areNotificationsEnabled(),
-                purchaseNotificationsEnabled = userPreferences.arePurchaseNotificationsEnabled(),
-                errorNotificationsEnabled = userPreferences.areErrorNotificationsEnabled(),
-                weeklySummaryEnabled = userPreferences.areWeeklySummaryNotificationsEnabled()
+                isBiometricLockEnabled = userPreferences.isBiometricLockEnabled()
             )
         }
     }
@@ -166,29 +163,9 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(isBiometricLockEnabled = enabled) }
     }
 
-    fun setAppTheme(theme: AppTheme) {
+    fun setTheme(theme: AppTheme) {
         userPreferences.setAppTheme(theme)
         _uiState.update { it.copy(appTheme = theme) }
-    }
-
-    fun setNotificationsEnabled(enabled: Boolean) {
-        userPreferences.setNotificationsEnabled(enabled)
-        _uiState.update { it.copy(notificationsEnabled = enabled) }
-    }
-
-    fun setPurchaseNotificationsEnabled(enabled: Boolean) {
-        userPreferences.setPurchaseNotificationsEnabled(enabled)
-        _uiState.update { it.copy(purchaseNotificationsEnabled = enabled) }
-    }
-
-    fun setErrorNotificationsEnabled(enabled: Boolean) {
-        userPreferences.setErrorNotificationsEnabled(enabled)
-        _uiState.update { it.copy(errorNotificationsEnabled = enabled) }
-    }
-
-    fun setWeeklySummaryEnabled(enabled: Boolean) {
-        userPreferences.setWeeklySummaryNotificationsEnabled(enabled)
-        _uiState.update { it.copy(weeklySummaryEnabled = enabled) }
     }
 
     fun setLanguage(tag: String) {

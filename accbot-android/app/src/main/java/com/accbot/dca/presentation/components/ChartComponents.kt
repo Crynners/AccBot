@@ -60,6 +60,7 @@ private val chartAccentColor = Primary
 private val costBasisColor = Color(0xFF888888)
 internal val btcPriceColor = Color(0xFFF7931A)
 internal val accumulatedCryptoColor = Color(0xFF4CAF50)
+internal val avgBuyPriceColor = Color(0xFF9C27B0)
 
 data class LegendEntry(
     val seriesIndex: Int,
@@ -164,7 +165,8 @@ fun PortfolioLineChart(
                     if (0 in visibleSeries) series(series0)
                     if (1 in visibleSeries) series(series1)
                     if (2 in visibleSeries) series(chartData.map { it.price.toFloat() })
-                    if (setOf(0, 1, 2).none { it in visibleSeries }) {
+                    if (4 in visibleSeries) series(chartData.map { it.avgBuyPrice.toFloat() })
+                    if (setOf(0, 1, 2, 4).none { it in visibleSeries }) {
                         series(List(chartData.size) { 0f })
                     }
                 }
@@ -210,6 +212,9 @@ fun PortfolioLineChart(
     val accumulatedLine = LineCartesianLayer.rememberLine(
         fill = LineCartesianLayer.LineFill.single(fill(accumulatedCryptoColor))
     )
+    val avgBuyPriceLine = LineCartesianLayer.rememberLine(
+        fill = LineCartesianLayer.LineFill.single(fill(avgBuyPriceColor))
+    )
     val hiddenLine = LineCartesianLayer.rememberLine(
         fill = LineCartesianLayer.LineFill.single(fill(Color.Transparent))
     )
@@ -219,6 +224,7 @@ fun PortfolioLineChart(
         if (0 in visibleSeries) add(valueLine)
         if (1 in visibleSeries) add(costBasisLine)
         if (2 in visibleSeries) add(priceLine)
+        if (4 in visibleSeries) add(avgBuyPriceLine)
         if (isEmpty()) add(hiddenLine)
     }
     val rightLines = buildList<LineCartesianLayer.Line> {

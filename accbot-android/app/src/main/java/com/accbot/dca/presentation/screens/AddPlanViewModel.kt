@@ -59,7 +59,8 @@ data class AddPlanUiState(
     val showImportDialog: Boolean = false,
     val errorMessage: String? = null,
     val monthlyCostEstimate: MonthlyCostEstimate? = null,
-    val minOrderSize: BigDecimal? = null
+    val minOrderSize: BigDecimal? = null,
+    val targetAmount: String = ""
 ) {
     val amountBelowMinimum: Boolean
         get() {
@@ -207,6 +208,10 @@ class AddPlanViewModel @Inject constructor(
         _uiState.update { it.copy(withdrawalAddress = address) }
     }
 
+    fun setTargetAmount(value: String) {
+        _uiState.update { it.copy(targetAmount = value) }
+    }
+
     private fun updateMinOrderSize() {
         viewModelScope.launch {
             val exchange = _uiState.value.selectedExchange ?: return@launch
@@ -298,7 +303,8 @@ class AddPlanViewModel @Inject constructor(
                     withdrawalEnabled = state.withdrawalEnabled,
                     withdrawalAddress = if (state.withdrawalEnabled) state.withdrawalAddress.trim() else null,
                     createdAt = now,
-                    nextExecutionAt = nextExecution
+                    nextExecutionAt = nextExecution,
+                    targetAmount = state.targetAmount.toBigDecimalOrNull()
                 )
 
                 dcaPlanDao.insertPlan(plan)

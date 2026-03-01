@@ -54,7 +54,8 @@ data class DcaPlanWithBalance(
     val remainingDays: Double? = null,
     val isLowBalance: Boolean = false,
     val isOverWithdrawalThreshold: Boolean = false,
-    val exchangeCryptoBalance: BigDecimal? = null
+    val exchangeCryptoBalance: BigDecimal? = null,
+    val accumulatedCrypto: BigDecimal? = null
 )
 
 @Immutable
@@ -116,7 +117,14 @@ class DashboardViewModel @Inject constructor(
                 val hasEnabledPlans = plans.any { it.isEnabled }
                 ensureServiceState(hasEnabledPlans)
 
-                val plansWithBalance = plans.map { DcaPlanWithBalance(plan = it) }
+                val plansWithBalance = plans.map { plan ->
+                    val accumulated = if (plan.targetAmount != null) {
+                        try {
+                            BigDecimal(transactionDao.getAccumulatedCryptoByPlan(plan.id))
+                        } catch (_: Exception) { null }
+                    } else null
+                    DcaPlanWithBalance(plan = plan, accumulatedCrypto = accumulated)
+                }
 
                 _uiState.update { state ->
                     state.copy(
@@ -197,12 +205,13 @@ class DashboardViewModel @Inject constructor(
         if (enabledPlans.isEmpty()) return
 
         val thresholdDays = userPreferences.getLowBalanceThresholdDays()
+        val existingAccumulated = _uiState.value.activePlans.associate { it.plan.id to it.accumulatedCrypto }
 
         // Group by exchange+fiat to avoid duplicate API calls
         val balanceCache = mutableMapOf<String, BigDecimal?>()
 
         val plansWithBalance = plans.map { plan ->
-            if (!plan.isEnabled) return@map DcaPlanWithBalance(plan = plan)
+            if (!plan.isEnabled) return@map DcaPlanWithBalance(plan = plan, accumulatedCrypto = existingAccumulated[plan.id])
 
             val balanceKey = "${plan.exchange}_${plan.fiat}"
             val balance = balanceCache.getOrPut(balanceKey) {
@@ -268,13 +277,15 @@ class DashboardViewModel @Inject constructor(
                     remainingDays = remainingDaysVal,
                     isLowBalance = remainingDaysVal < thresholdDays,
                     isOverWithdrawalThreshold = isOverThreshold,
-                    exchangeCryptoBalance = exchangeCryptoBalance
+                    exchangeCryptoBalance = exchangeCryptoBalance,
+                    accumulatedCrypto = existingAccumulated[plan.id]
                 )
             } else {
                 DcaPlanWithBalance(
                     plan = plan,
                     isOverWithdrawalThreshold = isOverThreshold,
-                    exchangeCryptoBalance = exchangeCryptoBalance
+                    exchangeCryptoBalance = exchangeCryptoBalance,
+                    accumulatedCrypto = existingAccumulated[plan.id]
                 )
             }
         }

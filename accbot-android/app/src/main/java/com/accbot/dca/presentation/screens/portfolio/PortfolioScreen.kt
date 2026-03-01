@@ -45,6 +45,7 @@ import com.accbot.dca.domain.usecase.ChartZoomLevel
 import com.accbot.dca.presentation.components.*
 import com.accbot.dca.presentation.components.btcPriceColor
 import com.accbot.dca.presentation.components.accumulatedCryptoColor
+import com.accbot.dca.presentation.components.avgBuyPriceColor
 import com.accbot.dca.presentation.ui.theme.Primary
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -498,29 +499,6 @@ internal fun PortfolioContent(
             }
         }
 
-        // Zoom header + drill-down chips (combined to reduce gap before chart)
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Crossfade(targetState = uiState.zoomLevel, label = "zoom") { zoom ->
-                    ChartZoomHeader(
-                        zoomLevel = zoom,
-                        canNavigatePrev = uiState.canNavigatePrev,
-                        canNavigateNext = uiState.canNavigateNext,
-                        onZoomOut = onZoomOut,
-                        onNavigatePrev = onNavigatePrev,
-                        onNavigateNext = onNavigateNext
-                    )
-                }
-                DrillDownChips(
-                    zoomLevel = uiState.zoomLevel,
-                    availableYears = uiState.availableYears,
-                    availableMonths = uiState.availableMonths,
-                    onDrillDownYear = onDrillDownYear,
-                    onDrillDownMonth = onDrillDownMonth
-                )
-            }
-        }
-
         // Chart
         item {
             if (uiState.isChartLoading) {
@@ -573,6 +551,31 @@ internal fun PortfolioContent(
             }
         }
 
+        // Zoom header (back arrow + prev/next navigation)
+        item {
+            Crossfade(targetState = uiState.zoomLevel, label = "zoom") { zoom ->
+                ChartZoomHeader(
+                    zoomLevel = zoom,
+                    canNavigatePrev = uiState.canNavigatePrev,
+                    canNavigateNext = uiState.canNavigateNext,
+                    onZoomOut = onZoomOut,
+                    onNavigatePrev = onNavigatePrev,
+                    onNavigateNext = onNavigateNext
+                )
+            }
+        }
+
+        // Drill-down chips (explore history)
+        item {
+            DrillDownChips(
+                zoomLevel = uiState.zoomLevel,
+                availableYears = uiState.availableYears,
+                availableMonths = uiState.availableMonths,
+                onDrillDownYear = onDrillDownYear,
+                onDrillDownMonth = onDrillDownMonth
+            )
+        }
+
         // Exchange filter chips
         if (uiState.availableExchanges.size > 1) {
             item {
@@ -604,12 +607,14 @@ private fun rememberLegendEntries(
     val crypto = currentPairCrypto ?: "BTC"
     val cryptoPriceLabel = stringResource(R.string.chart_crypto_price, crypto)
     val accumulatedCryptoLabel = stringResource(R.string.chart_accumulated_crypto, crypto)
+    val avgBuyPriceLabel = stringResource(R.string.chart_avg_buy_price)
     return remember(denominationMode, isSinglePair, currentPairCrypto) {
         buildList {
             add(LegendEntry(0, line1, Primary))
             add(LegendEntry(1, line2, androidx.compose.ui.graphics.Color(0xFF888888)))
             if (isSinglePair && denominationMode == DenominationMode.FIAT) {
                 add(LegendEntry(2, cryptoPriceLabel, btcPriceColor))
+                add(LegendEntry(4, avgBuyPriceLabel, avgBuyPriceColor))
                 add(LegendEntry(3, accumulatedCryptoLabel, accumulatedCryptoColor))
             }
         }
@@ -950,46 +955,70 @@ internal fun KpiCardContent(
 
     Spacer(modifier = Modifier.height(12.dp))
 
-    // Row 2: Avg Buy Price (single pair only) | Transactions
+    // Row 2: Invested | Avg Buy Price (single pair) or just Invested (aggregate)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
+        Column {
+            Text(
+                text = stringResource(R.string.chart_invested),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${NumberFormatters.fiat(latest.totalInvested)} $fiatSymbol",
+                fontWeight = FontWeight.SemiBold
+            )
+        }
         if (isSinglePair) {
-            Column {
+            val crypto = uiState.currentPairCrypto ?: "BTC"
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = stringResource(R.string.chart_avg_price),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "${NumberFormatters.fiat(latest.avgBuyPrice)} $fiatSymbol/${uiState.currentPairCrypto ?: "BTC"}",
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        } else {
-            Column {
-                Text(
-                    text = stringResource(R.string.chart_invested),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "${NumberFormatters.fiat(latest.totalInvested)} $fiatSymbol",
+                    text = "${NumberFormatters.fiat(latest.avgBuyPrice)} $fiatSymbol/$crypto",
                     fontWeight = FontWeight.SemiBold
                 )
             }
         }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text = stringResource(R.string.chart_transactions),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "${uiState.totalTransactions}",
-                fontWeight = FontWeight.SemiBold
-            )
+    }
+
+    // Row 3: Crypto Price | Accumulated Crypto (single pair only)
+    if (isSinglePair) {
+        val crypto = uiState.currentPairCrypto ?: "BTC"
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = stringResource(R.string.chart_crypto_price, crypto),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "${NumberFormatters.fiat(latest.price)} $fiatSymbol",
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = stringResource(R.string.chart_accumulated_crypto, crypto),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "${NumberFormatters.crypto(latest.cumulativeCrypto)} $crypto",
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }
@@ -1063,15 +1092,54 @@ private fun LandscapeKpiContent(
             )
         }
 
-        // Avg price or invested
+        // Invested, Avg price, Crypto Price, Accumulated (single pair) or just Invested (aggregate)
         if (isSinglePair) {
+            val crypto = uiState.currentPairCrypto ?: "BTC"
+
+            // Invested
+            Text(
+                text = stringResource(R.string.chart_invested),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${NumberFormatters.fiat(displayPoint.totalInvested)} $fiatSymbol",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            // Avg price
             Text(
                 text = stringResource(R.string.chart_avg_price),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "${NumberFormatters.fiat(displayPoint.avgBuyPrice)} $fiatSymbol/${uiState.currentPairCrypto ?: "BTC"}",
+                text = "${NumberFormatters.fiat(displayPoint.avgBuyPrice)} $fiatSymbol/$crypto",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            // Crypto Price
+            Text(
+                text = stringResource(R.string.chart_crypto_price, crypto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${NumberFormatters.fiat(displayPoint.price)} $fiatSymbol",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            // Accumulated Crypto
+            Text(
+                text = stringResource(R.string.chart_accumulated_crypto, crypto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${NumberFormatters.crypto(displayPoint.cumulativeCrypto)} $crypto",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold
             )

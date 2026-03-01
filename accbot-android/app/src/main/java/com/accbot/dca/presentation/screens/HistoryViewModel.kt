@@ -8,6 +8,7 @@ import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.usecase.CsvExportResult
 import com.accbot.dca.domain.usecase.ExportTransactionsToCsvUseCase
+import com.accbot.dca.presentation.utils.NumberFormatters
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -29,7 +30,8 @@ data class HistoryFilter(
     val exchange: String? = null,
     val status: TransactionStatus? = null,
     val dateFrom: Long? = null,
-    val dateTo: Long? = null
+    val dateTo: Long? = null,
+    val searchQuery: String = ""
 )
 
 /**
@@ -80,11 +82,17 @@ class HistoryViewModel @Inject constructor(
     ) { transactions, filter, sortOption ->
         val filtered = transactions.filter { tx ->
             val epochMillis = tx.executedAt.toEpochMilli()
-            (filter.crypto == null || tx.crypto == filter.crypto) &&
-            (filter.exchange == null || tx.exchange.name == filter.exchange) &&
-            (filter.status == null || tx.status == filter.status) &&
-            (filter.dateFrom == null || epochMillis >= filter.dateFrom) &&
-            (filter.dateTo == null || epochMillis <= filter.dateTo + 86_400_000)
+            val matchesChips = (filter.crypto == null || tx.crypto == filter.crypto) &&
+                (filter.exchange == null || tx.exchange.name == filter.exchange) &&
+                (filter.status == null || tx.status == filter.status) &&
+                (filter.dateFrom == null || epochMillis >= filter.dateFrom) &&
+                (filter.dateTo == null || epochMillis <= filter.dateTo + 86_400_000)
+            val matchesSearch = filter.searchQuery.isBlank() || listOf(
+                tx.crypto, tx.fiat, tx.exchange.name, tx.exchange.displayName,
+                NumberFormatters.fiat(tx.fiatAmount), NumberFormatters.crypto(tx.cryptoAmount),
+                tx.exchangeOrderId ?: "", tx.errorMessage ?: ""
+            ).any { it.contains(filter.searchQuery, ignoreCase = true) }
+            matchesChips && matchesSearch
         }
 
         val sorted = when (sortOption) {
@@ -132,6 +140,10 @@ class HistoryViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun setSearchQuery(query: String) {
+        _filterState.update { it.copy(searchQuery = query) }
     }
 
     fun setFilter(filter: HistoryFilter) {

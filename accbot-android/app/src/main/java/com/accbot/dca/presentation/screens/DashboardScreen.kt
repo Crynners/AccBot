@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -57,6 +58,8 @@ import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.TimeUtils
 import com.accbot.dca.presentation.utils.NumberFormatters
+import java.math.BigDecimal
+import java.math.RoundingMode
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -125,6 +128,10 @@ fun DashboardScreen(
 
                     if (uiState.isSandboxMode) {
                         SandboxBanner()
+                    }
+
+                    if (uiState.holdings.size >= 2) {
+                        PortfolioSummaryCard(holdings = uiState.holdings)
                     }
 
                     HoldingsPager(
@@ -214,6 +221,13 @@ fun DashboardScreen(
                 if (uiState.isSandboxMode) {
                     item {
                         SandboxBanner()
+                    }
+                }
+
+                // Portfolio Summary (when 2+ holdings)
+                if (uiState.holdings.size >= 2) {
+                    item {
+                        PortfolioSummaryCard(holdings = uiState.holdings)
                     }
                 }
 
@@ -726,10 +740,21 @@ internal fun DcaPlanCard(
                 CryptoIcon(crypto = plan.crypto)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(
-                        text = "${plan.crypto}/${plan.fiat}",
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "${plan.crypto}/${plan.fiat}",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = stringResource(plan.strategy.displayNameRes),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontStyle = FontStyle.Italic,
+                            color = accentCol
+                        )
+                    }
                     val frequencyText = if (plan.frequency == DcaFrequency.CUSTOM && plan.cronExpression != null) {
                         CronUtils.describeCron(plan.cronExpression) ?: stringResource(plan.frequency.displayNameRes)
                     } else {
@@ -740,29 +765,11 @@ internal fun DcaPlanCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = plan.exchange.displayName,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (plan.strategy !is DcaStrategy.Classic) {
-                            Text(
-                                text = "•",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = stringResource(plan.strategy.displayNameRes).replace(" DCA", ""),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = accentCol,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
+                    Text(
+                        text = plan.exchange.displayName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     if (plan.isEnabled && plan.nextExecutionAt != null) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -832,6 +839,47 @@ internal fun DcaPlanCard(
                                 fontWeight = if (planWithBalance.isLowBalance) FontWeight.Medium else FontWeight.Normal
                             )
                         }
+                    }
+                    // Goal progress bar
+                    if (plan.targetAmount != null && planWithBalance.accumulatedCrypto != null) {
+                        val target = plan.targetAmount
+                        val accumulated = planWithBalance.accumulatedCrypto
+                        val progress = if (target > BigDecimal.ZERO) {
+                            accumulated.divide(target, 4, RoundingMode.HALF_UP)
+                                .toFloat().coerceIn(0f, 1f)
+                        } else 0f
+                        val percent = if (target > BigDecimal.ZERO) {
+                            accumulated.divide(target, 4, RoundingMode.HALF_UP)
+                                .multiply(BigDecimal(100))
+                                .setScale(1, RoundingMode.HALF_UP)
+                        } else BigDecimal.ZERO
+                        val goalReached = accumulated >= target
+                        val goalColor = if (goalReached) successCol else accentCol
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp),
+                            color = goalColor,
+                            trackColor = goalColor.copy(alpha = 0.2f)
+                        )
+                        Text(
+                            text = if (goalReached) {
+                                stringResource(R.string.dashboard_goal_reached)
+                            } else {
+                                stringResource(
+                                    R.string.dashboard_goal_progress,
+                                    NumberFormatters.crypto(accumulated),
+                                    NumberFormatters.crypto(target),
+                                    plan.crypto,
+                                    percent.toPlainString()
+                                )
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = goalColor,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
@@ -916,6 +964,87 @@ internal fun QuickActionsRow(
     }
 }
 
+@Composable
+internal fun PortfolioSummaryCard(
+    holdings: List<CryptoHoldingWithPrice>
+) {
+    // Only show when all holdings have prices loaded
+    val allPricesLoaded = holdings.all { it.currentValue != null }
+    if (!allPricesLoaded) return
+
+    val totalValue = holdings.fold(BigDecimal.ZERO) { acc, h -> acc + (h.currentValue ?: BigDecimal.ZERO) }
+    val totalInvested = holdings.fold(BigDecimal.ZERO) { acc, h -> acc + h.totalInvested }
+    val roiAbsolute = totalValue.subtract(totalInvested)
+    val roiPercent = if (totalInvested > BigDecimal.ZERO) {
+        roiAbsolute.divide(totalInvested, 4, RoundingMode.HALF_UP)
+            .multiply(BigDecimal(100))
+            .setScale(2, RoundingMode.HALF_UP)
+    } else null
+
+    val successCol = successColor()
+    val isPositive = roiAbsolute >= BigDecimal.ZERO
+    val roiColor = if (isPositive) successCol else Error
+    val sign = if (isPositive) "+" else ""
+
+    // Determine common fiat (if all same) or fall back to first
+    val fiat = holdings.map { it.fiat }.distinct().let {
+        if (it.size == 1) it.first() else it.first()
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.dashboard_portfolio_total),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "${NumberFormatters.fiat(totalValue)} $fiat",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${stringResource(R.string.dashboard_portfolio_total_invested)}: ${NumberFormatters.fiat(totalInvested)} $fiat",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "$sign${NumberFormatters.fiat(roiAbsolute)} $fiat",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = roiColor
+                    )
+                    if (roiPercent != null) {
+                        Text(
+                            text = stringResource(R.string.dashboard_roi, "$sign${NumberFormatters.percent(roiPercent)}%"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = roiColor
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RunNowBottomSheet(
@@ -992,10 +1121,21 @@ private fun RunNowBottomSheet(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "${plan.crypto}/${plan.fiat}",
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "${plan.crypto}/${plan.fiat}",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = stringResource(plan.strategy.displayNameRes),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontStyle = FontStyle.Italic,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         Text(
                             text = "${plan.amount} ${plan.fiat} • ${plan.exchange.displayName}",
                             style = MaterialTheme.typography.bodySmall,

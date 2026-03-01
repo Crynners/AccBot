@@ -19,7 +19,8 @@ fun DcaPlanEntity.toDomain() = DcaPlan(
     withdrawalAddress = withdrawalAddress,
     createdAt = createdAt,
     lastExecutedAt = lastExecutedAt,
-    nextExecutionAt = nextExecutionAt
+    nextExecutionAt = nextExecutionAt,
+    targetAmount = targetAmount
 )
 
 fun TransactionEntity.toDomain() = Transaction(

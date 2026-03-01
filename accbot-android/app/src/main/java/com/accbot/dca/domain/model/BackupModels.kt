@@ -53,7 +53,8 @@ data class BackupPlan(
     val withdrawalAddress: String? = null,
     val createdAt: Long = 0,      // Instant epoch millis
     val lastExecutedAt: Long? = null,
-    val nextExecutionAt: Long? = null
+    val nextExecutionAt: Long? = null,
+    val targetAmount: String? = null  // BigDecimal.toPlainString()
 )
 
 /**
