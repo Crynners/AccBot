@@ -479,6 +479,13 @@ fun SettingsScreen(
             }
 
             item {
+                MarketPulseToggleCard(
+                    isEnabled = uiState.isMarketPulseEnabled,
+                    onToggle = { viewModel.setMarketPulseEnabled(it) }
+                )
+            }
+
+            item {
                 SettingsCardBase(
                     title = stringResource(R.string.settings_notifications),
                     subtitle = stringResource(R.string.settings_notifications_subtitle),
@@ -967,6 +974,37 @@ internal fun BiometricToggleCard(
         title = stringResource(R.string.biometric_lock_title),
         subtitle = stringResource(R.string.biometric_lock_subtitle),
         icon = Icons.Default.Fingerprint,
+        iconTint = if (isEnabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onToggle(!isEnabled)
+        },
+        cardModifier = Modifier.semantics(mergeDescendants = true) { role = Role.Switch },
+        trailing = {
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = accent,
+                    checkedTrackColor = accent.copy(alpha = 0.5f)
+                )
+            )
+        }
+    )
+}
+
+@Composable
+internal fun MarketPulseToggleCard(
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    val accent = successColor()
+    val haptic = LocalHapticFeedback.current
+    SettingsCardBase(
+        title = stringResource(R.string.settings_market_pulse_title),
+        subtitle = stringResource(R.string.settings_market_pulse_subtitle),
+        icon = Icons.AutoMirrored.Filled.ShowChart,
         iconTint = if (isEnabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
         onClick = {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)

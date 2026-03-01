@@ -164,6 +164,24 @@ class UserPreferences @Inject constructor(
         prefs.edit().putInt(KEY_LAST_SEEN_VERSION_CODE, code).apply()
     }
 
+    // ==================== Market Pulse ====================
+
+    fun isMarketPulseEnabled(): Boolean {
+        return prefs.getBoolean(KEY_MARKET_PULSE_ENABLED, true)
+    }
+
+    fun setMarketPulseEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_MARKET_PULSE_ENABLED, enabled).apply()
+    }
+
+    fun isMarketPulseExpanded(): Boolean {
+        return prefs.getBoolean(KEY_MARKET_PULSE_EXPANDED, true)
+    }
+
+    fun setMarketPulseExpanded(expanded: Boolean) {
+        prefs.edit().putBoolean(KEY_MARKET_PULSE_EXPANDED, expanded).apply()
+    }
+
     // ==================== Sandbox Mode ====================
 
     /**
@@ -195,5 +213,7 @@ class UserPreferences @Inject constructor(
         private const val KEY_BIOMETRIC_LOCK_ENABLED = "biometric_lock_enabled"
         private const val KEY_LOW_BALANCE_THRESHOLD_DAYS = "low_balance_threshold_days"
         private const val KEY_LAST_SEEN_VERSION_CODE = "last_seen_version_code"
+        private const val KEY_MARKET_PULSE_ENABLED = "market_pulse_enabled"
+        private const val KEY_MARKET_PULSE_EXPANDED = "market_pulse_expanded"
     }
 }

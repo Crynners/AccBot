@@ -30,6 +30,7 @@ import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.CredentialsInputCard
 import com.accbot.dca.presentation.components.ExchangeAvatar
+import com.accbot.dca.presentation.components.ImportConfigDialog
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -111,6 +112,17 @@ fun ExchangeDetailScreen(
                     Text(stringResource(R.string.common_cancel))
                 }
             }
+        )
+    }
+
+    // Import configuration dialog
+    if (uiState.showImportDialog) {
+        ImportConfigDialog(
+            planCount = uiState.plans.size,
+            sinceMillis = uiState.importSinceMillis,
+            onSinceDateChanged = { viewModel.setImportSinceDate(it) },
+            onConfirm = { viewModel.confirmImport() },
+            onDismiss = { viewModel.dismissImportDialog() }
         )
     }
 
@@ -286,7 +298,7 @@ fun ExchangeDetailScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Card(
-                    onClick = { viewModel.importViaApi() },
+                    onClick = { viewModel.showImportDialog() },
                     enabled = !uiState.isApiImporting && uiState.plans.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(

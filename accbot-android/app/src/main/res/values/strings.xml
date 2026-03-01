@@ -58,7 +58,7 @@
     <string name="dashboard_refresh_prices">Refresh prices</string>
     <string name="dashboard_transactions_total">%1$d transactions total</string>
     <string name="dashboard_invested">Invested</string>
-    <string name="dashboard_avg_price">Avg Price</string>
+    <string name="dashboard_avg_price">Avg Buy Price</string>
     <string name="dashboard_current_price">Current Price</string>
     <string name="dashboard_active_plans">My DCA Plans</string>
     <string name="dashboard_next_prefix">Next: %1$s</string>
@@ -422,25 +422,25 @@
     <string name="strategy_purchase_tiers">Purchase Tiers</string>
     <string name="strategy_distance_from_ath">Distance from ATH</string>
     <string name="strategy_multiplier">Multiplier</string>
-    <string name="strategy_ath_tier_0_10">0-10% below</string>
-    <string name="strategy_ath_tier_10_30">10-30% below</string>
-    <string name="strategy_ath_tier_30_50">30-50% below</string>
-    <string name="strategy_ath_tier_50_70">50-70% below</string>
-    <string name="strategy_ath_tier_70_plus">70%+ below</string>
+    <string name="strategy_ath_tier_0_20">0–20%</string>
+    <string name="strategy_ath_tier_20_40">20–40%</string>
+    <string name="strategy_ath_tier_40_60">40–60%</string>
+    <string name="strategy_ath_tier_60_80">60–80%</string>
+    <string name="strategy_ath_tier_80_100">80–100%</string>
     <string name="strategy_ath_mult_50">0.5x (50%)</string>
     <string name="strategy_ath_mult_100">1.0x (100%)</string>
     <string name="strategy_ath_mult_150">1.5x (150%)</string>
     <string name="strategy_ath_mult_200">2.0x (200%)</string>
     <string name="strategy_ath_mult_300">3.0x (300%)</string>
-    <string name="strategy_ath_example">Example: With a base amount of 100 EUR, if BTC is 40% below ATH, you\'ll buy 150 EUR worth.</string>
+    <string name="strategy_ath_example">Example: With a base amount of 100 EUR, if BTC is 50% below ATH, you\'ll buy 150 EUR worth.</string>
     <string name="strategy_fg_explanation">This strategy uses the Fear &amp; Greed Index to adjust purchases. Buy more when the market is fearful (often a good opportunity), buy less during extreme greed.</string>
     <string name="strategy_sentiment_tiers">Sentiment Tiers</string>
     <string name="strategy_market_sentiment">Market Sentiment</string>
-    <string name="strategy_fg_extreme_fear">Extreme Fear (0-24)</string>
-    <string name="strategy_fg_fear">Fear (25-44)</string>
-    <string name="strategy_fg_neutral">Neutral (45-54)</string>
-    <string name="strategy_fg_greed">Greed (55-74)</string>
-    <string name="strategy_fg_extreme_greed">Extreme Greed (75-100)</string>
+    <string name="strategy_fg_extreme_fear">Extreme Fear (0–19)</string>
+    <string name="strategy_fg_fear">Fear (20–39)</string>
+    <string name="strategy_fg_neutral">Neutral (40–59)</string>
+    <string name="strategy_fg_greed">Greed (60–79)</string>
+    <string name="strategy_fg_extreme_greed">Extreme Greed (80–100)</string>
     <string name="strategy_fg_mult_250">2.5x (250%)</string>
     <string name="strategy_fg_mult_150">1.5x (150%)</string>
     <string name="strategy_fg_mult_100">1.0x (100%)</string>
@@ -647,6 +647,10 @@
     <string name="import_api_no_new">No new transactions to import</string>
     <string name="import_api_offer_title">Import Transaction History?</string>
     <string name="import_api_offer_text">Would you like to import your existing transaction history from %1$s? You can also do this later from the exchange detail screen.</string>
+    <string name="import_api_dialog_text">Import trade history for %1$d plans.</string>
+    <string name="import_api_from_label">From</string>
+    <string name="import_api_all_history">All history</string>
+    <string name="import_api_start">Import</string>
 
     <!-- Exchange Instructions - Coinmate -->
     <string name="exchange_instructions_coinmate_1">Go to coinmate.io and log in</string>
@@ -787,6 +791,23 @@
     <string name="plan_target_amount_description">Shows a progress bar on the dashboard to visualize your goal</string>
     <string name="dashboard_goal_progress">%1$s / %2$s %3$s (%4$s%%)</string>
     <string name="dashboard_goal_reached">Goal reached!</string>
+
+    <!-- Market Pulse -->
+    <string name="dashboard_market_pulse">Market Pulse</string>
+    <string name="dashboard_fear_greed">Fear &amp; Greed</string>
+    <string name="dashboard_fear_label">Fear</string>
+    <string name="dashboard_greed_label">Greed</string>
+    <string name="dashboard_ath_distance">ATH Distance</string>
+    <string name="fg_class_extreme_fear">Extreme Fear</string>
+    <string name="fg_class_fear">Fear</string>
+    <string name="fg_class_neutral">Neutral</string>
+    <string name="fg_class_greed">Greed</string>
+    <string name="fg_class_extreme_greed">Extreme Greed</string>
+    <string name="dashboard_purchase_amount_formula">%1$s %2$s (%3$s × %4$s) • %5$s</string>
+
+    <!-- Settings: Market Pulse -->
+    <string name="settings_market_pulse_title">Market Pulse</string>
+    <string name="settings_market_pulse_subtitle">Show market indicators on dashboard</string>
 
     <!-- Accessibility -->
     <string name="a11y_retry">Retry</string>

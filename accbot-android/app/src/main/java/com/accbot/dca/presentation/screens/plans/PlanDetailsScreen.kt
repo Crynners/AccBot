@@ -176,6 +176,16 @@ fun PlanDetailsScreen(
         )
     }
 
+    // Import configuration dialog
+    if (uiState.showImportDialog) {
+        ImportConfigDialog(
+            sinceMillis = uiState.importSinceMillis,
+            onSinceDateChanged = { viewModel.setImportSinceDate(it) },
+            onConfirm = { viewModel.confirmImport() },
+            onDismiss = { viewModel.dismissImportDialog() }
+        )
+    }
+
     // API import result dialog
     uiState.apiImportResult?.let { result ->
         AlertDialog(
@@ -703,7 +713,7 @@ fun PlanDetailsScreen(
                     if (plan.exchange.supportsApiImport) {
                         item {
                             Card(
-                                onClick = { viewModel.importViaApi() },
+                                onClick = { viewModel.showImportDialog() },
                                 enabled = !uiState.isApiImporting,
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surface

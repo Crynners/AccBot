@@ -1,6 +1,10 @@
 package com.accbot.dca.presentation.screens
 
 import android.content.res.Configuration
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -17,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
@@ -29,6 +34,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
@@ -44,8 +50,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
+import com.accbot.dca.data.remote.CryptoData
+import com.accbot.dca.data.remote.FearGreedData
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.util.CronUtils
@@ -79,7 +90,17 @@ fun DashboardScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    // Ticker moved into DcaPlanCard – see currentTime state there
+    // Re-read preferences (e.g. Market Pulse toggle) when returning from Settings
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshPreferences()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(uiState.runNowTriggered) {
         if (uiState.runNowTriggered) {
@@ -108,12 +129,18 @@ fun DashboardScreen(
             )
         },
     ) { paddingValues ->
+        PullToRefreshBox(
+            isRefreshing = uiState.isPriceLoading,
+            onRefresh = { viewModel.refreshAll() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
         if (isLandscape) {
             // Landscape: two-column layout
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -124,8 +151,6 @@ fun DashboardScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Spacer(modifier = Modifier.height(8.dp))
-
                     if (uiState.isSandboxMode) {
                         SandboxBanner()
                     }
@@ -136,8 +161,6 @@ fun DashboardScreen(
 
                     HoldingsPager(
                         holdings = uiState.holdings,
-                        isPriceLoading = uiState.isPriceLoading,
-                        onRefreshPrices = { viewModel.refreshPrices() },
                         onHoldingClick = onNavigateToPortfolio,
                         onImportViaApi = onNavigateToExchangeDetail?.let { nav ->
                             {
@@ -147,6 +170,15 @@ fun DashboardScreen(
                         },
                         compact = true
                     )
+
+                    if (uiState.showMarketPulse && (uiState.fearGreedData != null || uiState.athDataByCrypto.isNotEmpty())) {
+                        MarketPulseCard(
+                            fearGreedData = uiState.fearGreedData,
+                            athDataByCrypto = uiState.athDataByCrypto,
+                            isExpanded = uiState.isMarketPulseExpanded,
+                            onToggleExpand = { viewModel.toggleMarketPulseExpanded() }
+                        )
+                    }
 
                     QuickActionsRow(
                         onViewHistory = onNavigateToHistory,
@@ -161,10 +193,6 @@ fun DashboardScreen(
                     modifier = Modifier.weight(0.5f),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    item {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
                     item {
                         SectionHeader(
                             title = stringResource(R.string.dashboard_active_plans),
@@ -209,14 +237,9 @@ fun DashboardScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
                 // Sandbox Mode Banner
                 if (uiState.isSandboxMode) {
                     item {
@@ -235,8 +258,6 @@ fun DashboardScreen(
                 item {
                     HoldingsPager(
                         holdings = uiState.holdings,
-                        isPriceLoading = uiState.isPriceLoading,
-                        onRefreshPrices = { viewModel.refreshPrices() },
                         onHoldingClick = onNavigateToPortfolio,
                         onImportViaApi = onNavigateToExchangeDetail?.let { nav ->
                             {
@@ -245,6 +266,18 @@ fun DashboardScreen(
                             }
                         }
                     )
+                }
+
+                // Market Pulse
+                if (uiState.showMarketPulse && (uiState.fearGreedData != null || uiState.athDataByCrypto.isNotEmpty())) {
+                    item {
+                        MarketPulseCard(
+                            fearGreedData = uiState.fearGreedData,
+                            athDataByCrypto = uiState.athDataByCrypto,
+                            isExpanded = uiState.isMarketPulseExpanded,
+                            onToggleExpand = { viewModel.toggleMarketPulseExpanded() }
+                        )
+                    }
                 }
 
                 // My DCA Plans
@@ -294,6 +327,7 @@ fun DashboardScreen(
                 }
             }
         }
+        } // PullToRefreshBox
     }
 }
 
@@ -400,8 +434,6 @@ internal fun SandboxBanner() {
 @Composable
 internal fun HoldingsPager(
     holdings: List<CryptoHoldingWithPrice>,
-    isPriceLoading: Boolean,
-    onRefreshPrices: () -> Unit,
     onHoldingClick: ((String, String) -> Unit)? = null,
     onImportViaApi: (() -> Unit)? = null,
     compact: Boolean = false
@@ -474,37 +506,12 @@ internal fun HoldingsPager(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header with refresh button
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 8.dp, top = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.dashboard_total_accumulated),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                IconButton(
-                    onClick = onRefreshPrices
-                ) {
-                    if (isPriceLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = stringResource(R.string.dashboard_refresh_prices),
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
+            Text(
+                text = stringResource(R.string.dashboard_total_accumulated),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 20.dp, top = 12.dp)
+            )
 
             HorizontalPager(
                 state = pagerState,
@@ -760,8 +767,28 @@ internal fun DcaPlanCard(
                     } else {
                         stringResource(plan.frequency.displayNameRes)
                     }
+                    val multiplierResult = planWithBalance.strategyMultiplier
+                    val amountText = if (multiplierResult != null && multiplierResult.multiplier != 1.0f) {
+                        val effective = plan.amount.multiply(BigDecimal(multiplierResult.multiplier.toString()))
+                            .setScale(plan.amount.scale().coerceAtLeast(0), RoundingMode.HALF_UP)
+                        val multiplierStr = if (multiplierResult.multiplier % 1.0f == 0f) {
+                            multiplierResult.multiplier.toInt().toString()
+                        } else {
+                            multiplierResult.multiplier.toString()
+                        }
+                        stringResource(
+                            R.string.dashboard_purchase_amount_formula,
+                            effective.toPlainString(),
+                            plan.fiat,
+                            plan.amount.toPlainString(),
+                            multiplierStr,
+                            frequencyText
+                        )
+                    } else {
+                        "${plan.amount} ${plan.fiat} • $frequencyText"
+                    }
                     Text(
-                        text = "${plan.amount} ${plan.fiat} • $frequencyText",
+                        text = amountText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -862,7 +889,9 @@ internal fun DcaPlanCard(
                                 .fillMaxWidth()
                                 .height(4.dp),
                             color = goalColor,
-                            trackColor = goalColor.copy(alpha = 0.2f)
+                            trackColor = goalColor.copy(alpha = 0.2f),
+                            gapSize = 0.dp,
+                            drawStopIndicator = {}
                         )
                         Text(
                             text = if (goalReached) {
@@ -1136,8 +1165,21 @@ private fun RunNowBottomSheet(
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
+                        val sheetMultiplier = planWithBalance.strategyMultiplier
+                        val sheetAmountText = if (sheetMultiplier != null && sheetMultiplier.multiplier != 1.0f) {
+                            val effective = plan.amount.multiply(BigDecimal(sheetMultiplier.multiplier.toString()))
+                                .setScale(plan.amount.scale().coerceAtLeast(0), RoundingMode.HALF_UP)
+                            val multiplierStr = if (sheetMultiplier.multiplier % 1.0f == 0f) {
+                                sheetMultiplier.multiplier.toInt().toString()
+                            } else {
+                                sheetMultiplier.multiplier.toString()
+                            }
+                            "${effective.toPlainString()} ${plan.fiat} (${plan.amount.toPlainString()} × $multiplierStr) • ${plan.exchange.displayName}"
+                        } else {
+                            "${plan.amount} ${plan.fiat} • ${plan.exchange.displayName}"
+                        }
                         Text(
-                            text = "${plan.amount} ${plan.fiat} • ${plan.exchange.displayName}",
+                            text = sheetAmountText,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1157,5 +1199,236 @@ private fun RunNowBottomSheet(
                 Text(stringResource(R.string.run_now_confirm, selectedIds.size))
             }
         }
+    }
+}
+
+@Composable
+internal fun MarketPulseCard(
+    fearGreedData: FearGreedData?,
+    athDataByCrypto: Map<String, CryptoData>,
+    isExpanded: Boolean = true,
+    onToggleExpand: () -> Unit = {}
+) {
+    val indicatorColor = MaterialTheme.colorScheme.onSurface
+
+    // Localized F&G classification
+    val localizedClassification = fearGreedData?.let { localizedFearGreedClass(it.value) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggleExpand),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.dashboard_market_pulse),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Gauge area
+            Column(modifier = Modifier.fillMaxWidth()) {
+
+                // Expanded: show labels above the bar
+                AnimatedVisibility(
+                    visible = isExpanded,
+                    enter = expandVertically(),
+                    exit = shrinkVertically()
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // "Fear & Greed" centered above
+                        if (fearGreedData != null) {
+                            Text(
+                                text = stringResource(R.string.dashboard_fear_greed),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center
+                            )
+
+                            // Row: "Fear" (left) — "14 — Extreme Fear" (center) — "Greed" (right)
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = stringResource(R.string.dashboard_fear_label),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.align(Alignment.CenterStart)
+                                )
+                                Text(
+                                    text = "${fearGreedData.value} — $localizedClassification",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = fearGreedColor(fearGreedData.value),
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                                Text(
+                                    text = stringResource(R.string.dashboard_greed_label),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.align(Alignment.CenterEnd)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // ▼ Fear & Greed triangle (always visible)
+                if (fearGreedData != null) {
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                    ) {
+                        val w = 8.dp.toPx(); val h = 6.dp.toPx()
+                        val x = (fearGreedData.value / 100f).coerceIn(0f, 1f) * size.width
+                        val path = Path().apply {
+                            moveTo(x - w / 2, size.height - h)
+                            lineTo(x + w / 2, size.height - h)
+                            lineTo(x, size.height)
+                            close()
+                        }
+                        drawPath(path, color = indicatorColor)
+                    }
+                }
+
+                // Colored bar (always visible)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    gaugeColors.forEach { color ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(8.dp)
+                                .background(color, RoundedCornerShape(2.dp))
+                        )
+                    }
+                }
+
+                // ▲ ATH triangles (always visible)
+                if (athDataByCrypto.isNotEmpty()) {
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                    ) {
+                        val w = 8.dp.toPx(); val h = 6.dp.toPx()
+                        athDataByCrypto.values.forEach { data ->
+                            val x = (1.0f - data.athDistance).coerceIn(0f, 1f) * size.width
+                            val path = Path().apply {
+                                moveTo(x, 0f)
+                                lineTo(x - w / 2, h)
+                                lineTo(x + w / 2, h)
+                                close()
+                            }
+                            drawPath(path, color = indicatorColor)
+                        }
+                    }
+                }
+
+                // Expanded: show labels below the bar
+                AnimatedVisibility(
+                    visible = isExpanded,
+                    enter = expandVertically(),
+                    exit = shrinkVertically()
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        if (athDataByCrypto.isNotEmpty()) {
+                            // Row: "0" (left) — "BTC -35 %" (center) — "ATH" (right)
+                            val athCenterText = if (athDataByCrypto.size == 1) {
+                                val entry = athDataByCrypto.entries.first()
+                                "-%d %%".format(entry.value.athDistancePercent)
+                            } else {
+                                athDataByCrypto.entries.joinToString(", ") { (crypto, data) ->
+                                    "%s -%d %%".format(crypto, data.athDistancePercent)
+                                }
+                            }
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = "0",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.align(Alignment.CenterStart)
+                                )
+                                Text(
+                                    text = athCenterText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                                Text(
+                                    text = "ATH",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.align(Alignment.CenterEnd)
+                                )
+                            }
+
+                            // "ATH Distance" / "Vzdálenost od ATH" centered below
+                            Text(
+                                text = stringResource(R.string.dashboard_ath_distance),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun localizedFearGreedClass(value: Int): String {
+    return when {
+        value <= 19 -> stringResource(R.string.fg_class_extreme_fear)
+        value <= 39 -> stringResource(R.string.fg_class_fear)
+        value <= 59 -> stringResource(R.string.fg_class_neutral)
+        value <= 79 -> stringResource(R.string.fg_class_greed)
+        else -> stringResource(R.string.fg_class_extreme_greed)
+    }
+}
+
+private val gaugeColors = listOf(
+    Color(0xFFE53935),
+    Color(0xFFFF9800),
+    Color(0xFFFDD835),
+    Color(0xFF8BC34A),
+    Color(0xFF4CAF50)
+)
+
+private fun fearGreedColor(value: Int): Color {
+    return when {
+        value <= 19 -> Color(0xFFE53935) // Extreme Fear - red
+        value <= 39 -> Color(0xFFFF9800) // Fear - orange
+        value <= 59 -> Color(0xFFFDD835) // Neutral - yellow
+        value <= 79 -> Color(0xFF8BC34A) // Greed - light green
+        else -> Color(0xFF4CAF50)        // Extreme Greed - green
     }
 }

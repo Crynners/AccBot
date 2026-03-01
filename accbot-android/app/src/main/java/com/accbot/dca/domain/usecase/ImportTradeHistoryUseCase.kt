@@ -32,15 +32,16 @@ class ImportTradeHistoryUseCase @Inject constructor(
         planId: Long,
         crypto: String,
         fiat: String,
-        exchange: Exchange
+        exchange: Exchange,
+        sinceDate: Instant? = null
     ): Flow<ApiImportProgress> = flow {
         try {
-            // Fetch all pages — always from the beginning.
+            // Fetch all pages — from sinceDate if provided, otherwise from the beginning.
             // Deduplication by exchangeOrderId prevents duplicates, so there's no need
             // for a timestamp cursor which can skip historical trades when the only
             // existing transactions are from auto-buy (not from a prior API import).
             val allTrades = mutableListOf<com.accbot.dca.domain.model.HistoricalTrade>()
-            var cursor: Instant? = null
+            var cursor: Instant? = sinceDate
             var page = 0
             val maxPages = 10_000  // Safety cap only; pagination stops naturally via hasMore
 
@@ -66,6 +67,11 @@ class ImportTradeHistoryUseCase @Inject constructor(
 
                 if (!result.hasMore || page >= maxPages) break
             } while (true)
+
+            // Filter by sinceDate if provided
+            if (sinceDate != null) {
+                allTrades.removeAll { it.timestamp.isBefore(sinceDate) }
+            }
 
             if (allTrades.isEmpty()) {
                 emit(ApiImportProgress.Complete(imported = 0, skipped = 0))
