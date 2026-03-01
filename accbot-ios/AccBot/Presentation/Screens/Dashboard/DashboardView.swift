@@ -345,13 +345,15 @@ struct DashboardView: View {
                 ? String(localized: "Double tap to collapse")
                 : String(localized: "Double tap to expand"))
 
-            // Fear & Greed section
-            if let fgValue = viewModel.fearGreedValue {
-                VStack(spacing: Spacing.xs) {
-                    if viewModel.isMarketPulseExpanded {
+            // Gauge area (single shared gauge matching Android layout)
+            VStack(spacing: 0) {
+                // Expanded: F&G labels above the bar
+                if let fgValue = viewModel.fearGreedValue, viewModel.isMarketPulseExpanded {
+                    VStack(spacing: Spacing.xs) {
                         Text(String(localized: "Fear & Greed"))
                             .font(AccBotFonts.caption)
                             .foregroundStyle(colors.onSurfaceVariant)
+                            .frame(maxWidth: .infinity)
 
                         HStack {
                             Text(String(localized: "Fear"))
@@ -367,43 +369,87 @@ struct DashboardView: View {
                                 .foregroundStyle(colors.onSurfaceVariant)
                         }
                     }
-
-                    // Gauge bar
-                    fearGreedGauge(value: fgValue)
+                    .padding(.bottom, Spacing.xs)
                 }
-            }
 
-            // ATH Distance section
-            if !viewModel.athData.isEmpty {
-                VStack(spacing: Spacing.xs) {
-                    if viewModel.isMarketPulseExpanded {
-                        // Labels for each crypto
+                // ▼ F&G triangle (above bar, pointing down) — matches Android line 1297-1314
+                if let fgValue = viewModel.fearGreedValue {
+                    GeometryReader { _ in
+                        Canvas { context, size in
+                            let w: CGFloat = 8, h: CGFloat = 6
+                            let x = CGFloat(fgValue) / 100.0 * size.width
+                            var path = Path()
+                            path.move(to: CGPoint(x: x - w / 2, y: size.height - h))
+                            path.addLine(to: CGPoint(x: x + w / 2, y: size.height - h))
+                            path.addLine(to: CGPoint(x: x, y: size.height))
+                            path.closeSubpath()
+                            context.fill(path, with: .color(colors.onSurface))
+                        }
+                    }
+                    .frame(height: 8)
+                }
+
+                // 5 colored segments (shared bar — always visible)
+                HStack(spacing: 2) {
+                    ForEach(FearGreedColors.gaugeColors.indices, id: \.self) { i in
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(FearGreedColors.gaugeColors[i])
+                            .frame(height: 8)
+                    }
+                }
+
+                // ▲ ATH triangle(s) (below bar, pointing up) — matches Android line 1331-1350
+                if !viewModel.athData.isEmpty {
+                    GeometryReader { _ in
+                        Canvas { context, size in
+                            let w: CGFloat = 8, h: CGFloat = 6
+                            for info in viewModel.athData {
+                                let x = CGFloat(100 - info.athDistancePercent) / 100.0 * size.width
+                                var path = Path()
+                                path.move(to: CGPoint(x: x, y: 0))
+                                path.addLine(to: CGPoint(x: x - w / 2, y: h))
+                                path.addLine(to: CGPoint(x: x + w / 2, y: h))
+                                path.closeSubpath()
+                                context.fill(path, with: .color(colors.onSurface))
+                            }
+                        }
+                    }
+                    .frame(height: 8)
+                }
+
+                // Expanded: ATH labels below the bar
+                if !viewModel.athData.isEmpty, viewModel.isMarketPulseExpanded {
+                    VStack(spacing: Spacing.xs) {
+                        let athCenterText: String = {
+                            if viewModel.athData.count == 1, let info = viewModel.athData.first {
+                                return "-\(info.athDistancePercent) %"
+                            } else {
+                                return viewModel.athData
+                                    .map { "\($0.crypto) -\($0.athDistancePercent) %" }
+                                    .joined(separator: ", ")
+                            }
+                        }()
+
                         HStack {
                             Text("0")
                                 .font(AccBotFonts.captionSmall)
                                 .foregroundStyle(colors.onSurfaceVariant)
                             Spacer()
-                            ForEach(viewModel.athData) { info in
-                                Text("\(info.crypto) -\(info.athDistancePercent)%")
-                                    .font(AccBotFonts.headline)
-                                    .foregroundStyle(colors.primary)
-                            }
+                            Text(athCenterText)
+                                .font(AccBotFonts.headline)
+                                .foregroundStyle(colors.onSurfaceVariant)
                             Spacer()
                             Text(String(localized: "ATH"))
                                 .font(AccBotFonts.captionSmall)
                                 .foregroundStyle(colors.onSurfaceVariant)
                         }
-                    }
 
-                    // ATH gauge with triangles
-                    athDistanceGauge(data: viewModel.athData)
-
-                    if viewModel.isMarketPulseExpanded {
                         Text(String(localized: "ATH Distance"))
                             .font(AccBotFonts.caption)
                             .foregroundStyle(colors.onSurfaceVariant)
                             .frame(maxWidth: .infinity)
                     }
+                    .padding(.top, Spacing.xs)
                 }
             }
         }
@@ -411,67 +457,6 @@ struct DashboardView: View {
         .background(colors.surface)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
         .animation(.easeInOut(duration: 0.25), value: viewModel.isMarketPulseExpanded)
-    }
-
-    private func fearGreedGauge(value: Int) -> some View {
-        VStack(spacing: 2) {
-            // 5 colored segments
-            HStack(spacing: 2) {
-                ForEach(FearGreedColors.gaugeColors.indices, id: \.self) { i in
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(FearGreedColors.gaugeColors[i])
-                        .frame(height: 8)
-                }
-            }
-
-            // Triangle indicator
-            GeometryReader { geo in
-                let position = CGFloat(value) / 100.0 * geo.size.width
-                Canvas { context, size in
-                    var path = Path()
-                    path.move(to: CGPoint(x: position - 5, y: 0))
-                    path.addLine(to: CGPoint(x: position + 5, y: 0))
-                    path.addLine(to: CGPoint(x: position, y: 7))
-                    path.closeSubpath()
-                    context.fill(path, with: .color(FearGreedColors.color(for: value)))
-                }
-            }
-            .frame(height: 8)
-        }
-    }
-
-    private func athDistanceGauge(data: [DashboardViewModel.AthCryptoInfo]) -> some View {
-        VStack(spacing: 2) {
-            // Gradient bar from price (left) to ATH (right)
-            HStack(spacing: 0) {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(
-                        LinearGradient(
-                            colors: [colors.primary.opacity(0.3), colors.primary],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(height: 8)
-            }
-
-            // Triangle indicators (pointing up)
-            GeometryReader { geo in
-                Canvas { context, size in
-                    for info in data {
-                        // Position: 0% distance = ATH (right), 100% distance = 0 (left)
-                        let position = CGFloat(100 - info.athDistancePercent) / 100.0 * size.width
-                        var path = Path()
-                        path.move(to: CGPoint(x: position - 5, y: 7))
-                        path.addLine(to: CGPoint(x: position + 5, y: 7))
-                        path.addLine(to: CGPoint(x: position, y: 0))
-                        path.closeSubpath()
-                        context.fill(path, with: .color(colors.primary))
-                    }
-                }
-            }
-            .frame(height: 8)
-        }
     }
 
     // MARK: - Plans Section
