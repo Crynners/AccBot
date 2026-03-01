@@ -26,7 +26,7 @@ final class DcaDatabase {
         } else {
             dbPool = try DatabasePool(path: ":memory:")
         }
-        try runMigrations()
+        try Self.runMigrations(on: dbPool)
         planDao = DcaPlanDao(dbPool: dbPool)
         transactionDao = TransactionDao(dbPool: dbPool)
         withdrawalDao = WithdrawalDao(dbPool: dbPool)
@@ -57,7 +57,7 @@ final class DcaDatabase {
 
     /// All Android Room migrations (1→11) collapsed into a single initial migration.
     /// Future iOS-only migrations added incrementally.
-    private func runMigrations() throws {
+    private static func runMigrations(on dbPool: DatabasePool) throws {
         var migrator = DatabaseMigrator()
 
         // Collapse all 11 Android migrations into final v11 schema
