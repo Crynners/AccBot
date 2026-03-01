@@ -33,7 +33,8 @@ final class BinanceApi: ExchangeApi {
     // MARK: - Time Sync
 
     private func ensureTimeSynced() async {
-        guard !await syncGuard.isSynced() else { return }
+        let alreadySynced = await syncGuard.isSynced()
+        guard !alreadySynced else { return }
         await syncServerTime()
         if timeOffset == 0 {
             try? await Task.sleep(nanoseconds: 500_000_000)
