@@ -53,6 +53,7 @@ final class BackupDataRestorer {
                             updated.withdrawalEnabled = record.withdrawalEnabled
                             updated.withdrawalAddress = record.withdrawalAddress
                             updated.cronExpression = record.cronExpression
+                            updated.targetAmount = record.targetAmount
                             updated.lastExecutedAt = record.lastExecutedAt
                             updated.nextExecutionAt = record.nextExecutionAt
                             try updated.update(db)
@@ -183,6 +184,7 @@ final class BackupDataRestorer {
             isEnabled: plan.isEnabled,
             withdrawalEnabled: plan.withdrawalEnabled,
             withdrawalAddress: plan.withdrawalAddress,
+            targetAmount: plan.targetAmount,
             createdAt: Double(plan.createdAt) / 1000.0,
             lastExecutedAt: plan.lastExecutedAt.map { Double($0) / 1000.0 },
             nextExecutionAt: plan.nextExecutionAt.map { Double($0) / 1000.0 }

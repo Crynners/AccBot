@@ -26,6 +26,10 @@ struct MainTabView: View {
     /// Whether the current gesture has been identified as horizontal.
     @State private var isDraggingHorizontally: Bool? = nil
 
+    /// Changelog auto-show on version update.
+    @State private var showChangelog = false
+    @State private var changelogEntries: [ChangelogEntry] = []
+
     var body: some View {
         VStack(spacing: 0) {
             GeometryReader { geo in
@@ -130,6 +134,21 @@ struct MainTabView: View {
                 .removeDuplicates()
         ) { count in
             router.unreadNotificationCount = count
+        }
+        .onAppear {
+            let currentBuild = Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0") ?? 0
+            let lastSeen = dependencies.userPreferences.lastSeenBuildNumber
+            if lastSeen > 0 && currentBuild > lastSeen {
+                let newEntries = ChangelogData.getNewEntries(since: lastSeen)
+                if !newEntries.isEmpty {
+                    changelogEntries = newEntries
+                    showChangelog = true
+                }
+            }
+            dependencies.userPreferences.lastSeenBuildNumber = currentBuild
+        }
+        .sheet(isPresented: $showChangelog) {
+            ChangelogView(entries: changelogEntries)
         }
     }
 

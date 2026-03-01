@@ -189,6 +189,13 @@ final class DcaDatabase {
             try db.execute(sql: "DELETE FROM notifications WHERE isArchived = 1")
         }
 
+        // Add optional target amount for goal tracking on DCA plans
+        migrator.registerMigration("v3_add_target_amount") { db in
+            try db.alter(table: "dca_plans") { t in
+                t.add(column: "targetAmount", .text)
+            }
+        }
+
         try migrator.migrate(dbPool)
     }
 }

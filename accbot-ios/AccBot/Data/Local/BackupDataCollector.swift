@@ -122,6 +122,7 @@ private extension DcaPlan {
             isEnabled: isEnabled,
             withdrawalEnabled: withdrawalEnabled,
             withdrawalAddress: withdrawalAddress,
+            targetAmount: targetAmount.map { "\($0)" },
             createdAt: Int64(createdAt.timeIntervalSince1970 * 1000),
             lastExecutedAt: lastExecutedAt.map { Int64($0.timeIntervalSince1970 * 1000) },
             nextExecutionAt: nextExecutionAt.map { Int64($0.timeIntervalSince1970 * 1000) }

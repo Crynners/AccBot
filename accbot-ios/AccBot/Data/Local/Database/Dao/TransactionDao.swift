@@ -153,6 +153,17 @@ final class TransactionDao {
         }
     }
 
+    func getAccumulatedCryptoByPlan(_ planId: Int64) throws -> Decimal {
+        try dbPool.read { db in
+            let row = try Row.fetchOne(db, sql: """
+                SELECT COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) as total
+                FROM transactions
+                WHERE planId = ? AND status = 'COMPLETED'
+                """, arguments: [planId])
+            return Decimal(row?["total"] as Double? ?? 0)
+        }
+    }
+
     // MARK: - Mutations
 
     @discardableResult

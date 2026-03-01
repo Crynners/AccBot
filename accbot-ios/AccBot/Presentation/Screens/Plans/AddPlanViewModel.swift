@@ -15,6 +15,7 @@ class AddPlanViewModel: ObservableObject {
     @Published var selectedStrategy: DcaStrategy = .classic
     @Published var withdrawalEnabled: Bool = false
     @Published var withdrawalAddress: String = ""
+    @Published var targetAmount: String = ""
     @Published var isSubmitting: Bool = false
     @Published var errorMessage: String?
 
@@ -199,6 +200,7 @@ class AddPlanViewModel: ObservableObject {
                 withdrawalAddress: withdrawalEnabled
                     ? withdrawalAddress.trimmingCharacters(in: .whitespaces)
                     : nil,
+                targetAmount: targetAmount.isEmpty ? nil : Decimal(string: targetAmount),
                 createdAt: now,
                 nextExecutionAt: nextExecution
             )

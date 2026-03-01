@@ -74,8 +74,8 @@ struct PortfolioView: View {
             pairPager
             controlsRow
             kpiSection
-            zoomHeader
             chartSection
+            zoomHeader
             legendSection
             drillDownChips
         }
@@ -239,14 +239,14 @@ struct PortfolioView: View {
                         valueColor: (snap.roiPercent ?? 0) >= 0 ? colors.primary : colors.error
                     )
                     kpiCard(
-                        title: String(localized: "Avg Buy Price"),
-                        value: formatFiat(snap.avgBuyPrice),
+                        title: String(localized: "Invested"),
+                        value: formatFiat(snap.totalInvested),
                         subtitle: viewModel.currentPair?.fiat
                     )
                     kpiCard(
-                        title: String(localized: "Transactions"),
-                        value: "\(snap.transactionCount)",
-                        subtitle: nil
+                        title: String(localized: "Avg Buy Price"),
+                        value: formatFiat(snap.avgBuyPrice),
+                        subtitle: viewModel.currentPair?.fiat
                     )
                 } else {
                     kpiCard(
@@ -263,15 +263,44 @@ struct PortfolioView: View {
                         valueColor: (viewModel.roiPercent ?? 0) >= 0 ? colors.primary : colors.error
                     )
                     kpiCard(
+                        title: String(localized: "Invested"),
+                        value: formatFiat(viewModel.totalInvested),
+                        subtitle: viewModel.currentPair?.fiat
+                    )
+                    kpiCard(
                         title: String(localized: "Avg Buy Price"),
                         value: formatFiat(viewModel.avgBuyPrice),
                         subtitle: viewModel.currentPair?.fiat
                     )
-                    kpiCard(
-                        title: String(localized: "Transactions"),
-                        value: "\(viewModel.transactionCount)",
-                        subtitle: nil
-                    )
+                }
+            }
+
+            // Single-pair extra KPIs: Crypto Price + Accumulated Crypto
+            if case .singlePair = viewModel.currentPage {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Spacing.sm) {
+                    if let snap = scrubbedKpi, isScrubbing {
+                        kpiCard(
+                            title: String(localized: "Crypto Price"),
+                            value: viewModel.currentPrice.map { formatFiat($0) } ?? "---",
+                            subtitle: viewModel.currentPair?.fiat
+                        )
+                        kpiCard(
+                            title: String(localized: "Accumulated"),
+                            value: formatCrypto(snap.cumulativeCrypto),
+                            subtitle: viewModel.currentPair?.crypto
+                        )
+                    } else {
+                        kpiCard(
+                            title: String(localized: "Crypto Price"),
+                            value: viewModel.currentPrice.map { formatFiat($0) } ?? "---",
+                            subtitle: viewModel.currentPair?.fiat
+                        )
+                        kpiCard(
+                            title: String(localized: "Accumulated"),
+                            value: formatCrypto(viewModel.totalCrypto),
+                            subtitle: viewModel.currentPair?.crypto
+                        )
+                    }
                 }
             }
 
@@ -403,6 +432,7 @@ struct PortfolioView: View {
                     PortfolioViewModel.ChartSeries.portfolioValue.localizedName: colors.primary,
                     PortfolioViewModel.ChartSeries.costBasis.localizedName: costBasisColor,
                     PortfolioViewModel.ChartSeries.cryptoPrice.localizedName: colors.warning,
+                    PortfolioViewModel.ChartSeries.avgBuyPrice.localizedName: avgBuyPriceColor,
                     PortfolioViewModel.ChartSeries.accumulatedCrypto.localizedName: colors.success,
                 ])
                 .chartLegend(.hidden)
@@ -537,7 +567,10 @@ struct PortfolioView: View {
         if case .aggregate = viewModel.currentPage {
             return [.portfolioValue, .costBasis]
         }
-        return PortfolioViewModel.ChartSeries.allCases
+        if viewModel.denomination == .fiat {
+            return [.portfolioValue, .costBasis, .cryptoPrice, .avgBuyPrice, .accumulatedCrypto]
+        }
+        return [.portfolioValue, .costBasis, .cryptoPrice, .accumulatedCrypto]
     }
 
     /// Distinct cost basis color that won't blend with chart grid lines.
@@ -545,11 +578,17 @@ struct PortfolioView: View {
         Color(hex: 0x8E99A4)
     }
 
+    /// Purple color matching Android's avg buy price line (#9C27B0).
+    private var avgBuyPriceColor: Color {
+        Color(red: 0.61, green: 0.15, blue: 0.69)
+    }
+
     private func seriesColor(_ series: PortfolioViewModel.ChartSeries) -> Color {
         switch series {
         case .portfolioValue: return colors.primary
         case .costBasis: return costBasisColor
         case .cryptoPrice: return colors.warning
+        case .avgBuyPrice: return avgBuyPriceColor
         case .accumulatedCrypto: return colors.success
         }
     }

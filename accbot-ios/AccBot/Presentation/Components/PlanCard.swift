@@ -10,6 +10,9 @@ struct PlanCard: View {
     var isLowBalance: Bool = false
     var withdrawalReady: Bool = false
     var withdrawalBalanceText: String? = nil
+    var goalProgress: Double? = nil
+    var goalText: String? = nil
+    var goalReached: Bool = false
 
     @Environment(\.accBotColors) private var colors
 
@@ -20,6 +23,7 @@ struct PlanCard: View {
                 Divider().background(colors.onSurfaceVariant.opacity(Opacity.divider))
                 detailsRow
                 nextExecutionRow
+                goalProgressRow
                 balanceDurationRow
                 withdrawalWarningRow
             }
@@ -40,9 +44,15 @@ struct PlanCard: View {
             CryptoIcon(symbol: plan.crypto, size: 36)
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text(plan.pair)
-                    .font(AccBotFonts.headline)
-                    .foregroundStyle(colors.onSurface)
+                HStack(spacing: Spacing.sm) {
+                    Text(plan.pair)
+                        .font(AccBotFonts.headline)
+                        .foregroundStyle(colors.onSurface)
+                    Text(plan.strategy.displayName)
+                        .font(AccBotFonts.caption)
+                        .italic()
+                        .foregroundStyle(colors.primary)
+                }
 
                 Text(plan.exchange.displayName)
                     .font(AccBotFonts.caption)
@@ -79,9 +89,6 @@ struct PlanCard: View {
                 value: plan.frequency.displayName
             )
 
-            Spacer()
-
-            strategyBadge
         }
     }
 
@@ -96,16 +103,6 @@ struct PlanCard: View {
                 .lineLimit(1)
                 .allowsTightening(true)
         }
-    }
-
-    private var strategyBadge: some View {
-        Text(plan.strategy.displayName)
-            .font(AccBotFonts.captionSmall)
-            .foregroundStyle(colors.primary)
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.xs)
-            .background(colors.primary.opacity(0.2))
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
     }
 
     // MARK: - Next Execution
@@ -135,6 +132,24 @@ struct PlanCard: View {
                         .font(AccBotFonts.captionSmall)
                         .foregroundStyle(colors.warning)
                 }
+            }
+        }
+    }
+
+    // MARK: - Goal Progress
+
+    @ViewBuilder
+    private var goalProgressRow: some View {
+        if let progress = goalProgress, let text = goalText {
+            let goalColor = goalReached ? colors.success : colors.primary
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                ProgressView(value: progress)
+                    .tint(goalColor)
+                    .scaleEffect(y: 0.6)
+                Text(text)
+                    .font(AccBotFonts.caption)
+                    .foregroundStyle(goalColor)
+                    .fontWeight(.medium)
             }
         }
     }

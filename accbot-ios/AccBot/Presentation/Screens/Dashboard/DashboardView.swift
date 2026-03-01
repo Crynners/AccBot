@@ -373,7 +373,10 @@ struct DashboardView: View {
                                 ? pwb.exchangeCryptoBalance.map {
                                     formatCryptoBalance($0, symbol: pwb.plan.crypto)
                                 }
-                                : nil
+                                : nil,
+                            goalProgress: goalProgress(for: pwb),
+                            goalText: goalText(for: pwb),
+                            goalReached: goalReached(for: pwb)
                         )
                     }
                 }
@@ -475,9 +478,15 @@ struct DashboardView: View {
                                                      ? colors.primary : colors.onSurfaceVariant)
 
                                 VStack(alignment: .leading) {
-                                    Text(plan.pair)
-                                        .font(AccBotFonts.headline)
-                                        .foregroundStyle(colors.onSurface)
+                                    HStack(spacing: Spacing.sm) {
+                                        Text(plan.pair)
+                                            .font(AccBotFonts.headline)
+                                            .foregroundStyle(colors.onSurface)
+                                        Text(plan.strategy.displayName)
+                                            .font(AccBotFonts.caption)
+                                            .italic()
+                                            .foregroundStyle(colors.primary)
+                                    }
                                     Text("\(plan.amount) \(plan.fiat) · \(plan.exchange.displayName)")
                                         .font(AccBotFonts.caption)
                                         .foregroundStyle(colors.onSurfaceVariant)
@@ -584,6 +593,33 @@ struct DashboardView: View {
         } else {
             return String(localized: "\(Int(days)) days")
         }
+    }
+
+    // MARK: - Goal Progress
+
+    private func goalProgress(for pwb: DashboardViewModel.PlanWithBalance) -> Double? {
+        guard let target = pwb.plan.targetAmount, target > 0,
+              let accumulated = pwb.accumulatedCrypto else { return nil }
+        return min(Double(truncating: accumulated as NSDecimalNumber) / Double(truncating: target as NSDecimalNumber), 1.0)
+    }
+
+    private func goalText(for pwb: DashboardViewModel.PlanWithBalance) -> String? {
+        guard let target = pwb.plan.targetAmount, target > 0,
+              let accumulated = pwb.accumulatedCrypto else { return nil }
+        let crypto = pwb.plan.crypto
+        let accStr = AccBotFormatters.formatCrypto(accumulated, symbol: crypto)
+        let targetStr = AccBotFormatters.formatCrypto(target, symbol: crypto)
+        if accumulated >= target {
+            return String(localized: "Goal reached! \(accStr) / \(targetStr)")
+        }
+        let pct = Int((Double(truncating: accumulated as NSDecimalNumber) / Double(truncating: target as NSDecimalNumber)) * 100)
+        return "\(accStr) / \(targetStr) (\(pct)%)"
+    }
+
+    private func goalReached(for pwb: DashboardViewModel.PlanWithBalance) -> Bool {
+        guard let target = pwb.plan.targetAmount, target > 0,
+              let accumulated = pwb.accumulatedCrypto else { return false }
+        return accumulated >= target
     }
 }
 

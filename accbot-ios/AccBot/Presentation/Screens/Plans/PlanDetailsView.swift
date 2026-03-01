@@ -162,9 +162,15 @@ struct PlanDetailsView: View {
                 CryptoIcon(symbol: plan.crypto, size: 48)
 
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text(plan.pair)
-                        .font(AccBotFonts.titleMedium)
-                        .foregroundStyle(colors.onSurface)
+                    HStack(spacing: Spacing.sm) {
+                        Text(plan.pair)
+                            .font(AccBotFonts.titleMedium)
+                            .foregroundStyle(colors.onSurface)
+                        Text(plan.strategy.displayName)
+                            .font(AccBotFonts.bodySmall)
+                            .italic()
+                            .foregroundStyle(colors.primary)
+                    }
 
                     Text(plan.exchange.displayName)
                         .font(AccBotFonts.bodySmall)
@@ -172,15 +178,6 @@ struct PlanDetailsView: View {
                 }
 
                 Spacer()
-
-                // Strategy badge
-                Text(plan.strategy.displayName)
-                    .font(AccBotFonts.captionSmall)
-                    .foregroundStyle(colors.primary)
-                    .padding(.horizontal, Spacing.sm)
-                    .padding(.vertical, Spacing.xs)
-                    .background(colors.primary.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
             }
 
             Divider().background(colors.onSurfaceVariant.opacity(0.3))

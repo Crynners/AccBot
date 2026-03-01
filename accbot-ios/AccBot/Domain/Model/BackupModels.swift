@@ -82,6 +82,7 @@ struct BackupPlan: Codable {
     let isEnabled: Bool
     let withdrawalEnabled: Bool
     let withdrawalAddress: String?
+    let targetAmount: String?
     let createdAt: Int64
     let lastExecutedAt: Int64?
     let nextExecutionAt: Int64?

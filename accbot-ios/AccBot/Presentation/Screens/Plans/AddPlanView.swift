@@ -41,6 +41,9 @@ struct AddPlanView: View {
                     // Auto-withdrawal
                     withdrawalSection
 
+                    // Goal tracking (optional target amount)
+                    targetAmountSection
+
                     // Monthly cost estimate
                     if let estimate = viewModel.monthlyCostEstimate {
                         monthlyCostCard(estimate)
@@ -453,6 +456,47 @@ struct AddPlanView: View {
         .padding(Spacing.lg)
         .background(colors.surface)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+    }
+
+    // MARK: - Target Amount (Goal Tracking)
+
+    private var targetAmountSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            sectionHeader(String(localized: "Target Amount (optional)"))
+
+            HStack(spacing: Spacing.sm) {
+                TextField(
+                    String(localized: "e.g. 0.1"),
+                    text: $viewModel.targetAmount
+                )
+                .font(AccBotFonts.titleMedium)
+                .foregroundStyle(colors.onSurface)
+                .keyboardType(.decimalPad)
+                .padding(Spacing.md)
+                .background(colors.surface)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                .accessibilityLabel(String(localized: "Target crypto amount"))
+                .onChange(of: viewModel.targetAmount) { newValue in
+                    let filtered = newValue.filter { $0.isNumber || $0 == "." || $0 == "," }
+                    let normalized = filtered.replacingOccurrences(of: ",", with: ".")
+                    let parts = normalized.split(separator: ".", maxSplits: 2)
+                    let sanitized = parts.count > 1
+                        ? "\(parts[0]).\(parts.dropFirst().joined())"
+                        : normalized
+                    if sanitized != newValue {
+                        viewModel.targetAmount = sanitized
+                    }
+                }
+
+                Text(viewModel.selectedCrypto)
+                    .font(AccBotFonts.headline)
+                    .foregroundStyle(colors.primary)
+            }
+
+            Text(String(localized: "Shows a progress bar on the dashboard to visualize your goal"))
+                .font(AccBotFonts.caption)
+                .foregroundStyle(colors.onSurfaceVariant)
+        }
     }
 
     // MARK: - Monthly Cost Estimate

@@ -14,6 +14,7 @@ struct EditPlanView: View {
     @State private var selectedStrategy: DcaStrategy = .classic
     @State private var withdrawalEnabled: Bool = false
     @State private var withdrawalAddress: String = ""
+    @State private var targetAmount: String = ""
     @State private var isSubmitting: Bool = false
     @State private var errorMessage: String?
     @State private var plan: DcaPlan?
@@ -29,6 +30,7 @@ struct EditPlanView: View {
     @State private var originalStrategy: DcaStrategy = .classic
     @State private var originalWithdrawalEnabled: Bool = false
     @State private var originalWithdrawalAddress: String = ""
+    @State private var originalTargetAmount: String = ""
 
     @Environment(\.accBotColors) private var colors
 
@@ -55,6 +57,7 @@ struct EditPlanView: View {
             || selectedStrategy != originalStrategy
             || withdrawalEnabled != originalWithdrawalEnabled
             || withdrawalAddress != originalWithdrawalAddress
+            || targetAmount != originalTargetAmount
     }
 
     private var isValid: Bool {
@@ -215,6 +218,9 @@ struct EditPlanView: View {
 
                 // Auto-withdrawal
                 withdrawalSection
+
+                // Goal tracking (optional target amount)
+                targetAmountSection
 
                 // Error message
                 if let error = errorMessage {
@@ -485,6 +491,47 @@ struct EditPlanView: View {
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
+    // MARK: - Target Amount (Goal Tracking)
+
+    private var targetAmountSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            sectionHeader(String(localized: "Target Amount (optional)"))
+
+            HStack(spacing: Spacing.sm) {
+                TextField(
+                    String(localized: "e.g. 0.1"),
+                    text: $targetAmount
+                )
+                .font(AccBotFonts.titleMedium)
+                .foregroundStyle(colors.onSurface)
+                .keyboardType(.decimalPad)
+                .padding(Spacing.md)
+                .background(colors.surface)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                .accessibilityLabel(String(localized: "Target crypto amount"))
+                .onChange(of: targetAmount) { newValue in
+                    let filtered = newValue.filter { $0.isNumber || $0 == "." || $0 == "," }
+                    let normalized = filtered.replacingOccurrences(of: ",", with: ".")
+                    let parts = normalized.split(separator: ".", maxSplits: 2)
+                    let sanitized = parts.count > 1
+                        ? "\(parts[0]).\(parts.dropFirst().joined())"
+                        : normalized
+                    if sanitized != newValue {
+                        targetAmount = sanitized
+                    }
+                }
+
+                Text(selectedCrypto)
+                    .font(AccBotFonts.headline)
+                    .foregroundStyle(colors.primary)
+            }
+
+            Text(String(localized: "Shows a progress bar on the dashboard to visualize your goal"))
+                .font(AccBotFonts.caption)
+                .foregroundStyle(colors.onSurfaceVariant)
+        }
+    }
+
     // MARK: - Save Button
 
     private var saveButton: some View {
@@ -558,6 +605,7 @@ struct EditPlanView: View {
                     selectedStrategy = loaded.strategy
                     withdrawalEnabled = loaded.withdrawalEnabled
                     withdrawalAddress = loaded.withdrawalAddress ?? ""
+                    targetAmount = loaded.targetAmount.map { NSDecimalNumber(decimal: $0).stringValue } ?? ""
                     // Save original values for change tracking
                     originalAmount = amount
                     originalFrequency = selectedFrequency
@@ -565,6 +613,7 @@ struct EditPlanView: View {
                     originalStrategy = selectedStrategy
                     originalWithdrawalEnabled = withdrawalEnabled
                     originalWithdrawalAddress = withdrawalAddress
+                    originalTargetAmount = targetAmount
                     isLoading = false
                 }
             } catch {
@@ -611,6 +660,7 @@ struct EditPlanView: View {
                 withdrawalAddress: withdrawalEnabled
                     ? withdrawalAddress.trimmingCharacters(in: .whitespaces)
                     : nil,
+                targetAmount: targetAmount.isEmpty ? nil : Decimal(string: targetAmount),
                 createdAt: existingPlan.createdAt,
                 lastExecutedAt: existingPlan.lastExecutedAt,
                 nextExecutionAt: nextExecution

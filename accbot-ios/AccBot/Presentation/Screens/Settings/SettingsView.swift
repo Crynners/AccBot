@@ -7,6 +7,8 @@ struct SettingsView: View {
     @Environment(\.accBotColors) private var colors
     @State private var dangerZoneExpanded = false
     @State private var showWithdrawalSheet = false
+    @State private var showChangelog = false
+    @State private var showNotificationInfo = false
 
     var body: some View {
         Form {
@@ -59,6 +61,12 @@ struct SettingsView: View {
         .sheet(isPresented: $showWithdrawalSheet) {
             WithdrawalThresholdsSheet(viewModel: viewModel)
         }
+        .sheet(isPresented: $showChangelog) {
+            ChangelogView(entries: ChangelogData.entries)
+        }
+        .sheet(isPresented: $showNotificationInfo) {
+            NotificationInfoSheet()
+        }
     }
 
     // MARK: - General
@@ -107,16 +115,26 @@ struct SettingsView: View {
             .accessibilityValue(languageDisplayName)
             .listRowBackground(colors.surface)
 
-            // Notifications toggle + system settings
+            // Notifications toggle + info + system settings
             HStack {
                 Toggle(String(localized: "Notifications"), isOn: $dependencies.userPreferences.notificationsEnabled)
+                Button {
+                    showNotificationInfo = true
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                        .foregroundStyle(colors.primary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(String(localized: "Notification info"))
                 Button {
                     if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
                         UIApplication.shared.open(url)
                     }
                 } label: {
-                    Image(systemName: "arrow.up.forward.square")
-                        .foregroundStyle(colors.primary)
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(colors.onSurfaceVariant)
                         .frame(minWidth: 44, minHeight: 44)
                         .contentShape(Rectangle())
                 }
@@ -339,6 +357,19 @@ struct SettingsView: View {
                 }
                 .listRowBackground(colors.surface)
             }
+
+            Button {
+                showChangelog = true
+            } label: {
+                HStack {
+                    Label(String(localized: "What's New"), systemImage: "star.circle")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .font(AccBotFonts.captionSmall)
+                }
+            }
+            .listRowBackground(colors.surface)
 
             Toggle(String(localized: "Sandbox Mode"), isOn: Binding(
                 get: { dependencies.userPreferences.sandboxMode },
@@ -629,5 +660,77 @@ struct WithdrawalThresholdsSheet: View {
                 )
             }
         }
+    }
+}
+
+// MARK: - Notification Info Sheet
+
+struct NotificationInfoSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.accBotColors) private var colors
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.lg) {
+                    infoRow(
+                        icon: "bell.badge",
+                        title: String(localized: "How Notifications Work"),
+                        text: String(localized: "AccBot sends local notifications when DCA purchases complete or fail. Notifications are processed on-device — no data is sent to external servers.")
+                    )
+
+                    infoRow(
+                        icon: "clock.arrow.circlepath",
+                        title: String(localized: "Background Execution"),
+                        text: String(localized: "iOS limits background execution to approximately every 15 minutes. For reliable DCA execution, open the app at least once daily. The app uses Background App Refresh when available.")
+                    )
+
+                    infoRow(
+                        icon: "gearshape",
+                        title: String(localized: "System Settings"),
+                        text: String(localized: "Make sure notifications are enabled in iOS Settings → AccBot → Notifications. You can also configure alert style, sounds, and badges there.")
+                    )
+
+                    infoRow(
+                        icon: "battery.75percent",
+                        title: String(localized: "Battery Optimization"),
+                        text: String(localized: "Disable Low Power Mode for best results. iOS may delay or skip background tasks when battery is low.")
+                    )
+                }
+                .padding(Spacing.lg)
+            }
+            .background(colors.background)
+            .navigationTitle(String(localized: "Notification Info"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(String(localized: "Done")) {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private func infoRow(icon: String, title: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: Spacing.md) {
+            Image(systemName: icon)
+                .font(AccBotFonts.titleSmall)
+                .foregroundStyle(colors.primary)
+                .frame(width: 32)
+
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(title)
+                    .font(AccBotFonts.headline)
+                    .foregroundStyle(colors.onSurface)
+                Text(text)
+                    .font(AccBotFonts.bodySmall)
+                    .foregroundStyle(colors.onSurfaceVariant)
+            }
+        }
+        .padding(Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 }

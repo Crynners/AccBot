@@ -19,6 +19,7 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
     var isEnabled: Bool
     var withdrawalEnabled: Bool
     var withdrawalAddress: String?
+    var targetAmount: String? // Decimal stored as TEXT, nil = no goal
     var createdAt: Double    // timeIntervalSince1970
     var lastExecutedAt: Double?
     var nextExecutionAt: Double?
@@ -44,6 +45,7 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
             isEnabled: isEnabled,
             withdrawalEnabled: withdrawalEnabled,
             withdrawalAddress: withdrawalAddress,
+            targetAmount: targetAmount.flatMap { Decimal(string: $0) },
             createdAt: Date(timeIntervalSince1970: createdAt),
             lastExecutedAt: lastExecutedAt.map { Date(timeIntervalSince1970: $0) },
             nextExecutionAt: nextExecutionAt.map { Date(timeIntervalSince1970: $0) }
@@ -63,6 +65,7 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
             isEnabled: plan.isEnabled,
             withdrawalEnabled: plan.withdrawalEnabled,
             withdrawalAddress: plan.withdrawalAddress,
+            targetAmount: plan.targetAmount.map { "\($0)" },
             createdAt: plan.createdAt.timeIntervalSince1970,
             lastExecutedAt: plan.lastExecutedAt?.timeIntervalSince1970,
             nextExecutionAt: plan.nextExecutionAt?.timeIntervalSince1970

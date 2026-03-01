@@ -20,9 +20,9 @@ struct HistoryView: View {
                 activeFilterChips
             }
 
-            if viewModel.isLoading && viewModel.transactions.isEmpty {
+            if viewModel.isLoading && viewModel.filteredTransactions.isEmpty {
                 LoadingStateView(message: "Loading transactions...")
-            } else if viewModel.transactions.isEmpty {
+            } else if viewModel.filteredTransactions.isEmpty {
                 VStack(spacing: Spacing.lg) {
                     EmptyStateView(
                         systemImage: viewModel.hasActiveFilters ? "doc.text.magnifyingglass" : "clock.arrow.circlepath",
@@ -85,6 +85,7 @@ struct HistoryView: View {
 }
             }
         }
+        .searchable(text: $viewModel.searchText, prompt: String(localized: "Search transactions…"))
         .sheet(isPresented: $viewModel.showFilterSheet) {
             filterSheet
         }
@@ -193,7 +194,7 @@ struct HistoryView: View {
 
     private var transactionList: some View {
         List {
-            ForEach(viewModel.transactions) { tx in
+            ForEach(viewModel.filteredTransactions) { tx in
                 Button {
                     router.navigate(to: .transactionDetails(tx.id))
                 } label: {
@@ -210,7 +211,7 @@ struct HistoryView: View {
                     }
                     .listRowBackground(colors.surface)
                     .onAppear {
-                        if tx.id == viewModel.transactions.last?.id {
+                        if tx.id == viewModel.filteredTransactions.last?.id {
                             viewModel.loadNextPage()
                         }
                     }
@@ -224,8 +225,8 @@ struct HistoryView: View {
                     Spacer()
                 }
                 .listRowBackground(colors.background)
-            } else if !viewModel.transactions.isEmpty {
-                Text(String(localized: "\(viewModel.transactions.count) transactions"))
+            } else if !viewModel.filteredTransactions.isEmpty {
+                Text(String(localized: "\(viewModel.filteredTransactions.count) transactions"))
                     .font(AccBotFonts.caption)
                     .foregroundStyle(colors.onSurfaceVariant)
                     .frame(maxWidth: .infinity)

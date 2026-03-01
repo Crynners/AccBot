@@ -13,6 +13,7 @@ struct DcaPlan: Identifiable, Equatable {
     let isEnabled: Bool
     let withdrawalEnabled: Bool
     let withdrawalAddress: String?
+    let targetAmount: Decimal?
     let createdAt: Date
     let lastExecutedAt: Date?
     let nextExecutionAt: Date?
@@ -29,6 +30,7 @@ struct DcaPlan: Identifiable, Equatable {
         isEnabled: Bool = true,
         withdrawalEnabled: Bool = false,
         withdrawalAddress: String? = nil,
+        targetAmount: Decimal? = nil,
         createdAt: Date = Date(),
         lastExecutedAt: Date? = nil,
         nextExecutionAt: Date? = nil
@@ -44,6 +46,7 @@ struct DcaPlan: Identifiable, Equatable {
         self.isEnabled = isEnabled
         self.withdrawalEnabled = withdrawalEnabled
         self.withdrawalAddress = withdrawalAddress
+        self.targetAmount = targetAmount
         self.createdAt = createdAt
         self.lastExecutedAt = lastExecutedAt
         self.nextExecutionAt = nextExecutionAt

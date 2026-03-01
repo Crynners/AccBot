@@ -105,6 +105,7 @@ final class PortfolioViewModel: ObservableObject {
         case portfolioValue = "Portfolio Value"
         case costBasis = "Cost Basis"
         case cryptoPrice = "Price"
+        case avgBuyPrice = "Avg Buy Price"
         case accumulatedCrypto = "Accumulated"
 
         var localizedName: String {
@@ -410,11 +411,13 @@ final class PortfolioViewModel: ObservableObject {
             var runningAccumulated: Decimal = 0
             var costBasisByIndex = [Decimal]()
             var accumulatedByIndex = [Decimal]()
+            var avgBuyPriceByIndex = [Decimal]()
             for tx in transactions {
                 runningCostBasis += tx.fiatAmount
                 runningAccumulated += tx.cryptoAmount
                 costBasisByIndex.append(runningCostBasis)
                 accumulatedByIndex.append(runningAccumulated)
+                avgBuyPriceByIndex.append(runningAccumulated > 0 ? runningCostBasis / runningAccumulated : 0)
             }
             for series in visibleSeries {
                 for (index, tx) in transactions.enumerated() {
@@ -426,6 +429,8 @@ final class PortfolioViewModel: ObservableObject {
                         value = costBasisByIndex[index]
                     case .cryptoPrice:
                         value = tx.price
+                    case .avgBuyPrice:
+                        value = avgBuyPriceByIndex[index]
                     case .accumulatedCrypto:
                         value = accumulatedByIndex[index]
                     }

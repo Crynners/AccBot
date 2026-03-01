@@ -57,6 +57,12 @@ final class UserPreferences: ObservableObject {
         didSet { defaults.set(lowBalanceThresholdDays, forKey: Keys.lowBalanceThresholdDays) }
     }
 
+    // MARK: - Changelog
+
+    @Published var lastSeenBuildNumber: Int {
+        didSet { defaults.set(lastSeenBuildNumber, forKey: Keys.lastSeenBuildNumber) }
+    }
+
     // MARK: - Background Execution
 
     @Published var lastBackgroundRun: Date? {
@@ -82,6 +88,7 @@ final class UserPreferences: ObservableObject {
         self.biometricLockEnabled = defaults.bool(forKey: Keys.biometricLockEnabled)
         self.sandboxMode = defaults.bool(forKey: Keys.sandboxMode)
         self.lowBalanceThresholdDays = max(1, min(14, defaults.object(forKey: Keys.lowBalanceThresholdDays) as? Int ?? 2))
+        self.lastSeenBuildNumber = defaults.integer(forKey: Keys.lastSeenBuildNumber)
         let bgTimestamp = defaults.double(forKey: Keys.lastBackgroundRun)
         self.lastBackgroundRun = bgTimestamp > 0 ? Date(timeIntervalSince1970: bgTimestamp) : nil
     }
@@ -100,6 +107,7 @@ final class UserPreferences: ObservableObject {
         static let biometricLockEnabled = "biometricLockEnabled"
         static let sandboxMode = "sandboxMode"
         static let lowBalanceThresholdDays = "lowBalanceThresholdDays"
+        static let lastSeenBuildNumber = "lastSeenBuildNumber"
         static let lastBackgroundRun = "lastBackgroundRun"
     }
 }

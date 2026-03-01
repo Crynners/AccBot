@@ -11,6 +11,7 @@ final class HistoryViewModel: ObservableObject {
     @Published var showDeleteConfirmation = false
     @Published var transactionToDelete: Transaction?
     @Published var errorMessage: String?
+    @Published var searchText: String = ""
 
     // Undo support
     @Published var undoTransaction: Transaction?
@@ -214,6 +215,21 @@ final class HistoryViewModel: ObservableObject {
         filterDateFrom = nil
         filterDateTo = nil
         loadData()
+    }
+
+    var filteredTransactions: [Transaction] {
+        guard !searchText.isEmpty else { return transactions }
+        let query = searchText.lowercased()
+        return transactions.filter { tx in
+            tx.crypto.lowercased().contains(query) ||
+            tx.fiat.lowercased().contains(query) ||
+            tx.exchange.displayName.lowercased().contains(query) ||
+            tx.exchange.rawValue.lowercased().contains(query) ||
+            (tx.exchangeOrderId?.lowercased().contains(query) ?? false) ||
+            "\(tx.fiatAmount)".contains(query) ||
+            "\(tx.cryptoAmount)".contains(query) ||
+            "\(tx.price)".contains(query)
+        }
     }
 
     var hasActiveFilters: Bool {

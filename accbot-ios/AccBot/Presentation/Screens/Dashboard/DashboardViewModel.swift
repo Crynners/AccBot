@@ -43,6 +43,7 @@ final class DashboardViewModel: ObservableObject {
         let isLowBalance: Bool
         let isOverWithdrawalThreshold: Bool
         let exchangeCryptoBalance: Decimal?
+        let accumulatedCrypto: Decimal?
 
         init(plan: DcaPlan,
              fiatBalance: Decimal? = nil,
@@ -50,7 +51,8 @@ final class DashboardViewModel: ObservableObject {
              remainingDays: Double? = nil,
              isLowBalance: Bool = false,
              isOverWithdrawalThreshold: Bool = false,
-             exchangeCryptoBalance: Decimal? = nil) {
+             exchangeCryptoBalance: Decimal? = nil,
+             accumulatedCrypto: Decimal? = nil) {
             self.plan = plan
             self.fiatBalance = fiatBalance
             self.remainingExecutions = remainingExecutions
@@ -58,6 +60,7 @@ final class DashboardViewModel: ObservableObject {
             self.isLowBalance = isLowBalance
             self.isOverWithdrawalThreshold = isOverWithdrawalThreshold
             self.exchangeCryptoBalance = exchangeCryptoBalance
+            self.accumulatedCrypto = accumulatedCrypto
         }
     }
 
@@ -254,12 +257,20 @@ final class DashboardViewModel: ObservableObject {
 
         guard !Task.isCancelled else { return }
 
+        // Pre-fetch accumulated crypto for plans with targetAmount
+        var accumulatedCache: [Int64: Decimal] = [:]
+        for plan in plans {
+            if plan.targetAmount != nil {
+                accumulatedCache[plan.id] = (try? deps.activeDatabase.transactionDao.getAccumulatedCryptoByPlan(plan.id)) ?? 0
+            }
+        }
+
         // Build result from cache (no more awaits)
         var result: [PlanWithBalance] = []
 
         for plan in plans {
             guard plan.isEnabled else {
-                result.append(PlanWithBalance(plan: plan))
+                result.append(PlanWithBalance(plan: plan, accumulatedCrypto: accumulatedCache[plan.id]))
                 continue
             }
 
@@ -305,13 +316,15 @@ final class DashboardViewModel: ObservableObject {
                     remainingDays: remainingDaysVal,
                     isLowBalance: remainingDaysVal < Double(thresholdDays),
                     isOverWithdrawalThreshold: isOverThreshold,
-                    exchangeCryptoBalance: cryptoBalance
+                    exchangeCryptoBalance: cryptoBalance,
+                    accumulatedCrypto: accumulatedCache[plan.id]
                 ))
             } else {
                 result.append(PlanWithBalance(
                     plan: plan,
                     isOverWithdrawalThreshold: isOverThreshold,
-                    exchangeCryptoBalance: cryptoBalance
+                    exchangeCryptoBalance: cryptoBalance,
+                    accumulatedCrypto: accumulatedCache[plan.id]
                 ))
             }
         }
