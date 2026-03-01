@@ -1,7 +1,7 @@
 import Foundation
 
-/// Non-sensitive settings stored in UserDefaults (same as Android SharedPreferences)
-@MainActor
+/// Non-sensitive settings stored in UserDefaults (same as Android SharedPreferences).
+/// UserDefaults is thread-safe for reads; @Published writes happen from UI (MainActor).
 final class UserPreferences: ObservableObject {
     private let defaults: UserDefaults
     private let suiteName = "com.accbot.dca.preferences"
