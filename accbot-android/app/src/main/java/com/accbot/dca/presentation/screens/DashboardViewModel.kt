@@ -13,8 +13,13 @@ import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.data.local.WithdrawalThresholdDao
 import com.accbot.dca.data.local.toDomain
+import com.accbot.dca.data.remote.CryptoData
+import com.accbot.dca.data.remote.FearGreedData
 import com.accbot.dca.data.remote.MarketDataService
 import com.accbot.dca.domain.model.DcaPlan
+import com.accbot.dca.domain.model.DcaStrategy
+import com.accbot.dca.domain.model.StrategyMultiplierResult
+import com.accbot.dca.domain.usecase.CalculateStrategyMultiplierUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.service.DcaForegroundService
@@ -22,6 +27,7 @@ import com.accbot.dca.worker.DcaWorker
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -55,7 +61,8 @@ data class DcaPlanWithBalance(
     val isLowBalance: Boolean = false,
     val isOverWithdrawalThreshold: Boolean = false,
     val exchangeCryptoBalance: BigDecimal? = null,
-    val accumulatedCrypto: BigDecimal? = null
+    val accumulatedCrypto: BigDecimal? = null,
+    val strategyMultiplier: StrategyMultiplierResult? = null
 )
 
 @Immutable
@@ -66,7 +73,12 @@ data class DashboardUiState(
     val isPriceLoading: Boolean = false,
     val isSandboxMode: Boolean = false,
     val runNowTriggered: Boolean = false,
-    val showRunNowSheet: Boolean = false
+    val showRunNowSheet: Boolean = false,
+    val fearGreedData: FearGreedData? = null,
+    val athDataByCrypto: Map<String, CryptoData> = emptyMap(),
+    val isMarketDataLoading: Boolean = false,
+    val showMarketPulse: Boolean = true,
+    val isMarketPulseExpanded: Boolean = true
 )
 
 @HiltViewModel
@@ -79,7 +91,8 @@ class DashboardViewModel @Inject constructor(
     private val exchangeApiFactory: ExchangeApiFactory,
     private val credentialsStore: CredentialsStore,
     private val exchangeBalanceDao: ExchangeBalanceDao,
-    private val withdrawalThresholdDao: WithdrawalThresholdDao
+    private val withdrawalThresholdDao: WithdrawalThresholdDao,
+    private val calculateStrategyMultiplier: CalculateStrategyMultiplierUseCase
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -101,7 +114,16 @@ class DashboardViewModel @Inject constructor(
         loadDataJob?.cancel()
         loadDataJob = viewModelScope.launch {
             val isSandbox = userPreferences.isSandboxMode()
-            _uiState.update { it.copy(isLoading = true, isSandboxMode = isSandbox) }
+            val showMarketPulse = userPreferences.isMarketPulseEnabled()
+            val isMarketPulseExpanded = userPreferences.isMarketPulseExpanded()
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    isSandboxMode = isSandbox,
+                    showMarketPulse = showMarketPulse,
+                    isMarketPulseExpanded = isMarketPulseExpanded
+                )
+            }
 
             combine(
                 dcaPlanDao.getAllPlans(),
@@ -109,6 +131,7 @@ class DashboardViewModel @Inject constructor(
             ) { planEntities, dbHoldings ->
                 Pair(planEntities, dbHoldings)
             }.collectLatest { (planEntities, dbHoldings) ->
+                refreshPricesJob?.cancel()
                 val plans = planEntities.map { it.toDomain() }
 
                 val holdings = mapHoldings(dbHoldings)
@@ -125,18 +148,39 @@ class DashboardViewModel @Inject constructor(
                     DcaPlanWithBalance(plan = plan, accumulatedCrypto = accumulated)
                 }
 
+                // Merge existing prices into fresh holdings to avoid KPI flash
+                val existingPrices = _uiState.value.holdings.associateBy(
+                    { "${it.crypto}/${it.fiat}" },
+                    { it }
+                )
+                val mergedHoldings = holdings.map { h ->
+                    val key = "${h.crypto}/${h.fiat}"
+                    val existing = existingPrices[key]
+                    if (existing?.currentPrice != null) {
+                        h.copy(
+                            currentPrice = existing.currentPrice,
+                            currentValue = existing.currentValue,
+                            roiAbsolute = existing.roiAbsolute,
+                            roiPercent = existing.roiPercent
+                        )
+                    } else h
+                }
+
                 _uiState.update { state ->
                     state.copy(
                         activePlans = plansWithBalance,
-                        holdings = holdings,
+                        holdings = mergedHoldings,
                         isLoading = false
                     )
                 }
 
                 // collectLatest cancels previous block on new emission,
                 // so these child coroutines are automatically cancelled
-                launch { fetchPricesForHoldings(holdings) }
+                launch { fetchPricesForHoldings(mergedHoldings) }
                 launch { fetchBalancesForPlans(plans, isSandbox) }
+                if (showMarketPulse) {
+                    launch { fetchMarketIndicators(plans) }
+                }
             }
         }
     }
@@ -169,9 +213,12 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchPricesForHoldings(holdings: List<CryptoHoldingWithPrice>) {
+    private suspend fun fetchPricesForHoldings(
+        holdings: List<CryptoHoldingWithPrice>,
+        manageLoadingState: Boolean = true
+    ) {
         if (holdings.isEmpty()) return
-        _uiState.update { it.copy(isPriceLoading = true) }
+        if (manageLoadingState) _uiState.update { it.copy(isPriceLoading = true) }
         val updatedHoldings = holdings.map { holding ->
             try {
                 val price = marketDataService.getCachedPrice(holding.crypto, holding.fiat)
@@ -196,7 +243,11 @@ class DashboardViewModel @Inject constructor(
             }
         }
         coroutineContext.ensureActive()
-        _uiState.update { it.copy(holdings = updatedHoldings, isPriceLoading = false) }
+        if (manageLoadingState) {
+            _uiState.update { it.copy(holdings = updatedHoldings, isPriceLoading = false) }
+        } else {
+            _uiState.update { it.copy(holdings = updatedHoldings) }
+        }
     }
 
     private suspend fun fetchBalancesForPlans(plans: List<DcaPlan>, isSandbox: Boolean) {
@@ -299,11 +350,98 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    fun refreshPrices() {
+    private suspend fun fetchMarketIndicators(plans: List<DcaPlan>) {
+        _uiState.update { it.copy(isMarketDataLoading = true) }
+        try {
+            // Fetch Fear & Greed index
+            val fearGreed = try {
+                marketDataService.getFearGreedIndex()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching Fear & Greed index", e)
+                null
+            }
+
+            // Fetch ATH data for each unique crypto/fiat pair
+            val uniquePairs = plans.map { it.crypto to it.fiat }.distinct()
+            val athData = mutableMapOf<String, CryptoData>()
+            for ((crypto, fiat) in uniquePairs) {
+                try {
+                    val data = marketDataService.getCryptoData(crypto, fiat)
+                    if (data != null) {
+                        athData[crypto] = data
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error fetching ATH data for $crypto/$fiat", e)
+                }
+            }
+
+            coroutineContext.ensureActive()
+            val currentCryptos = plans.map { it.crypto }.toSet()
+            _uiState.update { it.copy(
+                fearGreedData = fearGreed ?: it.fearGreedData,
+                athDataByCrypto = if (athData.isNotEmpty()) athData
+                    else it.athDataByCrypto.filterKeys { k -> k in currentCryptos },
+                isMarketDataLoading = false
+            ) }
+
+            // Calculate strategy multipliers for non-Classic plans
+            val nonClassicPlans = plans.filter { it.strategy !is DcaStrategy.Classic }
+            if (nonClassicPlans.isNotEmpty()) {
+                val multipliers = mutableMapOf<Long, StrategyMultiplierResult>()
+                for (plan in nonClassicPlans) {
+                    try {
+                        val result = calculateStrategyMultiplier(plan.strategy, plan.crypto, plan.fiat)
+                        multipliers[plan.id] = result
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error calculating multiplier for plan ${plan.id}", e)
+                    }
+                }
+
+                coroutineContext.ensureActive()
+                _uiState.update { current ->
+                    current.copy(
+                        activePlans = current.activePlans.map { pwb ->
+                            val mult = multipliers[pwb.plan.id]
+                            if (mult != null) pwb.copy(strategyMultiplier = mult) else pwb
+                        }
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching market indicators", e)
+            _uiState.update { it.copy(isMarketDataLoading = false) }
+        }
+    }
+
+    fun refreshPreferences() {
+        _uiState.update {
+            it.copy(showMarketPulse = userPreferences.isMarketPulseEnabled())
+        }
+    }
+
+    fun toggleMarketPulseExpanded() {
+        val newValue = !_uiState.value.isMarketPulseExpanded
+        userPreferences.setMarketPulseExpanded(newValue)
+        _uiState.update { it.copy(isMarketPulseExpanded = newValue) }
+    }
+
+    fun refreshAll() {
         marketDataService.invalidateCache()
         refreshPricesJob?.cancel()
         refreshPricesJob = viewModelScope.launch {
-            fetchPricesForHoldings(_uiState.value.holdings)
+            _uiState.update { it.copy(isPriceLoading = true) }
+            try {
+                val state = _uiState.value
+                val plans = state.activePlans.map { it.plan }
+                coroutineScope {
+                    launch { fetchPricesForHoldings(state.holdings, manageLoadingState = false) }
+                    if (state.showMarketPulse) {
+                        launch { fetchMarketIndicators(plans) }
+                    }
+                }
+            } finally {
+                _uiState.update { it.copy(isPriceLoading = false) }
+            }
         }
     }
 
