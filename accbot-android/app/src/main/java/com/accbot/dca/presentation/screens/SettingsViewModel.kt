@@ -45,6 +45,7 @@ data class SettingsUiState(
     val isBiometricLockEnabled: Boolean = false,
     val withdrawalThresholds: List<WithdrawalThreshold> = emptyList(),
     val availableCryptoExchangePairs: List<Pair<String, Exchange>> = emptyList(),
+    val isMarketPulseEnabled: Boolean = true,
     val appTheme: AppTheme = AppTheme.DARK,
     val dcaPlanCount: Int = 0,
     val transactionCount: Int = 0,
@@ -103,7 +104,8 @@ class SettingsViewModel @Inject constructor(
                 lowBalanceThresholdDays = userPreferences.getLowBalanceThresholdDays(),
                 languageTag = userPreferences.getLanguageTag(),
                 appTheme = userPreferences.getAppTheme(),
-                isBiometricLockEnabled = userPreferences.isBiometricLockEnabled()
+                isBiometricLockEnabled = userPreferences.isBiometricLockEnabled(),
+                isMarketPulseEnabled = userPreferences.isMarketPulseEnabled()
             )
         }
     }
@@ -156,6 +158,11 @@ class SettingsViewModel @Inject constructor(
     @Deprecated("Use requestSandboxModeChange() instead - requires app restart")
     fun toggleSandboxMode() {
         requestSandboxModeChange()
+    }
+
+    fun setMarketPulseEnabled(enabled: Boolean) {
+        userPreferences.setMarketPulseEnabled(enabled)
+        _uiState.update { it.copy(isMarketPulseEnabled = enabled) }
     }
 
     fun setBiometricLockEnabled(enabled: Boolean) {

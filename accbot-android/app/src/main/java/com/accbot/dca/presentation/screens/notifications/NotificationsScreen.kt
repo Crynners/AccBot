@@ -30,6 +30,7 @@ import com.accbot.dca.data.local.NotificationType
 import com.accbot.dca.domain.model.AppNotification
 import com.accbot.dca.presentation.components.EmptyState
 import com.accbot.dca.presentation.ui.theme.Error
+import com.accbot.dca.presentation.ui.theme.LocalSandboxMode
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.DateFormatters
@@ -53,6 +54,14 @@ fun NotificationsScreen(
                     )
                 },
                 actions = {
+                    if (LocalSandboxMode.current) {
+                        IconButton(onClick = { viewModel.createTestNotifications() }) {
+                            Icon(
+                                imageVector = Icons.Default.BugReport,
+                                contentDescription = "Create test notifications"
+                            )
+                        }
+                    }
                     if (unreadCount > 0) {
                         TextButton(onClick = { viewModel.markAllAsRead() }) {
                             Text(stringResource(R.string.notifications_mark_all_read))

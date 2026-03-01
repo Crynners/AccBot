@@ -9,6 +9,7 @@ import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.time.temporal.WeekFields
 import javax.inject.Inject
 
@@ -101,8 +102,12 @@ class CalculateChartDataUseCase @Inject constructor(
             nextTx = if (txIterator.hasNext()) txIterator.next() else null
         }
 
-        val emitMonthly = zoomLevel is ChartZoomLevel.Overview
-        val emitWeekly = zoomLevel is ChartZoomLevel.Year
+        // Adaptive aggregation: Overview adapts based on history length
+        val historyMonths = if (zoomLevel is ChartZoomLevel.Overview)
+            ChronoUnit.MONTHS.between(startDate, endDate) else 0L
+        val emitMonthly = zoomLevel is ChartZoomLevel.Overview && historyMonths > 12
+        val emitWeekly = zoomLevel is ChartZoomLevel.Year ||
+            (zoomLevel is ChartZoomLevel.Overview && historyMonths in 3..12)
         val emitBucketed = emitMonthly || emitWeekly
         val result = mutableListOf<ChartDataPoint>()
         var lastKnownPrice: BigDecimal? = null
@@ -227,8 +232,12 @@ class CalculateChartDataUseCase @Inject constructor(
             }
         }
 
-        val emitMonthly = zoomLevel is ChartZoomLevel.Overview
-        val emitWeekly = zoomLevel is ChartZoomLevel.Year
+        // Adaptive aggregation: Overview adapts based on history length
+        val historyMonths = if (zoomLevel is ChartZoomLevel.Overview)
+            ChronoUnit.MONTHS.between(startDate, endDate) else 0L
+        val emitMonthly = zoomLevel is ChartZoomLevel.Overview && historyMonths > 12
+        val emitWeekly = zoomLevel is ChartZoomLevel.Year ||
+            (zoomLevel is ChartZoomLevel.Overview && historyMonths in 3..12)
         val emitBucketed = emitMonthly || emitWeekly
         val result = mutableListOf<ChartDataPoint>()
         var currentDate = startDate

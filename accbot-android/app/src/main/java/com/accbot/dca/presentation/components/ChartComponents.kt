@@ -183,7 +183,12 @@ fun PortfolioLineChart(
 
     val xLabels = remember(chartData, zoomLevel) {
         val formatter = when (zoomLevel) {
-            is ChartZoomLevel.Overview -> DateTimeFormatter.ofPattern("MMM yyyy")
+            is ChartZoomLevel.Overview -> {
+                val spanDays = if (chartData.size >= 2)
+                    chartData.last().epochDay - chartData.first().epochDay else 0L
+                if (spanDays > 365) DateTimeFormatter.ofPattern("MMM yyyy")
+                else DateTimeFormatter.ofPattern("d MMM")
+            }
             is ChartZoomLevel.Year -> DateTimeFormatter.ofPattern("d MMM")
             is ChartZoomLevel.Month -> DateTimeFormatter.ofPattern("d")
         }
@@ -258,9 +263,15 @@ fun PortfolioLineChart(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textSize = 10.sp
     )
+    // Axis tick label styling — must be explicit for light theme support
+    val axisLabelComponent = rememberTextComponent(
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textSize = 10.sp
+    )
 
     // End (right) axis — accumulated crypto in BTC units
     val endAxisComponent = VerticalAxis.rememberEnd(
+        label = axisLabelComponent,
         title = cryptoSymbol,
         titleComponent = axisTitleComponent,
         itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
@@ -294,6 +305,7 @@ fun PortfolioLineChart(
                     verticalAxisPosition = Axis.Position.Vertical.End
                 ),
                 startAxis = VerticalAxis.rememberStart(
+                    label = axisLabelComponent,
                     title = unitSuffix,
                     titleComponent = axisTitleComponent,
                     itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
@@ -307,6 +319,7 @@ fun PortfolioLineChart(
                 ),
                 endAxis = if (hasRightAxis) endAxisComponent else null,
                 bottomAxis = HorizontalAxis.rememberBottom(
+                    label = axisLabelComponent,
                     valueFormatter = { _, value, _ ->
                         val index = value.toInt().coerceIn(0, xLabels.size - 1)
                         xLabels.getOrElse(index) { "" }

@@ -237,11 +237,11 @@ private fun AthBasedStrategyContent(currentMultiplier: Float?) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 // Rows
-                TierRow(stringResource(R.string.strategy_ath_tier_0_10), stringResource(R.string.strategy_ath_mult_50))
-                TierRow(stringResource(R.string.strategy_ath_tier_10_30), stringResource(R.string.strategy_ath_mult_100))
-                TierRow(stringResource(R.string.strategy_ath_tier_30_50), stringResource(R.string.strategy_ath_mult_150))
-                TierRow(stringResource(R.string.strategy_ath_tier_50_70), stringResource(R.string.strategy_ath_mult_200))
-                TierRow(stringResource(R.string.strategy_ath_tier_70_plus), stringResource(R.string.strategy_ath_mult_300))
+                TierRow(stringResource(R.string.strategy_ath_tier_0_20), stringResource(R.string.strategy_ath_mult_50))
+                TierRow(stringResource(R.string.strategy_ath_tier_20_40), stringResource(R.string.strategy_ath_mult_100))
+                TierRow(stringResource(R.string.strategy_ath_tier_40_60), stringResource(R.string.strategy_ath_mult_150))
+                TierRow(stringResource(R.string.strategy_ath_tier_60_80), stringResource(R.string.strategy_ath_mult_200))
+                TierRow(stringResource(R.string.strategy_ath_tier_80_100), stringResource(R.string.strategy_ath_mult_300))
             }
         }
 
