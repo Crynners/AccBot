@@ -54,16 +54,28 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Primary,
-    onPrimary = OnPrimary,
-    secondary = Secondary,
-    onSecondary = OnSecondary,
-    background = Color(0xFFF5F5F5),
+    primary = Color(0xFF2E9B7B),
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFC2EAD9),
+    onPrimaryContainer = Color(0xFF0A3A28),
+    secondary = Color(0xFF4A6E62),
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFCDE8DD),
+    onSecondaryContainer = Color(0xFF06201A),
+    background = Color(0xFFF8FBF9),
     onBackground = Color(0xFF1A1A2E),
-    surface = Color.White,
+    surface = Color(0xFFEDF5F0),
     onSurface = Color(0xFF1A1A2E),
-    surfaceVariant = Color(0xFFE0E0E0),
-    onSurfaceVariant = Color(0xFF666666),
+    surfaceVariant = Color(0xFFD4E5DE),
+    onSurfaceVariant = Color(0xFF4A5D55),
+    surfaceTint = Color(0xFF2E9B7B),
+    outline = Color(0xFF8FA99E),
+    outlineVariant = Color(0xFFC0D5CB),
+    surfaceContainerLowest = Color(0xFFFAFCFB),
+    surfaceContainerLow = Color(0xFFF5FAF7),
+    surfaceContainer = Color(0xFFF0F6F2),
+    surfaceContainerHigh = Color(0xFFEAF2ED),
+    surfaceContainerHighest = Color(0xFFE4EDE8),
     error = Error,
     onError = Color.White
 )
@@ -86,16 +98,28 @@ private val SandboxDarkColorScheme = darkColorScheme(
 
 // Sandbox light color scheme (orange theme)
 private val SandboxLightColorScheme = lightColorScheme(
-    primary = SandboxPrimary,
-    onPrimary = OnPrimary,
-    secondary = Secondary,
-    onSecondary = OnSecondary,
-    background = Color(0xFFF5F5F5),
+    primary = Color(0xFFE68A00),
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFFFDDB0),
+    onPrimaryContainer = Color(0xFF3D2600),
+    secondary = Color(0xFF6E5E50),
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFF5E0CC),
+    onSecondaryContainer = Color(0xFF2A1B0C),
+    background = Color(0xFFFFFCF8),
     onBackground = Color(0xFF1A1A2E),
-    surface = Color.White,
+    surface = Color(0xFFF5EDE2),
     onSurface = Color(0xFF1A1A2E),
-    surfaceVariant = Color(0xFFE0E0E0),
-    onSurfaceVariant = Color(0xFF666666),
+    surfaceVariant = Color(0xFFF0DCC8),
+    onSurfaceVariant = Color(0xFF5C4E42),
+    surfaceTint = Color(0xFFE68A00),
+    outline = Color(0xFFA89585),
+    outlineVariant = Color(0xFFD4C4B4),
+    surfaceContainerLowest = Color(0xFFFFFCF8),
+    surfaceContainerLow = Color(0xFFFFF9F2),
+    surfaceContainer = Color(0xFFFFF4E8),
+    surfaceContainerHigh = Color(0xFFFFF0E0),
+    surfaceContainerHighest = Color(0xFFFFEBD8),
     error = Error,
     onError = Color.White
 )
@@ -118,7 +142,10 @@ fun AccBotTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            window.navigationBarColor = colorScheme.background.toArgb()
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 
@@ -135,15 +162,15 @@ fun AccBotTheme(
 // ============================================
 
 /**
- * Returns the appropriate accent/primary color based on sandbox mode.
+ * Returns the appropriate accent/primary color based on sandbox mode and light/dark theme.
  * Use this instead of hardcoded `Primary` constant.
  */
 @Composable
-fun accentColor(): Color = if (LocalSandboxMode.current) SandboxPrimary else Primary
+fun accentColor(): Color = MaterialTheme.colorScheme.primary
 
 /**
- * Returns the appropriate success color based on sandbox mode.
+ * Returns the appropriate success color based on sandbox mode and light/dark theme.
  * Use this instead of hardcoded `Success` constant.
  */
 @Composable
-fun successColor(): Color = if (LocalSandboxMode.current) SandboxSuccess else Success
+fun successColor(): Color = MaterialTheme.colorScheme.primary

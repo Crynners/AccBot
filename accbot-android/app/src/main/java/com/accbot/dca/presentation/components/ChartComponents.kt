@@ -258,9 +258,15 @@ fun PortfolioLineChart(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textSize = 10.sp
     )
+    // Axis tick label styling — must be explicit for light theme support
+    val axisLabelComponent = rememberTextComponent(
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textSize = 10.sp
+    )
 
     // End (right) axis — accumulated crypto in BTC units
     val endAxisComponent = VerticalAxis.rememberEnd(
+        label = axisLabelComponent,
         title = cryptoSymbol,
         titleComponent = axisTitleComponent,
         itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
@@ -294,6 +300,7 @@ fun PortfolioLineChart(
                     verticalAxisPosition = Axis.Position.Vertical.End
                 ),
                 startAxis = VerticalAxis.rememberStart(
+                    label = axisLabelComponent,
                     title = unitSuffix,
                     titleComponent = axisTitleComponent,
                     itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
@@ -307,6 +314,7 @@ fun PortfolioLineChart(
                 ),
                 endAxis = if (hasRightAxis) endAxisComponent else null,
                 bottomAxis = HorizontalAxis.rememberBottom(
+                    label = axisLabelComponent,
                     valueFormatter = { _, value, _ ->
                         val index = value.toInt().coerceIn(0, xLabels.size - 1)
                         xLabels.getOrElse(index) { "" }
