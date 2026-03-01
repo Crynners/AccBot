@@ -22,6 +22,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.Immutable
+import java.time.Instant
 import javax.inject.Inject
 
 @Immutable
@@ -38,7 +39,9 @@ data class ExchangeDetailUiState(
     val plans: List<DcaPlanEntity> = emptyList(),
     val isApiImporting: Boolean = false,
     val apiImportProgress: String = "",
-    val apiImportResult: ApiImportResultState? = null
+    val apiImportResult: ApiImportResultState? = null,
+    val showImportDialog: Boolean = false,
+    val importSinceMillis: Long? = null
 )
 
 @HiltViewModel
@@ -143,7 +146,25 @@ class ExchangeDetailViewModel @Inject constructor(
         }
     }
 
-    fun importViaApi() {
+    fun showImportDialog() {
+        _uiState.update { it.copy(showImportDialog = true, importSinceMillis = null) }
+    }
+
+    fun dismissImportDialog() {
+        _uiState.update { it.copy(showImportDialog = false) }
+    }
+
+    fun setImportSinceDate(millis: Long?) {
+        _uiState.update { it.copy(importSinceMillis = millis) }
+    }
+
+    fun confirmImport() {
+        _uiState.update { it.copy(showImportDialog = false) }
+        val sinceDate = _uiState.value.importSinceMillis?.let { Instant.ofEpochMilli(it) }
+        importViaApi(sinceDate)
+    }
+
+    fun importViaApi(sinceDate: Instant? = null) {
         val state = _uiState.value
         val exchange = state.exchange ?: return
         if (state.isApiImporting) return
@@ -175,7 +196,8 @@ class ExchangeDetailViewModel @Inject constructor(
                         planId = plan.id,
                         crypto = plan.crypto,
                         fiat = plan.fiat,
-                        exchange = exchange
+                        exchange = exchange,
+                        sinceDate = sinceDate
                     ).collect { progress ->
                         when (progress) {
                             is ApiImportProgress.Fetching -> {

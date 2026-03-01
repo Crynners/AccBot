@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.Instant
 import javax.inject.Inject
 
 @Immutable
@@ -48,7 +49,9 @@ data class PlanDetailsUiState(
     val isBalanceLoading: Boolean = false,
     val isApiImporting: Boolean = false,
     val apiImportProgress: String = "",
-    val apiImportResult: ApiImportResultState? = null
+    val apiImportResult: ApiImportResultState? = null,
+    val showImportDialog: Boolean = false,
+    val importSinceMillis: Long? = null
 )
 
 @HiltViewModel
@@ -240,7 +243,25 @@ class PlanDetailsViewModel @Inject constructor(
         }
     }
 
-    fun importViaApi() {
+    fun showImportDialog() {
+        _uiState.update { it.copy(showImportDialog = true, importSinceMillis = null) }
+    }
+
+    fun dismissImportDialog() {
+        _uiState.update { it.copy(showImportDialog = false) }
+    }
+
+    fun setImportSinceDate(millis: Long?) {
+        _uiState.update { it.copy(importSinceMillis = millis) }
+    }
+
+    fun confirmImport() {
+        _uiState.update { it.copy(showImportDialog = false) }
+        val sinceDate = _uiState.value.importSinceMillis?.let { Instant.ofEpochMilli(it) }
+        importViaApi(sinceDate)
+    }
+
+    fun importViaApi(sinceDate: Instant? = null) {
         val plan = _uiState.value.plan ?: return
         if (_uiState.value.isApiImporting) return
 
@@ -265,7 +286,8 @@ class PlanDetailsViewModel @Inject constructor(
                     planId = plan.id,
                     crypto = plan.crypto,
                     fiat = plan.fiat,
-                    exchange = plan.exchange
+                    exchange = plan.exchange,
+                    sinceDate = sinceDate
                 ).collect { progress ->
                     when (progress) {
                         is ApiImportProgress.Fetching -> {

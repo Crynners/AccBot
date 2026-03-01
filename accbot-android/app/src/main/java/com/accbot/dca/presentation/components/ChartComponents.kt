@@ -183,7 +183,12 @@ fun PortfolioLineChart(
 
     val xLabels = remember(chartData, zoomLevel) {
         val formatter = when (zoomLevel) {
-            is ChartZoomLevel.Overview -> DateTimeFormatter.ofPattern("MMM yyyy")
+            is ChartZoomLevel.Overview -> {
+                val spanDays = if (chartData.size >= 2)
+                    chartData.last().epochDay - chartData.first().epochDay else 0L
+                if (spanDays > 365) DateTimeFormatter.ofPattern("MMM yyyy")
+                else DateTimeFormatter.ofPattern("d MMM")
+            }
             is ChartZoomLevel.Year -> DateTimeFormatter.ofPattern("d MMM")
             is ChartZoomLevel.Month -> DateTimeFormatter.ofPattern("d")
         }

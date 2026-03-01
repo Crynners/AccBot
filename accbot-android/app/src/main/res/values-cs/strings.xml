@@ -627,6 +627,10 @@
     <string name="import_api_no_new">Žádné nové transakce k importu</string>
     <string name="import_api_offer_title">Importovat historii transakcí?</string>
     <string name="import_api_offer_text">Chcete importovat existující historii transakcí z %1$s? Můžete to udělat i později v detailu burzy.</string>
+    <string name="import_api_dialog_text">Import historie obchodů pro %1$d plánů.</string>
+    <string name="import_api_from_label">Od</string>
+    <string name="import_api_all_history">Celá historie</string>
+    <string name="import_api_start">Importovat</string>
 
     <!-- Schedule Builder -->
     <string name="schedule_type_label">Typ rozvrhu</string>

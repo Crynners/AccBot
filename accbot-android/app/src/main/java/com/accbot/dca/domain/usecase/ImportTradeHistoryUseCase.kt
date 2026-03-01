@@ -32,7 +32,8 @@ class ImportTradeHistoryUseCase @Inject constructor(
         planId: Long,
         crypto: String,
         fiat: String,
-        exchange: Exchange
+        exchange: Exchange,
+        sinceDate: Instant? = null
     ): Flow<ApiImportProgress> = flow {
         try {
             // Fetch all pages — always from the beginning.
@@ -66,6 +67,11 @@ class ImportTradeHistoryUseCase @Inject constructor(
 
                 if (!result.hasMore || page >= maxPages) break
             } while (true)
+
+            // Filter by sinceDate if provided
+            if (sinceDate != null) {
+                allTrades.removeAll { it.timestamp.isBefore(sinceDate) }
+            }
 
             if (allTrades.isEmpty()) {
                 emit(ApiImportProgress.Complete(imported = 0, skipped = 0))

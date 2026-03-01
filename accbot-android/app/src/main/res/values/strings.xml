@@ -647,6 +647,10 @@
     <string name="import_api_no_new">No new transactions to import</string>
     <string name="import_api_offer_title">Import Transaction History?</string>
     <string name="import_api_offer_text">Would you like to import your existing transaction history from %1$s? You can also do this later from the exchange detail screen.</string>
+    <string name="import_api_dialog_text">Import trade history for %1$d plans.</string>
+    <string name="import_api_from_label">From</string>
+    <string name="import_api_all_history">All history</string>
+    <string name="import_api_start">Import</string>
 
     <!-- Exchange Instructions - Coinmate -->
     <string name="exchange_instructions_coinmate_1">Go to coinmate.io and log in</string>
