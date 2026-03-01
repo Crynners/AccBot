@@ -141,6 +141,7 @@ fun HistoryScreen(
             uiState.filter.status != null ||
             uiState.filter.dateFrom != null ||
             uiState.filter.dateTo != null
+    var showSearchBar by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -152,6 +153,16 @@ fun HistoryScreen(
                     }
                 },
                 actions = {
+                    // Search button
+                    IconButton(onClick = {
+                        showSearchBar = !showSearchBar
+                        if (!showSearchBar) viewModel.setSearchQuery("")
+                    }) {
+                        Icon(
+                            if (showSearchBar) Icons.Default.SearchOff else Icons.Default.Search,
+                            contentDescription = stringResource(R.string.history_search)
+                        )
+                    }
                     // Sort button
                     Box {
                         IconButton(onClick = { showSortMenu = true }) {
@@ -205,6 +216,27 @@ fun HistoryScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Search bar
+            if (showSearchBar) {
+                OutlinedTextField(
+                    value = uiState.filter.searchQuery,
+                    onValueChange = { viewModel.setSearchQuery(it) },
+                    placeholder = { Text(stringResource(R.string.history_search)) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (uiState.filter.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.common_clear))
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
             // Active filter chips
             if (hasActiveFilter) {
                 ActiveFilterChips(

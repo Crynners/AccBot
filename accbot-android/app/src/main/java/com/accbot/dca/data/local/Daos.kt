@@ -255,6 +255,9 @@ interface TransactionDao {
 
     @Query("SELECT * FROM transactions WHERE exchangeOrderId = :orderId LIMIT 1")
     suspend fun getByExchangeOrderId(orderId: String): TransactionEntity?
+
+    @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE planId = :planId AND status = 'COMPLETED'")
+    suspend fun getAccumulatedCryptoByPlan(planId: Long): String
 }
 
 data class CryptoFiatHolding(

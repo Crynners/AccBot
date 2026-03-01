@@ -72,6 +72,9 @@
     <string name="run_now_title">Spustit nyní</string>
     <string name="run_now_all_plans">Všechny plány</string>
     <string name="run_now_confirm">Spustit %1$d plán(ů)</string>
+    <string name="dashboard_portfolio_total">Celkové portfolio</string>
+    <string name="dashboard_portfolio_total_value">Hodnota</string>
+    <string name="dashboard_portfolio_total_invested">Investováno</string>
     <string name="dashboard_roi">ROI %1$s</string>
     <string name="dashboard_less_than_1_hour">&lt; 1 hodina</string>
     <plurals name="dashboard_hours">
@@ -196,6 +199,10 @@
     <string name="settings_language_system_default">Výchozí systémový</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_czech">Čeština</string>
+    <string name="settings_theme">Vzhled aplikace</string>
+    <string name="settings_theme_dark">Tmavý</string>
+    <string name="settings_theme_light">Světlý</string>
+    <string name="settings_theme_system">Podle systému</string>
     <string name="settings_notifications">Spravovat oznámení</string>
     <string name="settings_notifications_subtitle">Nastavení kanálů oznámení a zvuků</string>
 
@@ -230,6 +237,7 @@
     <string name="history_filter_date_range">Časové období</string>
     <string name="history_filter_date_from">Od</string>
     <string name="history_filter_date_to">Do</string>
+    <string name="history_search">Hledat transakce…</string>
     <string name="history_filter_date_select">Vybrat datum</string>
 
     <!-- Add Plan Screen -->
@@ -321,6 +329,7 @@
     <string name="chart_period_roi">%1$s za %2$s</string>
     <string name="chart_crypto_price">Cena %1$s</string>
     <string name="chart_accumulated_crypto">Akum. %1$s</string>
+    <string name="chart_avg_buy_price">Prům. nákupní cena</string>
     <string name="chart_explore">Prozkoumat historii:</string>
 
     <!-- Exchange Management Screen -->
@@ -759,6 +768,30 @@
     <string name="settings_delete_transactions_dialog_text">Trvale se smaže všech %1$d transakcí. Portfolio data budou ztracena. Tuto akci nelze vrátit zpět.</string>
     <string name="settings_delete_notifications_dialog_title">Smazat historii oznámení?</string>
     <string name="settings_delete_notifications_dialog_text">Trvale se smaže všech %1$d oznámení. Tuto akci nelze vrátit zpět.</string>
+
+    <!-- Notification Info -->
+    <string name="notification_info_title">Nastavení notifikací</string>
+    <string name="notification_info_body">AccBot používá 4 notifikační kanály. V nastavení Androidu si můžete každý kanál upravit individuálně:\n\n• DCA služba — stav služby na pozadí\n• Notifikace nákupů — úspěšné obchody\n• Chybové notifikace — neúspěšné obchody\n• Upozornění na nízký zůstatek — výstrahy zůstatku\n\nPro každý kanál si můžete nastavit vlastní zvuk, vibrace a výjimky z režimu Nerušit.</string>
+    <string name="notification_info_open_settings">Otevřít nastavení</string>
+
+    <!-- Changelog -->
+    <string name="changelog_whats_new">Co je nového</string>
+    <string name="changelog_got_it">Rozumím</string>
+    <string name="settings_changelog_subtitle">Poznámky k verzím a nové funkce</string>
+    <string name="changelog_title_2_2_1">Verze 2.2.1</string>
+    <string name="changelog_2_2_1_feature_1">Sledování cíle — nastavte cílové množství kryptoměny pro DCA plán</string>
+    <string name="changelog_2_2_1_feature_2">Výběr vzhledu — tmavý, světlý nebo podle systému</string>
+    <string name="changelog_2_2_1_feature_3">Celkový přehled portfolia na Dashboardu</string>
+    <string name="changelog_2_2_1_feature_4">Vyhledávání v historii transakcí</string>
+    <string name="changelog_2_2_1_feature_5">Informace o notifikačních kanálech v Nastavení</string>
+    <string name="changelog_2_2_1_feature_6">Přehled novinek po aktualizaci</string>
+
+    <!-- Goal Tracking -->
+    <string name="plan_target_amount">Cílové množství (volitelné)</string>
+    <string name="plan_target_amount_hint">např. 0,1</string>
+    <string name="plan_target_amount_description">Zobrazí progress bar na dashboardu pro vizualizaci cíle</string>
+    <string name="dashboard_goal_progress">%1$s / %2$s %3$s (%4$s%%)</string>
+    <string name="dashboard_goal_reached">Cíl dosažen!</string>
 
     <!-- Accessibility -->
     <string name="a11y_retry">Opakovat</string>

@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.collectAsState
@@ -36,6 +37,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.accbot.dca.data.local.AppTheme
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.UserPreferences
@@ -61,6 +63,8 @@ import com.accbot.dca.presentation.screens.backup.BackupExportScreen
 import com.accbot.dca.presentation.screens.backup.BackupImportScreen
 import com.accbot.dca.presentation.screens.portfolio.PortfolioScreen
 import com.accbot.dca.presentation.screens.splash.SplashScreen
+import com.accbot.dca.presentation.changelog.ChangelogData
+import com.accbot.dca.presentation.components.ChangelogSheet
 import com.accbot.dca.presentation.ui.theme.AccBotTheme
 import com.accbot.dca.data.local.NotificationDao
 import com.accbot.dca.service.NotificationService
@@ -106,7 +110,31 @@ class MainActivity : AppCompatActivity() {
             var isUnlocked by rememberSaveable { mutableStateOf(false) }
             val biometricEnabled = userPreferences.isBiometricLockEnabled()
 
-            AccBotTheme(isSandboxMode = isSandboxMode) {
+            // Theme: collect reactive flow so changes apply immediately
+            val appTheme by userPreferences.appThemeFlow.collectAsState()
+            val darkTheme = when (appTheme) {
+                AppTheme.DARK -> true
+                AppTheme.LIGHT -> false
+                AppTheme.SYSTEM -> isSystemInDarkTheme()
+            }
+
+            // Changelog: show on first launch after update
+            var showChangelog by rememberSaveable { mutableStateOf(false) }
+            var changelogEntries by remember { mutableStateOf(emptyList<com.accbot.dca.presentation.changelog.ChangelogEntry>()) }
+            LaunchedEffect(Unit) {
+                val currentVersion = BuildConfig.VERSION_CODE
+                val lastSeen = userPreferences.getLastSeenVersionCode()
+                if (lastSeen > 0 && currentVersion > lastSeen) {
+                    val newEntries = ChangelogData.getNewEntries(lastSeen)
+                    if (newEntries.isNotEmpty()) {
+                        changelogEntries = newEntries
+                        showChangelog = true
+                    }
+                }
+                userPreferences.setLastSeenVersionCode(currentVersion)
+            }
+
+            AccBotTheme(darkTheme = darkTheme, isSandboxMode = isSandboxMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -123,6 +151,14 @@ class MainActivity : AppCompatActivity() {
                                 onboardingPreferences.setOnboardingCompleted(true)
                             },
                             pendingTab = pendingTab
+                        )
+                    }
+
+                    // Changelog bottom sheet
+                    if (showChangelog) {
+                        ChangelogSheet(
+                            entries = changelogEntries,
+                            onDismiss = { showChangelog = false }
                         )
                     }
                 }

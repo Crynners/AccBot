@@ -14,6 +14,7 @@ import com.accbot.dca.data.local.MonthlySummaryDao
 import com.accbot.dca.data.local.NotificationDao
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.TransactionDao
+import com.accbot.dca.data.local.AppTheme
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.data.local.WithdrawalDao
 import com.accbot.dca.data.local.WithdrawalThresholdDao
@@ -44,6 +45,7 @@ data class SettingsUiState(
     val isBiometricLockEnabled: Boolean = false,
     val withdrawalThresholds: List<WithdrawalThreshold> = emptyList(),
     val availableCryptoExchangePairs: List<Pair<String, Exchange>> = emptyList(),
+    val appTheme: AppTheme = AppTheme.DARK,
     val dcaPlanCount: Int = 0,
     val transactionCount: Int = 0,
     val notificationCount: Int = 0
@@ -95,6 +97,7 @@ class SettingsViewModel @Inject constructor(
                 isSandboxMode = isSandbox,
                 lowBalanceThresholdDays = userPreferences.getLowBalanceThresholdDays(),
                 languageTag = userPreferences.getLanguageTag(),
+                appTheme = userPreferences.getAppTheme(),
                 isBiometricLockEnabled = userPreferences.isBiometricLockEnabled()
             )
         }
@@ -153,6 +156,11 @@ class SettingsViewModel @Inject constructor(
     fun setBiometricLockEnabled(enabled: Boolean) {
         userPreferences.setBiometricLockEnabled(enabled)
         _uiState.update { it.copy(isBiometricLockEnabled = enabled) }
+    }
+
+    fun setTheme(theme: AppTheme) {
+        userPreferences.setAppTheme(theme)
+        _uiState.update { it.copy(appTheme = theme) }
     }
 
     fun setLanguage(tag: String) {

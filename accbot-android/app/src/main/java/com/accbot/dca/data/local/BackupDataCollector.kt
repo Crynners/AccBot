@@ -101,7 +101,8 @@ class BackupDataCollector @Inject constructor(
         withdrawalAddress = withdrawalAddress,
         createdAt = createdAt.toEpochMilli(),
         lastExecutedAt = lastExecutedAt?.toEpochMilli(),
-        nextExecutionAt = nextExecutionAt?.toEpochMilli()
+        nextExecutionAt = nextExecutionAt?.toEpochMilli(),
+        targetAmount = targetAmount?.toPlainString()
     )
 
     private fun TransactionEntity.toBackup() = BackupTransaction(

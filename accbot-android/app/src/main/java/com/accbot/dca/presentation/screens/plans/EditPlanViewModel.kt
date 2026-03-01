@@ -41,7 +41,8 @@ data class EditPlanUiState(
     val error: String? = null,
     val addressError: String? = null,
     val monthlyCostEstimate: MonthlyCostEstimate? = null,
-    val minOrderSize: BigDecimal? = null
+    val minOrderSize: BigDecimal? = null,
+    val targetAmount: String = ""
 ) {
     val amountBelowMinimum: Boolean
         get() {
@@ -146,6 +147,7 @@ class EditPlanViewModel @Inject constructor(
                         selectedStrategy = plan.strategy,
                         withdrawalEnabled = plan.withdrawalEnabled,
                         withdrawalAddress = plan.withdrawalAddress ?: "",
+                        targetAmount = plan.targetAmount?.toPlainString() ?: "",
                         isLoading = false
                     )
                 }
@@ -201,6 +203,10 @@ class EditPlanViewModel @Inject constructor(
     fun selectStrategy(strategy: DcaStrategy) {
         _uiState.update { it.copy(selectedStrategy = strategy) }
         updateMonthlyCostEstimate()
+    }
+
+    fun setTargetAmount(value: String) {
+        _uiState.update { it.copy(targetAmount = value) }
     }
 
     fun setWithdrawalEnabled(enabled: Boolean) {
@@ -283,7 +289,8 @@ class EditPlanViewModel @Inject constructor(
                     strategy = state.selectedStrategy,
                     withdrawalEnabled = state.withdrawalEnabled,
                     withdrawalAddress = if (state.withdrawalEnabled) state.withdrawalAddress.trim() else null,
-                    nextExecutionAt = nextExecution
+                    nextExecutionAt = nextExecution,
+                    targetAmount = state.targetAmount.toBigDecimalOrNull()
                 )
 
                 dcaPlanDao.updatePlan(updatedPlan)
