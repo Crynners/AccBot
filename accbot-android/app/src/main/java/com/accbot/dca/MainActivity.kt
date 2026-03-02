@@ -58,7 +58,6 @@ import com.accbot.dca.presentation.screens.onboarding.*
 import com.accbot.dca.presentation.screens.history.TransactionDetailsScreen
 import com.accbot.dca.presentation.screens.plans.EditPlanScreen
 import com.accbot.dca.presentation.screens.plans.PlanDetailsScreen
-import com.accbot.dca.presentation.screens.ImportCsvScreen
 import com.accbot.dca.presentation.screens.backup.BackupExportScreen
 import com.accbot.dca.presentation.screens.backup.BackupImportScreen
 import com.accbot.dca.presentation.screens.portfolio.PortfolioScreen
@@ -409,9 +408,6 @@ fun AccBotApp(
                 onNavigateToEdit = {
                     navController.navigate(Screen.EditPlan.createRoute(planId))
                 },
-                onNavigateToImport = {
-                    navController.navigate(Screen.ImportCsv.createRoute(planId))
-                },
                 onNavigateToHistory = { crypto, fiat ->
                     navController.navigate(Screen.History.createRoute(crypto, fiat))
                 }
@@ -429,24 +425,6 @@ fun AccBotApp(
                 planId = planId,
                 onNavigateBack = { navController.popBackStack() },
                 onPlanUpdated = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = Screen.ImportCsv.route,
-            arguments = listOf(
-                navArgument(Screen.PLAN_ID_ARG) { type = NavType.LongType }
-            )
-        ) { backStackEntry ->
-            val planId = backStackEntry.arguments?.getLong(Screen.PLAN_ID_ARG) ?: return@composable
-            ImportCsvScreen(
-                planId = planId,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToHistory = {
-                    navController.navigate(Screen.History.createRoute()) {
-                        popUpTo(Screen.PlanDetails.createRoute(planId)) { inclusive = false }
-                    }
-                }
             )
         }
 

@@ -91,11 +91,6 @@ enum class Exchange(
 fun Exchange.supportsSandbox(): Boolean = sandboxSupport == SandboxSupport.FULL
 
 /**
- * Check if exchange supports CSV transaction history import
- */
-val Exchange.supportsImport: Boolean get() = this == Exchange.COINMATE
-
-/**
  * Check if exchange supports API-based transaction history import
  */
 val Exchange.supportsApiImport: Boolean get() = this in setOf(Exchange.COINMATE, Exchange.BINANCE, Exchange.KRAKEN, Exchange.COINBASE)
