@@ -1,27 +1,83 @@
 [
   {
+    "versionCode": 24000,
+    "version": "2.4.0",
+    "title": {
+      "en": "Market Pulse, Adaptive Charts & Cleaner UI",
+      "cs": "Market Pulse, adaptivní grafy a čistší UI"
+    },
+    "features": {
+      "en": [
+        "Market Pulse dashboard card — Fear & Greed gauge + ATH distance",
+        "Collapsible Market Pulse with settings toggle",
+        "Adaptive chart aggregation — daily, weekly, or monthly based on data span",
+        "Avg buy price line in portfolio charts",
+        "API import date filter — choose start date for imports",
+        "Consolidated plan details screen (cleaner layout)",
+        "Read/unread notifications with swipe-to-delete",
+        "Reorganized Settings (fewer sections, WCAG accessibility)",
+        "Unified Fear & Greed 5-level classification",
+        "Light theme polish and color fixes",
+        "Removed CSV import (replaced by API import)"
+      ],
+      "cs": [
+        "Market Pulse karta na Dashboard — Fear & Greed ukazatel + vzdálenost od ATH",
+        "Sbalitelný Market Pulse s přepínačem v Nastavení",
+        "Adaptivní granularita grafů — denní, týdenní nebo měsíční dle rozsahu dat",
+        "Průměrná nákupní cena v grafech portfolia",
+        "Filtr data importu — výběr počátečního data pro API importy",
+        "Přehlednější obrazovka detailu plánu",
+        "Přečtené/nepřečtené notifikace se smazáním swipem",
+        "Přeorganizované Nastavení (méně sekcí, WCAG přístupnost)",
+        "Sjednocená 5-úrovňová klasifikace Fear & Greed",
+        "Vylepšení světlého motivu a opravy barev",
+        "Odstraněn CSV import (nahrazen API importem)"
+      ]
+    }
+  },
+  {
+    "versionCode": 23000,
+    "version": "2.3.0",
+    "title": {
+      "en": "Backup & Restore",
+      "cs": "Záloha a obnova"
+    },
+    "features": {
+      "en": [
+        "Encrypted backup export and import",
+        "Merge or replace restore modes",
+        "Seed phrase import support"
+      ],
+      "cs": [
+        "Šifrovaný export a import zálohy",
+        "Režimy obnovy: sloučení nebo nahrazení",
+        "Podpora importu seed phrase"
+      ]
+    }
+  },
+  {
     "versionCode": 22100,
     "version": "2.2.1",
     "title": {
       "en": "Goal Tracking, Search & Themes",
-      "cs": "Sledov\u00e1n\u00ed c\u00edl\u016f, vyhled\u00e1v\u00e1n\u00ed a motivy"
+      "cs": "Sledování cílů, vyhledávání a motivy"
     },
     "features": {
       "en": [
-        "Goal tracking \u2014 set a target crypto amount for your DCA plan",
-        "Theme selection \u2014 choose Dark, Light, or System",
+        "Goal tracking — set a target crypto amount for your DCA plan",
+        "Theme selection — choose Dark, Light, or System",
         "Total portfolio summary on Dashboard",
         "Transaction history search",
         "Notification channel info in Settings",
-        "What\u2019s New screen after updates"
+        "What's New screen after updates"
       ],
       "cs": [
-        "Sledov\u00e1n\u00ed c\u00edl\u016f \u2014 nastaven\u00ed c\u00edlov\u00e9 \u010d\u00e1stky kryptom\u011bny pro DCA pl\u00e1n",
-        "V\u00fdb\u011br motivu \u2014 Tmav\u00fd, Sv\u011btl\u00fd nebo Podle syst\u00e9mu",
-        "Celkov\u00e9 shrnut\u00ed portfolia na Dashboard",
-        "Vyhled\u00e1v\u00e1n\u00ed v historii transakc\u00ed",
-        "Informace o kan\u00e1lu ozn\u00e1men\u00ed v Nastaven\u00ed",
-        "Obrazovka Co je nov\u00e9ho po aktualizac\u00edch"
+        "Sledování cílů — nastavení cílové částky kryptoměny pro DCA plán",
+        "Výběr motivu — Tmavý, Světlý nebo Podle systému",
+        "Celkové shrnutí portfolia na Dashboard",
+        "Vyhledávání v historii transakcí",
+        "Informace o kanálu oznámení v Nastavení",
+        "Obrazovka Co je nového po aktualizacích"
       ]
     }
   }
