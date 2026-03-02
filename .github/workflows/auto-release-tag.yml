@@ -5,6 +5,9 @@ on:
     types: [closed]
     branches: [main]
 
+permissions:
+  contents: write
+
 jobs:
   create-tag:
     if: >
@@ -25,7 +28,6 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          token: ${{ secrets.PAT_GITHUB }}
 
       - name: Create and push tag
         run: |
