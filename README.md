@@ -1,9 +1,11 @@
 [![Community Chat](https://img.shields.io/badge/community%20chat-telegram-%235351FB)](https://t.me/accbotsupport)
-[![MIT License](https://img.shields.io/apm/l/atomic-design-ui.svg?)](https://github.com/Crynners/AccBot/blob/main/LICENSE)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Crynners/AccBot/blob/main/LICENSE)
 [![PR's Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com)
 [![GitHub Release](https://img.shields.io/github/release/crynners/accbot.svg?style=flat)](https://github.com/Crynners/AccBot/releases/latest)
 [![Github All Releases](https://img.shields.io/github/downloads/crynners/accbot/total.svg)](https://github.com/Crynners/AccBot/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-brightgreen?logo=android)](https://github.com/Crynners/AccBot/releases/latest)
+[![iOS](https://img.shields.io/badge/iOS-coming%20soon-lightgrey?logo=apple)](https://crynners.github.io/AccBot/)
+[![Website](https://img.shields.io/badge/website-accbot-4ECCA3?style=flat&logo=github)](https://crynners.github.io/AccBot/)
 
 _Read README in [Czech <img src="https://cdn.countryflags.com/thumbs/czech-republic/flag-400.png" width=25 height=16 />](https://github.com/Crynners/AccBot/blob/main/README.cs.md)_
 
@@ -12,6 +14,8 @@ _Read README in [Czech <img src="https://cdn.countryflags.com/thumbs/czech-repub
 **Stack Sats. Stay Humble.**
 
 Open-source, self-custody crypto DCA app for Android. iOS coming soon.
+
+Visit our **[website](https://crynners.github.io/AccBot/)** for screenshots and more.
 
 - **Self-custody** — API keys never leave your device
 - **7 exchanges** supported
@@ -128,22 +132,29 @@ AccBot is completely free. We believe regular saving in Bitcoin is the best way 
 
 If you'd like to support us, we certainly won't stop you. Below are wallets where you can send us a donation — for example, for a beer. :) Thank you <3
 
-- **BTC**: bc1q2hz79m4csklecqgusu9e2yjnrr6e9ca6nhu0at
-     - <img src="https://user-images.githubusercontent.com/87997650/127651099-d9e1b381-adcf-46a5-9d17-59f87176304d.png" width="150" height="150" />
-- **LTC**: LTXdCFBYHgVLa8cBNBqwEvaQLi8tENY5R3
-     - <img src="https://user-images.githubusercontent.com/87997650/127651223-0abe025d-950b-445e-8196-7c113853b313.png" width="150" height="150" />
-- **XMR**: 49QBko3UdegAkx6g8foqjs9efQD6rrhsPEoTqP9HmA2LCUZsJ8xBD2JZSMEdzhA5NJ9SrVhzu2uJXRUvL2kAiV45LyDBCUt
-     - <img src="https://user-images.githubusercontent.com/87997650/127651801-cc35dfc0-f1ce-4dd0-ae0f-211fab41e2fb.png" width="150" height="150" />
-- **DOGE**: DR9mEaVLmx3gxqiqffwYQcLsT1upRL3xe9
-     - <img src="https://user-images.githubusercontent.com/87997650/127651630-2bb06de7-3b7a-42af-86b0-8b8fa0a6d59a.png" width="150" height="150" />
-- **ETH**: 0x8A944bcb5919dF04C5207939749C40A61f88188C
-     - <img src="https://user-images.githubusercontent.com/87997650/127653313-e989e607-f1db-40e9-a341-7cbdbd9fdfd0.png" width="150" height="150" />
-- **DOT**: 15sBCVyWu5Gy9VnzQpid4ggC1MmguBBd1xotUVbsbbRWddun
-     - <img src="https://user-images.githubusercontent.com/87997650/127651761-6484c9f4-547c-475e-a5ec-2029e6ee1699.png" width="150" height="150" />
-- **BNB**: bnb1lwcgq8emrjgptxg4hm37d5tf2yunrph842awrh
-     - <img src="https://user-images.githubusercontent.com/87997650/127651542-1fa0b32b-ed30-4a9a-b1cd-1622ef1044cf.png" width="150" height="150" />
-- **ADA**: addr1qxgfp7xf8rpg7laque78queavpfdztajgl3hr8kuanuqgdysjruvjwxz3al6penuwpen6czj6yhmy3lrwx0dem8cqs6qr8y8fj
-     - <img src="https://user-images.githubusercontent.com/87997650/127651500-df50eaee-15aa-415e-8a0b-044f22d89493.png" width="150" height="150" />
+| Crypto | Address |
+|--------|---------|
+| **BTC** | `bc1q2hz79m4csklecqgusu9e2yjnrr6e9ca6nhu0at` |
+| **LTC** | `LTXdCFBYHgVLa8cBNBqwEvaQLi8tENY5R3` |
+| **ETH** | `0x8A944bcb5919dF04C5207939749C40A61f88188C` |
+| **XMR** | `49QBko3UdegAkx6g8foqjs9efQD6rrhsPEoTqP9HmA2LCUZsJ8xBD2JZSMEdzhA5NJ9SrVhzu2uJXRUvL2kAiV45LyDBCUt` |
+| **DOGE** | `DR9mEaVLmx3gxqiqffwYQcLsT1upRL3xe9` |
+| **DOT** | `15sBCVyWu5Gy9VnzQpid4ggC1MmguBBd1xotUVbsbbRWddun` |
+| **BNB** | `bnb1lwcgq8emrjgptxg4hm37d5tf2yunrph842awrh` |
+| **ADA** | `addr1qxgfp7xf8rpg7laque78queavpfdztajgl3hr8kuanuqgdysjruvjwxz3al6penuwpen6czj6yhmy3lrwx0dem8cqs6qr8y8fj` |
+
+<details>
+<summary>Show QR codes</summary>
+
+| BTC | LTC | ETH | DOGE |
+|:---:|:---:|:---:|:---:|
+| <img src="https://user-images.githubusercontent.com/87997650/127651099-d9e1b381-adcf-46a5-9d17-59f87176304d.png" width="120" /> | <img src="https://user-images.githubusercontent.com/87997650/127651223-0abe025d-950b-445e-8196-7c113853b313.png" width="120" /> | <img src="https://user-images.githubusercontent.com/87997650/127653313-e989e607-f1db-40e9-a341-7cbdbd9fdfd0.png" width="120" /> | <img src="https://user-images.githubusercontent.com/87997650/127651630-2bb06de7-3b7a-42af-86b0-8b8fa0a6d59a.png" width="120" /> |
+
+| XMR | DOT | BNB | ADA |
+|:---:|:---:|:---:|:---:|
+| <img src="https://user-images.githubusercontent.com/87997650/127651801-cc35dfc0-f1ce-4dd0-ae0f-211fab41e2fb.png" width="120" /> | <img src="https://user-images.githubusercontent.com/87997650/127651761-6484c9f4-547c-475e-a5ec-2029e6ee1699.png" width="120" /> | <img src="https://user-images.githubusercontent.com/87997650/127651542-1fa0b32b-ed30-4a9a-b1cd-1622ef1044cf.png" width="120" /> | <img src="https://user-images.githubusercontent.com/87997650/127651500-df50eaee-15aa-415e-8a0b-044f22d89493.png" width="120" /> |
+
+</details>
 
 # License
 

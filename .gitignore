@@ -361,6 +361,7 @@ MigrationBackup/
 *.aab
 *.ap_
 *.dex
+*.ipa
 local.properties
 build/
 .gradle/
