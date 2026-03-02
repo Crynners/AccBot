@@ -74,9 +74,10 @@
     <string name="run_now_all_plans">All plans</string>
     <string name="run_now_confirm">Run %1$d plan(s)</string>
     <string name="dashboard_portfolio_total">Total Portfolio</string>
-    <string name="dashboard_portfolio_total_value">Value</string>
     <string name="dashboard_portfolio_total_invested">Invested</string>
     <string name="dashboard_roi">ROI %1$s</string>
+    <string name="ath_distance_format">-%1$d %%</string>
+    <string name="ath_distance_crypto_format">%1$s -%2$d %%</string>
     <string name="dashboard_less_than_1_hour">&lt; 1 hour</string>
     <plurals name="dashboard_hours">
         <item quantity="one">%1$d hour</item>
@@ -724,6 +725,7 @@
     <string name="notifications_title">Notifications</string>
     <string name="notifications_empty_title">No notifications yet</string>
     <string name="notifications_empty_description">Notifications about purchases, errors and warnings will appear here</string>
+    <string name="notifications_create_test">Create test notifications</string>
     <string name="notifications_mark_all_read">Mark all as read</string>
     <string name="notifications_delete_all">Delete all</string>
     <string name="notification_state_read">Read</string>

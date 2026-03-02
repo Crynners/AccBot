@@ -90,6 +90,15 @@ fun DashboardScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+    // Shared ticker for all DcaPlanCard countdown texts
+    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000L)
+            currentTime = System.currentTimeMillis()
+        }
+    }
+
     // Re-read preferences (e.g. Market Pulse toggle) when returning from Settings
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -222,7 +231,7 @@ fun DashboardScreen(
                                 planWithBalance = planWithBalance,
                                 onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
                                 onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
-
+                                currentTime = currentTime
                             )
                         }
                     }
@@ -309,7 +318,8 @@ fun DashboardScreen(
                         DcaPlanCard(
                             planWithBalance = planWithBalance,
                             onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
-                            onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) }
+                            onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
+                            currentTime = currentTime
                         )
                     }
                 }
@@ -710,21 +720,13 @@ internal fun StatItem(label: String, value: String) {
 internal fun DcaPlanCard(
     planWithBalance: DcaPlanWithBalance,
     onToggle: () -> Unit,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    currentTime: Long = System.currentTimeMillis()
 ) {
     val plan = planWithBalance.plan
     val successCol = successColor()
     val accentCol = accentColor()
     val context = LocalContext.current
-
-    // Self-contained ticker: updates currentTime every 60s so the countdown text refreshes
-    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(60_000L)
-            currentTime = System.currentTimeMillis()
-        }
-    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1015,10 +1017,10 @@ internal fun PortfolioSummaryCard(
     val roiColor = if (isPositive) successCol else Error
     val sign = if (isPositive) "+" else ""
 
-    // Determine common fiat (if all same) or fall back to first
-    val fiat = holdings.map { it.fiat }.distinct().let {
-        if (it.size == 1) it.first() else it.first()
-    }
+    // Determine common fiat — only show summary when all plans use the same currency
+    val distinctFiats = holdings.map { it.fiat }.distinct()
+    if (distinctFiats.size != 1) return
+    val fiat = distinctFiats.first()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1358,12 +1360,14 @@ internal fun MarketPulseCard(
                     Column(modifier = Modifier.fillMaxWidth()) {
                         if (athDataByCrypto.isNotEmpty()) {
                             // Row: "0" (left) — "BTC -35 %" (center) — "ATH" (right)
+                            val singleFmt = stringResource(R.string.ath_distance_format)
+                            val cryptoFmt = stringResource(R.string.ath_distance_crypto_format)
                             val athCenterText = if (athDataByCrypto.size == 1) {
                                 val entry = athDataByCrypto.entries.first()
-                                "-%d %%".format(entry.value.athDistancePercent)
+                                String.format(singleFmt, entry.value.athDistancePercent)
                             } else {
                                 athDataByCrypto.entries.joinToString(", ") { (crypto, data) ->
-                                    "%s -%d %%".format(crypto, data.athDistancePercent)
+                                    String.format(cryptoFmt, crypto, data.athDistancePercent)
                                 }
                             }
                             Box(modifier = Modifier.fillMaxWidth()) {

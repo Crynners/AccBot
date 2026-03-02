@@ -2,6 +2,9 @@ package com.accbot.dca.exchange
 
 import com.accbot.dca.domain.model.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -39,16 +42,16 @@ class BinanceApi(
      * Ensure time is synced once per instance lifetime.
      * Called before every signed API request.
      */
-    private val timeSyncLock = Any()
+    private val timeSyncMutex = Mutex()
 
-    private fun ensureTimeSynced() {
+    private suspend fun ensureTimeSynced() {
         if (!timeSynced) {
-            synchronized(timeSyncLock) {
+            timeSyncMutex.withLock {
                 if (!timeSynced) {
                     syncServerTime()
                     if (timeOffset == 0L) {
                         // Retry once if initial sync failed
-                        Thread.sleep(500)
+                        delay(500)
                         syncServerTime()
                     }
                     timeSynced = true
@@ -69,15 +72,16 @@ class BinanceApi(
                 .build()
 
             val localBefore = System.currentTimeMillis()
-            val response = client.newCall(request).execute()
-            val localAfter = System.currentTimeMillis()
-            val body = response.body?.string() ?: return
+            client.newCall(request).execute().use { response ->
+                val localAfter = System.currentTimeMillis()
+                val body = response.body?.string() ?: return
 
-            val json = JSONObject(body)
-            val serverTime = json.getLong("serverTime")
-            val localTime = (localBefore + localAfter) / 2
-            timeOffset = serverTime - localTime
-            android.util.Log.d("BinanceApi", "Time synced: offset=${timeOffset}ms, url=$baseUrl")
+                val json = JSONObject(body)
+                val serverTime = json.getLong("serverTime")
+                val localTime = (localBefore + localAfter) / 2
+                timeOffset = serverTime - localTime
+                android.util.Log.d("BinanceApi", "Time synced: offset=${timeOffset}ms, url=$baseUrl")
+            }
         } catch (e: Exception) {
             android.util.Log.w("BinanceApi", "Time sync failed: ${e.message}")
         }
@@ -114,60 +118,61 @@ class BinanceApi(
                 .post("".toRequestBody())
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: throw Exception("Empty response")
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: throw Exception("Empty response")
 
-            if (!response.isSuccessful) {
-                val isRetryable = response.code in 500..599 || response.code == 429
-                val errorMsg = try {
-                    JSONObject(body).optString("msg", "HTTP ${response.code}")
-                } catch (_: Exception) { "HTTP ${response.code}" }
-                return@withContext DcaResult.Error(errorMsg, retryable = isRetryable)
-            }
+                if (!response.isSuccessful) {
+                    val isRetryable = response.code in 500..599 || response.code == 429
+                    val errorMsg = try {
+                        JSONObject(body).optString("msg", "HTTP ${response.code}")
+                    } catch (_: Exception) { "HTTP ${response.code}" }
+                    return@withContext DcaResult.Error(errorMsg, retryable = isRetryable)
+                }
 
-            val json = JSONObject(body)
+                val json = JSONObject(body)
 
-            if (json.has("code")) {
-                val errorMessage = json.optString("msg", "Unknown error")
-                return@withContext DcaResult.Error(errorMessage, retryable = false)
-            }
+                if (json.has("code")) {
+                    val errorMessage = json.optString("msg", "Unknown error")
+                    return@withContext DcaResult.Error(errorMessage, retryable = false)
+                }
 
-            val executedQty = BigDecimal(json.getString("executedQty"))
-            val cummulativeQuoteQty = BigDecimal(json.getString("cummulativeQuoteQty"))
-            val avgPrice = if (executedQty > BigDecimal.ZERO) {
-                cummulativeQuoteQty.divide(executedQty, 8, RoundingMode.HALF_UP)
-            } else BigDecimal.ZERO
+                val executedQty = BigDecimal(json.getString("executedQty"))
+                val cummulativeQuoteQty = BigDecimal(json.getString("cummulativeQuoteQty"))
+                val avgPrice = if (executedQty > BigDecimal.ZERO) {
+                    cummulativeQuoteQty.divide(executedQty, 8, RoundingMode.HALF_UP)
+                } else BigDecimal.ZERO
 
-            // Calculate fee from fills
-            var totalFee = BigDecimal.ZERO
-            var feeAsset = ""
-            val fills = json.optJSONArray("fills")
-            if (fills != null) {
-                for (i in 0 until fills.length()) {
-                    val fill = fills.getJSONObject(i)
-                    totalFee += BigDecimal(fill.getString("commission"))
-                    if (feeAsset.isEmpty()) {
-                        feeAsset = fill.optString("commissionAsset", "")
+                // Calculate fee from fills
+                var totalFee = BigDecimal.ZERO
+                var feeAsset = ""
+                val fills = json.optJSONArray("fills")
+                if (fills != null) {
+                    for (i in 0 until fills.length()) {
+                        val fill = fills.getJSONObject(i)
+                        totalFee += BigDecimal(fill.getString("commission"))
+                        if (feeAsset.isEmpty()) {
+                            feeAsset = fill.optString("commissionAsset", "")
+                        }
                     }
                 }
-            }
 
-            DcaResult.Success(
-                Transaction(
-                    planId = 0,
-                    exchange = Exchange.BINANCE,
-                    crypto = crypto,
-                    fiat = fiat,
-                    fiatAmount = cummulativeQuoteQty,
-                    cryptoAmount = executedQty,
-                    price = avgPrice,
-                    fee = totalFee,
-                    feeAsset = feeAsset,
-                    status = TransactionStatus.COMPLETED,
-                    exchangeOrderId = json.optString("orderId"),
-                    executedAt = Instant.now()
+                DcaResult.Success(
+                    Transaction(
+                        planId = 0,
+                        exchange = Exchange.BINANCE,
+                        crypto = crypto,
+                        fiat = fiat,
+                        fiatAmount = cummulativeQuoteQty,
+                        cryptoAmount = executedQty,
+                        price = avgPrice,
+                        fee = totalFee,
+                        feeAsset = feeAsset,
+                        status = TransactionStatus.COMPLETED,
+                        exchangeOrderId = json.optString("orderId"),
+                        executedAt = Instant.now()
+                    )
                 )
-            )
+            }
         } catch (e: java.io.IOException) {
             DcaResult.Error(e.message ?: "Network error", retryable = true)
         } catch (e: Exception) {
@@ -188,21 +193,22 @@ class BinanceApi(
                 .get()
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext null
-            if (!response.isSuccessful) return@withContext null
-            val json = JSONObject(body)
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext null
+                if (!response.isSuccessful) return@withContext null
+                val json = JSONObject(body)
 
-            if (json.has("code")) return@withContext null
+                if (json.has("code")) return@withContext null
 
-            val balances = json.getJSONArray("balances")
-            for (i in 0 until balances.length()) {
-                val balance = balances.getJSONObject(i)
-                if (balance.getString("asset") == currency) {
-                    return@withContext BigDecimal(balance.getString("free"))
+                val balances = json.getJSONArray("balances")
+                for (i in 0 until balances.length()) {
+                    val balance = balances.getJSONObject(i)
+                    if (balance.getString("asset") == currency) {
+                        return@withContext BigDecimal(balance.getString("free"))
+                    }
                 }
+                null
             }
-            null
         } catch (e: Exception) {
             null
         }
@@ -216,12 +222,13 @@ class BinanceApi(
                 .get()
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext null
-            if (!response.isSuccessful) return@withContext null
-            val json = JSONObject(body)
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext null
+                if (!response.isSuccessful) return@withContext null
+                val json = JSONObject(body)
 
-            BigDecimal(json.getString("price"))
+                BigDecimal(json.getString("price"))
+            }
         } catch (e: Exception) {
             null
         }
@@ -251,24 +258,25 @@ class BinanceApi(
                 .post("".toRequestBody())
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: throw Exception("Empty response")
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: throw Exception("Empty response")
 
-            if (!response.isSuccessful) {
-                val errorMsg = try {
-                    JSONObject(body).optString("msg", "HTTP ${response.code}")
-                } catch (_: Exception) { "HTTP ${response.code}" }
-                return@withContext Result.failure(Exception(errorMsg))
+                if (!response.isSuccessful) {
+                    val errorMsg = try {
+                        JSONObject(body).optString("msg", "HTTP ${response.code}")
+                    } catch (_: Exception) { "HTTP ${response.code}" }
+                    return@withContext Result.failure(Exception(errorMsg))
+                }
+
+                val json = JSONObject(body)
+
+                if (json.has("code")) {
+                    val errorMessage = json.optString("msg", "Withdrawal failed")
+                    return@withContext Result.failure(Exception(errorMessage))
+                }
+
+                Result.success(json.optString("id", ""))
             }
-
-            val json = JSONObject(body)
-
-            if (json.has("code")) {
-                val errorMessage = json.optString("msg", "Withdrawal failed")
-                return@withContext Result.failure(Exception(errorMessage))
-            }
-
-            Result.success(json.optString("id", ""))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -287,22 +295,23 @@ class BinanceApi(
                 .get()
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext null
-            if (!response.isSuccessful) return@withContext null
-            val json = org.json.JSONArray(body)
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext null
+                if (!response.isSuccessful) return@withContext null
+                val json = org.json.JSONArray(body)
 
-            for (i in 0 until json.length()) {
-                val coin = json.getJSONObject(i)
-                if (coin.getString("coin") == crypto) {
-                    val networks = coin.getJSONArray("networkList")
-                    if (networks.length() > 0) {
-                        val network = networks.getJSONObject(0)
-                        return@withContext BigDecimal(network.getString("withdrawFee"))
+                for (i in 0 until json.length()) {
+                    val coin = json.getJSONObject(i)
+                    if (coin.getString("coin") == crypto) {
+                        val networks = coin.getJSONArray("networkList")
+                        if (networks.length() > 0) {
+                            val network = networks.getJSONObject(0)
+                            return@withContext BigDecimal(network.getString("withdrawFee"))
+                        }
                     }
                 }
+                null
             }
-            null
         } catch (e: Exception) {
             null
         }
@@ -337,58 +346,59 @@ class BinanceApi(
             .get()
             .build()
 
-        val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: throw Exception("Empty response")
+        client.newCall(request).execute().use { response ->
+            val body = response.body?.string() ?: throw Exception("Empty response")
 
-        if (!response.isSuccessful) {
-            val errorMsg = try {
-                JSONObject(body).optString("msg", "HTTP ${response.code}")
-            } catch (_: Exception) { "HTTP ${response.code}" }
-            throw Exception(errorMsg)
-        }
-
-        // Check for error response (JSON object with "code" field)
-        if (body.trimStart().startsWith("{")) {
-            val json = JSONObject(body)
-            if (json.has("code")) {
-                throw Exception(json.optString("msg", "Failed to fetch trade history"))
+            if (!response.isSuccessful) {
+                val errorMsg = try {
+                    JSONObject(body).optString("msg", "HTTP ${response.code}")
+                } catch (_: Exception) { "HTTP ${response.code}" }
+                throw Exception(errorMsg)
             }
-        }
 
-        val jsonArray = org.json.JSONArray(body)
-        val trades = mutableListOf<HistoricalTrade>()
+            // Check for error response (JSON object with "code" field)
+            if (body.trimStart().startsWith("{")) {
+                val json = JSONObject(body)
+                if (json.has("code")) {
+                    throw Exception(json.optString("msg", "Failed to fetch trade history"))
+                }
+            }
 
-        for (i in 0 until jsonArray.length()) {
-            val trade = jsonArray.getJSONObject(i)
-            val isBuyer = trade.optBoolean("isBuyer", false)
-            val qty = BigDecimal(trade.getString("qty"))
-            val price = BigDecimal(trade.getString("price"))
-            val quoteQty = BigDecimal(trade.getString("quoteQty"))
-            val commission = BigDecimal(trade.getString("commission"))
-            val commissionAsset = trade.optString("commissionAsset", "")
-            val tradeTime = trade.getLong("time")
+            val jsonArray = org.json.JSONArray(body)
+            val trades = mutableListOf<HistoricalTrade>()
 
-            trades.add(
-                HistoricalTrade(
-                    // Use trade id for dedup since one market order can produce multiple fills
-                    orderId = trade.get("id").toString(),
-                    timestamp = Instant.ofEpochMilli(tradeTime),
-                    crypto = crypto,
-                    fiat = fiat,
-                    cryptoAmount = qty,
-                    fiatAmount = quoteQty,
-                    price = price,
-                    fee = commission,
-                    feeAsset = commissionAsset,
-                    side = if (isBuyer) "BUY" else "SELL"
+            for (i in 0 until jsonArray.length()) {
+                val trade = jsonArray.getJSONObject(i)
+                val isBuyer = trade.optBoolean("isBuyer", false)
+                val qty = BigDecimal(trade.getString("qty"))
+                val price = BigDecimal(trade.getString("price"))
+                val quoteQty = BigDecimal(trade.getString("quoteQty"))
+                val commission = BigDecimal(trade.getString("commission"))
+                val commissionAsset = trade.optString("commissionAsset", "")
+                val tradeTime = trade.getLong("time")
+
+                trades.add(
+                    HistoricalTrade(
+                        // Use trade id for dedup since one market order can produce multiple fills
+                        orderId = trade.get("id").toString(),
+                        timestamp = Instant.ofEpochMilli(tradeTime),
+                        crypto = crypto,
+                        fiat = fiat,
+                        cryptoAmount = qty,
+                        fiatAmount = quoteQty,
+                        price = price,
+                        fee = commission,
+                        feeAsset = commissionAsset,
+                        side = if (isBuyer) "BUY" else "SELL"
+                    )
                 )
+            }
+
+            TradeHistoryPage(
+                trades = trades,
+                hasMore = trades.size >= limit
             )
         }
-
-        TradeHistoryPage(
-            trades = trades,
-            hasMore = trades.size >= limit
-        )
     }
 
     override suspend fun validateCredentials(): Boolean = withContext(Dispatchers.IO) {
@@ -405,31 +415,32 @@ class BinanceApi(
                 .get()
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string()
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string()
 
-            if (body == null) {
-                android.util.Log.e("BinanceApi", "validateCredentials: Empty response")
-                return@withContext false
+                if (body == null) {
+                    android.util.Log.e("BinanceApi", "validateCredentials: Empty response")
+                    return@withContext false
+                }
+
+                if (!response.isSuccessful) {
+                    android.util.Log.e("BinanceApi", "validateCredentials: HTTP ${response.code}")
+                    return@withContext false
+                }
+
+                val json = JSONObject(body)
+
+                if (json.has("code")) {
+                    val code = json.optInt("code")
+                    val msg = json.optString("msg", "Unknown error")
+                    android.util.Log.e("BinanceApi", "validateCredentials failed: code=$code, msg=$msg, url=$baseUrl")
+                    throw Exception(msg)
+                }
+
+                // Success - account info returned
+                android.util.Log.d("BinanceApi", "validateCredentials success, url=$baseUrl")
+                true
             }
-
-            if (!response.isSuccessful) {
-                android.util.Log.e("BinanceApi", "validateCredentials: HTTP ${response.code}")
-                return@withContext false
-            }
-
-            val json = JSONObject(body)
-
-            if (json.has("code")) {
-                val code = json.optInt("code")
-                val msg = json.optString("msg", "Unknown error")
-                android.util.Log.e("BinanceApi", "validateCredentials failed: code=$code, msg=$msg, url=$baseUrl")
-                throw Exception(msg)
-            }
-
-            // Success - account info returned
-            android.util.Log.d("BinanceApi", "validateCredentials success, url=$baseUrl")
-            true
         } catch (e: Exception) {
             android.util.Log.e("BinanceApi", "validateCredentials exception: ${e.message}, url=$baseUrl")
             throw e

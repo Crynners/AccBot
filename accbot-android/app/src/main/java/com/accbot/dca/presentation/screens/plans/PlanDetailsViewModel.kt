@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.withTransaction
 import com.accbot.dca.data.local.*
 import com.accbot.dca.data.remote.MarketDataService
 import com.accbot.dca.domain.model.DcaPlan
@@ -57,6 +58,7 @@ data class PlanDetailsUiState(
 @HiltViewModel
 class PlanDetailsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val database: DcaDatabase,
     private val dcaPlanDao: DcaPlanDao,
     private val transactionDao: TransactionDao,
     private val marketDataService: MarketDataService,
@@ -234,8 +236,10 @@ class PlanDetailsViewModel @Inject constructor(
     fun deletePlan(onDeleted: () -> Unit) {
         viewModelScope.launch {
             try {
-                transactionDao.deleteTransactionsByPlanId(planId)
-                dcaPlanDao.deletePlanById(planId)
+                database.withTransaction {
+                    transactionDao.deleteTransactionsByPlanId(planId)
+                    dcaPlanDao.deletePlanById(planId)
+                }
                 onDeleted()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to delete plan") }

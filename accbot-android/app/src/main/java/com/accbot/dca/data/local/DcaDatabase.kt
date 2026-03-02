@@ -248,8 +248,11 @@ abstract class DcaDatabase : RoomDatabase() {
             val prodDbFile = context.getDatabasePath(PROD_DATABASE_NAME)
 
             if (legacyDbFile.exists() && !prodDbFile.exists()) {
-                // Rename legacy database to production database
-                legacyDbFile.renameTo(prodDbFile)
+                // Rename legacy database to production database, fall back to copy
+                if (!legacyDbFile.renameTo(prodDbFile)) {
+                    legacyDbFile.copyTo(prodDbFile, overwrite = false)
+                    legacyDbFile.delete()
+                }
 
                 // Also migrate WAL and SHM files if they exist
                 val legacyWal = context.getDatabasePath("$LEGACY_DATABASE_NAME-wal")
@@ -257,8 +260,18 @@ abstract class DcaDatabase : RoomDatabase() {
                 val prodWal = context.getDatabasePath("$PROD_DATABASE_NAME-wal")
                 val prodShm = context.getDatabasePath("$PROD_DATABASE_NAME-shm")
 
-                if (legacyWal.exists()) legacyWal.renameTo(prodWal)
-                if (legacyShm.exists()) legacyShm.renameTo(prodShm)
+                if (legacyWal.exists()) {
+                    if (!legacyWal.renameTo(prodWal)) {
+                        legacyWal.copyTo(prodWal, overwrite = false)
+                        legacyWal.delete()
+                    }
+                }
+                if (legacyShm.exists()) {
+                    if (!legacyShm.renameTo(prodShm)) {
+                        legacyShm.copyTo(prodShm, overwrite = false)
+                        legacyShm.delete()
+                    }
+                }
             }
         }
 

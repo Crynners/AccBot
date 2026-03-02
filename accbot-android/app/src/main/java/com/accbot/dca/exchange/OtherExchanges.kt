@@ -73,8 +73,10 @@ class KrakenApi(
         return android.util.Base64.encodeToString(signed, android.util.Base64.NO_WRAP)
     }
 
+    private data class ApiResponse(val isSuccessful: Boolean, val code: Int, val body: String)
+
     /** Execute an authenticated POST request to Kraken private API */
-    private fun executePrivateRequest(path: String, extraParams: String = ""): Pair<okhttp3.Response, String> {
+    private fun executePrivateRequest(path: String, extraParams: String = ""): ApiResponse {
         val nonce = System.currentTimeMillis() * 1000
         val postData = if (extraParams.isEmpty()) "nonce=$nonce" else "nonce=$nonce&$extraParams"
         val signature = createKrakenSignature(path, nonce, postData)
@@ -86,9 +88,10 @@ class KrakenApi(
             .post(postData.toRequestBody(formMediaType))
             .build()
 
-        val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: throw Exception("Empty response")
-        return response to body
+        return client.newCall(request).execute().use { response ->
+            val body = response.body?.string() ?: throw Exception("Empty response")
+            ApiResponse(response.isSuccessful, response.code, body)
+        }
     }
 
     /** Check Kraken JSON response for errors. Returns error string or null. */
@@ -106,11 +109,11 @@ class KrakenApi(
                 val pair = mapPair(crypto, fiat)
                 val params = "ordertype=market&type=buy&pair=$pair&oflags=viqc&volume=${fiatAmount.toPlainString()}"
 
-                val (response, body) = executePrivateRequest("/0/private/AddOrder", params)
+                val (isSuccessful, code, body) = executePrivateRequest("/0/private/AddOrder", params)
 
-                if (!response.isSuccessful) {
-                    val isRetryable = response.code in 500..599 || response.code == 429
-                    return@withContext DcaResult.Error("HTTP ${response.code}", retryable = isRetryable)
+                if (!isSuccessful) {
+                    val isRetryable = code in 500..599 || code == 429
+                    return@withContext DcaResult.Error("HTTP $code", retryable = isRetryable)
                 }
 
                 val json = JSONObject(body)
@@ -175,7 +178,7 @@ class KrakenApi(
             try {
                 if (attempt > 0) kotlinx.coroutines.delay(1000)
 
-                val (_, body) = executePrivateRequest("/0/private/QueryOrders", "txid=$txId&trades=true")
+                val (_, _, body) = executePrivateRequest("/0/private/QueryOrders", "txid=$txId&trades=true")
                 val json = JSONObject(body)
 
                 if (checkKrakenErrors(json) != null) return null
@@ -210,7 +213,7 @@ class KrakenApi(
 
     override suspend fun getOrderStatus(orderId: String): Transaction? = withContext(Dispatchers.IO) {
         try {
-            val (_, body) = executePrivateRequest("/0/private/QueryOrders", "txid=$orderId&trades=true")
+            val (_, _, body) = executePrivateRequest("/0/private/QueryOrders", "txid=$orderId&trades=true")
             val json = JSONObject(body)
 
             if (checkKrakenErrors(json) != null) return@withContext null
@@ -254,8 +257,8 @@ class KrakenApi(
 
     override suspend fun getBalance(currency: String): BigDecimal? = withContext(Dispatchers.IO) {
         try {
-            val (response, body) = executePrivateRequest("/0/private/Balance")
-            if (!response.isSuccessful) return@withContext null
+            val (isSuccessful, _, body) = executePrivateRequest("/0/private/Balance")
+            if (!isSuccessful) return@withContext null
 
             val json = JSONObject(body)
             if (checkKrakenErrors(json) != null) return@withContext null
@@ -284,20 +287,21 @@ class KrakenApi(
                 .get()
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext null
-            if (!response.isSuccessful) return@withContext null
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext null
+                if (!response.isSuccessful) return@withContext null
 
-            val json = JSONObject(body)
-            if (checkKrakenErrors(json) != null) return@withContext null
+                val json = JSONObject(body)
+                if (checkKrakenErrors(json) != null) return@withContext null
 
-            val result = json.getJSONObject("result")
-            // Kraken returns the pair key which may differ from input
-            val pairKey = result.keys().next()
-            val ticker = result.getJSONObject(pairKey)
-            // c = last trade closed [price, lot-volume]
-            val lastPrice = ticker.getJSONArray("c").getString(0)
-            BigDecimal(lastPrice)
+                val result = json.getJSONObject("result")
+                // Kraken returns the pair key which may differ from input
+                val pairKey = result.keys().next()
+                val ticker = result.getJSONObject(pairKey)
+                // c = last trade closed [price, lot-volume]
+                val lastPrice = ticker.getJSONArray("c").getString(0)
+                BigDecimal(lastPrice)
+            }
         } catch (_: Exception) {
             null
         }
@@ -317,8 +321,8 @@ class KrakenApi(
             }
         }
 
-        val (response, body) = executePrivateRequest("/0/private/TradesHistory", params)
-        if (!response.isSuccessful) throw Exception("HTTP ${response.code}")
+        val (isSuccessful, code, body) = executePrivateRequest("/0/private/TradesHistory", params)
+        if (!isSuccessful) throw Exception("HTTP $code")
 
         val json = JSONObject(body)
         checkKrakenErrors(json)?.let { throw Exception(it) }
@@ -373,10 +377,10 @@ class KrakenApi(
                 val asset = mapToKrakenAsset(crypto)
                 val params = "asset=$asset&key=$address&amount=${amount.toPlainString()}"
 
-                val (response, body) = executePrivateRequest("/0/private/Withdraw", params)
+                val (isSuccessful, code, body) = executePrivateRequest("/0/private/Withdraw", params)
 
-                if (!response.isSuccessful) {
-                    return@withContext Result.failure(Exception("HTTP ${response.code}"))
+                if (!isSuccessful) {
+                    return@withContext Result.failure(Exception("HTTP $code"))
                 }
 
                 val json = JSONObject(body)
@@ -400,9 +404,9 @@ class KrakenApi(
 
     override suspend fun validateCredentials(): Boolean = withContext(Dispatchers.IO) {
         try {
-            val (response, body) = executePrivateRequest("/0/private/Balance")
-            if (!response.isSuccessful) {
-                throw Exception("HTTP ${response.code}")
+            val (isSuccessful, code, body) = executePrivateRequest("/0/private/Balance")
+            if (!isSuccessful) {
+                throw Exception("HTTP $code")
             }
 
             val json = JSONObject(body)
@@ -462,32 +466,33 @@ class KuCoinApi(
                     .post(body.toRequestBody())
                     .build()
 
-                val response = client.newCall(request).execute()
-                val responseBody = response.body?.string() ?: throw Exception("Empty response")
-                val json = JSONObject(responseBody)
+                client.newCall(request).execute().use { response ->
+                    val responseBody = response.body?.string() ?: throw Exception("Empty response")
+                    val json = JSONObject(responseBody)
 
-                if (json.optString("code") != "200000") {
-                    val errorMessage = json.optString("msg", "Unknown error")
-                    return@withContext DcaResult.Error(errorMessage, retryable = false)
-                }
+                    if (json.optString("code") != "200000") {
+                        val errorMessage = json.optString("msg", "Unknown error")
+                        return@withContext DcaResult.Error(errorMessage, retryable = false)
+                    }
 
-                val data = json.getJSONObject("data")
+                    val data = json.getJSONObject("data")
 
-                DcaResult.Success(
-                    Transaction(
-                        planId = 0,
-                        exchange = Exchange.KUCOIN,
-                        crypto = crypto,
-                        fiat = fiat,
-                        fiatAmount = fiatAmount,
-                        cryptoAmount = BigDecimal.ZERO,
-                        price = BigDecimal.ZERO,
-                        fee = BigDecimal.ZERO,
-                        status = TransactionStatus.PENDING,
-                        exchangeOrderId = data.optString("orderId"),
-                        executedAt = Instant.now()
+                    DcaResult.Success(
+                        Transaction(
+                            planId = 0,
+                            exchange = Exchange.KUCOIN,
+                            crypto = crypto,
+                            fiat = fiat,
+                            fiatAmount = fiatAmount,
+                            cryptoAmount = BigDecimal.ZERO,
+                            price = BigDecimal.ZERO,
+                            fee = BigDecimal.ZERO,
+                            status = TransactionStatus.PENDING,
+                            exchangeOrderId = data.optString("orderId"),
+                            executedAt = Instant.now()
+                        )
                     )
-                )
+                }
             } catch (e: java.io.IOException) {
                 DcaResult.Error(e.message ?: "Network error", retryable = true)
             } catch (e: Exception) {
@@ -520,10 +525,11 @@ class KuCoinApi(
                 .get()
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext false
-            val json = JSONObject(body)
-            json.optString("code") == "200000"
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext false
+                val json = JSONObject(body)
+                json.optString("code") == "200000"
+            }
         } catch (_: Exception) {
             false
         }

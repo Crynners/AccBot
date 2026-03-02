@@ -78,15 +78,16 @@ class CoinbaseApi(
     override suspend fun validateCredentials(): Boolean = withContext(Dispatchers.IO) {
         try {
             val request = buildGetRequest("/api/v3/brokerage/accounts")
-            val response = client.newCall(request).execute()
-            val body = response.body?.string()
-            if (!response.isSuccessful) {
-                val msg = body?.let {
-                    try { JSONObject(it).optString("message", "") .takeIf { s -> s.isNotEmpty() } } catch (_: Exception) { null }
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string()
+                if (!response.isSuccessful) {
+                    val msg = body?.let {
+                        try { JSONObject(it).optString("message", "") .takeIf { s -> s.isNotEmpty() } } catch (_: Exception) { null }
+                    }
+                    throw Exception(msg ?: "HTTP ${response.code}")
                 }
-                throw Exception(msg ?: "HTTP ${response.code}")
+                true
             }
-            true
         } catch (e: java.io.IOException) {
             throw Exception("Network error: ${e.message}")
         }
@@ -113,14 +114,16 @@ class CoinbaseApi(
             }.toString()
 
             val request = buildPostRequest("/api/v3/brokerage/orders", body)
-            val response = client.newCall(request).execute()
-            val responseBody = response.body?.string() ?: throw Exception("Empty response")
+            val (responseBody, responseCode, responseSuccessful) = client.newCall(request).execute().use { response ->
+                val respBody = response.body?.string() ?: throw Exception("Empty response")
+                Triple(respBody, response.code, response.isSuccessful)
+            }
 
-            if (!response.isSuccessful) {
-                val isRetryable = response.code in 500..599 || response.code == 429
+            if (!responseSuccessful) {
+                val isRetryable = responseCode in 500..599 || responseCode == 429
                 val errorMsg = try {
-                    JSONObject(responseBody).optString("message", "HTTP ${response.code}")
-                } catch (_: Exception) { "HTTP ${response.code}" }
+                    JSONObject(responseBody).optString("message", "HTTP $responseCode")
+                } catch (_: Exception) { "HTTP $responseCode" }
                 return@withContext DcaResult.Error(errorMsg, retryable = isRetryable)
             }
 
@@ -192,24 +195,27 @@ class CoinbaseApi(
                 if (attempt > 0) kotlinx.coroutines.delay(1000)
 
                 val request = buildGetRequest("/api/v3/brokerage/orders/historical/$orderId")
-                val response = client.newCall(request).execute()
-                val body = response.body?.string() ?: return null
-                if (!response.isSuccessful) return null
+                val result = client.newCall(request).execute().use { response ->
+                    val body = response.body?.string() ?: return@use null
+                    if (!response.isSuccessful) return@use null
 
-                val json = JSONObject(body)
-                val order = json.optJSONObject("order") ?: return null
-                val status = order.optString("status", "")
+                    val json = JSONObject(body)
+                    val order = json.optJSONObject("order") ?: return@use null
+                    val status = order.optString("status", "")
 
-                if (status == "FILLED") {
-                    val filledSize = BigDecimal(order.optString("filled_size", "0"))
-                    val avgPrice = BigDecimal(order.optString("average_filled_price", "0"))
-                    val totalFees = BigDecimal(order.optString("total_fees", "0"))
-                    val cost = if (filledSize > BigDecimal.ZERO && avgPrice > BigDecimal.ZERO) {
-                        filledSize.multiply(avgPrice).setScale(8, RoundingMode.HALF_UP)
-                    } else BigDecimal.ZERO
+                    if (status == "FILLED") {
+                        val filledSize = BigDecimal(order.optString("filled_size", "0"))
+                        val avgPrice = BigDecimal(order.optString("average_filled_price", "0"))
+                        val totalFees = BigDecimal(order.optString("total_fees", "0"))
+                        val cost = if (filledSize > BigDecimal.ZERO && avgPrice > BigDecimal.ZERO) {
+                            filledSize.multiply(avgPrice).setScale(8, RoundingMode.HALF_UP)
+                        } else BigDecimal.ZERO
 
-                    return FillDetails(filledSize, cost, avgPrice, totalFees)
+                        FillDetails(filledSize, cost, avgPrice, totalFees)
+                    } else null
                 }
+
+                if (result != null) return result
             } catch (_: Exception) {
                 // Continue retrying
             }
@@ -227,37 +233,38 @@ class CoinbaseApi(
     override suspend fun getOrderStatus(orderId: String): Transaction? = withContext(Dispatchers.IO) {
         try {
             val request = buildGetRequest("/api/v3/brokerage/orders/historical/$orderId")
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext null
-            if (!response.isSuccessful) return@withContext null
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext null
+                if (!response.isSuccessful) return@withContext null
 
-            val json = JSONObject(body)
-            val order = json.optJSONObject("order") ?: return@withContext null
-            val status = order.optString("status", "")
+                val json = JSONObject(body)
+                val order = json.optJSONObject("order") ?: return@withContext null
+                val status = order.optString("status", "")
 
-            if (status == "FILLED") {
-                val filledSize = BigDecimal(order.optString("filled_size", "0"))
-                val avgPrice = BigDecimal(order.optString("average_filled_price", "0"))
-                val totalFees = BigDecimal(order.optString("total_fees", "0"))
-                val cost = if (filledSize > BigDecimal.ZERO && avgPrice > BigDecimal.ZERO) {
-                    filledSize.multiply(avgPrice).setScale(8, RoundingMode.HALF_UP)
-                } else BigDecimal.ZERO
+                if (status == "FILLED") {
+                    val filledSize = BigDecimal(order.optString("filled_size", "0"))
+                    val avgPrice = BigDecimal(order.optString("average_filled_price", "0"))
+                    val totalFees = BigDecimal(order.optString("total_fees", "0"))
+                    val cost = if (filledSize > BigDecimal.ZERO && avgPrice > BigDecimal.ZERO) {
+                        filledSize.multiply(avgPrice).setScale(8, RoundingMode.HALF_UP)
+                    } else BigDecimal.ZERO
 
-                Transaction(
-                    planId = 0,
-                    exchange = Exchange.COINBASE,
-                    crypto = "",
-                    fiat = "",
-                    fiatAmount = cost,
-                    cryptoAmount = filledSize,
-                    price = avgPrice,
-                    fee = totalFees,
-                    status = TransactionStatus.COMPLETED,
-                    exchangeOrderId = orderId,
-                    executedAt = Instant.now()
-                )
-            } else {
-                null
+                    Transaction(
+                        planId = 0,
+                        exchange = Exchange.COINBASE,
+                        crypto = "",
+                        fiat = "",
+                        fiatAmount = cost,
+                        cryptoAmount = filledSize,
+                        price = avgPrice,
+                        fee = totalFees,
+                        status = TransactionStatus.COMPLETED,
+                        exchangeOrderId = orderId,
+                        executedAt = Instant.now()
+                    )
+                } else {
+                    null
+                }
             }
         } catch (_: Exception) {
             null
@@ -267,23 +274,24 @@ class CoinbaseApi(
     override suspend fun getBalance(currency: String): BigDecimal? = withContext(Dispatchers.IO) {
         try {
             val request = buildGetRequest("/api/v3/brokerage/accounts")
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext null
-            if (!response.isSuccessful) return@withContext null
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext null
+                if (!response.isSuccessful) return@withContext null
 
-            val json = JSONObject(body)
-            val accounts = json.optJSONArray("accounts") ?: return@withContext null
+                val json = JSONObject(body)
+                val accounts = json.optJSONArray("accounts") ?: return@withContext null
 
-            for (i in 0 until accounts.length()) {
-                val account = accounts.getJSONObject(i)
-                if (account.optString("currency") == currency) {
-                    val availableBalance = account.optJSONObject("available_balance")
-                    return@withContext availableBalance?.let {
-                        BigDecimal(it.optString("value", "0"))
+                for (i in 0 until accounts.length()) {
+                    val account = accounts.getJSONObject(i)
+                    if (account.optString("currency") == currency) {
+                        val availableBalance = account.optJSONObject("available_balance")
+                        return@withContext availableBalance?.let {
+                            BigDecimal(it.optString("value", "0"))
+                        }
                     }
                 }
+                null
             }
-            null
         } catch (_: Exception) {
             null
         }
@@ -293,12 +301,13 @@ class CoinbaseApi(
         try {
             val productId = "$crypto-$fiat"
             val request = buildGetRequest("/api/v3/brokerage/products/$productId")
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext null
-            if (!response.isSuccessful) return@withContext null
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext null
+                if (!response.isSuccessful) return@withContext null
 
-            val json = JSONObject(body)
-            BigDecimal(json.getString("price"))
+                val json = JSONObject(body)
+                BigDecimal(json.getString("price"))
+            }
         } catch (_: Exception) {
             null
         }
@@ -317,60 +326,61 @@ class CoinbaseApi(
         }
 
         val request = buildGetRequest(path)
-        val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: throw Exception("Empty response")
+        client.newCall(request).execute().use { response ->
+            val body = response.body?.string() ?: throw Exception("Empty response")
 
-        if (!response.isSuccessful) {
-            val errorMsg = try {
-                JSONObject(body).optString("message", "HTTP ${response.code}")
-            } catch (_: Exception) { "HTTP ${response.code}" }
-            throw Exception(errorMsg)
-        }
-
-        val json = JSONObject(body)
-        val fills = json.optJSONArray("fills") ?: org.json.JSONArray()
-        val cursor = json.optString("cursor", "")
-        val trades = mutableListOf<HistoricalTrade>()
-
-        for (i in 0 until fills.length()) {
-            val fill = fills.getJSONObject(i)
-            val side = fill.optString("side", "")
-            if (side != "BUY") continue
-
-            val size = BigDecimal(fill.optString("size", "0"))
-            val price = BigDecimal(fill.optString("price", "0"))
-            val commission = BigDecimal(fill.optString("commission", "0"))
-            val tradeTime = fill.optString("trade_time", "")
-
-            val timestamp = try {
-                Instant.parse(tradeTime)
-            } catch (_: Exception) {
-                Instant.now()
+            if (!response.isSuccessful) {
+                val errorMsg = try {
+                    JSONObject(body).optString("message", "HTTP ${response.code}")
+                } catch (_: Exception) { "HTTP ${response.code}" }
+                throw Exception(errorMsg)
             }
 
-            // Filter locally by sinceTimestamp
-            if (sinceTimestamp != null && !timestamp.isAfter(sinceTimestamp)) continue
+            val json = JSONObject(body)
+            val fills = json.optJSONArray("fills") ?: org.json.JSONArray()
+            val cursor = json.optString("cursor", "")
+            val trades = mutableListOf<HistoricalTrade>()
 
-            trades.add(
-                HistoricalTrade(
-                    orderId = fill.optString("trade_id", fill.optString("order_id", "")),
-                    timestamp = timestamp,
-                    crypto = crypto,
-                    fiat = fiat,
-                    cryptoAmount = size,
-                    fiatAmount = size.multiply(price).setScale(8, RoundingMode.HALF_UP),
-                    price = price,
-                    fee = commission,
-                    feeAsset = fiat,
-                    side = "BUY"
+            for (i in 0 until fills.length()) {
+                val fill = fills.getJSONObject(i)
+                val side = fill.optString("side", "")
+                if (side != "BUY") continue
+
+                val size = BigDecimal(fill.optString("size", "0"))
+                val price = BigDecimal(fill.optString("price", "0"))
+                val commission = BigDecimal(fill.optString("commission", "0"))
+                val tradeTime = fill.optString("trade_time", "")
+
+                val timestamp = try {
+                    Instant.parse(tradeTime)
+                } catch (_: Exception) {
+                    Instant.now()
+                }
+
+                // Filter locally by sinceTimestamp
+                if (sinceTimestamp != null && !timestamp.isAfter(sinceTimestamp)) continue
+
+                trades.add(
+                    HistoricalTrade(
+                        orderId = fill.optString("trade_id", fill.optString("order_id", "")),
+                        timestamp = timestamp,
+                        crypto = crypto,
+                        fiat = fiat,
+                        cryptoAmount = size,
+                        fiatAmount = size.multiply(price).setScale(8, RoundingMode.HALF_UP),
+                        price = price,
+                        fee = commission,
+                        feeAsset = fiat,
+                        side = "BUY"
+                    )
                 )
+            }
+
+            TradeHistoryPage(
+                trades = trades,
+                hasMore = cursor.isNotBlank() && fills.length() >= limit
             )
         }
-
-        TradeHistoryPage(
-            trades = trades,
-            hasMore = cursor.isNotBlank() && fills.length() >= limit
-        )
     }
 
     override suspend fun withdraw(

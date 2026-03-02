@@ -73,9 +73,10 @@
     <string name="run_now_all_plans">Všechny plány</string>
     <string name="run_now_confirm">Spustit %1$d plán(ů)</string>
     <string name="dashboard_portfolio_total">Celkové portfolio</string>
-    <string name="dashboard_portfolio_total_value">Hodnota</string>
     <string name="dashboard_portfolio_total_invested">Investováno</string>
     <string name="dashboard_roi">ROI %1$s</string>
+    <string name="ath_distance_format">-%1$d %%</string>
+    <string name="ath_distance_crypto_format">%1$s -%2$d %%</string>
     <string name="dashboard_less_than_1_hour">&lt; 1 hodina</string>
     <plurals name="dashboard_hours">
         <item quantity="one">%1$d hodina</item>
@@ -726,6 +727,7 @@
     <string name="notifications_title">Oznámení</string>
     <string name="notifications_empty_title">Zatím žádná oznámení</string>
     <string name="notifications_empty_description">Oznámení o nákupech, chybách a upozorněních se zobrazí zde</string>
+    <string name="notifications_create_test">Vytvořit testovací oznámení</string>
     <string name="notifications_mark_all_read">Označit vše jako přečtené</string>
     <string name="notifications_delete_all">Smazat vše</string>
     <string name="notification_state_read">Přečtené</string>

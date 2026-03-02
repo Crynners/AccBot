@@ -39,7 +39,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.accbot.dca.data.local.AppTheme
-import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.presentation.components.AccBotBottomNav
@@ -150,7 +149,8 @@ class MainActivity : AppCompatActivity() {
                             onOnboardingComplete = {
                                 onboardingPreferences.setOnboardingCompleted(true)
                             },
-                            pendingTab = pendingTab
+                            pendingTab = pendingTab,
+                            unreadNotificationCount = notificationDao.getUnreadCount()
                         )
                     }
 
@@ -212,7 +212,8 @@ class MainActivity : AppCompatActivity() {
 fun AccBotApp(
     isOnboardingCompleted: Boolean,
     onOnboardingComplete: () -> Unit,
-    pendingTab: MutableStateFlow<Int?> = MutableStateFlow(null)
+    pendingTab: MutableStateFlow<Int?> = MutableStateFlow(null),
+    unreadNotificationCount: kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.flowOf(0)
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -322,11 +323,9 @@ fun AccBotApp(
         composable("main") {
             var isChartTouching by remember { mutableStateOf(false) }
 
-            // Notification badge count
-            val notificationBadgeCount by remember {
-                DcaDatabase.getInstance(navController.context, false)
-                    .notificationDao().getUnreadCount()
-            }.collectAsState(initial = 0)
+            // Notification badge count (flow provided via Hilt-injected DAO)
+            val notificationBadgeCount by unreadNotificationCount
+                .collectAsState(initial = 0)
 
             if (isLandscape) {
                 Row(
