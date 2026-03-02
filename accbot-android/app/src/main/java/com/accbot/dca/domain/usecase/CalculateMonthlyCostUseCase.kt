@@ -78,7 +78,7 @@ class CalculateMonthlyCostUseCase @Inject constructor(
                             val mult = strategy.tiers.sortedBy { it.maxIndex }
                                 .firstOrNull { fngData.value <= it.maxIndex }
                                 ?.multiplier ?: 1.0f
-                            mult to "Fear & Greed: ${fngData.value} (${fngData.classification})"
+                            mult to "Fear & Greed: ${fngData.value} (${fngData.classificationLabel})"
                         } else null
                     }
                 )
