@@ -59,17 +59,18 @@ class CoinmateApi(
                 .post(formBody)
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: throw Exception("Empty response")
-            val json = JSONObject(body)
+            val orderId = client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: throw Exception("Empty response")
+                val json = JSONObject(body)
 
-            if (json.optBoolean("error", true)) {
-                val errorMessage = json.optString("errorMessage", "Unknown error")
-                return@withContext DcaResult.Error(errorMessage, retryable = false)
+                if (json.optBoolean("error", true)) {
+                    val errorMessage = json.optString("errorMessage", "Unknown error")
+                    return@withContext DcaResult.Error(errorMessage, retryable = false)
+                }
+
+                // buyInstant returns just the order ID
+                json.get("data").toString()
             }
-
-            // buyInstant returns just the order ID
-            val orderId = json.get("data").toString()
 
             // Query tradeHistory for real fill details (amount, price, fee)
             val tradeDetails = getTradeDetailsByOrderId(orderId, pair)
@@ -155,42 +156,45 @@ class CoinmateApi(
                     .post(formBody)
                     .build()
 
-                val response = client.newCall(request).execute()
-                val body = response.body?.string() ?: continue
-                val json = JSONObject(body)
+                val result = client.newCall(request).execute().use { response ->
+                    val body = response.body?.string() ?: return@use null
+                    val json = JSONObject(body)
 
-                if (json.optBoolean("error", true)) continue
+                    if (json.optBoolean("error", true)) return@use null
 
-                val dataArray = json.optJSONArray("data") ?: continue
+                    val dataArray = json.optJSONArray("data") ?: return@use null
 
-                // Filter fills matching our orderId
-                var totalAmount = BigDecimal.ZERO
-                var totalFee = BigDecimal.ZERO
-                var totalCost = BigDecimal.ZERO // amount × price per fill, for weighted avg
-                var found = false
+                    // Filter fills matching our orderId
+                    var totalAmount = BigDecimal.ZERO
+                    var totalFee = BigDecimal.ZERO
+                    var totalCost = BigDecimal.ZERO // amount × price per fill, for weighted avg
+                    var found = false
 
-                for (i in 0 until dataArray.length()) {
-                    val trade = dataArray.getJSONObject(i)
-                    val tradeOrderId = trade.optString("orderId", "")
-                    if (tradeOrderId == orderId) {
-                        found = true
-                        val amount = BigDecimal(trade.getString("amount"))
-                        val price = BigDecimal(trade.getString("price"))
-                        val fee = BigDecimal(trade.getString("fee"))
-                        totalAmount = totalAmount.add(amount)
-                        totalFee = totalFee.add(fee)
-                        totalCost = totalCost.add(amount.multiply(price))
+                    for (i in 0 until dataArray.length()) {
+                        val trade = dataArray.getJSONObject(i)
+                        val tradeOrderId = trade.optString("orderId", "")
+                        if (tradeOrderId == orderId) {
+                            found = true
+                            val amount = BigDecimal(trade.getString("amount"))
+                            val price = BigDecimal(trade.getString("price"))
+                            val fee = BigDecimal(trade.getString("fee"))
+                            totalAmount = totalAmount.add(amount)
+                            totalFee = totalFee.add(fee)
+                            totalCost = totalCost.add(amount.multiply(price))
+                        }
                     }
+
+                    if (found && totalAmount > BigDecimal.ZERO) {
+                        val weightedAvgPrice = totalCost.divide(totalAmount, 2, RoundingMode.HALF_UP)
+                        TradeDetails(
+                            totalAmount = totalAmount,
+                            totalFee = totalFee.setScale(2, RoundingMode.HALF_UP),
+                            weightedAvgPrice = weightedAvgPrice
+                        )
+                    } else null
                 }
 
-                if (found && totalAmount > BigDecimal.ZERO) {
-                    val weightedAvgPrice = totalCost.divide(totalAmount, 2, RoundingMode.HALF_UP)
-                    return TradeDetails(
-                        totalAmount = totalAmount,
-                        totalFee = totalFee.setScale(2, RoundingMode.HALF_UP),
-                        weightedAvgPrice = weightedAvgPrice
-                    )
-                }
+                if (result != null) return result
             } catch (_: Exception) {
                 // Continue to retry
             }
@@ -215,15 +219,16 @@ class CoinmateApi(
                 .post(formBody)
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext null
-            val json = JSONObject(body)
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext null
+                val json = JSONObject(body)
 
-            if (json.optBoolean("error", true)) return@withContext null
+                if (json.optBoolean("error", true)) return@withContext null
 
-            val data = json.getJSONObject("data")
-            val currencyData = data.optJSONObject(currency) ?: return@withContext null
-            BigDecimal(currencyData.getString("available"))
+                val data = json.getJSONObject("data")
+                val currencyData = data.optJSONObject(currency) ?: return@withContext null
+                BigDecimal(currencyData.getString("available"))
+            }
         } catch (e: Exception) {
             null
         }
@@ -237,14 +242,15 @@ class CoinmateApi(
                 .get()
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext null
-            val json = JSONObject(body)
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext null
+                val json = JSONObject(body)
 
-            if (json.optBoolean("error", true)) return@withContext null
+                if (json.optBoolean("error", true)) return@withContext null
 
-            val data = json.getJSONObject("data")
-            BigDecimal(data.getString("last"))
+                val data = json.getJSONObject("data")
+                BigDecimal(data.getString("last"))
+            }
         } catch (e: Exception) {
             null
         }
@@ -274,17 +280,18 @@ class CoinmateApi(
                 .post(formBody)
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: throw Exception("Empty response")
-            val json = JSONObject(body)
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: throw Exception("Empty response")
+                val json = JSONObject(body)
 
-            if (json.optBoolean("error", true)) {
-                val errorMessage = json.optString("errorMessage", "Withdrawal failed")
-                return@withContext Result.failure(Exception(errorMessage))
+                if (json.optBoolean("error", true)) {
+                    val errorMessage = json.optString("errorMessage", "Withdrawal failed")
+                    return@withContext Result.failure(Exception(errorMessage))
+                }
+
+                val data = json.getJSONObject("data")
+                Result.success(data.optString("id", ""))
             }
-
-            val data = json.getJSONObject("data")
-            Result.success(data.optString("id", ""))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -329,47 +336,48 @@ class CoinmateApi(
             .post(formBuilder.build())
             .build()
 
-        val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: throw Exception("Empty response")
-        val json = JSONObject(body)
+        client.newCall(request).execute().use { response ->
+            val body = response.body?.string() ?: throw Exception("Empty response")
+            val json = JSONObject(body)
 
-        if (json.optBoolean("error", true)) {
-            throw Exception(json.optString("errorMessage", "Failed to fetch trade history"))
-        }
+            if (json.optBoolean("error", true)) {
+                throw Exception(json.optString("errorMessage", "Failed to fetch trade history"))
+            }
 
-        val dataArray = json.optJSONArray("data") ?: throw Exception("No data in response")
-        val trades = mutableListOf<HistoricalTrade>()
+            val dataArray = json.optJSONArray("data") ?: throw Exception("No data in response")
+            val trades = mutableListOf<HistoricalTrade>()
 
-        for (i in 0 until dataArray.length()) {
-            val trade = dataArray.getJSONObject(i)
-            val tradeType = trade.optString("type", "")
-            val side = if (tradeType == "BUY") "BUY" else "SELL"
+            for (i in 0 until dataArray.length()) {
+                val trade = dataArray.getJSONObject(i)
+                val tradeType = trade.optString("type", "")
+                val side = if (tradeType == "BUY") "BUY" else "SELL"
 
-            val amount = BigDecimal(trade.getString("amount"))
-            val price = BigDecimal(trade.getString("price"))
-            val fee = BigDecimal(trade.getString("fee"))
-            val timestamp = Instant.ofEpochMilli(trade.getLong("createdTimestamp"))
+                val amount = BigDecimal(trade.getString("amount"))
+                val price = BigDecimal(trade.getString("price"))
+                val fee = BigDecimal(trade.getString("fee"))
+                val timestamp = Instant.ofEpochMilli(trade.getLong("createdTimestamp"))
 
-            trades.add(
-                HistoricalTrade(
-                    orderId = trade.optString("orderId", trade.optString("transactionId", "")),
-                    timestamp = timestamp,
-                    crypto = crypto,
-                    fiat = fiat,
-                    cryptoAmount = amount,
-                    fiatAmount = amount.multiply(price).setScale(2, RoundingMode.HALF_UP),
-                    price = price,
-                    fee = fee,
-                    feeAsset = fiat,
-                    side = side
+                trades.add(
+                    HistoricalTrade(
+                        orderId = trade.optString("orderId", trade.optString("transactionId", "")),
+                        timestamp = timestamp,
+                        crypto = crypto,
+                        fiat = fiat,
+                        cryptoAmount = amount,
+                        fiatAmount = amount.multiply(price).setScale(2, RoundingMode.HALF_UP),
+                        price = price,
+                        fee = fee,
+                        feeAsset = fiat,
+                        side = side
+                    )
                 )
+            }
+
+            TradeHistoryPage(
+                trades = trades,
+                hasMore = trades.size >= limit
             )
         }
-
-        TradeHistoryPage(
-            trades = trades,
-            hasMore = trades.size >= limit
-        )
     }
 
     override suspend fun validateCredentials(): Boolean = withContext(Dispatchers.IO) {

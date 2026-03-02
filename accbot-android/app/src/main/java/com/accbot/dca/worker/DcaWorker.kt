@@ -82,6 +82,21 @@ class DcaWorker @AssistedInject constructor(
                     continue
                 }
 
+                // Check if plan has reached its target accumulation amount
+                if (plan.targetAmount != null && plan.targetAmount > BigDecimal.ZERO) {
+                    val accumulated = BigDecimal(database.transactionDao().getAccumulatedCryptoByPlan(plan.id))
+                    if (accumulated >= plan.targetAmount) {
+                        database.dcaPlanDao().setEnabled(plan.id, false)
+                        Log.d(TAG, "Plan ${plan.id} reached target ${plan.targetAmount}, auto-disabled")
+                        notificationService.showErrorNotification(
+                            context.getString(R.string.notification_dca_failed),
+                            "Target reached: ${plan.targetAmount} ${plan.crypto}",
+                            plan.id
+                        )
+                        continue
+                    }
+                }
+
                 // Get credentials (using current sandbox mode)
                 val isSandbox = userPreferences.isSandboxMode()
                 val credentials = credentialsStore.getCredentials(plan.exchange, isSandbox)
@@ -140,6 +155,19 @@ class DcaWorker @AssistedInject constructor(
                     continue
                 }
 
+                // Atomically claim the plan to prevent double-purchase from concurrent workers.
+                // claimPlanForExecutionSync advances nextExecutionAt only if it's still in the past
+                // (or null), returning 0 if another worker already claimed it.
+                if (!forceRun) {
+                    val nextExec = calculateNextExecution(plan, now)
+                    val claimed = database.dcaPlanDao().claimPlanForExecutionSync(plan.id, now, nextExec)
+                    if (claimed == 0) {
+                        Log.d(TAG, "Plan ${plan.id} already claimed by another worker, skipping")
+                        continue
+                    }
+                    Log.d(TAG, "Plan ${plan.id} claimed for execution, nextExecution advanced to $nextExec")
+                }
+
                 // Execute DCA purchase with immediate retry
                 val api = exchangeApiFactory.create(credentials)
                 val maxAttempts = 3
@@ -193,7 +221,11 @@ class DcaWorker @AssistedInject constructor(
                             )
                             database.runInTransaction {
                                 database.transactionDao().insertTransactionSync(transaction)
-                                database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, calculateNextExecution(plan, now))
+                                // For non-forceRun, nextExecutionAt was already advanced by the claim;
+                                // only update for forceRun which bypasses the claim step
+                                if (forceRun) {
+                                    database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, calculateNextExecution(plan, now))
+                                }
                             }
                         } catch (e: Exception) {
                             Log.e(TAG, "Failed to save transaction for plan ${plan.id}", e)
@@ -230,7 +262,8 @@ class DcaWorker @AssistedInject constructor(
 
                     is DcaResult.Error -> {
                         if (finalResult.retryable) {
-                            // Network error — silent retry in 5 min, no transaction saved
+                            // Network error — silent retry in 5 min, no transaction saved.
+                            // Override the claimed nextExecutionAt with an earlier retry time.
                             try {
                                 val retryTime = now.plus(Duration.ofMinutes(5))
                                 database.dcaPlanDao().updateExecutionTime(plan.id, now, retryTime)
@@ -260,7 +293,11 @@ class DcaWorker @AssistedInject constructor(
                                 )
                                 database.runInTransaction {
                                     database.transactionDao().insertTransactionSync(transaction)
-                                    database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, calculateNextExecution(plan, now))
+                                    // For non-forceRun, nextExecutionAt was already advanced by the claim;
+                                    // only update for forceRun which bypasses the claim step
+                                    if (forceRun) {
+                                        database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, calculateNextExecution(plan, now))
+                                    }
                                 }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to save failed transaction for plan ${plan.id}", e)
@@ -433,6 +470,8 @@ class DcaWorker @AssistedInject constructor(
          * Creates an expedited OneTimeWorkRequest that respects nextExecutionAt checks
          * (does NOT set KEY_FORCE_RUN).
          */
+        private const val ALARM_WORK_NAME = "dca_alarm_execution"
+
         fun runFromAlarm(context: Context) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -445,9 +484,9 @@ class DcaWorker @AssistedInject constructor(
                 .build()
 
             WorkManager.getInstance(context)
-                .enqueue(oneTimeWorkRequest)
+                .enqueueUniqueWork(ALARM_WORK_NAME, ExistingWorkPolicy.KEEP, oneTimeWorkRequest)
 
-            Log.d(TAG, "DCA alarm-triggered work enqueued (expedited)")
+            Log.d(TAG, "DCA alarm-triggered work enqueued (expedited, unique=$ALARM_WORK_NAME)")
         }
 
         /**

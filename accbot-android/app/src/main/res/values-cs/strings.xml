@@ -73,9 +73,10 @@
     <string name="run_now_all_plans">Všechny plány</string>
     <string name="run_now_confirm">Spustit %1$d plán(ů)</string>
     <string name="dashboard_portfolio_total">Celkové portfolio</string>
-    <string name="dashboard_portfolio_total_value">Hodnota</string>
     <string name="dashboard_portfolio_total_invested">Investováno</string>
     <string name="dashboard_roi">ROI %1$s</string>
+    <string name="ath_distance_format">-%1$d %%</string>
+    <string name="ath_distance_crypto_format">%1$s -%2$d %%</string>
     <string name="dashboard_less_than_1_hour">&lt; 1 hodina</string>
     <plurals name="dashboard_hours">
         <item quantity="one">%1$d hodina</item>
@@ -285,6 +286,7 @@
     <string name="plan_details_current_value">Aktuální hodnota</string>
     <string name="plan_details_roi">ROI</string>
     <string name="plan_details_balance">Zůstatek na burze</string>
+    <string name="plan_details_exchange_balance_title">Zůstatek na burze</string>
     <string name="plan_details_crypto_balance">Zůstatek krypta</string>
     <string name="plan_details_estimated_duration">Odhadovaná doba</string>
     <string name="plan_details_days_remaining">~%1$d dní (%2$d nákupů)</string>
@@ -598,23 +600,6 @@
     <!-- Splash Screen -->
     <string name="splash_tagline">Stackuj saty. Zůstaň pokorný.</string>
 
-    <!-- Import CSV -->
-    <string name="import_csv_title">Importovat historii</string>
-    <string name="import_csv_subtitle">Importovat transakce z exportu Coinmate CSV</string>
-    <string name="import_csv_select_file">Vybrat CSV soubor</string>
-    <string name="import_csv_select_file_desc">Vyberte exportovanou historii transakcí z Coinmate</string>
-    <string name="import_csv_new_transactions">%1$d nových transakcí</string>
-    <string name="import_csv_skipped">%1$d již importováno (přeskočeno)</string>
-    <string name="import_csv_import_button">Importovat</string>
-    <string name="import_csv_importing">Importování…</string>
-    <string name="import_csv_success">%1$d transakcí úspěšně importováno</string>
-    <string name="import_csv_no_buy_transactions">V CSV nebyly nalezeny odpovídající nákupní transakce</string>
-    <string name="import_csv_parse_error">Nepodařilo se zpracovat CSV soubor</string>
-    <string name="import_csv_view_history">Zobrazit historii</string>
-    <string name="import_csv_file_loaded">Soubor načten</string>
-    <string name="import_csv_plan_info">%1$s/%2$s na %3$s</string>
-    <string name="import_csv_instructions">Exportujte historii transakcí z Coinmate a vyberte CSV soubor níže.</string>
-
     <!-- Import via API -->
     <string name="import_api_title">Import přes API</string>
     <string name="import_api_subtitle">Import transakcí jedním kliknutím z burzy</string>
@@ -726,6 +711,7 @@
     <string name="notifications_title">Oznámení</string>
     <string name="notifications_empty_title">Zatím žádná oznámení</string>
     <string name="notifications_empty_description">Oznámení o nákupech, chybách a upozorněních se zobrazí zde</string>
+    <string name="notifications_create_test">Vytvořit testovací oznámení</string>
     <string name="notifications_mark_all_read">Označit vše jako přečtené</string>
     <string name="notifications_delete_all">Smazat vše</string>
     <string name="notification_state_read">Přečtené</string>

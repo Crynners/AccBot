@@ -69,17 +69,29 @@
     var navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
     if (!sections.length || !navLinks.length) return;
     if (!('IntersectionObserver' in window)) return;
+
+    function setActive(id) {
+      navLinks.forEach(function (link) {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+      });
+    }
+
     var observer = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
         if (entry.isIntersecting) {
-          var id = entry.target.getAttribute('id');
-          navLinks.forEach(function (link) {
-            link.classList.toggle('active', link.getAttribute('href') === '#' + id);
-          });
+          setActive(entry.target.getAttribute('id'));
         }
       });
     }, { rootMargin: '-20% 0px -70% 0px' });
     sections.forEach(function (s) { observer.observe(s); });
+
+    // When scrolled to bottom, activate the last section's nav link
+    var lastSection = sections[sections.length - 1];
+    window.addEventListener('scroll', function () {
+      if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+        setActive(lastSection.getAttribute('id'));
+      }
+    }, { passive: true });
   }
 
   function init() {

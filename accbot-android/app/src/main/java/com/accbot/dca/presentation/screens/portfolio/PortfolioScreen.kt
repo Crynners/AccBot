@@ -891,8 +891,13 @@ internal fun KpiCardContent(
     // Scrub date indicator
     if (isScrubbing) {
         Text(
-            text = LocalDate.ofEpochDay(latest.epochDay)
-                .format(com.accbot.dca.presentation.utils.DateFormatters.shortDate),
+            text = if (latest.epochMillis != null) {
+                java.time.Instant.ofEpochMilli(latest.epochMillis)
+                    .let { com.accbot.dca.presentation.utils.DateFormatters.shortDateTime.format(it) }
+            } else {
+                LocalDate.ofEpochDay(latest.epochDay)
+                    .format(com.accbot.dca.presentation.utils.DateFormatters.shortDate)
+            },
             style = MaterialTheme.typography.labelMedium,
             color = accentColor(),
             fontWeight = FontWeight.SemiBold,
@@ -1044,8 +1049,13 @@ private fun LandscapeKpiContent(
         // Scrub date
         if (isScrubbing) {
             Text(
-                text = LocalDate.ofEpochDay(displayPoint.epochDay)
-                    .format(com.accbot.dca.presentation.utils.DateFormatters.shortDate),
+                text = if (displayPoint.epochMillis != null) {
+                    java.time.Instant.ofEpochMilli(displayPoint.epochMillis)
+                        .let { com.accbot.dca.presentation.utils.DateFormatters.shortDateTime.format(it) }
+                } else {
+                    LocalDate.ofEpochDay(displayPoint.epochDay)
+                        .format(com.accbot.dca.presentation.utils.DateFormatters.shortDate)
+                },
                 style = MaterialTheme.typography.labelMedium,
                 color = accentColor(),
                 fontWeight = FontWeight.SemiBold

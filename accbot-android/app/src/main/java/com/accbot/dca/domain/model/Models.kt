@@ -91,11 +91,6 @@ enum class Exchange(
 fun Exchange.supportsSandbox(): Boolean = sandboxSupport == SandboxSupport.FULL
 
 /**
- * Check if exchange supports CSV transaction history import
- */
-val Exchange.supportsImport: Boolean get() = this == Exchange.COINMATE
-
-/**
  * Check if exchange supports API-based transaction history import
  */
 val Exchange.supportsApiImport: Boolean get() = this in setOf(Exchange.COINMATE, Exchange.BINANCE, Exchange.KRAKEN, Exchange.COINBASE)
@@ -131,7 +126,7 @@ enum class DcaFrequency(
     EVERY_8_HOURS(R.string.frequency_every_8_hours, 480),
     DAILY(R.string.frequency_daily, 1440),
     WEEKLY(R.string.frequency_weekly, 10080),
-    CUSTOM(R.string.frequency_custom, 0)
+    CUSTOM(R.string.frequency_custom, 1440)
 }
 
 /**

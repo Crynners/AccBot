@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -145,7 +146,6 @@ class MarketDataService @Inject constructor(
 
     fun invalidateCache() {
         priceCache.clear()
-        fetchMutexes.clear()
     }
 
     /**
@@ -295,7 +295,7 @@ class MarketDataService @Inject constructor(
      */
     fun calculateAthDistance(currentPrice: BigDecimal, ath: BigDecimal): Float {
         if (ath <= BigDecimal.ZERO) return 0f
-        val distance = (ath - currentPrice) / ath
+        val distance = (ath - currentPrice).divide(ath, 8, RoundingMode.HALF_UP)
         return distance.toFloat().coerceIn(0f, 1f)
     }
 }
@@ -311,7 +311,7 @@ data class CryptoData(
 ) {
     val athDistance: Float
         get() = if (allTimeHigh > BigDecimal.ZERO) {
-            ((allTimeHigh - currentPrice) / allTimeHigh).toFloat().coerceIn(0f, 1f)
+            (allTimeHigh - currentPrice).divide(allTimeHigh, 8, RoundingMode.HALF_UP).toFloat().coerceIn(0f, 1f)
         } else 0f
 
     val athDistancePercent: Int
@@ -320,9 +320,23 @@ data class CryptoData(
 
 data class FearGreedData(
     val value: Int,           // 0-100
-    val classification: String, // "Extreme Fear", "Fear", "Neutral", "Greed", "Extreme Greed"
+    val classification: String, // raw API classification (not used for display)
     val timestamp: Long
-)
+) {
+    /** 5-level classification with 20-point bands (0-19, 20-39, 40-59, 60-79, 80-100) */
+    val classificationLabel: String
+        get() = classify(value)
+
+    companion object {
+        fun classify(value: Int): String = when {
+            value <= 19 -> "Extreme Fear"
+            value <= 39 -> "Fear"
+            value <= 59 -> "Neutral"
+            value <= 79 -> "Greed"
+            else -> "Extreme Greed"
+        }
+    }
+}
 
 // CoinGecko API response models
 

@@ -54,7 +54,8 @@ data class HistoryUiState(
     val exportSuccess: Boolean = false,
     val exportError: String? = null,
     val exportData: CsvExportData? = null,
-    val snackbarMessage: String? = null
+    val snackbarMessage: String? = null,
+    val isLoading: Boolean = true
 )
 
 @HiltViewModel
@@ -104,7 +105,7 @@ class HistoryViewModel @Inject constructor(
             SortOption.PRICE_LOWEST -> filtered.sortedBy { it.price }
         }
 
-        HistoryUiState(transactions = sorted, filter = filter, sortOption = sortOption)
+        HistoryUiState(transactions = sorted, filter = filter, sortOption = sortOption, isLoading = false)
     }
 
     // Stage 2: merge transient UI state without re-filtering/re-sorting

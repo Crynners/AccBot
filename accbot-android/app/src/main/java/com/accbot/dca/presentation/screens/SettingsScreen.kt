@@ -172,7 +172,7 @@ fun SettingsScreen(
             title = { Text(stringResource(R.string.settings_language)) },
             text = {
                 Column {
-                    LanguageOption(
+                    RadioOption(
                         label = stringResource(R.string.settings_language_system_default),
                         isSelected = currentTag.isEmpty(),
                         onClick = {
@@ -180,7 +180,7 @@ fun SettingsScreen(
                             showLanguageDialog = false
                         }
                     )
-                    LanguageOption(
+                    RadioOption(
                         label = stringResource(R.string.settings_language_english),
                         isSelected = currentTag == "en",
                         onClick = {
@@ -188,7 +188,7 @@ fun SettingsScreen(
                             showLanguageDialog = false
                         }
                     )
-                    LanguageOption(
+                    RadioOption(
                         label = stringResource(R.string.settings_language_czech),
                         isSelected = currentTag == "cs",
                         onClick = {
@@ -213,7 +213,7 @@ fun SettingsScreen(
             title = { Text(stringResource(R.string.settings_theme)) },
             text = {
                 Column {
-                    LanguageOption(
+                    RadioOption(
                         label = stringResource(R.string.settings_theme_system),
                         isSelected = uiState.appTheme == AppTheme.SYSTEM,
                         onClick = {
@@ -221,7 +221,7 @@ fun SettingsScreen(
                             showThemeDialog = false
                         }
                     )
-                    LanguageOption(
+                    RadioOption(
                         label = stringResource(R.string.settings_theme_dark),
                         isSelected = uiState.appTheme == AppTheme.DARK,
                         onClick = {
@@ -229,7 +229,7 @@ fun SettingsScreen(
                             showThemeDialog = false
                         }
                     )
-                    LanguageOption(
+                    RadioOption(
                         label = stringResource(R.string.settings_theme_light),
                         isSelected = uiState.appTheme == AppTheme.LIGHT,
                         onClick = {
@@ -936,7 +936,7 @@ internal fun SettingsCard(
 }
 
 @Composable
-private fun LanguageOption(
+private fun RadioOption(
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit

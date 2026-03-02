@@ -39,7 +39,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.accbot.dca.data.local.AppTheme
-import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.presentation.components.AccBotBottomNav
@@ -59,7 +58,6 @@ import com.accbot.dca.presentation.screens.onboarding.*
 import com.accbot.dca.presentation.screens.history.TransactionDetailsScreen
 import com.accbot.dca.presentation.screens.plans.EditPlanScreen
 import com.accbot.dca.presentation.screens.plans.PlanDetailsScreen
-import com.accbot.dca.presentation.screens.ImportCsvScreen
 import com.accbot.dca.presentation.screens.backup.BackupExportScreen
 import com.accbot.dca.presentation.screens.backup.BackupImportScreen
 import com.accbot.dca.presentation.screens.portfolio.PortfolioScreen
@@ -150,7 +148,8 @@ class MainActivity : AppCompatActivity() {
                             onOnboardingComplete = {
                                 onboardingPreferences.setOnboardingCompleted(true)
                             },
-                            pendingTab = pendingTab
+                            pendingTab = pendingTab,
+                            unreadNotificationCount = notificationDao.getUnreadCount()
                         )
                     }
 
@@ -212,7 +211,8 @@ class MainActivity : AppCompatActivity() {
 fun AccBotApp(
     isOnboardingCompleted: Boolean,
     onOnboardingComplete: () -> Unit,
-    pendingTab: MutableStateFlow<Int?> = MutableStateFlow(null)
+    pendingTab: MutableStateFlow<Int?> = MutableStateFlow(null),
+    unreadNotificationCount: kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.flowOf(0)
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -322,11 +322,9 @@ fun AccBotApp(
         composable("main") {
             var isChartTouching by remember { mutableStateOf(false) }
 
-            // Notification badge count
-            val notificationBadgeCount by remember {
-                DcaDatabase.getInstance(navController.context, false)
-                    .notificationDao().getUnreadCount()
-            }.collectAsState(initial = 0)
+            // Notification badge count (flow provided via Hilt-injected DAO)
+            val notificationBadgeCount by unreadNotificationCount
+                .collectAsState(initial = 0)
 
             if (isLandscape) {
                 Row(
@@ -410,9 +408,6 @@ fun AccBotApp(
                 onNavigateToEdit = {
                     navController.navigate(Screen.EditPlan.createRoute(planId))
                 },
-                onNavigateToImport = {
-                    navController.navigate(Screen.ImportCsv.createRoute(planId))
-                },
                 onNavigateToHistory = { crypto, fiat ->
                     navController.navigate(Screen.History.createRoute(crypto, fiat))
                 }
@@ -430,24 +425,6 @@ fun AccBotApp(
                 planId = planId,
                 onNavigateBack = { navController.popBackStack() },
                 onPlanUpdated = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = Screen.ImportCsv.route,
-            arguments = listOf(
-                navArgument(Screen.PLAN_ID_ARG) { type = NavType.LongType }
-            )
-        ) { backStackEntry ->
-            val planId = backStackEntry.arguments?.getLong(Screen.PLAN_ID_ARG) ?: return@composable
-            ImportCsvScreen(
-                planId = planId,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToHistory = {
-                    navController.navigate(Screen.History.createRoute()) {
-                        popUpTo(Screen.PlanDetails.createRoute(planId)) { inclusive = false }
-                    }
-                }
             )
         }
 

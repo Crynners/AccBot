@@ -26,10 +26,6 @@ sealed class Screen(val route: String) {
     data object EditPlan : Screen("plans/edit/{planId}") {
         fun createRoute(planId: Long) = "plans/edit/$planId"
     }
-    data object ImportCsv : Screen("plans/import_csv/{planId}") {
-        fun createRoute(planId: Long) = "plans/import_csv/$planId"
-    }
-
     // Exchange screens
     data object ExchangeManagement : Screen("exchanges/manage")
     data object ExchangeDetail : Screen("exchanges/detail/{exchange}?autoImport={autoImport}") {

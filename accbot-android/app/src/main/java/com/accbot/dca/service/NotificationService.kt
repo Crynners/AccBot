@@ -278,19 +278,19 @@ class NotificationService @Inject constructor(
         const val CHANNEL_LOW_BALANCE = "accbot_low_balance"
 
         const val NOTIFICATION_ID_SERVICE = 1
-        private const val NOTIFICATION_ID_PURCHASE = 100
-        private const val NOTIFICATION_ID_ERROR = 200
-        private const val NOTIFICATION_ID_LOW_BALANCE = 300
-        private const val NOTIFICATION_ID_WITHDRAWAL_THRESHOLD = 400
+        private const val NOTIFICATION_ID_PURCHASE = 10_000
+        private const val NOTIFICATION_ID_ERROR = 20_000
+        private const val NOTIFICATION_ID_LOW_BALANCE = 30_000
+        private const val NOTIFICATION_ID_WITHDRAWAL_THRESHOLD = 40_000
 
         const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
 
         /**
          * Generate a unique notification ID per plan to prevent overwriting.
-         * Each category (purchase/error/low_balance) gets a range of 100 IDs.
+         * Each category (purchase/error/low_balance) gets a range of 10000 IDs.
          */
         private fun notificationIdForPlan(baseId: Int, planId: Long): Int {
-            return if (planId > 0) baseId + (planId % 99).toInt() + 1 else baseId
+            return if (planId > 0) baseId + ((planId % 9999) + 1).toInt() else baseId
         }
     }
 }

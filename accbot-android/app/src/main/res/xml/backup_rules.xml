@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <!-- Exclude sensitive data from backup -->
-    <exclude domain="sharedpref" path="accbot_encrypted_prefs.xml"/>
-    <exclude domain="database" path="accbot_dca.db"/>
+    <exclude domain="sharedpref" path="accbot_credentials.xml"/>
+    <exclude domain="sharedpref" path="__androidx_security_crypto_encrypted_prefs__.xml"/>
+    <exclude domain="database" path="accbot_prod.db"/>
+    <exclude domain="database" path="accbot_prod.db-wal"/>
+    <exclude domain="database" path="accbot_prod.db-shm"/>
+    <exclude domain="database" path="accbot_sandbox.db"/>
+    <exclude domain="database" path="accbot_sandbox.db-wal"/>
+    <exclude domain="database" path="accbot_sandbox.db-shm"/>
 </full-backup-content>

@@ -63,4 +63,12 @@ object DateFormatters {
     val shortDate: DateTimeFormatter = DateTimeFormatter
         .ofPattern("d MMM yyyy")
         .withZone(ZoneId.systemDefault())
+
+    /**
+     * Format: "15 Jan 2024 14:30"
+     * Used for chart scrub date display in per-transaction mode
+     */
+    val shortDateTime: DateTimeFormatter = DateTimeFormatter
+        .ofPattern("d MMM yyyy H:mm")
+        .withZone(ZoneId.systemDefault())
 }

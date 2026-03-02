@@ -42,6 +42,30 @@ fun NotificationsScreen(
 ) {
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val unreadCount by viewModel.unreadCount.collectAsStateWithLifecycle()
+    var showDeleteAllDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteAllDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAllDialog = false },
+            title = { Text(stringResource(R.string.notifications_delete_all)) },
+            text = { Text(stringResource(R.string.settings_delete_notifications_dialog_text, notifications.size)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAllNotifications()
+                        showDeleteAllDialog = false
+                    }
+                ) {
+                    Text(stringResource(R.string.common_delete), color = Error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAllDialog = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
@@ -58,7 +82,7 @@ fun NotificationsScreen(
                         IconButton(onClick = { viewModel.createTestNotifications() }) {
                             Icon(
                                 imageVector = Icons.Default.BugReport,
-                                contentDescription = "Create test notifications"
+                                contentDescription = stringResource(R.string.notifications_create_test)
                             )
                         }
                     }
@@ -67,7 +91,7 @@ fun NotificationsScreen(
                             Text(stringResource(R.string.notifications_mark_all_read))
                         }
                     } else if (notifications.isNotEmpty()) {
-                        TextButton(onClick = { viewModel.deleteAllNotifications() }) {
+                        TextButton(onClick = { showDeleteAllDialog = true }) {
                             Text(stringResource(R.string.notifications_delete_all))
                         }
                     }

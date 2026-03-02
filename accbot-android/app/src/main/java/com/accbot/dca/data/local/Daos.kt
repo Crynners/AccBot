@@ -35,6 +35,17 @@ interface DcaPlanDao {
     @Query("UPDATE dca_plans SET lastExecutedAt = :lastExecutedAt, nextExecutionAt = :nextExecutionAt WHERE id = :planId")
     fun updateExecutionTimeSync(planId: Long, lastExecutedAt: Instant, nextExecutionAt: Instant)
 
+    /**
+     * Atomically claim a plan for execution by advancing nextExecutionAt,
+     * but only if it is still in the past (or null). Returns the number of
+     * rows affected: 1 = claimed, 0 = another worker already claimed it.
+     */
+    @Query("UPDATE dca_plans SET nextExecutionAt = :newNextExecutionAt, lastExecutedAt = :now WHERE id = :planId AND (nextExecutionAt IS NULL OR nextExecutionAt <= :now)")
+    fun claimPlanForExecutionSync(planId: Long, now: Instant, newNextExecutionAt: Instant): Int
+
+    @Query("SELECT * FROM dca_plans WHERE id = :id")
+    fun getPlanByIdSync(id: Long): DcaPlanEntity?
+
     @Query("UPDATE dca_plans SET isEnabled = :enabled WHERE id = :planId")
     suspend fun setEnabled(planId: Long, enabled: Boolean)
 

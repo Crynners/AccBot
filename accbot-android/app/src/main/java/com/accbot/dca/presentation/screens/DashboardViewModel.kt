@@ -416,7 +416,10 @@ class DashboardViewModel @Inject constructor(
 
     fun refreshPreferences() {
         _uiState.update {
-            it.copy(showMarketPulse = userPreferences.isMarketPulseEnabled())
+            it.copy(
+                showMarketPulse = userPreferences.isMarketPulseEnabled(),
+                isMarketPulseExpanded = userPreferences.isMarketPulseExpanded()
+            )
         }
     }
 
