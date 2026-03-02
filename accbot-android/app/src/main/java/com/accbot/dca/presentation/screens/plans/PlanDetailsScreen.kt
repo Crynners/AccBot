@@ -1,14 +1,11 @@
 package com.accbot.dca.presentation.screens.plans
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -19,23 +16,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.domain.usecase.ApiImportResultState
-import com.accbot.dca.domain.model.supportsImport
 import com.accbot.dca.presentation.components.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
@@ -52,7 +45,6 @@ fun PlanDetailsScreen(
     planId: Long,
     onNavigateBack: () -> Unit,
     onNavigateToEdit: () -> Unit,
-    onNavigateToImport: (() -> Unit)? = null,
     onNavigateToHistory: ((crypto: String, fiat: String) -> Unit)? = null,
     viewModel: PlanDetailsViewModel = hiltViewModel()
 ) {
@@ -64,6 +56,7 @@ fun PlanDetailsScreen(
     var showStrategyInfo by rememberSaveable { mutableStateOf(false) }
     var showDeleteTransactionsDialog by rememberSaveable { mutableStateOf(false) }
     var deleteTransactionsConfirmText by rememberSaveable { mutableStateOf("") }
+    var dangerZoneExpanded by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(planId) {
@@ -270,7 +263,7 @@ fun PlanDetailsScreen(
                 ) {
                     item { Spacer(modifier = Modifier.height(8.dp)) }
 
-                    // Plan header card
+                    // 1. Header card (simplified — no strategy name)
                     item {
                         Card(
                             colors = CardDefaults.cardColors(
@@ -291,13 +284,6 @@ fun PlanDetailsScreen(
                                     text = "${plan.crypto}/${plan.fiat}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
-                                )
-
-                                Text(
-                                    text = stringResource(plan.strategy.displayNameRes),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontStyle = FontStyle.Italic,
-                                    color = accentColor()
                                 )
 
                                 Text(
@@ -336,7 +322,128 @@ fun PlanDetailsScreen(
                         }
                     }
 
-                    // Plan configuration
+                    // 2. Performance card (merged Stats + Performance)
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.plan_details_performance),
+                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    modifier = Modifier.semantics { heading() }
+                                )
+
+                                // 2x2 compact stat grid
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    CompactStat(
+                                        label = stringResource(R.string.plan_details_invested),
+                                        value = "${NumberFormatters.fiat(uiState.totalInvested)} ${plan.fiat}",
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    CompactStat(
+                                        label = stringResource(R.string.plan_details_current_value),
+                                        value = if (uiState.currentValue != null)
+                                            "${NumberFormatters.fiat(uiState.currentValue!!)} ${plan.fiat}"
+                                        else
+                                            "${NumberFormatters.fiat(uiState.totalInvested)} ${plan.fiat}",
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    CompactStat(
+                                        label = stringResource(R.string.plan_details_avg_price),
+                                        value = "${NumberFormatters.fiat(uiState.averagePrice)} ${plan.fiat}/${plan.crypto}",
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    CompactStat(
+                                        label = stringResource(R.string.plan_details_transactions),
+                                        value = uiState.transactionCount.toString(),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+
+                                // Price / ROI section (only when transactions exist)
+                                if (uiState.transactionCount > 0) {
+                                    HorizontalDivider()
+
+                                    if (uiState.isPriceLoading) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.Center
+                                        ) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(20.dp),
+                                                strokeWidth = 2.dp
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = stringResource(R.string.common_loading),
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    } else {
+                                        val price = uiState.currentPrice
+                                        if (price != null) {
+                                            PlanConfigRow(
+                                                icon = Icons.Default.Paid,
+                                                label = stringResource(R.string.plan_details_current_price),
+                                                value = "${NumberFormatters.fiat(price)} ${plan.fiat}/${plan.crypto}"
+                                            )
+                                        }
+
+                                        val roiAbs = uiState.roiAbsolute
+                                        val roiPct = uiState.roiPercent
+                                        if (roiAbs != null && roiPct != null) {
+                                            val isPositive = roiAbs >= BigDecimal.ZERO
+                                            val sign = if (isPositive) "+" else ""
+                                            val roiColor = if (isPositive) successColor() else Error
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (isPositive) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
+                                                    contentDescription = null,
+                                                    tint = roiColor,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = stringResource(R.string.plan_details_roi),
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                    Text(
+                                                        text = "$sign${NumberFormatters.fiat(roiAbs)} ${plan.fiat} (${sign}${NumberFormatters.percent(roiPct)}%)",
+                                                        fontWeight = FontWeight.Medium,
+                                                        color = roiColor
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. Plan Setup card (merged Configuration + Strategy)
                     item {
                         Card(
                             colors = CardDefaults.cardColors(
@@ -379,40 +486,41 @@ fun PlanDetailsScreen(
                                     value = uiState.timeUntilNextExecution
                                 )
 
-                                if (plan.withdrawalEnabled && plan.withdrawalAddress != null) {
-                                    PlanConfigRow(
-                                        icon = Icons.AutoMirrored.Filled.Send,
-                                        label = stringResource(R.string.plan_details_auto_withdrawal),
-                                        value = "${plan.withdrawalAddress.take(8)}...${plan.withdrawalAddress.takeLast(8)}"
-                                    )
-                                }
-                            }
-                        }
-                    }
+                                // Strategy (merged from separate card)
+                                HorizontalDivider()
 
-                    // DCA Strategy
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.add_plan_dca_strategy),
-                                        fontWeight = FontWeight.SemiBold,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        modifier = Modifier.semantics { heading() }
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = when (plan.strategy) {
+                                                is DcaStrategy.Classic -> Icons.Default.Repeat
+                                                is DcaStrategy.AthBased -> Icons.AutoMirrored.Filled.TrendingDown
+                                                is DcaStrategy.FearAndGreed -> Icons.Default.Psychology
+                                            },
+                                            contentDescription = null,
+                                            tint = accentColor(),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = stringResource(plan.strategy.displayNameRes),
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                text = stringResource(plan.strategy.descriptionRes),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
                                     IconButton(
                                         onClick = { showStrategyInfo = true }
                                     ) {
@@ -425,31 +533,13 @@ fun PlanDetailsScreen(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = when (plan.strategy) {
-                                            is DcaStrategy.Classic -> Icons.Default.Repeat
-                                            is DcaStrategy.AthBased -> Icons.AutoMirrored.Filled.TrendingDown
-                                            is DcaStrategy.FearAndGreed -> Icons.Default.Psychology
-                                        },
-                                        contentDescription = null,
-                                        tint = accentColor(),
-                                        modifier = Modifier.size(20.dp)
+                                if (plan.withdrawalEnabled && plan.withdrawalAddress != null) {
+                                    HorizontalDivider()
+                                    PlanConfigRow(
+                                        icon = Icons.AutoMirrored.Filled.Send,
+                                        label = stringResource(R.string.plan_details_auto_withdrawal),
+                                        value = "${plan.withdrawalAddress.take(8)}...${plan.withdrawalAddress.takeLast(8)}"
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(
-                                            text = stringResource(plan.strategy.displayNameRes),
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            text = stringResource(plan.strategy.descriptionRes),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
                                 }
                             }
                         }
@@ -463,136 +553,7 @@ fun PlanDetailsScreen(
                         }
                     }
 
-                    // Statistics
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            StatCard(
-                                title = stringResource(R.string.plan_details_invested),
-                                value = "${NumberFormatters.fiat(uiState.totalInvested)} ${plan.fiat}",
-                                modifier = Modifier.weight(1f)
-                            )
-                            StatCard(
-                                title = stringResource(R.string.plan_details_accumulated),
-                                value = "${NumberFormatters.crypto(uiState.totalCrypto)} ${plan.crypto}",
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            StatCard(
-                                title = stringResource(R.string.plan_details_avg_price),
-                                value = "${NumberFormatters.fiat(uiState.averagePrice)} ${plan.fiat}/${plan.crypto}",
-                                modifier = Modifier.weight(1f)
-                            )
-                            StatCard(
-                                title = stringResource(R.string.plan_details_transactions),
-                                value = uiState.transactionCount.toString(),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-
-                    // Performance card
-                    if (uiState.transactionCount > 0) {
-                        item {
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.plan_details_performance),
-                                        fontWeight = FontWeight.SemiBold,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        modifier = Modifier.semantics { heading() }
-                                    )
-
-                                    if (uiState.isPriceLoading) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.Center
-                                        ) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(20.dp),
-                                                strokeWidth = 2.dp
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = stringResource(R.string.common_loading),
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                        }
-                                    } else {
-                                        val price = uiState.currentPrice
-                                        if (price != null) {
-                                            PlanConfigRow(
-                                                icon = Icons.AutoMirrored.Filled.TrendingUp,
-                                                label = stringResource(R.string.plan_details_current_price),
-                                                value = "${NumberFormatters.fiat(price)} ${plan.fiat}/${plan.crypto}"
-                                            )
-                                        }
-
-                                        val value = uiState.currentValue
-                                        if (value != null) {
-                                            PlanConfigRow(
-                                                icon = Icons.Default.AccountBalanceWallet,
-                                                label = stringResource(R.string.plan_details_current_value),
-                                                value = "${NumberFormatters.fiat(value)} ${plan.fiat}"
-                                            )
-                                        }
-
-                                        val roiAbs = uiState.roiAbsolute
-                                        val roiPct = uiState.roiPercent
-                                        if (roiAbs != null && roiPct != null) {
-                                            val isPositive = roiAbs >= BigDecimal.ZERO
-                                            val sign = if (isPositive) "+" else ""
-                                            val roiColor = if (isPositive) successColor() else Error
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(
-                                                    imageVector = if (isPositive) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
-                                                    contentDescription = null,
-                                                    tint = roiColor,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text(
-                                                        text = stringResource(R.string.plan_details_roi),
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                    Text(
-                                                        text = "$sign${NumberFormatters.fiat(roiAbs)} ${plan.fiat} (${sign}${NumberFormatters.percent(roiPct)}%)",
-                                                        fontWeight = FontWeight.Medium,
-                                                        color = roiColor
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Balance card
+                    // 4. Exchange Balance card (with heading)
                     item {
                         Card(
                             colors = CardDefaults.cardColors(
@@ -605,6 +566,13 @@ fun PlanDetailsScreen(
                                     .padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
+                                Text(
+                                    text = stringResource(R.string.plan_details_exchange_balance_title),
+                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    modifier = Modifier.semantics { heading() }
+                                )
+
                                 if (uiState.isBalanceLoading) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -653,12 +621,45 @@ fun PlanDetailsScreen(
                         }
                     }
 
-                    // Transaction history
-                    if (uiState.transactions.isNotEmpty()) {
-                        item {
-                            SectionHeader(title = stringResource(R.string.plan_details_recent_transactions))
+                    // 5. Transactions section (with Import API in header)
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.plan_details_recent_transactions),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.semantics { heading() }
+                            )
+                            if (plan.exchange.supportsApiImport) {
+                                if (uiState.isApiImporting) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    FilledTonalIconButton(
+                                        onClick = { viewModel.showImportDialog() },
+                                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                            containerColor = accentColor().copy(alpha = 0.15f),
+                                            contentColor = accentColor()
+                                        )
+                                    ) {
+                                        Icon(
+                                            Icons.Default.CloudDownload,
+                                            contentDescription = stringResource(R.string.import_api_title),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
+                    }
 
+                    if (uiState.transactions.isNotEmpty()) {
                         items(uiState.transactions.take(10), key = { it.id }) { transaction ->
                             TransactionCard(transaction = transaction)
                         }
@@ -687,94 +688,78 @@ fun PlanDetailsScreen(
                         }
                     }
 
-                    // Delete all transactions button
-                    if (uiState.transactions.isNotEmpty()) {
-                        item {
-                            OutlinedButton(
-                                onClick = { showDeleteTransactionsDialog = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = Error
-                                ),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Error.copy(alpha = 0.5f))
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.DeleteSweep,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.plan_details_delete_transactions_button))
-                            }
+                    // 6. Danger Zone (collapsible)
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { dangerZoneExpanded = !dangerZoneExpanded }
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_danger_zone),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Error,
+                                modifier = Modifier.semantics { heading() }
+                            )
+                            Icon(
+                                imageVector = if (dangerZoneExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = if (dangerZoneExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
+                                tint = Error,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
 
-                    // Import via API card
-                    if (plan.exchange.supportsApiImport) {
-                        item {
-                            Card(
-                                onClick = { viewModel.showImportDialog() },
-                                enabled = !uiState.isApiImporting,
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                )
-                            ) {
-                                Row(
+                    if (dangerZoneExpanded) {
+                        if (uiState.transactions.isNotEmpty()) {
+                            item {
+                                OutlinedCard(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CloudDownload,
-                                        contentDescription = null,
-                                        tint = accentColor(),
-                                        modifier = Modifier.size(24.dp)
+                                        .clickable { showDeleteTransactionsDialog = true },
+                                    colors = CardDefaults.outlinedCardColors(
+                                        containerColor = Error.copy(alpha = 0.1f)
+                                    ),
+                                    border = CardDefaults.outlinedCardBorder().copy(
+                                        brush = androidx.compose.ui.graphics.SolidColor(Error)
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = stringResource(R.string.import_api_title),
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        if (uiState.isApiImporting) {
-                                            Text(
-                                                text = uiState.apiImportProgress,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = accentColor()
-                                            )
-                                        } else {
-                                            Text(
-                                                text = stringResource(R.string.import_api_subtitle),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-                                    if (uiState.isApiImporting) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                            strokeWidth = 2.dp
-                                        )
-                                    } else {
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         Icon(
-                                            imageVector = Icons.Default.ChevronRight,
+                                            imageVector = Icons.Default.DeleteSweep,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            tint = Error
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = stringResource(R.string.plan_details_delete_transactions_button),
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Error
                                         )
                                     }
                                 }
                             }
                         }
-                    }
 
-                    // Import History card (only for exchanges that support CSV import)
-                    if (onNavigateToImport != null && plan.exchange.supportsImport) {
                         item {
-                            Card(
-                                onClick = onNavigateToImport,
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
+                            OutlinedCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showDeleteDialog = true },
+                                colors = CardDefaults.outlinedCardColors(
+                                    containerColor = Error.copy(alpha = 0.1f)
+                                ),
+                                border = CardDefaults.outlinedCardBorder().copy(
+                                    brush = androidx.compose.ui.graphics.SolidColor(Error)
                                 )
                             ) {
                                 Row(
@@ -784,81 +769,23 @@ fun PlanDetailsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.FileUpload,
+                                        imageVector = Icons.Default.Delete,
                                         contentDescription = null,
-                                        tint = accentColor(),
-                                        modifier = Modifier.size(24.dp)
+                                        tint = Error
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
+                                    Column {
                                         Text(
-                                            text = stringResource(R.string.import_csv_title),
-                                            fontWeight = FontWeight.SemiBold
+                                            text = stringResource(R.string.plan_details_delete_title),
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Error
                                         )
                                         Text(
-                                            text = stringResource(R.string.import_csv_subtitle),
+                                            text = stringResource(R.string.plan_details_delete_subtitle),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                    Icon(
-                                        imageVector = Icons.Default.ChevronRight,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Danger Zone
-                    item {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.settings_danger_zone),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Error,
-                            modifier = Modifier
-                                .padding(bottom = 8.dp)
-                                .semantics { heading() }
-                        )
-                    }
-
-                    item {
-                        OutlinedCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showDeleteDialog = true },
-                            colors = CardDefaults.outlinedCardColors(
-                                containerColor = Error.copy(alpha = 0.1f)
-                            ),
-                            border = CardDefaults.outlinedCardBorder().copy(
-                                brush = androidx.compose.ui.graphics.SolidColor(Error)
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = null,
-                                    tint = Error
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.plan_details_delete_title),
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Error
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.plan_details_delete_subtitle),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
                                 }
                             }
                         }
@@ -899,5 +826,26 @@ internal fun PlanConfigRow(
                 fontWeight = FontWeight.Medium
             )
         }
+    }
+}
+
+@Composable
+private fun CompactStat(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

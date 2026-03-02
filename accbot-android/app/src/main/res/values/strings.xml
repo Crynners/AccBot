@@ -285,6 +285,7 @@
     <string name="plan_details_current_value">Current Value</string>
     <string name="plan_details_roi">ROI</string>
     <string name="plan_details_balance">Exchange Balance</string>
+    <string name="plan_details_exchange_balance_title">Exchange Balance</string>
     <string name="plan_details_crypto_balance">Crypto Balance</string>
     <string name="plan_details_estimated_duration">Estimated Duration</string>
     <string name="plan_details_days_remaining">~%1$d days (%2$d executions)</string>
@@ -596,23 +597,6 @@
 
     <!-- Splash Screen -->
     <string name="splash_tagline">Stack Sats. Stay Humble.</string>
-
-    <!-- Import CSV -->
-    <string name="import_csv_title">Import History</string>
-    <string name="import_csv_subtitle">Import transactions from Coinmate CSV export</string>
-    <string name="import_csv_select_file">Select CSV File</string>
-    <string name="import_csv_select_file_desc">Choose your Coinmate transaction history export</string>
-    <string name="import_csv_new_transactions">%1$d new transactions</string>
-    <string name="import_csv_skipped">%1$d already imported (skipped)</string>
-    <string name="import_csv_import_button">Import</string>
-    <string name="import_csv_importing">Importing…</string>
-    <string name="import_csv_success">%1$d transactions imported successfully</string>
-    <string name="import_csv_no_buy_transactions">No matching buy transactions found in CSV</string>
-    <string name="import_csv_parse_error">Failed to parse CSV file</string>
-    <string name="import_csv_view_history">View History</string>
-    <string name="import_csv_file_loaded">File loaded</string>
-    <string name="import_csv_plan_info">%1$s/%2$s on %3$s</string>
-    <string name="import_csv_instructions">Export your transaction history from Coinmate and select the CSV file below.</string>
 
     <!-- Schedule Builder -->
     <string name="schedule_type_label">Schedule Type</string>
