@@ -1,0 +1,126 @@
+name: Build & Test iOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'release/**'
+      - 'feature/**'
+    paths:
+      - 'accbot-ios/**'
+      - '.github/workflows/ios-build.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'accbot-ios/**'
+      - '.github/workflows/ios-build.yml'
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: accbot-ios
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+
+      - name: Print Xcode version
+        run: xcodebuild -version
+
+      - name: Install tools
+        run: |
+          brew install xcodegen
+          gem install xcpretty
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Cache SPM packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            accbot-ios/AccBot.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('accbot-ios/project.yml') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Resolve packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project AccBot.xcodeproj \
+            -scheme AccBot \
+            -clonedSourcePackagesDirPath SourcePackages
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project AccBot.xcodeproj \
+            -scheme AccBot \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -clonedSourcePackagesDirPath SourcePackages \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            | xcpretty --color
+
+      - name: Test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project AccBot.xcodeproj \
+            -scheme AccBot \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -clonedSourcePackagesDirPath SourcePackages \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            | xcpretty --color
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults
+          path: accbot-ios/TestResults.xcresult
+          retention-days: 14
+
+      - name: Build for device (unsigned arm64)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project AccBot.xcodeproj \
+            -scheme AccBot \
+            -destination 'generic/platform=iOS' \
+            -clonedSourcePackagesDirPath SourcePackages \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            | xcpretty --color
+
+      - name: Package unsigned .ipa
+        run: |
+          mkdir -p Payload
+          cp -r DerivedData/Build/Products/Debug-iphoneos/AccBot.app Payload/
+          zip -r AccBot-unsigned.ipa Payload
+
+      - name: Upload device build
+        uses: actions/upload-artifact@v4
+        with:
+          name: AccBot-Device
+          path: accbot-ios/AccBot-unsigned.ipa
+          retention-days: 30

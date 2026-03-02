@@ -1,0 +1,813 @@
+/* Czech (cs) Localizable.strings for AccBot iOS */
+/* Keys match English text used in String(localized:) and SwiftUI LocalizedStringKey */
+
+/* ===== Common ===== */
+"Cancel" = "Zrušit";
+"Delete" = "Smazat";
+"Save" = "Uložit";
+"Done" = "Hotovo";
+"Back" = "Zpět";
+"Next" = "Další";
+"Apply" = "Použít";
+"OK" = "OK";
+"Retry" = "Zkusit znovu";
+"Skip" = "Přeskočit";
+"Clear" = "Vymazat";
+"Remove" = "Odebrat";
+"Continue" = "Pokračovat";
+"Close" = "Zavřít";
+"Copy" = "Kopírovat";
+"Error" = "Chyba";
+"Warning" = "Upozornění";
+"Loading" = "Načítání";
+
+/* ===== Navigation / Tabs ===== */
+"Dashboard" = "Přehled";
+"Portfolio" = "Portfolio";
+"Notifications" = "Oznámení";
+"Settings" = "Nastavení";
+
+/* ===== DCA Strategy ===== */
+"Classic" = "Klasické DCA";
+"ATH-Based" = "DCA dle ATH";
+"Fear & Greed" = "DCA dle Fear & Greed";
+"Fixed amount at regular intervals. Simple and effective." = "Nákup pevné částky v pravidelných intervalech. Jednoduché a efektivní.";
+"Buy more when price is far from All-Time High. Buy less near ATH." = "Kupuj více, když je cena daleko pod historickým maximem. Kupuj méně blízko ATH.";
+"Buy more during market fear, less during greed. Uses Fear & Greed Index." = "Kupuj více, když na trhu panuje strach, méně při chamtivosti. Využívá index Fear & Greed.";
+
+/* ===== DCA Frequency ===== */
+"Every 15 minutes" = "Každých 15 minut";
+"Hourly" = "Každou hodinu";
+"Every 4 hours" = "Každé 4 hodiny";
+"Every 8 hours" = "Každých 8 hodin";
+"Daily" = "Denně";
+"Weekly" = "Týdně";
+"Custom (CRON)" = "Vlastní plán";
+"iOS may not execute this frequency reliably in the background. For best results, open the app regularly." = "iOS nemusí tuto frekvenci spolehlivě provádět na pozadí. Pro nejlepší výsledky otevírejte aplikaci pravidelně.";
+
+/* ===== Theme ===== */
+"Dark" = "Tmavý";
+"Light" = "Světlý";
+"System" = "Systémový";
+
+/* ===== Splash ===== */
+"Self-Custody DCA" = "DCA ve vaší správě";
+"Stack Sats. Stay Humble." = "Hromaďte satoshi. Zůstaňte pokorní.";
+
+/* ===== Biometric Lock ===== */
+"AccBot" = "AccBot";
+"Authenticate to continue" = "Ověřte svou identitu";
+"Try Again" = "Zkusit znovu";
+"Authentication failed" = "Ověření selhalo";
+"Face ID" = "Face ID";
+"Touch ID" = "Touch ID";
+"Face ID Lock" = "Zámek Face ID";
+"Touch ID Lock" = "Zámek Touch ID";
+"Biometric Lock" = "Biometrický zámek";
+"Not available on this device" = "Na tomto zařízení není k dispozici";
+
+/* ===== Onboarding — Welcome ===== */
+"Your Self-Custody DCA Companion" = "Automatické DCA pro vaše kryptoměny";
+"Auto DCA" = "Automatické DCA";
+"Automatically buy crypto at regular intervals with dollar cost averaging." = "Nastavte a zapomeňte. AccBot nakupuje krypto podle vašeho plánu.";
+"Self-Custody" = "Vlastní správa";
+"Your keys, your crypto. All credentials stored locally on your device." = "Vaše klíče zůstávají na vašem zařízení. Žádný cloud, žádné sledování.";
+"Stack Sats" = "Hromaďte satoshi";
+"Accumulate Bitcoin and other cryptos across multiple exchanges." = "Budujte bohatství postupně pomocí průměrování nákladů.";
+"Get Started" = "Začít";
+
+/* ===== Onboarding — Security ===== */
+"Your Security Matters" = "Vaše klíče, vaše krypto";
+"AccBot is designed with a decentralized, security-first architecture." = "AccBot je navržen s důrazem na bezpečnost. Vaše API klíče nikdy neopustí vaše zařízení.";
+"Local-Only Storage" = "Pouze lokální úložiště";
+"All data stays on your device. Nothing is sent to external servers." = "Všechna data zůstávají na vašem zařízení. Nic není odesíláno na servery.";
+"Keychain Encryption" = "Šifrování Keychain";
+"API credentials are encrypted using iOS Keychain with device-only access." = "Přihlašovací údaje šifrovány pomocí iOS Keychain s přístupem pouze na zařízení.";
+"No Cloud Backup" = "Žádná synchronizace s cloudem";
+"Sensitive data is excluded from iCloud and iTunes backups." = "Citlivá data jsou vyloučena ze záloh iCloud a iTunes.";
+"Direct Exchange Communication" = "Přímá API volání";
+"AccBot communicates directly with exchanges via HTTPS. No middleman." = "Komunikace probíhá přímo s burzami přes HTTPS. Žádný prostředník.";
+"Optional Biometric Lock" = "Volitelný biometrický zámek";
+"Protect the app with Face ID or Touch ID for an extra layer of security." = "Chraňte aplikaci pomocí Face ID nebo Touch ID pro další vrstvu zabezpečení.";
+"Require authentication to open AccBot" = "Vyžadovat ověření pro otevření AccBot";
+"I Understand, Continue" = "Rozumím, pokračovat";
+
+/* ===== Onboarding — Exchange Setup ===== */
+"Connect Your Exchange" = "Připojit burzu";
+"Select an exchange and enter your API credentials to get started." = "Vyberte burzu a zadejte API přihlašovací údaje pro začátek.";
+"Skip for Now" = "Přeskočit";
+"Credentials validated successfully" = "Přihlašovací údaje úspěšně ověřeny";
+"API Key" = "API klíč";
+"API Secret" = "API tajný klíč";
+"Passphrase" = "Heslo";
+"Client ID" = "Client ID";
+"Enter your API key" = "Zadejte svůj API klíč";
+"Enter your API secret" = "Zadejte svůj API tajný klíč";
+"Enter your passphrase" = "Zadejte heslo";
+"Enter your client ID" = "Zadejte Client ID";
+
+/* ===== Onboarding — First Plan ===== */
+"Create Your First DCA Plan" = "Vytvořte svůj první DCA plán";
+"Set up automatic recurring purchases." = "Nastavte automatické opakované nákupy.";
+"Cryptocurrency" = "Kryptoměna";
+"Fiat Currency" = "Fiat měna";
+"Amount per Purchase" = "Částka za nákup";
+"Frequency" = "Frekvence";
+"Create Plan" = "Vytvořit plán";
+"Recommended" = "Doporučeno";
+
+/* ===== Onboarding — Completion ===== */
+"You're All Set!" = "Vše je připraveno!";
+"AccBot is ready to start stacking sats for you." = "AccBot je připraven začít nakupovat za vás.";
+"Next Steps" = "Co dál";
+"Your DCA plan will execute automatically" = "Váš DCA plán se bude provádět automaticky";
+"Open the app daily for reliable iOS execution" = "Otevírejte aplikaci denně pro spolehlivé provádění";
+"Add more plans in Dashboard" = "Přidejte další plány v přehledu";
+"Go to Dashboard" = "Přejít na přehled";
+
+/* ===== Dashboard ===== */
+"Holdings" = "Celkem nakoupeno";
+"Total Accumulated" = "Celkem nakoupeno";
+"Amount" = "Částka";
+"Invested" = "Investováno";
+"Avg Price" = "Prům. cena";
+"Current Price" = "Aktuální cena";
+"ROI" = "ROI";
+"Active Plans" = "Moje DCA plány";
+"No DCA Plans" = "Zatím žádné DCA plány";
+"Create your first plan to start accumulating crypto" = "Vytvořte si první DCA plán a začněte nakupovat";
+"History" = "Historie";
+"Run Now" = "Spustit nyní";
+"Select plans to execute now" = "Vyberte plány ke spuštění";
+"Select all plans" = "Vybrat všechny plány";
+/* Format: "%lld txns" */
+"%lld txns" = "%lld transakcí";
+/* Format: "%lld active" */
+"%lld active" = "%lld aktivních";
+/* Format: "Run %lld Plans" */
+"Run %lld Plans" = "Spustit %lld plánů";
+
+/* ===== History ===== */
+"Loading transactions..." = "Načítání transakcí…";
+"No Matching Transactions" = "Žádné odpovídající transakce";
+"No Transactions" = "Zatím žádné transakce";
+"Try adjusting your filters" = "Zkuste upravit filtry";
+"Your DCA purchase history will appear here" = "Zde se zobrazí historie vašich DCA nákupů";
+"Delete Transaction?" = "Smazat transakci?";
+"Filter" = "Filtr";
+"Clear Filters" = "Vymazat filtry";
+"Export CSV" = "Export CSV";
+"Clear All" = "Vymazat vše";
+"Filters" = "Filtry";
+"Crypto" = "Kryptoměna";
+"All" = "Vše";
+"Exchange" = "Burza";
+"Status" = "Stav";
+"Completed" = "Dokončeno";
+"Failed" = "Selhalo";
+"Pending" = "Čekající";
+"Partial" = "Částečně vyplněno";
+"Date Range" = "Časové období";
+"From" = "Od";
+"To" = "Do";
+/* Format: "%lld transactions" */
+"%lld transactions" = "%lld transakcí";
+
+/* History — Sort Options */
+"Date (Newest)" = "Datum (nejnovější)";
+"Date (Oldest)" = "Datum (nejstarší)";
+"Amount (Highest)" = "Částka (nejvyšší)";
+"Amount (Lowest)" = "Částka (nejnižší)";
+"Price (Highest)" = "Cena (nejvyšší)";
+"Price (Lowest)" = "Cena (nejnižší)";
+
+/* ===== Transaction Details ===== */
+"Transaction Details" = "Detail transakce";
+"Loading transaction..." = "Načítání transakce…";
+"Fiat Amount" = "Částka fiat";
+"Crypto Amount" = "Částka krypto";
+"Price" = "Cena";
+"Fee" = "Poplatek";
+"Order ID" = "ID objednávky";
+
+/* ===== Portfolio ===== */
+"Loading portfolio..." = "Načítání portfolia…";
+"No Portfolio Data" = "Žádná data portfolia";
+"Complete your first DCA purchase to see portfolio analytics" = "Proveďte alespoň jeden DCA nákup pro zobrazení grafů výkonnosti";
+"FIAT" = "FIAT";
+"CRYPTO" = "KRYPTO";
+"All Exchanges" = "Všechny burzy";
+"All Crypto/%@" = "Vše Crypto/%@";
+"Portfolio Value" = "Hodnota portfolia";
+"Crypto Held" = "Držené krypto";
+"Avg Buy Price" = "Prům. nákupní cena";
+"Transactions" = "Transakce";
+"Zoom Out" = "Oddálit";
+"Not enough data for chart" = "Nedostatek dat pro graf";
+"All Time" = "Celková historie";
+
+/* Portfolio — Chart Series (Note: "Portfolio Value" shared with stats section above) */
+"Cost Basis" = "Investováno";
+"Accumulated" = "Akumulováno";
+
+/* ===== Notifications Screen ===== */
+"Active" = "Aktivní";
+"Archive" = "Archiv";
+"Dismiss All" = "Zamítnout vše";
+"Clear Archive" = "Vymazat archiv";
+"This will permanently delete all archived notifications." = "Trvale se smažou všechna archivovaná oznámení. Tuto akci nelze vrátit zpět.";
+"You're all caught up!" = "Vše přečteno!";
+"DCA alerts and updates will appear here" = "Oznámení o nákupech, chybách a upozorněních se zobrazí zde";
+"Archive is empty" = "Archiv je prázdný";
+"Dismissed notifications will appear here" = "Zamítnutá oznámení se zobrazí zde";
+
+/* ===== Settings ===== */
+"Confirm Delete" = "Potvrdit smazání";
+"Restart Required" = "Vyžadován restart";
+"Please restart the app for the language change to take effect." = "Prosím restartujte aplikaci pro projevení změny jazyka.";
+"Sandbox Mode" = "Sandbox režim";
+"Sandbox mode enabled. Using testnet APIs. Please restart the app." = "Sandbox režim zapnut. Používání testovacích API. Prosím restartujte aplikaci.";
+"Sandbox mode disabled. Using production APIs. Please restart the app." = "Sandbox režim vypnut. Používání produkčních API. Prosím restartujte aplikaci.";
+"Sandbox mode enabled. Using testnet APIs. Restart required." = "Sandbox režim zapnut. Používání testovacích API. Je vyžadován restart.";
+"Sandbox mode disabled. Using production APIs. Restart required." = "Sandbox režim vypnut. Používání produkčních API. Je vyžadován restart.";
+"Restart Now" = "Restartovat nyní";
+"Build Date" = "Datum sestavení";
+"No exchanges connected" = "Žádné burzy připojeny";
+"Exchange Accounts" = "Účty na burzách";
+"Manage Exchanges" = "Správa burz";
+"Theme" = "Motiv";
+"Language" = "Jazyk";
+"System Default" = "Výchozí systémový";
+"English" = "English";
+"Czech" = "Čeština";
+"Purchase Alerts" = "Oznámení o nákupech";
+"Error Alerts" = "Oznámení o chybách";
+"Weekly Summary" = "Týdenní souhrn";
+"Low Balance Warning" = "Upozornění na nízký zůstatek";
+"Withdrawal Thresholds" = "Limity pro výběr";
+"DCA Alerts" = "DCA upozornění";
+"iOS executes DCA plans approximately. Open the app daily for reliable execution." = "iOS provádí DCA plány přibližně. Otevírejte aplikaci denně pro spolehlivé provádění.";
+"Last Background Run" = "Poslední běh na pozadí";
+"Background Execution" = "Běh na pozadí";
+"Not Available" = "Nedostupné";
+"Security" = "Zabezpečení";
+"Export Backup" = "Exportovat zálohu";
+"Import Backup" = "Importovat zálohu";
+"Backup & Restore" = "Záloha a obnova";
+"Version" = "Verze";
+"Build" = "Sestavení";
+"Made with ❤️ by Crynners" = "Vytvořeno s ❤️ od Crynners";
+"About" = "O aplikaci";
+"Documentation" = "Dokumentace";
+"Report Issue" = "Nahlásit problém";
+"Help" = "Nápověda";
+"Using testnet APIs. No real funds will be used." = "Používání testovacích API. Žádné skutečné prostředky nebudou použity.";
+"Developer" = "Vývojář";
+"Delete All Plans" = "Smazat DCA plány";
+"Delete All Transactions" = "Smazat historii transakcí";
+"Delete All Notifications" = "Smazat historii oznámení";
+"Data Management" = "Správa dat";
+"These actions are irreversible. All data will be permanently deleted." = "Tyto akce jsou nevratné. Všechna data budou trvale smazána.";
+"Danger Zone" = "Nebezpečná zóna";
+"Delete All Data & Reset" = "Smazat všechna data a resetovat";
+"Never" = "Nikdy";
+
+/* Settings — Delete Targets */
+"This will delete all DCA plans. This action cannot be undone." = "Trvale se smažou všechny DCA plány. Tuto akci nelze vrátit zpět.";
+"This will delete all transaction history. This action cannot be undone." = "Trvale se smaže historie transakcí. Tuto akci nelze vrátit zpět.";
+"This will delete all notifications. This action cannot be undone." = "Trvale se smaže historie oznámení. Tuto akci nelze vrátit zpět.";
+"This will delete ALL data including plans, transactions, credentials, and settings. This action cannot be undone." = "Trvale se smažou VŠECHNA data včetně plánů, transakcí, přihlašovacích údajů a nastavení. Tuto akci nelze vrátit zpět.";
+"Delete All Data" = "Smazat všechna data";
+/* Format: "%lld days" */
+"%lld days" = "%lld dní";
+/* Format: "%@ connected" */
+"%@ connected" = "%@ připojeno";
+"Open Notification Settings" = "Otevřít nastavení oznámení";
+/* Format: "%lld connected" */
+"%lld connected" = "%lld připojených";
+/* Format: "%lld plans" */
+"%lld plans" = "%lld plánů";
+/* Note: "%lld transactions" already defined in History section */
+/* Format: "%lld notifications" */
+"%lld notifications" = "%lld oznámení";
+
+/* ===== Exchanges ===== */
+"Exchanges" = "Burzy";
+"Connected" = "Připojeno";
+"No Exchanges Connected" = "Žádné burzy připojeny";
+"Connect an exchange to start your DCA journey." = "Připojte burzu pro zahájení DCA.";
+"Available" = "Dostupné";
+
+/* ===== Exchange Card ===== */
+"Not configured" = "Nenastaveno";
+
+/* ===== Exchange Detail ===== */
+"Delete Connection" = "Odebrat burzu";
+"Not Connected" = "Nepřipojeno";
+"Full sandbox support" = "Plná podpora sandboxu";
+"Paper trading available" = "Paper trading k dispozici";
+"Futures demo only" = "Pouze futures demo";
+"Connection Details" = "Podrobnosti připojení";
+"Configured" = "Nastaveno";
+"Not set" = "Nenastaveno";
+"Supported Pairs" = "Podporované páry";
+"Cryptocurrencies" = "Kryptoměny";
+"Fiat Currencies" = "Fiat měny";
+"Minimum Order Sizes" = "Minimální velikosti objednávek";
+"Cached Balances" = "Uložené zůstatky";
+"From local cache" = "Z lokální mezipaměti";
+"No cached balances. Tap Refresh to fetch." = "Žádné uložené zůstatky. Klepněte na Obnovit.";
+"Refreshing..." = "Obnovuji…";
+"Refresh Balances" = "Obnovit zůstatky";
+"Credentials not found" = "Přihlašovací údaje nenalezeny";
+
+/* ===== Add Exchange ===== */
+"Add Exchange" = "Přidat burzu";
+"Select Exchange" = "Vybrat burzu";
+"Pairs:" = "Páry:";
+"API Credentials" = "API přihlašovací údaje";
+"Validating..." = "Ověřuji…";
+"Validate & Save" = "Ověřit a uložit";
+"Credentials validated and saved successfully!" = "Přihlašovací údaje ověřeny a uloženy!";
+"Invalid credentials. Please check your API key and secret." = "Neplatné přihlašovací údaje. Zkontrolujte API klíč a tajný klíč.";
+
+/* ===== Add / Edit Plan ===== */
+"Create DCA Plan" = "Vytvořit DCA plán";
+"Edit Plan" = "Upravit plán";
+"Scan Wallet QR" = "Skenovat QR peněženky";
+"No exchanges configured. Add one in Settings." = "Žádné burzy nakonfigurovány. Přidejte jednu v Nastavení.";
+"Strategy" = "Strategie";
+"Auto-Withdrawal" = "Automatický výběr";
+"Automatically withdraw to your wallet after purchase" = "Automaticky odeslat do vaší peněženky po nákupu";
+"Wallet Address" = "Adresa peněženky";
+"Enter wallet address" = "Zadejte adresu peněženky";
+"Estimated Monthly Cost" = "Měsíční odhad";
+"Creating..." = "Vytvářím…";
+"Plan Not Found" = "Plán nenalezen";
+"This plan may have been deleted." = "Tento plán mohl být smazán.";
+"Exchange cannot be changed" = "Burzu nelze změnit";
+"Saving..." = "Ukládám…";
+"Save Changes" = "Uložit změny";
+
+/* ===== Plan Details ===== */
+"Plan Details" = "Detail plánu";
+"Delete Plan" = "Smazat plán";
+"Are you sure you want to delete this plan and all associated transactions? This action cannot be undone." = "Opravdu chcete smazat tento DCA plán? Všechny související transakce budou také smazány. Tuto akci nelze vrátit zpět.";
+"Paused" = "Pozastaveno";
+"Execution" = "Provádění";
+"Last Executed" = "Naposledy provedeno";
+"Next Execution" = "Další provedení";
+"--" = "—";
+"Recent Transactions" = "Poslední transakce";
+"No Transactions Yet" = "Zatím žádné transakce";
+"Transactions will appear here after the plan executes." = "Transakce se zde zobrazí po prvním DCA nákupu.";
+"Import History" = "Importovat historii";
+"Performance" = "Výkonnost";
+/* Note: "Current Price" already defined in Dashboard section */
+"Current Value" = "Aktuální hodnota";
+"Balance" = "Zůstatek";
+"Exchange Balance" = "Zůstatek na burze";
+"Remaining" = "Zbývá";
+"days" = "dní";
+"executions" = "provedení";
+"Are you sure you want to delete all transactions for this plan? This action cannot be undone." = "Opravdu chcete smazat všechny transakce tohoto plánu? Tuto akci nelze vrátit zpět.";
+/* Format: "Type %@ to confirm" — used in delete confirmation alerts */
+"Type %@ to confirm" = "Pro potvrzení zadejte %@";
+
+/* ===== Schedule Builder ===== */
+"Custom Schedule" = "Vlastní rozvrh";
+"Schedule Type" = "Typ rozvrhu";
+"Days of Week" = "Dny v týdnu";
+"Days of Month" = "Dny v měsíci";
+"Time" = "Čas";
+"Minute" = "Minuta";
+"Hour" = "Hodina";
+"Hour (tap to select multiple)" = "Hodina (klepněte pro výběr více)";
+"Day of Week" = "Den v týdnu";
+"Select Days" = "Vyberte dny";
+"Every Day" = "Každý den";
+"Sun" = "Ne";
+"Mon" = "Po";
+"Tue" = "Út";
+"Wed" = "St";
+"Thu" = "Čt";
+"Fri" = "Pá";
+"Sat" = "So";
+"Schedule Preview" = "Náhled rozvrhu";
+"Advanced: Edit CRON directly" = "Pokročilé: Upravit CRON přímo";
+"e.g. 0 9 * * 1 (Mon 9:00)" = "např. 0 9 * * 1 (Po 9:00)";
+"Invalid CRON expression" = "Neplatný CRON výraz";
+"Examples:" = "Příklady:";
+"Every day at 9:00" = "Každý den v 9:00";
+"Every Monday at 9:00" = "Každé pondělí v 9:00";
+"1st of every month at 9:00" = "1. každého měsíce v 9:00";
+"Every day at 9:00 and 21:00" = "Každý den v 9:00 a 21:00";
+
+/* ===== Strategy Info Sheet ===== */
+"DCA Strategies" = "DCA strategie";
+"Buys a fixed amount at every scheduled interval. No market-based adjustments. Simple, time-tested, and effective for long-term accumulation." = "Klasické DCA nakupuje stejnou pevnou částku v každém naplánovaném intervalu bez ohledu na tržní podmínky. Jedná se o nejjednodušší přístup k průměrování nákladů.";
+"Adjusts the purchase amount based on how far the current price is from the All-Time High. Buy more when the market is down, less when it's near ATH." = "Tato strategie upravuje výši nákupu podle toho, jak daleko je aktuální cena od historického maxima (ATH). Kupujte více při poklesu, méně blízko ATH.";
+"Uses the Fear & Greed Index (0-100) to adjust purchase amounts. Buy more during extreme fear, less during extreme greed." = "Tato strategie využívá index Fear & Greed (0–100) k úpravě nákupů. Kupujte více při extrémním strachu, méně při extrémní chamtivosti.";
+"Distance from ATH" = "Vzdálenost od ATH";
+"Multiplier" = "Násobitel";
+"Index Range" = "Rozsah indexu";
+"Sentiment" = "Sentiment";
+"Extreme Fear" = "Extrémní strach";
+"Fear" = "Strach";
+"Neutral" = "Neutrální";
+"Greed" = "Chamtivost";
+"Extreme Greed" = "Extrémní chamtivost";
+
+/* ===== Sandbox ===== */
+"SANDBOX MODE" = "SANDBOX REŽIM";
+"SANDBOX MODE - Test trades only" = "SANDBOX REŽIM - Pouze testovací obchody";
+
+/* ===== Notification Service ===== */
+"DCA Purchase Completed" = "DCA nákup dokončen";
+"DCA Error" = "DCA chyba";
+/* Note: "Low Balance Warning" already defined in Settings section */
+"Withdrawal Threshold Reached" = "Doporučen výběr";
+"DCA Plan Due" = "DCA plán k provedení";
+/* Format strings for notifications */
+"Bought %@ for %@ %@ on %@" = "Nakoupeno %1$@ za %2$@ %3$@ na %4$@";
+"%@: %@ %@ remaining (~%lld days)" = "%1$@: %2$@ %3$@ zbývá (~%4$lld dní)";
+"%@ %@ on %@ ready for withdrawal" = "%1$@ %2$@ na %3$@ připraveno k výběru";
+"Tap to execute: %@" = "Klepněte pro provedení: %@";
+
+/* ===== Import CSV ===== */
+"Select a CSV file to import transaction history" = "Vyberte CSV soubor pro import historie transakcí";
+"Choose CSV File" = "Vybrat CSV soubor";
+"Import trade history directly from exchange API" = "Import historie obchodů přímo z API burzy";
+"Import from API" = "Import přes API";
+"Import Complete" = "Import dokončen";
+"CSV File" = "CSV soubor";
+"Exchange API" = "API burzy";
+
+/* ===== Backup Export ===== */
+/* Note: "Export Backup" already defined in Settings section */
+"DCA Plans" = "DCA plány";
+"App preferences" = "Nastavení aplikace";
+"Exchange Credentials" = "Přístupové údaje k burzám";
+"Withdrawals" = "Výběry";
+"Password" = "Heslo";
+"Recovery Seed" = "Obnovovací seed";
+"Minimum 8 characters" = "Minimálně 8 znaků";
+"Confirm Password" = "Potvrdit heslo";
+"Repeat password" = "Zopakujte heslo";
+"Write down these 12 words in order. You will need them to restore your backup." = "Zapište si těchto 12 slov v pořadí. Budete je potřebovat k obnovení zálohy.";
+"Generate New Seed" = "Vygenerovat nový seed";
+"I have written down my recovery seed" = "Zapsal/a jsem si obnovovací seed";
+"Backup Created" = "Záloha vytvořena";
+"Share Backup File" = "Sdílet soubor zálohy";
+"Or scan QR code" = "Nebo naskenovat QR kód";
+"Create Backup" = "Vytvořit zálohu";
+"Select Data" = "Výběr dat";
+"Encryption" = "Šifrování";
+"Result" = "Výsledek";
+"Password must be at least 8 characters" = "Heslo musí mít alespoň 8 znaků";
+"Passwords do not match" = "Hesla se neshodují";
+"Always included" = "Vždy zahrnuto";
+"Requires encryption" = "Vyžaduje šifrování";
+
+/* ===== Backup Import ===== */
+/* Note: "Import Backup" already defined in Settings section */
+"Scan Backup QR" = "Naskenovat QR kód zálohy";
+"Choose how to import your backup" = "Vyberte způsob importu zálohy";
+"Select File" = "Vybrat soubor";
+"Choose a .json backup file" = "Vyberte soubor zálohy .json";
+"Scan QR Code" = "Naskenovat QR kód";
+"Scan a backup QR code" = "Naskenujte QR kód zálohy";
+"Enter backup password" = "Zadejte heslo zálohy";
+"Enter your 12-word recovery seed" = "Zadejte svůj 12slovný obnovovací seed";
+"Created" = "Vytvořeno";
+"App Version" = "Verze aplikace";
+"Environment" = "Prostředí";
+"Backup Contents" = "Obsah zálohy";
+"Plans" = "Plány";
+"Credentials" = "Přihlašovací údaje";
+"Thresholds" = "Prahové hodnoty";
+"Restore Mode" = "Režim obnovy";
+"Merge" = "Sloučit";
+"Replace" = "Nahradit";
+"Existing data will be kept. Duplicates will be skipped." = "Stávající data budou zachována. Duplicity budou přeskočeny.";
+"All existing data will be DELETED and replaced with backup data. This cannot be undone." = "Všechna stávající data budou SMAZÁNA a nahrazena zálohou. Tuto operaci nelze vrátit!";
+"Restore Complete" = "Obnova dokončena";
+"Your data has been restored successfully. Please restart the app for all changes to take effect." = "Vaše data byla úspěšně obnovena. Prosím restartujte aplikaci pro projevení všech změn.";
+"Restore" = "Obnovit";
+"Decrypt" = "Dešifrovat";
+"Source" = "Zdroj";
+"Preview" = "Náhled";
+"Cannot access selected file" = "Nelze přistoupit k vybranému souboru";
+"Invalid file format" = "Neplatný formát souboru";
+
+/* ===== QR Scanner ===== */
+"Point the camera at a QR code" = "Namiřte fotoaparát na QR kód";
+
+/* ===== Credentials Input ===== */
+"Stored securely in Keychain" = "Bezpečně uloženo v Keychain";
+
+/* ===== Plan Card ===== */
+"next" = "další";
+"remaining" = "zbývá";
+"Withdrawal ready" = "Výběr připraven";
+/* Format: "Next: %@" */
+"Next: %@" = "Další: %@";
+"Next execution: --" = "Další provedení: —";
+
+/* ===== Plan Details — extra format strings ===== */
+/* Note: "Last Executed" and "Next Execution" defined in Plan Details section above */
+/* Format: "Minimum order: %@" */
+"Minimum order: %@" = "Minimální objednávka: %@";
+
+/* ===== Transaction Card ===== */
+"at" = "v";
+
+/* ===== Interpolated Format Strings ===== */
+/* HistoryView — delete confirmation message */
+"Delete %@/%@ transaction from %@?" = "Smazat transakci %1$@/%2$@ z %3$@?";
+
+/* ExchangeDetailView — delete connection confirmation */
+"Are you sure you want to remove the API credentials for %@? Any plans using this exchange will stop executing." = "Opravdu chcete odebrat API přihlašovací údaje pro %@? Všechny plány používající tuto burzu přestanou fungovat.";
+
+/* SecurityView — biometric toggle */
+"Enable %@" = "Zapnout %@";
+
+/* ImportCsvView — import progress and result */
+"Importing... %lld transactions" = "Importuji… %lld transakcí";
+"%lld transactions imported" = "%lld transakcí importováno";
+
+/* ExchangeSetupView — credentials header */
+"%@ API Credentials" = "API přihlašovací údaje %@";
+
+/* ===== Exchange Detail — Credential Editing & API Import ===== */
+"No plans for this exchange" = "Žádné plány pro tuto burzu";
+"Import for %lld plans" = "Import pro %lld plánů";
+"Importing..." = "Importuji...";
+"No new transactions found" = "Žádné nové transakce nenalezeny";
+"%lld new transactions imported, %lld skipped" = "%1$lld nových transakcí importováno, %2$lld přeskočeno";
+/* ExchangeDetailView — delete with plan count */
+"Are you sure you want to remove the API credentials for %@? %lld plan(s) using this exchange will stop executing." = "Opravdu chcete odebrat API přihlašovací údaje pro %1$@? %2$lld plánů používajících tuto burzu přestane fungovat.";
+
+/* ===== Withdrawal Thresholds Dialog ===== */
+"Set threshold amounts for automatic withdrawal alerts" = "Nastavte prahové částky pro automatické upozornění na výběr";
+"No plans configured" = "Žádné plány nakonfigurovány";
+"Threshold amount" = "Prahová částka";
+
+/* ===== Round 3 — New Strings ===== */
+
+/* EditPlanView — read-only fields info */
+"Exchange, pair, and fiat currency cannot be changed" = "Burzu, pár a fiat měnu nelze změnit";
+
+/* Dashboard — Holdings empty state */
+"No Holdings Yet" = "Zatím žádné holdings";
+"Your portfolio will appear here after your first DCA purchase" = "Vaše portfolio se zobrazí po prvním DCA nákupu";
+
+/* TransactionDetailsView — Amount Received */
+"Amount Received" = "Přijatá částka";
+
+/* PlanCard — Withdrawal with balance */
+"on exchange — consider withdrawal" = "na burze — zvažte výběr";
+
+/* SecurityView — Info tip */
+"Biometric authentication adds an extra layer of security to protect your API keys and settings" = "Biometrické ověření přidává další vrstvu zabezpečení pro ochranu vašich API klíčů a nastavení";
+
+/* ImportCsvView — Preview step */
+"Import Preview" = "Náhled importu";
+"New transactions" = "Nové transakce";
+"Already exist (will be skipped)" = "Již existují (budou přeskočeny)";
+/* Format: "Import %lld Transactions" */
+"Import %lld Transactions" = "Importovat %lld transakcí";
+"View History" = "Zobrazit historii";
+
+/* ExchangeManagementView — crypto count */
+/* Format: "%lld cryptos" */
+"%lld cryptos" = "%lld kryptoměn";
+
+/* ===== Exchange Instructions — Coinmate ===== */
+"Go to coinmate.io and log in" = "Přejděte na coinmate.io a přihlaste se";
+"Note your Client ID (shown at the top)" = "Poznamenejte si Client ID (zobrazeno nahoře)";
+"Click 'Create new API key'" = "Klikněte na 'Vytvořit nový API klíč'";
+"Enable 'Trade' permission only" = "Povolte pouze oprávnění 'Obchodování'";
+"Copy Client ID, Public Key, and Private Key" = "Zkopírujte Client ID, veřejný klíč a soukromý klíč";
+
+/* ===== Exchange Instructions — Binance ===== */
+"Go to binance.com and log in" = "Přejděte na binance.com a přihlaste se";
+"Navigate to API Management" = "Přejděte do Správy API";
+"Create a new API key" = "Vytvořte nový API klíč";
+"Enable 'Spot & Margin Trading' only" = "Povolte pouze 'Spot & Margin obchodování'";
+"Restrict to your IP if possible" = "Pokud možno, omezte na vaši IP adresu";
+"Copy the API Key and Secret" = "Zkopírujte API klíč a tajný klíč";
+
+/* ===== Exchange Instructions — Kraken ===== */
+"Go to kraken.com and log in" = "Přejděte na kraken.com a přihlaste se";
+"Navigate to Settings > API" = "Přejděte do Nastavení > API";
+"Enable 'Create & Modify Orders' only" = "Povolte pouze 'Vytvářet a upravovat objednávky'";
+"Copy the API Key and Private Key" = "Zkopírujte API klíč a soukromý klíč";
+
+/* ===== Exchange Instructions — KuCoin ===== */
+"Go to kucoin.com and log in" = "Přejděte na kucoin.com a přihlaste se";
+"Create a new API key with passphrase" = "Vytvořte nový API klíč s heslem";
+"Copy the API Key, Secret, and Passphrase" = "Zkopírujte API klíč, tajný klíč a heslo";
+
+/* ===== Exchange Instructions — Bitfinex ===== */
+"Go to bitfinex.com and log in" = "Přejděte na bitfinex.com a přihlaste se";
+"Navigate to Account > API Keys" = "Přejděte do Účet > API klíče";
+"Enable 'Orders' permission only" = "Povolte pouze oprávnění 'Objednávky'";
+
+/* ===== Exchange Instructions — Huobi ===== */
+"Go to huobi.com and log in" = "Přejděte na huobi.com a přihlaste se";
+"Copy the Access Key and Secret Key" = "Zkopírujte přístupový klíč a tajný klíč";
+
+/* ===== Exchange Instructions — Coinbase ===== */
+"Go to coinbase.com and log in" = "Přejděte na coinbase.com a přihlaste se";
+
+/* ===== Sandbox Instructions — Binance ===== */
+"Open testnet.binance.vision" = "Otevřete testnet.binance.vision";
+"Log in with your GitHub account" = "Přihlaste se pomocí GitHub účtu";
+"Click 'Generate HMAC_SHA256 Key'" = "Klikněte na 'Generate HMAC_SHA256 Key'";
+"Copy the API Key and Secret Key" = "Zkopírujte API klíč a tajný klíč";
+"Test funds are provided automatically" = "Testovací prostředky jsou poskytovány automaticky";
+
+/* ===== Sandbox Instructions — KuCoin ===== */
+"Open sandbox.kucoin.com" = "Otevřete sandbox.kucoin.com";
+"Register a new account (separate from production)" = "Zaregistrujte nový účet (oddělený od produkčního)";
+"Go to API Management" = "Přejděte do Správy API";
+"Enable 'Trade' permission" = "Povolte oprávnění 'Obchodování'";
+"Copy API Key, Secret, and Passphrase" = "Zkopírujte API klíč, tajný klíč a heslo";
+
+/* ===== Sandbox Instructions — Coinbase ===== */
+"Open the Coinbase Exchange Sandbox" = "Otevřete Coinbase Exchange Sandbox";
+"Register a sandbox account" = "Zaregistrujte sandbox účet";
+"Go to Settings > API" = "Přejděte do Nastavení > API";
+"Select 'View' and 'Trade' permissions" = "Vyberte oprávnění 'Zobrazení' a 'Obchodování'";
+
+/* ===== ExchangeDetailView — Sandbox Steps ===== */
+"Go to Binance Testnet" = "Přejděte na Binance Testnet";
+"Paste them in the fields below" = "Vložte je do polí níže";
+"Go to KuCoin Sandbox" = "Přejděte na KuCoin Sandbox";
+"Create a sandbox account" = "Vytvořte sandbox účet";
+"Copy Key, Secret, and Passphrase" = "Zkopírujte klíč, tajný klíč a heslo";
+"Go to Coinbase Exchange Sandbox" = "Přejděte na Coinbase Exchange Sandbox";
+"Navigate to API settings" = "Přejděte do nastavení API";
+
+/* ===== AddExchangeView — UI Strings ===== */
+"Choose an exchange to connect" = "Vyberte burzu k připojení";
+"All Exchanges Connected" = "Všechny burzy připojeny";
+"You have connected all available exchanges" = "Připojili jste všechny dostupné burzy";
+"Set up %@" = "Nastavit %@";
+"Open API Page" = "Otevřít API stránku";
+"I Have My Keys" = "Mám své API klíče";
+"Testnet credentials are separate from your real exchange account. Test funds are provided for free." = "Testovací přihlašovací údaje jsou oddělené od vašeho skutečného účtu na burze. Testovací prostředky jsou poskytovány zdarma.";
+"Security tip: Only enable trading permissions. Never enable withdrawal permissions for DCA bots." = "Bezpečnostní tip: Povolte pouze obchodní oprávnění. Nikdy nepovolujte oprávnění k výběru pro DCA roboty.";
+"Scan All Credentials" = "Skenovat všechny údaje";
+"Public Key" = "Veřejný klíč";
+"Enter your public key" = "Zadejte svůj veřejný klíč";
+"Private Key" = "Soukromý klíč";
+"Enter your private key" = "Zadejte svůj soukromý klíč";
+"Connect" = "Připojit";
+"Successfully Connected" = "Úspěšně připojeno";
+"You are now connected to %@" = "Nyní jste připojeni k %@";
+"Import Transaction History" = "Importovat historii transakcí";
+"Scan Credential" = "Skenovat přihlašovací údaj";
+"Instructions" = "Instrukce";
+"Success" = "Úspěch";
+"Enter your passphrase" = "Zadejte heslo";
+
+/* ===== Items 2-4 — New Strings ===== */
+"Data Deleted" = "Data smazána";
+"All data has been deleted. The app must restart to complete the reset." = "Všechna data byla smazána. Aplikace se musí restartovat pro dokončení resetu.";
+"Transaction deleted" = "Transakce smazána";
+"Undo" = "Zpět";
+
+/* ===== QR / Text Scanner — Mode Toggle & OCR ===== */
+"Text" = "Text";
+"Scan Mode" = "Režim skenování";
+"Point camera at text to scan" = "Namiřte fotoaparát na text ke skenování";
+"All fields assigned!" = "Všechna pole přiřazena!";
+/* Format: "Now scanning: %@" */
+"Now scanning: %@" = "Nyní skenuji: %@";
+/* Format: "Done (%lld/%lld)" */
+"Done (%lld/%lld)" = "Hotovo (%1$lld/%2$lld)";
+
+/* ===== Chart / Portfolio — Additional ===== */
+"in" = "za";
+
+/* ===== Phase 7 - Additional localizations ===== */
+
+/* Dashboard — Loading & Plans */
+"Loading dashboard..." = "Načítání přehledu…";
+"My DCA Plans" = "Moje DCA plány";
+"No plans yet" = "Zatím žádné plány";
+"Create your first DCA plan to start accumulating crypto" = "Vytvořte si první DCA plán a začněte nakupovat krypto";
+
+/* Dashboard — Run Now & Accessibility */
+"Selected" = "Vybráno";
+"Not selected" = "Nevybráno";
+"Confirm Execution" = "Potvrdit provedení";
+
+/* Dashboard — Balance Duration */
+"<1 hour" = "<1 hodina";
+"1 day" = "1 den";
+
+/* Notifications — Dismiss All */
+"Dismiss All?" = "Zamítnout vše?";
+"All active notifications will be archived." = "Všechna aktivní oznámení budou archivována.";
+"Notification filter" = "Filtr oznámení";
+
+/* Biometric Lock */
+"Unlock AccBot to access your DCA plans" = "Odemkněte AccBot pro přístup k vašim DCA plánům";
+
+/* Onboarding — Completion Next Steps */
+"Start DCA — Run your first purchase" = "Spustit DCA — Proveďte svůj první nákup";
+"Fine Tune Settings — Adjust your preferences" = "Doladit nastavení — Upravte si preference";
+"Stay Informed — Get alerts on DCA events" = "Buďte informováni — Dostávejte upozornění o DCA událostech";
+"Start Stacking" = "Začít nakupovat";
+
+/* Exchange Detail — Sandbox */
+"Testnet Credentials Required" = "Vyžadovány testovací přihlašovací údaje";
+"Open Testnet" = "Otevřít testnet";
+"Not connected" = "Nepřipojeno";
+
+/* Add Exchange — Import Error */
+"No plans found for this exchange. Create a plan first, then import from the exchange detail screen." = "Pro tuto burzu nebyly nalezeny žádné plány. Nejprve vytvořte plán a poté importujte z detailu burzy.";
+
+/* Transaction Details — Not Found */
+"Transaction Not Found" = "Transakce nenalezena";
+"This transaction may have been deleted." = "Tato transakce mohla být smazána.";
+
+/* Onboarding — Completion Pro Tip */
+"Pro tip: For reliable DCA execution on iOS, open AccBot at least once a day so background tasks can run on schedule." = "Tip: Pro spolehlivé provádění DCA na iOS otevírejte AccBot alespoň jednou denně, aby se úlohy na pozadí mohly spouštět podle plánu.";
+
+/* Exchange Detail — Sandbox Credentials Info */
+"Sandbox mode requires testnet API keys from %@. Production keys will NOT work." = "Sandbox režim vyžaduje testovací API klíče z %@. Produkční klíče NEBUDOU fungovat.";
+
+/* ===== UX/UI Fix — Accessibility Labels ===== */
+
+/* DashboardView */
+"Refresh prices" = "Obnovit ceny";
+"Tap to view in portfolio" = "Klepněte pro zobrazení v portfoliu";
+
+/* HistoryView */
+"Filter transactions" = "Filtrovat transakce";
+"Swipe left to delete" = "Přejetím doleva smažete";
+
+/* TransactionDetailsView */
+"Copy order ID" = "Kopírovat ID objednávky";
+
+/* SettingsView */
+"Select language" = "Vybrat jazyk";
+
+/* PortfolioView */
+"Previous period" = "Předchozí období";
+"Next period" = "Další období";
+
+/* BiometricLockView */
+"Too many biometric attempts. Use device passcode instead." = "Příliš mnoho neúspěšných pokusů. Použijte kód zařízení.";
+"Use Passcode" = "Použít kód";
+
+/* ===== UX/UI Audit Fix — New Strings ===== */
+
+/* MainTabView — notification badge */
+"No unread notifications" = "Žádná nepřečtená oznámení";
+
+/* QrScannerView — accessibility */
+"QR code scanning area" = "Oblast skenování QR kódu";
+"Point camera at QR code inside the frame" = "Namiřte fotoaparát na QR kód uvnitř rámečku";
+
+/* SeedPhraseGrid — paste announcement */
+"Pasted %lld words" = "Vloženo %lld slov";
+
+/* FiatIcon — accessibility names */
+"US Dollar" = "Americký dolar";
+"Euro" = "Euro";
+"British Pound" = "Britská libra";
+"Czech Koruna" = "Česká koruna";
+"Tether" = "Tether";
+
+/* CryptoIcon — accessibility names */
+"Bitcoin" = "Bitcoin";
+"Ethereum" = "Ethereum";
+"Solana" = "Solana";
+"Cardano" = "Cardano";
+"Polkadot" = "Polkadot";
+"Litecoin" = "Litecoin";
+"Dogecoin" = "Dogecoin";
+"Chainlink" = "Chainlink";
+"Avalanche" = "Avalanche";
+"Polygon" = "Polygon";
+
+/* BackupExportView — password strength */
+"Password strength: %@" = "Síla hesla: %@";
+"Too short" = "Příliš krátké";
+"Weak" = "Slabé";
+"Good" = "Dobré";
+"Strong" = "Silné";
+
+/* BackupExportView — seed phrase screenshot warning */
+"Do not take a screenshot. Write the words on paper and store them securely." = "Nepořizujte snímek obrazovky. Zapište slova na papír a uložte je bezpečně.";
+
+/* Plan saved */
+"Plan saved successfully" = "Plán úspěšně uložen";
+
+/* Authentication */
+"Authentication is not available on this device. Please set up a device passcode in Settings." = "Ověření není na tomto zařízení k dispozici. Prosím nastavte kód zařízení v Nastavení.";

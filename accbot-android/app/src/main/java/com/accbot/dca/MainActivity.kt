@@ -22,6 +22,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -109,7 +110,6 @@ class MainActivity : AppCompatActivity() {
             val isSandboxMode = userPreferences.isSandboxMode()
             var isUnlocked by rememberSaveable { mutableStateOf(false) }
             val biometricEnabled = userPreferences.isBiometricLockEnabled()
-
             // Theme: collect reactive flow so changes apply immediately
             val appTheme by userPreferences.appThemeFlow.collectAsState()
             val darkTheme = when (appTheme) {

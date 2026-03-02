@@ -1,0 +1,66 @@
+name: AccBot
+options:
+  bundleIdPrefix: com.accbot
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+  knownRegions: [en, cs]
+
+packages:
+  GRDB:
+    url: https://github.com/groue/GRDB.swift.git
+    from: "6.24.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGN_IDENTITY: ""
+    CODE_SIGNING_REQUIRED: "NO"
+    COMPILER_INDEX_STORE_ENABLE: "NO"
+
+targets:
+  AccBot:
+    type: application
+    platform: iOS
+    sources:
+      - path: AccBot
+        excludes:
+          - "**/.DS_Store"
+    resources:
+      - path: AccBot/Resources/Assets.xcassets
+    settings:
+      base:
+        INFOPLIST_FILE: AccBot/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.accbot.dca
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    dependencies:
+      - package: GRDB
+
+  AccBotTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AccBotTests
+    dependencies:
+      - target: AccBot
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.accbot.dca.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/AccBot.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AccBot"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+schemes:
+  AccBot:
+    build:
+      targets:
+        AccBot: all
+        AccBotTests: [test]
+    test:
+      targets:
+        - AccBotTests

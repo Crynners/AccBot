@@ -73,6 +73,28 @@ jobs:
         if: always()
         run: rm -f accbot-android/accbot-upload.jks
 
+      - name: Extract release notes from changelog.json
+        id: notes
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          CHANGELOG="changelog.json"
+          if [ -f "$CHANGELOG" ] && command -v jq &>/dev/null; then
+            BODY=$(jq -r --arg ver "$VERSION" '
+              .[] | select(.version == $ver) |
+              "**\(.title.en)**\n" +
+              ([.features.en[] | "- \(.)"] | join("\n"))
+            ' "$CHANGELOG")
+          fi
+          if [ -z "$BODY" ]; then
+            BODY="See the [commit history](https://github.com/${{ github.repository }}/commits/v${VERSION}) for changes."
+          fi
+          # Write multiline output
+          {
+            echo "BODY<<EOF"
+            echo "$BODY"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -87,7 +109,7 @@ jobs:
             - **AAB** — upload to Google Play Console
 
             ### What's New
-            See the [commit history](https://github.com/${{ github.repository }}/commits/v${{ steps.version.outputs.VERSION }}) for changes.
+            ${{ steps.notes.outputs.BODY }}
           files: |
             accbot-android/app/build/outputs/apk/debug/accbot-${{ steps.version.outputs.VERSION }}-debug.apk
             accbot-android/app/build/outputs/apk/release/accbot-${{ steps.version.outputs.VERSION }}-release.apk

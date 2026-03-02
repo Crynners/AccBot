@@ -1,0 +1,28 @@
+[
+  {
+    "versionCode": 22100,
+    "version": "2.2.1",
+    "title": {
+      "en": "Goal Tracking, Search & Themes",
+      "cs": "Sledov\u00e1n\u00ed c\u00edl\u016f, vyhled\u00e1v\u00e1n\u00ed a motivy"
+    },
+    "features": {
+      "en": [
+        "Goal tracking \u2014 set a target crypto amount for your DCA plan",
+        "Theme selection \u2014 choose Dark, Light, or System",
+        "Total portfolio summary on Dashboard",
+        "Transaction history search",
+        "Notification channel info in Settings",
+        "What\u2019s New screen after updates"
+      ],
+      "cs": [
+        "Sledov\u00e1n\u00ed c\u00edl\u016f \u2014 nastaven\u00ed c\u00edlov\u00e9 \u010d\u00e1stky kryptom\u011bny pro DCA pl\u00e1n",
+        "V\u00fdb\u011br motivu \u2014 Tmav\u00fd, Sv\u011btl\u00fd nebo Podle syst\u00e9mu",
+        "Celkov\u00e9 shrnut\u00ed portfolia na Dashboard",
+        "Vyhled\u00e1v\u00e1n\u00ed v historii transakc\u00ed",
+        "Informace o kan\u00e1lu ozn\u00e1men\u00ed v Nastaven\u00ed",
+        "Obrazovka Co je nov\u00e9ho po aktualizac\u00edch"
+      ]
+    }
+  }
+]

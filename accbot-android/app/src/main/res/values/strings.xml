@@ -768,6 +768,25 @@
     <string name="settings_delete_notifications_dialog_title">Delete Notification History?</string>
     <string name="settings_delete_notifications_dialog_text">This will permanently delete all %1$d notifications. This action cannot be undone.</string>
 
+    <!-- Notification Sub-toggles -->
+    <string name="settings_notifications_section">NOTIFICATIONS</string>
+    <string name="settings_notifications_master">Notifications</string>
+    <string name="settings_notifications_master_subtitle">Enable push notifications</string>
+    <string name="settings_notifications_purchase">Purchase Alerts</string>
+    <string name="settings_notifications_purchase_subtitle">Notify on completed DCA purchases</string>
+    <string name="settings_notifications_error">Error Alerts</string>
+    <string name="settings_notifications_error_subtitle">Notify on DCA errors</string>
+    <string name="settings_notifications_weekly">Weekly Summary</string>
+    <string name="settings_notifications_weekly_subtitle">Weekly portfolio summary report</string>
+    <string name="settings_notifications_system">System Settings</string>
+    <string name="settings_notifications_system_subtitle">Manage notification channels</string>
+
+    <!-- Preset Amount Buttons -->
+    <string name="add_plan_preset_amount">Quick amounts</string>
+
+    <!-- Swipe to archive -->
+    <string name="notifications_swipe_archive">Archive</string>
+
     <!-- Notification Info -->
     <string name="notification_info_title">Notification Settings</string>
     <string name="notification_info_body">AccBot uses 4 notification channels. In Android settings, you can customize each channel individually:\n\n• DCA Service — background service status\n• Purchase Notifications — successful trades\n• Error Notifications — failed trades\n• Low Balance Warnings — balance alerts\n\nFor each channel, you can set custom sound, vibration, and Do Not Disturb exceptions.</string>

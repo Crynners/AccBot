@@ -216,6 +216,30 @@ fun AddPlanScreen(
                     }
                 )
 
+                // Preset amount buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("25", "50", "100", "250", "500").forEach { preset ->
+                        OutlinedButton(
+                            onClick = { viewModel.setAmount(preset) },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                            colors = if (uiState.amount == preset) {
+                                ButtonDefaults.outlinedButtonColors(
+                                    containerColor = successColor().copy(alpha = 0.15f),
+                                    contentColor = successColor()
+                                )
+                            } else {
+                                ButtonDefaults.outlinedButtonColors()
+                            }
+                        ) {
+                            Text(text = preset, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+
                 // Frequency Selection - Dropdown
                 SectionTitle(stringResource(R.string.add_plan_purchase_frequency))
                 FrequencyDropdown(

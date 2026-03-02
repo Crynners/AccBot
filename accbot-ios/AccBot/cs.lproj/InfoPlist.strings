@@ -1,0 +1,4 @@
+/* Czech localization for Info.plist */
+
+"NSFaceIDUsageDescription" = "AccBot používá Face ID k ochraně přístupových údajů k burzám a přístupu do aplikace.";
+"NSCameraUsageDescription" = "AccBot používá fotoaparát ke skenování QR kódů.";

@@ -49,7 +49,11 @@ data class SettingsUiState(
     val appTheme: AppTheme = AppTheme.DARK,
     val dcaPlanCount: Int = 0,
     val transactionCount: Int = 0,
-    val notificationCount: Int = 0
+    val notificationCount: Int = 0,
+    val notificationsEnabled: Boolean = true,
+    val purchaseNotificationsEnabled: Boolean = true,
+    val errorNotificationsEnabled: Boolean = true,
+    val weeklySummaryEnabled: Boolean = false
 )
 
 @HiltViewModel
