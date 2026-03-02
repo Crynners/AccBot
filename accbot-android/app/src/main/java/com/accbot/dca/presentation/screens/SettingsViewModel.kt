@@ -50,7 +50,6 @@ data class SettingsUiState(
     val dcaPlanCount: Int = 0,
     val transactionCount: Int = 0,
     val notificationCount: Int = 0,
-    val appTheme: AppTheme = AppTheme.DARK,
     val notificationsEnabled: Boolean = true,
     val purchaseNotificationsEnabled: Boolean = true,
     val errorNotificationsEnabled: Boolean = true,

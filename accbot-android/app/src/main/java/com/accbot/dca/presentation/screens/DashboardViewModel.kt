@@ -427,33 +427,24 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun refreshAll() {
-        marketDataService.invalidateCache()
-        refreshPricesJob?.cancel()
-        refreshPricesJob = viewModelScope.launch {
-            _uiState.update { it.copy(isPriceLoading = true) }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true, isPriceLoading = true) }
+            marketDataService.invalidateCache()
+            refreshPricesJob?.cancel()
             try {
                 val state = _uiState.value
                 val plans = state.activePlans.map { it.plan }
                 coroutineScope {
+                    launch { loadData() }
                     launch { fetchPricesForHoldings(state.holdings, manageLoadingState = false) }
                     if (state.showMarketPulse) {
                         launch { fetchMarketIndicators(plans) }
                     }
                 }
             } finally {
-                _uiState.update { it.copy(isPriceLoading = false) }
+                kotlinx.coroutines.delay(1000)
+                _uiState.update { it.copy(isRefreshing = false, isPriceLoading = false) }
             }
-        }
-    }
-
-    fun refreshAll() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isRefreshing = true) }
-            marketDataService.invalidateCache()
-            loadData()
-            // Wait briefly for data to start loading, then clear refreshing state
-            kotlinx.coroutines.delay(1000)
-            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 

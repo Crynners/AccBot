@@ -773,12 +773,6 @@
     <string name="settings_delete_notifications_dialog_title">Smazat historii oznámení?</string>
     <string name="settings_delete_notifications_dialog_text">Trvale se smaže všech %1$d oznámení. Tuto akci nelze vrátit zpět.</string>
 
-    <!-- Theme Picker -->
-    <string name="settings_theme">Motiv</string>
-    <string name="settings_theme_dark">Tmavý</string>
-    <string name="settings_theme_light">Světlý</string>
-    <string name="settings_theme_system">Systém</string>
-
     <!-- Notification Sub-toggles -->
     <string name="settings_notifications_section">OZNÁMENÍ</string>
     <string name="settings_notifications_master">Oznámení</string>

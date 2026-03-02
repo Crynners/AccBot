@@ -67,11 +67,54 @@ else
 fi
 
 echo "Version bumped: $OLD_VERSION -> $NEW_VERSION"
+
+# ── Changelog scaffolding ───────────────────────────────────────────────────
+
+CHANGELOG="changelog.json"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -f "$CHANGELOG" ]; then
+    # Reuse ensure_jq from generate-changelog.sh
+    source "$SCRIPT_DIR/generate-changelog.sh" --source-only 2>/dev/null || true
+
+    # Inline jq availability check (in case sourcing didn't work)
+    if ! command -v jq &>/dev/null; then
+        # Try common locations
+        if [ -x "$HOME/.local/bin/jq" ] || [ -x "$HOME/.local/bin/jq.exe" ]; then
+            export PATH="$HOME/.local/bin:$PATH"
+        fi
+    fi
+
+    if command -v jq &>/dev/null; then
+        NEW_VERSION_CODE=$((MAJOR * 10000 + MINOR * 1000 + PATCH * 100))
+
+        # Check if this version already exists
+        existing=$(jq --argjson vc "$NEW_VERSION_CODE" '[.[] | select(.versionCode == $vc)] | length' "$CHANGELOG")
+
+        if [ "$existing" -eq 0 ]; then
+            # Prepend new template entry with all locales
+            jq --argjson vc "$NEW_VERSION_CODE" \
+               --arg ver "$NEW_VERSION" \
+               '[{versionCode: $vc, version: $ver, title: {en: "TODO: Release title", cs: "TODO: Název releasu"}, features: {en: ["TODO: Add features"], cs: ["TODO: Přidat funkce"]}}] + .' \
+               "$CHANGELOG" > "$CHANGELOG.tmp" && mv "$CHANGELOG.tmp" "$CHANGELOG"
+
+            echo ""
+            echo "Added changelog template for v$NEW_VERSION (versionCode $NEW_VERSION_CODE)"
+        fi
+
+        # Regenerate ChangelogData.kt
+        "$SCRIPT_DIR/generate-changelog.sh"
+    else
+        echo ""
+        echo "Warning: jq not found — skipping changelog scaffolding"
+        echo "Run: ./scripts/generate-changelog.sh (it will auto-install jq)"
+    fi
+fi
+
 echo ""
 echo "Next steps:"
-echo "  1. Review changes: git diff"
-echo "  2. Commit: git commit -am \"Bump version to $NEW_VERSION\""
-echo "  3. Tag: git tag v$NEW_VERSION"
-echo "  4. Push: git push && git push --tags"
+echo "  1. Edit changelog.json with real release notes for v$NEW_VERSION"
+echo "  2. Run: ./scripts/release.sh [--push]"
+echo "     (regenerates Kotlin, commits, tags v$NEW_VERSION, optionally pushes)"
 echo ""
 echo "This will trigger the GitHub Actions workflow to build and release."
