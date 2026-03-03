@@ -50,7 +50,7 @@ class CalculateStrategyMultiplierUseCase @Inject constructor(
         crypto: String,
         fiat: String
     ): StrategyMultiplierResult {
-        val cryptoData = marketDataService.getCryptoData(crypto, fiat)
+        val cryptoData = marketDataService.getCachedCryptoData(crypto, fiat)
 
         if (cryptoData == null) {
             Log.w(TAG, "Could not fetch ATH data for $crypto/$fiat, using default multiplier")

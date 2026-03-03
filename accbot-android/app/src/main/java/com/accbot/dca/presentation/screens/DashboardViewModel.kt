@@ -367,7 +367,7 @@ class DashboardViewModel @Inject constructor(
             val athData = mutableMapOf<String, CryptoData>()
             for ((crypto, fiat) in uniquePairs) {
                 try {
-                    val data = marketDataService.getCryptoData(crypto, fiat)
+                    val data = marketDataService.getCachedCryptoData(crypto, fiat)
                     if (data != null) {
                         athData[crypto] = data
                     }

@@ -56,7 +56,7 @@ class CalculateMonthlyCostUseCase @Inject constructor(
                     minMult = strategy.tiers.minOf { it.multiplier },
                     maxMult = strategy.tiers.maxOf { it.multiplier },
                     fetchCurrentMultiplier = {
-                        val cryptoData = marketDataService.getCryptoData(crypto, fiat)
+                        val cryptoData = marketDataService.getCachedCryptoData(crypto, fiat)
                         if (cryptoData != null) {
                             val mult = strategy.tiers.sortedBy { it.maxDistancePercent }
                                 .firstOrNull { cryptoData.athDistance <= it.maxDistancePercent }
