@@ -274,6 +274,7 @@ data class NotificationEntity(
     val isRead: Boolean = false,
     val isArchived: Boolean = false,
     val systemNotificationId: Int? = null,
+    val templateArgs: String? = null,
     val createdAt: Instant = Instant.now()
 )
 

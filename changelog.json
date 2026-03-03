@@ -1,5 +1,25 @@
 [
   {
+    "versionCode": 24200,
+    "version": "2.4.2",
+    "title": {
+      "en": "Locale-Aware Notifications",
+      "cs": "Notifikace reagující na změnu jazyka"
+    },
+    "features": {
+      "en": [
+        "Notifications re-render instantly when switching language",
+        "Structured notification templates (templateArgs) for locale-independent storage",
+        "Notification backup & restore support"
+      ],
+      "cs": [
+        "Notifikace se okamžitě přerenderují při přepnutí jazyka",
+        "Strukturované šablony notifikací (templateArgs) pro jazykově nezávislé ukládání",
+        "Podpora zálohování a obnovy notifikací"
+      ]
+    }
+  },
+  {
     "versionCode": 24100,
     "version": "2.4.1",
     "title": {

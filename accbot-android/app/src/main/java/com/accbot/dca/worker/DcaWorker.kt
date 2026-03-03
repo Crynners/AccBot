@@ -6,6 +6,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.*
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.CredentialsStore
+import com.accbot.dca.data.local.NotificationTemplateArgs
 import com.accbot.dca.data.local.DcaPlanEntity
 import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.data.local.UserPreferences
@@ -89,9 +90,11 @@ class DcaWorker @AssistedInject constructor(
                         database.dcaPlanDao().setEnabled(plan.id, false)
                         Log.d(TAG, "Plan ${plan.id} reached target ${plan.targetAmount}, auto-disabled")
                         notificationService.showErrorNotification(
-                            context.getString(R.string.notification_dca_failed),
-                            "Target reached: ${plan.targetAmount} ${plan.crypto}",
-                            plan.id
+                            planId = plan.id,
+                            templateArgs = NotificationTemplateArgs.TargetReached(
+                                targetAmount = plan.targetAmount.toPlainString(),
+                                crypto = plan.crypto
+                            )
                         )
                         continue
                     }
@@ -147,10 +150,13 @@ class DcaWorker @AssistedInject constructor(
                     }
 
                     notificationService.showErrorNotification(
-                        context.getString(R.string.notification_dca_failed),
-                        context.getString(R.string.notification_dca_failed_text, plan.crypto,
-                            "Amount $purchaseAmount ${plan.fiat} below exchange minimum $minOrderSize ${plan.fiat}"),
-                        plan.id
+                        planId = plan.id,
+                        templateArgs = NotificationTemplateArgs.BelowMinimum(
+                            crypto = plan.crypto,
+                            purchaseAmount = purchaseAmount.toPlainString(),
+                            fiat = plan.fiat,
+                            minOrderSize = minOrderSize.toPlainString()
+                        )
                     )
                     continue
                 }
@@ -304,9 +310,11 @@ class DcaWorker @AssistedInject constructor(
                             }
 
                             notificationService.showErrorNotification(
-                                context.getString(R.string.notification_dca_failed),
-                                context.getString(R.string.notification_dca_failed_text, plan.crypto, finalResult.message),
-                                plan.id
+                                planId = plan.id,
+                                templateArgs = NotificationTemplateArgs.Error(
+                                    crypto = plan.crypto,
+                                    errorMessage = finalResult.message
+                                )
                             )
                             Log.e(TAG, "DCA purchase failed for plan ${plan.id} after $maxAttempts attempts: ${finalResult.message}")
                         }

@@ -224,6 +224,7 @@ class BackupDataRestorer @Inject constructor(
         exchange = exchange?.let { try { Exchange.valueOf(it) } catch (_: Exception) { null } },
         isRead = isRead,
         isArchived = isArchived,
+        templateArgs = templateArgs,
         createdAt = Instant.ofEpochMilli(createdAt)
     )
 

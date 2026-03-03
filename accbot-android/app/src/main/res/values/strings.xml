@@ -723,6 +723,8 @@
     <string name="settings_withdrawal_threshold_no_plans">No active DCA plans found</string>
     <string name="notification_withdrawal_threshold_title">Withdrawal Recommended</string>
     <string name="notification_withdrawal_threshold_text">You have accumulated %1$s %2$s on %3$s — consider withdrawing to cold wallet</string>
+    <string name="notification_target_reached">Target reached: %1$s %2$s — plan auto-disabled</string>
+    <string name="notification_below_minimum">Amount %1$s %2$s below exchange minimum %3$s %2$s</string>
     <string name="dashboard_withdrawal_ready">%1$s %2$s on exchange — consider withdrawal</string>
 
     <!-- DCA Alerts section -->

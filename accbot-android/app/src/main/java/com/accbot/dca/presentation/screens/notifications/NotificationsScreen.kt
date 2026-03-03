@@ -40,6 +40,8 @@ import com.accbot.dca.presentation.utils.DateFormatters
 fun NotificationsScreen(
     viewModel: NotificationsViewModel = hiltViewModel()
 ) {
+    LaunchedEffect(Unit) { viewModel.refreshForLocale() }
+
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val unreadCount by viewModel.unreadCount.collectAsStateWithLifecycle()
     var showDeleteAllDialog by remember { mutableStateOf(false) }
