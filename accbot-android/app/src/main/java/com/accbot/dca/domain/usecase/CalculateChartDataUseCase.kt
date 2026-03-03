@@ -25,7 +25,8 @@ data class ChartDataPoint(
     val cumulativeCrypto: BigDecimal = BigDecimal.ZERO,
     val investedEquivCrypto: BigDecimal = BigDecimal.ZERO,
     val avgBuyPrice: BigDecimal = BigDecimal.ZERO,
-    val price: BigDecimal = BigDecimal.ZERO
+    val price: BigDecimal = BigDecimal.ZERO,
+    val epochMillis: Long? = null
 )
 
 /**
@@ -51,6 +52,35 @@ sealed class ChartZoomLevel {
 class CalculateChartDataUseCase @Inject constructor(
     private val dailyPriceDao: DailyPriceDao
 ) {
+    companion object {
+        const val MAX_POINTS = 90
+    }
+
+    private enum class Granularity { PER_TX, DAILY, WEEKLY, MONTHLY }
+
+    private fun chooseGranularity(
+        txInPeriod: Int,
+        daysInPeriod: Long,
+        zoomLevel: ChartZoomLevel
+    ): Granularity {
+        // Estimate per-tx point count: each tx day gets N points (one per tx),
+        // each non-tx day gets 1 point for daily fill.
+        val perTxEstimate = if (txInPeriod <= daysInPeriod) {
+            daysInPeriod  // each tx on a separate day → same as daily
+        } else {
+            txInPeriod + (daysInPeriod - minOf(txInPeriod.toLong(), daysInPeriod))
+        }
+
+        if (perTxEstimate <= MAX_POINTS) return Granularity.PER_TX
+        if (daysInPeriod <= MAX_POINTS) return Granularity.DAILY
+
+        val weeksInPeriod = (daysInPeriod + 6) / 7
+        if (weeksInPeriod <= MAX_POINTS && zoomLevel !is ChartZoomLevel.Month)
+            return Granularity.WEEKLY
+
+        return Granularity.MONTHLY
+    }
+
     suspend fun calculate(
         transactions: List<TransactionEntity>,
         crypto: String?,
@@ -102,13 +132,16 @@ class CalculateChartDataUseCase @Inject constructor(
             nextTx = if (txIterator.hasNext()) txIterator.next() else null
         }
 
-        // Adaptive aggregation: Overview adapts based on history length
-        val historyMonths = if (zoomLevel is ChartZoomLevel.Overview)
-            ChronoUnit.MONTHS.between(startDate, endDate) else 0L
-        val emitMonthly = zoomLevel is ChartZoomLevel.Overview && historyMonths > 12
-        val emitWeekly = zoomLevel is ChartZoomLevel.Year ||
-            (zoomLevel is ChartZoomLevel.Overview && historyMonths in 3..12)
-        val emitBucketed = emitMonthly || emitWeekly
+        // Count transactions in visible period for granularity selection
+        val txInPeriod = pairTxs.count { tx ->
+            val d = tx.executedAt.atZone(ZoneId.systemDefault()).toLocalDate()
+            !d.isBefore(startDate) && !d.isAfter(endDate)
+        }
+        val daysInPeriod = ChronoUnit.DAYS.between(startDate, endDate) + 1
+        val granularity = chooseGranularity(txInPeriod, daysInPeriod, zoomLevel)
+
+        val emitWeekly = granularity == Granularity.WEEKLY
+        val emitBucketed = granularity == Granularity.WEEKLY || granularity == Granularity.MONTHLY
         val result = mutableListOf<ChartDataPoint>()
         var lastKnownPrice: BigDecimal? = null
         var currentDate = startDate
@@ -125,20 +158,40 @@ class CalculateChartDataUseCase @Inject constructor(
         while (!currentDate.isAfter(endDate)) {
             val epochDay = currentDate.toEpochDay()
 
-            // Add transactions on this day
+            // Resolve price for today BEFORE processing transactions
+            // so per-tx emission can use it
+            val price = priceMap[epochDay] ?: lastKnownPrice
+            if (price != null) lastKnownPrice = price
+
+            // Process transactions on this day
+            var txProcessedToday = false
             while (nextTx != null) {
                 val txDate = nextTx.executedAt.atZone(ZoneId.systemDefault()).toLocalDate()
                 if (txDate.isAfter(currentDate)) break
+                val txMillis = nextTx.executedAt.toEpochMilli()
                 cumulativeCrypto += nextTx.cryptoAmount
                 cumulativeInvested += nextTx.fiatAmount
                 nextTx = if (txIterator.hasNext()) txIterator.next() else null
+                txProcessedToday = true
+
+                // Per-tx mode: emit a point after each individual transaction
+                if (granularity == Granularity.PER_TX && price != null) {
+                    result.add(buildChartDataPoint(
+                        epochDay, cumulativeCrypto, cumulativeInvested, price,
+                        epochMillis = txMillis
+                    ))
+                }
             }
 
-            val price = priceMap[epochDay] ?: lastKnownPrice
             if (price != null) {
-                lastKnownPrice = price
-
-                if (emitBucketed) {
+                if (granularity == Granularity.PER_TX) {
+                    // Only emit daily fill on days with no transactions
+                    if (!txProcessedToday) {
+                        result.add(buildChartDataPoint(
+                            epochDay, cumulativeCrypto, cumulativeInvested, price
+                        ))
+                    }
+                } else if (emitBucketed) {
                     val bucketKey = if (emitWeekly) {
                         currentDate.get(WeekFields.ISO.weekBasedYear()) * 100 + currentDate.get(isoWeekField)
                     } else {
@@ -232,13 +285,18 @@ class CalculateChartDataUseCase @Inject constructor(
             }
         }
 
-        // Adaptive aggregation: Overview adapts based on history length
-        val historyMonths = if (zoomLevel is ChartZoomLevel.Overview)
-            ChronoUnit.MONTHS.between(startDate, endDate) else 0L
-        val emitMonthly = zoomLevel is ChartZoomLevel.Overview && historyMonths > 12
-        val emitWeekly = zoomLevel is ChartZoomLevel.Year ||
-            (zoomLevel is ChartZoomLevel.Overview && historyMonths in 3..12)
-        val emitBucketed = emitMonthly || emitWeekly
+        // Count transactions in visible period for granularity selection
+        val txInPeriod = fiatTransactions.count { tx ->
+            val d = tx.executedAt.atZone(ZoneId.systemDefault()).toLocalDate()
+            !d.isBefore(startDate) && !d.isAfter(endDate)
+        }
+        val daysInPeriod = ChronoUnit.DAYS.between(startDate, endDate) + 1
+        // For aggregate, PER_TX falls through to DAILY (intra-day detail not meaningful with daily prices)
+        val rawGranularity = chooseGranularity(txInPeriod, daysInPeriod, zoomLevel)
+        val granularity = if (rawGranularity == Granularity.PER_TX) Granularity.DAILY else rawGranularity
+
+        val emitWeekly = granularity == Granularity.WEEKLY
+        val emitBucketed = granularity == Granularity.WEEKLY || granularity == Granularity.MONTHLY
         val result = mutableListOf<ChartDataPoint>()
         var currentDate = startDate
 
@@ -311,7 +369,8 @@ class CalculateChartDataUseCase @Inject constructor(
         epochDay: Long,
         cumulativeCrypto: BigDecimal,
         cumulativeInvested: BigDecimal,
-        price: BigDecimal
+        price: BigDecimal,
+        epochMillis: Long? = null
     ): ChartDataPoint {
         val value = cumulativeCrypto * price
         val roiAbsolute = value - cumulativeInvested
@@ -336,7 +395,8 @@ class CalculateChartDataUseCase @Inject constructor(
             cumulativeCrypto = cumulativeCrypto,
             investedEquivCrypto = investedEquiv,
             avgBuyPrice = avgBuy,
-            price = price
+            price = price,
+            epochMillis = epochMillis
         )
     }
 

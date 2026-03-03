@@ -31,27 +31,13 @@ class Converters {
     fun fromBigDecimal(value: BigDecimal?): String? = value?.toPlainString()
 
     @TypeConverter
-    fun toBigDecimal(value: String?): BigDecimal? = value?.let {
-        try {
-            BigDecimal(it)
-        } catch (e: NumberFormatException) {
-            Log.w(TAG, "Invalid BigDecimal value '$it', falling back to ZERO", e)
-            BigDecimal.ZERO
-        }
-    }
+    fun toBigDecimal(value: String?): BigDecimal? = value?.let { BigDecimal(it) }
 
     @TypeConverter
     fun fromInstant(value: Instant?): Long? = value?.toEpochMilli()
 
     @TypeConverter
-    fun toInstant(value: Long?): Instant? = value?.let {
-        try {
-            Instant.ofEpochMilli(it)
-        } catch (e: Exception) {
-            Log.w(TAG, "Invalid Instant millis '$it', falling back to now()", e)
-            Instant.now()
-        }
-    }
+    fun toInstant(value: Long?): Instant? = value?.let { Instant.ofEpochMilli(it) }
 
     @TypeConverter
     fun fromExchange(value: Exchange): String = value.name
@@ -288,6 +274,7 @@ data class NotificationEntity(
     val isRead: Boolean = false,
     val isArchived: Boolean = false,
     val systemNotificationId: Int? = null,
+    val templateArgs: String? = null,
     val createdAt: Instant = Instant.now()
 )
 

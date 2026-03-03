@@ -19,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         NotificationEntity::class,
         WithdrawalThresholdEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -179,6 +179,13 @@ abstract class DcaDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 13 to 14: Add templateArgs column to notifications
+        private val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE notifications ADD COLUMN templateArgs TEXT DEFAULT NULL")
+            }
+        }
+
         // Migration from version 9 to 10: Add notifications and withdrawal_thresholds tables
         private val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -248,8 +255,11 @@ abstract class DcaDatabase : RoomDatabase() {
             val prodDbFile = context.getDatabasePath(PROD_DATABASE_NAME)
 
             if (legacyDbFile.exists() && !prodDbFile.exists()) {
-                // Rename legacy database to production database
-                legacyDbFile.renameTo(prodDbFile)
+                // Rename legacy database to production database, fall back to copy
+                if (!legacyDbFile.renameTo(prodDbFile)) {
+                    legacyDbFile.copyTo(prodDbFile, overwrite = false)
+                    legacyDbFile.delete()
+                }
 
                 // Also migrate WAL and SHM files if they exist
                 val legacyWal = context.getDatabasePath("$LEGACY_DATABASE_NAME-wal")
@@ -257,8 +267,18 @@ abstract class DcaDatabase : RoomDatabase() {
                 val prodWal = context.getDatabasePath("$PROD_DATABASE_NAME-wal")
                 val prodShm = context.getDatabasePath("$PROD_DATABASE_NAME-shm")
 
-                if (legacyWal.exists()) legacyWal.renameTo(prodWal)
-                if (legacyShm.exists()) legacyShm.renameTo(prodShm)
+                if (legacyWal.exists()) {
+                    if (!legacyWal.renameTo(prodWal)) {
+                        legacyWal.copyTo(prodWal, overwrite = false)
+                        legacyWal.delete()
+                    }
+                }
+                if (legacyShm.exists()) {
+                    if (!legacyShm.renameTo(prodShm)) {
+                        legacyShm.copyTo(prodShm, overwrite = false)
+                        legacyShm.delete()
+                    }
+                }
             }
         }
 
@@ -268,7 +288,7 @@ abstract class DcaDatabase : RoomDatabase() {
                 DcaDatabase::class.java,
                 databaseName
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                 // Only allow destructive migration on app downgrade, never on failed upgrade
                 // This protects user's transaction history from accidental deletion
                 .fallbackToDestructiveMigrationOnDowngrade()

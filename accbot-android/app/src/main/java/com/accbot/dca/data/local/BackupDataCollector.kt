@@ -133,6 +133,7 @@ class BackupDataCollector @Inject constructor(
         exchange = exchange?.name,
         isRead = isRead,
         isArchived = isArchived,
+        templateArgs = templateArgs,
         createdAt = createdAt.toEpochMilli()
     )
 

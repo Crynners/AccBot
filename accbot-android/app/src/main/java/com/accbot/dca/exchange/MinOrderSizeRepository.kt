@@ -75,20 +75,22 @@ class MinOrderSizeRepository @Inject constructor(
                 .get()
                 .build()
 
-            val pairsResponse = okHttpClient.newCall(pairsRequest).execute()
-            if (!pairsResponse.isSuccessful) return@withContext null
+            val minAmount = okHttpClient.newCall(pairsRequest).execute().use { pairsResponse ->
+                if (!pairsResponse.isSuccessful) return@withContext null
 
-            val pairsBody = pairsResponse.body.string()
-            val pairsJson = JSONObject(pairsBody)
-            val pairsData = pairsJson.optJSONArray("data") ?: return@withContext null
+                val pairsBody = pairsResponse.body.string()
+                val pairsJson = JSONObject(pairsBody)
+                val pairsData = pairsJson.optJSONArray("data") ?: return@withContext null
 
-            var minAmount: BigDecimal? = null
-            for (i in 0 until pairsData.length()) {
-                val pairObj = pairsData.getJSONObject(i)
-                if (pairObj.getString("name") == pair) {
-                    minAmount = BigDecimal(pairObj.getString("minAmount"))
-                    break
+                var found: BigDecimal? = null
+                for (i in 0 until pairsData.length()) {
+                    val pairObj = pairsData.getJSONObject(i)
+                    if (pairObj.getString("name") == pair) {
+                        found = BigDecimal(pairObj.getString("minAmount"))
+                        break
+                    }
                 }
+                found
             }
             if (minAmount == null) return@withContext null
 
@@ -98,13 +100,14 @@ class MinOrderSizeRepository @Inject constructor(
                 .get()
                 .build()
 
-            val tickerResponse = okHttpClient.newCall(tickerRequest).execute()
-            if (!tickerResponse.isSuccessful) return@withContext null
+            val lastPrice = okHttpClient.newCall(tickerRequest).execute().use { tickerResponse ->
+                if (!tickerResponse.isSuccessful) return@withContext null
 
-            val tickerBody = tickerResponse.body.string()
-            val tickerJson = JSONObject(tickerBody)
-            val tickerData = tickerJson.optJSONObject("data") ?: return@withContext null
-            val lastPrice = BigDecimal(tickerData.getString("last"))
+                val tickerBody = tickerResponse.body.string()
+                val tickerJson = JSONObject(tickerBody)
+                val tickerData = tickerJson.optJSONObject("data") ?: return@withContext null
+                BigDecimal(tickerData.getString("last"))
+            }
 
             // 3. minAmount (crypto) × price = minimum fiat amount, rounded up
             val minFiat = minAmount.multiply(lastPrice).setScale(2, RoundingMode.UP)
@@ -128,27 +131,28 @@ class MinOrderSizeRepository @Inject constructor(
                 .get()
                 .build()
 
-            val response = okHttpClient.newCall(request).execute()
-            if (!response.isSuccessful) return@withContext null
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
 
-            val body = response.body.string()
-            val json = JSONObject(body)
-            val symbols = json.optJSONArray("symbols")
-            if (symbols == null || symbols.length() == 0) return@withContext null
+                val body = response.body.string()
+                val json = JSONObject(body)
+                val symbols = json.optJSONArray("symbols")
+                if (symbols == null || symbols.length() == 0) return@withContext null
 
-            val symbolObj = symbols.getJSONObject(0)
-            val filters = symbolObj.getJSONArray("filters")
+                val symbolObj = symbols.getJSONObject(0)
+                val filters = symbolObj.getJSONArray("filters")
 
-            for (i in 0 until filters.length()) {
-                val filter = filters.getJSONObject(i)
-                if (filter.getString("filterType") == "NOTIONAL") {
-                    val minNotional = BigDecimal(filter.getString("minNotional"))
-                    Log.d(TAG, "Binance $symbol: minNotional=$minNotional")
-                    return@withContext minNotional
+                for (i in 0 until filters.length()) {
+                    val filter = filters.getJSONObject(i)
+                    if (filter.getString("filterType") == "NOTIONAL") {
+                        val minNotional = BigDecimal(filter.getString("minNotional"))
+                        Log.d(TAG, "Binance $symbol: minNotional=$minNotional")
+                        return@withContext minNotional
+                    }
                 }
-            }
 
-            null
+                null
+            }
         }
 
     companion object {

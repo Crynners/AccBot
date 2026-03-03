@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -26,16 +27,18 @@ class MarketDataService @Inject constructor(
     private val okHttpClient: OkHttpClient,
     private val gson: Gson
 ) {
-    private data class PriceCache(
-        val price: BigDecimal,
+    private data class CryptoDataCache(
+        val data: CryptoData,
         val fetchedAt: Long
     )
 
-    private val priceCache = ConcurrentHashMap<String, PriceCache>()
+    private val cryptoDataCache = ConcurrentHashMap<String, CryptoDataCache>()
     private val fetchMutexes = ConcurrentHashMap<String, Mutex>()
-    private val CACHE_TTL_MS = 60 * 60 * 1000L // 1 hour
     companion object {
         private const val TAG = "MarketDataService"
+        private const val PRICE_CACHE_TTL_MS = 60 * 60 * 1000L // 1 hour
+        private const val ATH_CACHE_TTL_MS = 24 * 60 * 60 * 1000L // 24 hours
+        private const val ATH_NEAR_THRESHOLD = 0.10f // refresh ATH when price is within 10%
 
         // CoinGecko API (free, no auth required)
         private const val COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3"
@@ -118,34 +121,48 @@ class MarketDataService @Inject constructor(
     }
 
     /**
-     * Get cached current price for a crypto/fiat pair.
-     * Returns from 1-hour in-memory cache if available, otherwise fetches fresh.
+     * Get cached CryptoData (price + ATH) for a crypto/fiat pair.
+     * Price is cached for 1 hour. ATH is cached for 24 hours when price is >10% below ATH,
+     * or 1 hour when near ATH (within 10%) since ATH could change.
      * Uses per-key Mutex to prevent cache stampede (duplicate concurrent API calls).
      */
-    suspend fun getCachedPrice(crypto: String, fiat: String): BigDecimal? {
+    suspend fun getCachedCryptoData(crypto: String, fiat: String): CryptoData? {
         val key = "${crypto}_${fiat}"
-        val cached = priceCache[key]
-        if (cached != null && System.currentTimeMillis() - cached.fetchedAt < CACHE_TTL_MS) {
-            return cached.price
+        val cached = cryptoDataCache[key]
+        if (cached != null) {
+            val age = System.currentTimeMillis() - cached.fetchedAt
+            val nearAth = cached.data.athDistance < ATH_NEAR_THRESHOLD
+            val ttl = if (nearAth) PRICE_CACHE_TTL_MS else ATH_CACHE_TTL_MS
+            if (age < ttl) return cached.data
         }
         val mutex = fetchMutexes.getOrPut(key) { Mutex() }
         return mutex.withLock {
             // Double-check after acquiring lock
-            val rechecked = priceCache[key]
-            if (rechecked != null && System.currentTimeMillis() - rechecked.fetchedAt < CACHE_TTL_MS) {
-                return@withLock rechecked.price
+            val rechecked = cryptoDataCache[key]
+            if (rechecked != null) {
+                val age = System.currentTimeMillis() - rechecked.fetchedAt
+                val nearAth = rechecked.data.athDistance < ATH_NEAR_THRESHOLD
+                val ttl = if (nearAth) PRICE_CACHE_TTL_MS else ATH_CACHE_TTL_MS
+                if (age < ttl) return@withLock rechecked.data
             }
             val data = getCryptoData(crypto, fiat)
             if (data != null) {
-                priceCache[key] = PriceCache(data.currentPrice, System.currentTimeMillis())
+                cryptoDataCache[key] = CryptoDataCache(data, System.currentTimeMillis())
             }
-            data?.currentPrice
+            data ?: cached?.data
         }
     }
 
+    /**
+     * Get cached current price for a crypto/fiat pair.
+     * Delegates to [getCachedCryptoData] which caches the full CryptoData.
+     */
+    suspend fun getCachedPrice(crypto: String, fiat: String): BigDecimal? {
+        return getCachedCryptoData(crypto, fiat)?.currentPrice
+    }
+
     fun invalidateCache() {
-        priceCache.clear()
-        fetchMutexes.clear()
+        cryptoDataCache.clear()
     }
 
     /**
@@ -295,7 +312,7 @@ class MarketDataService @Inject constructor(
      */
     fun calculateAthDistance(currentPrice: BigDecimal, ath: BigDecimal): Float {
         if (ath <= BigDecimal.ZERO) return 0f
-        val distance = (ath - currentPrice) / ath
+        val distance = (ath - currentPrice).divide(ath, 8, RoundingMode.HALF_UP)
         return distance.toFloat().coerceIn(0f, 1f)
     }
 }
@@ -311,7 +328,7 @@ data class CryptoData(
 ) {
     val athDistance: Float
         get() = if (allTimeHigh > BigDecimal.ZERO) {
-            ((allTimeHigh - currentPrice) / allTimeHigh).toFloat().coerceIn(0f, 1f)
+            (allTimeHigh - currentPrice).divide(allTimeHigh, 8, RoundingMode.HALF_UP).toFloat().coerceIn(0f, 1f)
         } else 0f
 
     val athDistancePercent: Int
@@ -320,9 +337,23 @@ data class CryptoData(
 
 data class FearGreedData(
     val value: Int,           // 0-100
-    val classification: String, // "Extreme Fear", "Fear", "Neutral", "Greed", "Extreme Greed"
+    val classification: String, // raw API classification (not used for display)
     val timestamp: Long
-)
+) {
+    /** 5-level classification with 20-point bands (0-19, 20-39, 40-59, 60-79, 80-100) */
+    val classificationLabel: String
+        get() = classify(value)
+
+    companion object {
+        fun classify(value: Int): String = when {
+            value <= 19 -> "Extreme Fear"
+            value <= 39 -> "Fear"
+            value <= 59 -> "Neutral"
+            value <= 79 -> "Greed"
+            else -> "Extreme Greed"
+        }
+    }
+}
 
 // CoinGecko API response models
 
@@ -343,18 +374,22 @@ data class MarketDataResponse(
 // Fear & Greed API response models
 
 data class FearGreedResponse(
+    @SerializedName("data")
     val data: List<FearGreedItem>?
 )
 
 data class FearGreedItem(
+    @SerializedName("value")
     val value: String,
     @SerializedName("value_classification")
     val valueClassification: String?,
+    @SerializedName("timestamp")
     val timestamp: String?
 )
 
 // CoinGecko market_chart response
 data class MarketChartResponse(
+    @SerializedName("prices")
     val prices: List<List<Double>>?
 )
 
@@ -374,6 +409,8 @@ data class CryptoCompareHistodayData(
 )
 
 data class CryptoCompareHistodayPoint(
+    @SerializedName("time")
     val time: Long,
+    @SerializedName("close")
     val close: Double?
 )

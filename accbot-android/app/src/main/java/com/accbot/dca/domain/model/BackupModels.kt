@@ -116,6 +116,7 @@ data class BackupNotification(
     val exchange: String? = null,
     val isRead: Boolean = false,
     val isArchived: Boolean = false,
+    val templateArgs: String? = null,
     val createdAt: Long = 0
 )
 

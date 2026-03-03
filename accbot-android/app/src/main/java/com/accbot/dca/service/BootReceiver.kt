@@ -8,6 +8,7 @@ import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.worker.DcaWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -28,7 +29,7 @@ class BootReceiver : BroadcastReceiver() {
 
             // Re-arm exact alarm (requires DB access, so use goAsync + coroutine)
             val pendingResult = goAsync()
-            CoroutineScope(Dispatchers.IO).launch {
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                 try {
                     withTimeoutOrNull(9_000) {
                         DcaAlarmScheduler.scheduleNextAlarm(context)

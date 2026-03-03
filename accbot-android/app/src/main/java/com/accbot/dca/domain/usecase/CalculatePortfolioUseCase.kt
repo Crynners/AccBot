@@ -161,7 +161,7 @@ class CalculatePortfolioUseCase @Inject constructor() {
             }
             .map { (yearMonth, txs) ->
                 val totalInvested = txs.sumOf { it.fiatAmount }
-                val totalCrypto = txs.filter { it.crypto == "BTC" }.sumOf { it.cryptoAmount }
+                val totalCrypto = txs.sumOf { it.cryptoAmount }
                 val averagePrice = calculateAveragePrice(totalInvested, totalCrypto)
 
                 MonthlyPerformance(

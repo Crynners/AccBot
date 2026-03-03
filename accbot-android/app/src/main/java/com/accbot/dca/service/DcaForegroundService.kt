@@ -30,17 +30,21 @@ class DcaForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "DcaForegroundService started")
 
-        when (intent?.action) {
+        return when (intent?.action) {
             ACTION_START -> {
                 startForegroundService()
+                // START_STICKY ensures service restarts if killed
+                START_STICKY
             }
             ACTION_STOP -> {
                 stopForegroundService()
+                START_NOT_STICKY
+            }
+            else -> {
+                // Null intent (e.g. system restart after crash) — do not auto-restart
+                START_NOT_STICKY
             }
         }
-
-        // START_STICKY ensures service restarts if killed
-        return START_STICKY
     }
 
     private fun startForegroundService() {

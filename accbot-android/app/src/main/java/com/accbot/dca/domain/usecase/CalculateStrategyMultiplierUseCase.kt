@@ -50,7 +50,7 @@ class CalculateStrategyMultiplierUseCase @Inject constructor(
         crypto: String,
         fiat: String
     ): StrategyMultiplierResult {
-        val cryptoData = marketDataService.getCryptoData(crypto, fiat)
+        val cryptoData = marketDataService.getCachedCryptoData(crypto, fiat)
 
         if (cryptoData == null) {
             Log.w(TAG, "Could not fetch ATH data for $crypto/$fiat, using default multiplier")
@@ -103,11 +103,11 @@ class CalculateStrategyMultiplierUseCase @Inject constructor(
             .firstOrNull { index <= it.maxIndex }
             ?.multiplier ?: 1.0f
 
-        Log.d(TAG, "Fear & Greed: Index is $index (${fngData.classification}), multiplier: $multiplier")
+        Log.d(TAG, "Fear & Greed: Index is $index (${fngData.classificationLabel}), multiplier: $multiplier")
 
         return StrategyMultiplierResult(
             multiplier = multiplier,
-            reason = "${fngData.classification} ($index) → ${formatMultiplier(multiplier)}",
+            reason = "${fngData.classificationLabel} ($index) → ${formatMultiplier(multiplier)}",
             marketData = MarketData(
                 currentPrice = BigDecimal.ZERO,
                 fearGreedIndex = index

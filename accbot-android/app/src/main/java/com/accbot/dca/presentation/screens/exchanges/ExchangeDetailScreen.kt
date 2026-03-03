@@ -42,7 +42,27 @@ fun ExchangeDetailScreen(
     viewModel: ExchangeDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val exchange = uiState.exchange ?: return
+    val exchange = uiState.exchange
+    if (exchange == null) {
+        Scaffold(
+            topBar = {
+                AccBotTopAppBar(
+                    title = stringResource(R.string.exchange_detail_title),
+                    onNavigateBack = onNavigateBack
+                )
+            }
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        return
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var showRemoveDialog by remember { mutableStateOf(false) }

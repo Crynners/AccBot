@@ -3,6 +3,9 @@
 # Keep Room entities
 -keep class com.accbot.dca.data.local.** { *; }
 
+# Keep API response models (Gson deserialization via reflection)
+-keep class com.accbot.dca.data.remote.** { *; }
+
 # Keep domain models
 -keep class com.accbot.dca.domain.model.** { *; }
 
