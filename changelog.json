@@ -1,5 +1,25 @@
 [
   {
+    "versionCode": 24100,
+    "version": "2.4.1",
+    "title": {
+      "en": "Stability & CI Fixes",
+      "cs": "Opravy stability a CI"
+    },
+    "features": {
+      "en": [
+        "Fix R8 obfuscation breaking API JSON parsing in release builds",
+        "Smart ATH caching — reduces redundant network calls",
+        "CI pipeline fix — remove PAT dependency for release workflow"
+      ],
+      "cs": [
+        "Oprava R8 obfuskace narušující parsování API odpovědí v release buildech",
+        "Chytré cachování ATH dat — méně zbytečných síťových volání",
+        "Oprava CI pipeline — odstranění závislosti na PAT pro release workflow"
+      ]
+    }
+  },
+  {
     "versionCode": 24000,
     "version": "2.4.0",
     "title": {
