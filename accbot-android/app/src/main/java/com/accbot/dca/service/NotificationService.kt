@@ -11,6 +11,7 @@ import com.accbot.dca.MainActivity
 import com.accbot.dca.R
 import com.accbot.dca.data.local.NotificationDao
 import com.accbot.dca.data.local.NotificationEntity
+import com.accbot.dca.data.local.NotificationTemplateArgs
 import com.accbot.dca.data.local.NotificationType
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.presentation.utils.NumberFormatters
@@ -123,6 +124,23 @@ class NotificationService @Inject constructor(
             context.getString(R.string.notification_purchase_text, NumberFormatters.crypto(cryptoAmount), crypto, NumberFormatters.fiat(fiatAmount), fiat, priceFormatted)
         }
 
+        val args = if (pending) {
+            NotificationTemplateArgs.PurchasePending(
+                fiatAmount = fiatAmount.toPlainString(),
+                fiat = fiat,
+                crypto = crypto,
+                price = price.toPlainString()
+            )
+        } else {
+            NotificationTemplateArgs.Purchase(
+                cryptoAmount = cryptoAmount.toPlainString(),
+                crypto = crypto,
+                fiatAmount = fiatAmount.toPlainString(),
+                fiat = fiat,
+                price = price.toPlainString()
+            )
+        }
+
         val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_PURCHASE, planId)
         persistAndShow(
             sysNotifId = sysNotifId,
@@ -136,7 +154,8 @@ class NotificationService @Inject constructor(
                 planId = planId.takeIf { it > 0 },
                 crypto = crypto,
                 exchange = exchange,
-                systemNotificationId = sysNotifId
+                systemNotificationId = sysNotifId,
+                templateArgs = args.toJson()
             )
         )
     }
@@ -145,7 +164,14 @@ class NotificationService @Inject constructor(
      * Show error notification.
      * Uses a unique notification ID per plan so multiple error notifications are all visible.
      */
-    fun showErrorNotification(title: String, message: String, planId: Long = 0, exchange: Exchange? = null, crypto: String? = null) {
+    fun showErrorNotification(
+        title: String,
+        message: String,
+        planId: Long = 0,
+        exchange: Exchange? = null,
+        crypto: String? = null,
+        templateArgs: NotificationTemplateArgs? = null
+    ) {
         val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_ERROR, planId)
         persistAndShow(
             sysNotifId = sysNotifId,
@@ -159,7 +185,8 @@ class NotificationService @Inject constructor(
                 planId = planId.takeIf { it > 0 },
                 crypto = crypto,
                 exchange = exchange,
-                systemNotificationId = sysNotifId
+                systemNotificationId = sysNotifId,
+                templateArgs = templateArgs?.toJson()
             )
         )
     }
@@ -172,6 +199,11 @@ class NotificationService @Inject constructor(
         val title = context.getString(R.string.notification_low_balance_title, exchange)
         val daysText = if (remainingDays < 1) context.getString(R.string.notification_low_balance_less_1_day) else context.getString(R.string.notification_low_balance_days, remainingDays.toInt())
         val text = context.getString(R.string.notification_low_balance_text, daysText, fiat)
+        val args = NotificationTemplateArgs.LowBalance(
+            exchangeName = exchange,
+            fiat = fiat,
+            remainingDays = remainingDays
+        )
         val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_LOW_BALANCE, planId)
         persistAndShow(
             sysNotifId = sysNotifId,
@@ -183,7 +215,8 @@ class NotificationService @Inject constructor(
                 title = title,
                 message = text,
                 planId = planId.takeIf { it > 0 },
-                systemNotificationId = sysNotifId
+                systemNotificationId = sysNotifId,
+                templateArgs = args.toJson()
             )
         )
     }
@@ -200,6 +233,11 @@ class NotificationService @Inject constructor(
     ) {
         val title = context.getString(R.string.notification_withdrawal_threshold_title)
         val text = context.getString(R.string.notification_withdrawal_threshold_text, amount.toPlainString(), crypto, exchange)
+        val args = NotificationTemplateArgs.WithdrawalThreshold(
+            amount = amount.toPlainString(),
+            crypto = crypto,
+            exchangeName = exchange
+        )
         val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_WITHDRAWAL_THRESHOLD, planId)
         persistAndShow(
             sysNotifId = sysNotifId,
@@ -212,7 +250,8 @@ class NotificationService @Inject constructor(
                 message = text,
                 planId = planId.takeIf { it > 0 },
                 crypto = crypto,
-                systemNotificationId = sysNotifId
+                systemNotificationId = sysNotifId,
+                templateArgs = args.toJson()
             )
         )
     }

@@ -725,6 +725,8 @@
     <string name="settings_withdrawal_threshold_no_plans">Žádné aktivní DCA plány</string>
     <string name="notification_withdrawal_threshold_title">Doporučen výběr</string>
     <string name="notification_withdrawal_threshold_text">Nakumulovali jste %1$s %2$s na %3$s — zvažte výběr do cold wallet</string>
+    <string name="notification_target_reached">Cíl dosažen: %1$s %2$s — plán automaticky deaktivován</string>
+    <string name="notification_below_minimum">Částka %1$s %2$s pod minimem burzy %3$s %2$s</string>
     <string name="dashboard_withdrawal_ready">%1$s %2$s na burze — zvažte výběr</string>
 
     <!-- DCA Alerts section -->
