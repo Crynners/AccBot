@@ -54,10 +54,10 @@ class OnboardingViewModel: ObservableObject {
 
         let credentials = ExchangeCredentials(
             exchange: exchange,
-            apiKey: apiKey.trimmingCharacters(in: .whitespaces),
-            apiSecret: apiSecret.trimmingCharacters(in: .whitespaces),
-            passphrase: exchange.requiresPassphrase ? passphrase.trimmingCharacters(in: .whitespaces) : nil,
-            clientId: exchange.requiresClientId ? clientId.trimmingCharacters(in: .whitespaces) : nil
+            apiKey: apiKey.trimmingCharacters(in: .whitespacesAndNewlines),
+            apiSecret: apiSecret.trimmingCharacters(in: .whitespacesAndNewlines),
+            passphrase: exchange.requiresPassphrase ? passphrase.trimmingCharacters(in: .whitespacesAndNewlines) : nil,
+            clientId: exchange.requiresClientId ? clientId.trimmingCharacters(in: .whitespacesAndNewlines) : nil
         )
 
         do {

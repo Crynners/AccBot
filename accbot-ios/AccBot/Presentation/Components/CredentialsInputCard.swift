@@ -19,12 +19,12 @@ struct CredentialsInputCard: View {
     @Environment(\.accBotColors) private var colors
 
     private var isFormValid: Bool {
-        let base = !apiKey.trimmingCharacters(in: .whitespaces).isEmpty
-            && !apiSecret.trimmingCharacters(in: .whitespaces).isEmpty
+        let base = !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !apiSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let passOk = !exchange.requiresPassphrase
-            || !passphrase.trimmingCharacters(in: .whitespaces).isEmpty
+            || !passphrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let clientOk = !exchange.requiresClientId
-            || !clientId.trimmingCharacters(in: .whitespaces).isEmpty
+            || !clientId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         return base && passOk && clientOk
     }
 
@@ -142,13 +142,13 @@ struct CredentialsInputCard: View {
             isLoading = true
             let credentials = ExchangeCredentials(
                 exchange: exchange,
-                apiKey: apiKey.trimmingCharacters(in: .whitespaces),
-                apiSecret: apiSecret.trimmingCharacters(in: .whitespaces),
+                apiKey: apiKey.trimmingCharacters(in: .whitespacesAndNewlines),
+                apiSecret: apiSecret.trimmingCharacters(in: .whitespacesAndNewlines),
                 passphrase: exchange.requiresPassphrase
-                    ? passphrase.trimmingCharacters(in: .whitespaces)
+                    ? passphrase.trimmingCharacters(in: .whitespacesAndNewlines)
                     : nil,
                 clientId: exchange.requiresClientId
-                    ? clientId.trimmingCharacters(in: .whitespaces)
+                    ? clientId.trimmingCharacters(in: .whitespacesAndNewlines)
                     : nil
             )
             Task {
