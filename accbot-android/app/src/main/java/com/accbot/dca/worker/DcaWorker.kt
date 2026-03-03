@@ -89,15 +89,12 @@ class DcaWorker @AssistedInject constructor(
                     if (accumulated >= plan.targetAmount) {
                         database.dcaPlanDao().setEnabled(plan.id, false)
                         Log.d(TAG, "Plan ${plan.id} reached target ${plan.targetAmount}, auto-disabled")
-                        val targetArgs = NotificationTemplateArgs.TargetReached(
-                            targetAmount = plan.targetAmount.toPlainString(),
-                            crypto = plan.crypto
-                        )
                         notificationService.showErrorNotification(
-                            context.getString(R.string.notification_dca_failed),
-                            context.getString(R.string.notification_target_reached, plan.targetAmount.toPlainString(), plan.crypto),
-                            plan.id,
-                            templateArgs = targetArgs
+                            planId = plan.id,
+                            templateArgs = NotificationTemplateArgs.TargetReached(
+                                targetAmount = plan.targetAmount.toPlainString(),
+                                crypto = plan.crypto
+                            )
                         )
                         continue
                     }
@@ -152,18 +149,14 @@ class DcaWorker @AssistedInject constructor(
                         Log.e(TAG, "Failed to save below-minimum transaction for plan ${plan.id}", e)
                     }
 
-                    val belowMinArgs = NotificationTemplateArgs.BelowMinimum(
-                        crypto = plan.crypto,
-                        purchaseAmount = purchaseAmount.toPlainString(),
-                        fiat = plan.fiat,
-                        minOrderSize = minOrderSize.toPlainString()
-                    )
                     notificationService.showErrorNotification(
-                        context.getString(R.string.notification_dca_failed),
-                        context.getString(R.string.notification_dca_failed_text, plan.crypto,
-                            context.getString(R.string.notification_below_minimum, purchaseAmount.toPlainString(), plan.fiat, minOrderSize.toPlainString())),
-                        plan.id,
-                        templateArgs = belowMinArgs
+                        planId = plan.id,
+                        templateArgs = NotificationTemplateArgs.BelowMinimum(
+                            crypto = plan.crypto,
+                            purchaseAmount = purchaseAmount.toPlainString(),
+                            fiat = plan.fiat,
+                            minOrderSize = minOrderSize.toPlainString()
+                        )
                     )
                     continue
                 }
@@ -316,15 +309,12 @@ class DcaWorker @AssistedInject constructor(
                                 Log.e(TAG, "Failed to save failed transaction for plan ${plan.id}", e)
                             }
 
-                            val errorArgs = NotificationTemplateArgs.Error(
-                                crypto = plan.crypto,
-                                errorMessage = finalResult.message
-                            )
                             notificationService.showErrorNotification(
-                                context.getString(R.string.notification_dca_failed),
-                                context.getString(R.string.notification_dca_failed_text, plan.crypto, finalResult.message),
-                                plan.id,
-                                templateArgs = errorArgs
+                                planId = plan.id,
+                                templateArgs = NotificationTemplateArgs.Error(
+                                    crypto = plan.crypto,
+                                    errorMessage = finalResult.message
+                                )
                             )
                             Log.e(TAG, "DCA purchase failed for plan ${plan.id} after $maxAttempts attempts: ${finalResult.message}")
                         }

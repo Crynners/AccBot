@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import com.accbot.dca.data.local.NotificationTemplateArgs
 import java.math.BigDecimal
-import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -100,8 +99,6 @@ class NotificationsViewModel @Inject constructor(
                 planId = 901
             )
             notificationService.showErrorNotification(
-                title = context.getString(com.accbot.dca.R.string.notification_dca_failed),
-                message = context.getString(com.accbot.dca.R.string.notification_dca_failed_text, "BTC", "Insufficient balance on Binance"),
                 planId = 902,
                 templateArgs = NotificationTemplateArgs.Error(
                     crypto = "BTC",
@@ -123,8 +120,6 @@ class NotificationsViewModel @Inject constructor(
             )
             // Target reached
             notificationService.showErrorNotification(
-                title = context.getString(com.accbot.dca.R.string.notification_dca_failed),
-                message = context.getString(com.accbot.dca.R.string.notification_target_reached, "0.5", "BTC"),
                 planId = 905,
                 templateArgs = NotificationTemplateArgs.TargetReached(
                     targetAmount = "0.5",
@@ -133,9 +128,6 @@ class NotificationsViewModel @Inject constructor(
             )
             // Below minimum
             notificationService.showErrorNotification(
-                title = context.getString(com.accbot.dca.R.string.notification_dca_failed),
-                message = context.getString(com.accbot.dca.R.string.notification_dca_failed_text, "BTC",
-                    context.getString(com.accbot.dca.R.string.notification_below_minimum, "5", "EUR", "10")),
                 planId = 906,
                 templateArgs = NotificationTemplateArgs.BelowMinimum(
                     crypto = "BTC",

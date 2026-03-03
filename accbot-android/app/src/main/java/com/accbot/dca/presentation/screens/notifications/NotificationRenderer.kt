@@ -20,7 +20,10 @@ object NotificationRenderer {
     fun render(context: Context, entity: NotificationEntity): Pair<String, String> {
         val args = entity.templateArgs?.let { NotificationTemplateArgs.fromJson(it) }
             ?: return entity.title to entity.message
+        return render(context, args)
+    }
 
+    fun render(context: Context, args: NotificationTemplateArgs): Pair<String, String> {
         return when (args) {
             is NotificationTemplateArgs.Purchase -> {
                 val title = context.getString(R.string.notification_purchase_title)

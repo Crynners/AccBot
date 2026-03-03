@@ -13,6 +13,7 @@ import com.accbot.dca.data.local.NotificationDao
 import com.accbot.dca.data.local.NotificationEntity
 import com.accbot.dca.data.local.NotificationTemplateArgs
 import com.accbot.dca.data.local.NotificationType
+import com.accbot.dca.presentation.screens.notifications.NotificationRenderer
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.presentation.utils.NumberFormatters
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -165,23 +166,28 @@ class NotificationService @Inject constructor(
      * Uses a unique notification ID per plan so multiple error notifications are all visible.
      */
     fun showErrorNotification(
-        title: String,
-        message: String,
+        title: String? = null,
+        message: String? = null,
         planId: Long = 0,
         exchange: Exchange? = null,
         crypto: String? = null,
         templateArgs: NotificationTemplateArgs? = null
     ) {
+        val (t, m) = if (templateArgs != null) {
+            NotificationRenderer.render(context, templateArgs)
+        } else {
+            (title ?: "") to (message ?: "")
+        }
         val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_ERROR, planId)
         persistAndShow(
             sysNotifId = sysNotifId,
             channel = CHANNEL_ERROR,
-            title = title,
-            text = message,
+            title = t,
+            text = m,
             entity = NotificationEntity(
                 type = NotificationType.ERROR,
-                title = title,
-                message = message,
+                title = t,
+                message = m,
                 planId = planId.takeIf { it > 0 },
                 crypto = crypto,
                 exchange = exchange,
