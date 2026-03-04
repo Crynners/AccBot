@@ -14,7 +14,8 @@ data class ExchangeInstructions(
     val needsPassphrase: Boolean,
     val needsClientId: Boolean = false,
     val sandboxSteps: List<Int>? = null,
-    val sandboxUrl: String? = null
+    val sandboxUrl: String? = null,
+    @StringRes val urlRes: Int? = null
 )
 
 /**
@@ -55,12 +56,12 @@ object ExchangeInstructionsProvider {
                     R.string.exchange_instructions_coinmate_2,
                     R.string.exchange_instructions_coinmate_3,
                     R.string.exchange_instructions_coinmate_4,
-                    R.string.exchange_instructions_coinmate_5,
-                    R.string.exchange_instructions_coinmate_6
+                    R.string.exchange_instructions_coinmate_5
                 ),
-                url = "https://coinmate.io/apikeys",
+                url = "",
                 needsPassphrase = false,
-                needsClientId = true
+                needsClientId = true,
+                urlRes = R.string.exchange_url_coinmate
             )
             Exchange.BINANCE -> ExchangeInstructions(
                 steps = listOf(
