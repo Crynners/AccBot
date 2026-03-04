@@ -221,7 +221,13 @@ fun AddPlanScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf("25", "50", "100", "250", "500").forEach { preset ->
+                    val quickAmounts = remember(uiState.minOrderSize) {
+                        val allAmounts = listOf("25", "50", "100", "250", "500")
+                        val min = uiState.minOrderSize
+                        if (min != null) allAmounts.filter { it.toBigDecimal() >= min }
+                        else allAmounts
+                    }
+                    quickAmounts.forEach { preset ->
                         OutlinedButton(
                             onClick = { viewModel.setAmount(preset) },
                             modifier = Modifier.weight(1f),

@@ -309,6 +309,11 @@ class AddPlanViewModel @Inject constructor(
 
                 dcaPlanDao.insertPlan(plan)
 
+                // Auto-enable Market Pulse when creating a plan with market-aware strategy
+                if (state.selectedStrategy is DcaStrategy.AthBased || state.selectedStrategy is DcaStrategy.FearAndGreed) {
+                    userPreferences.setMarketPulseEnabled(true)
+                }
+
                 val shouldOfferImport = !state.hasCredentials && exchange.supportsApiImport
                 _uiState.update { it.copy(
                     isLoading = false,
