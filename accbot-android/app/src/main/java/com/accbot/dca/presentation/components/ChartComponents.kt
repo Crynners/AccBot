@@ -276,7 +276,7 @@ fun PortfolioLineChart(
         titleComponent = axisTitleComponent,
         itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
         valueFormatter = { _, value, _ ->
-            NumberFormatters.crypto(BigDecimal.valueOf(value))
+            NumberFormatters.cryptoCompact(BigDecimal.valueOf(value))
         }
     )
 
@@ -313,7 +313,7 @@ fun PortfolioLineChart(
                         val bd = BigDecimal.valueOf(value)
                         when {
                             value >= 1 -> NumberFormatters.compactFiat(bd)
-                            else -> NumberFormatters.crypto(bd)
+                            else -> NumberFormatters.cryptoCompact(bd)
                         }
                     }
                 ),

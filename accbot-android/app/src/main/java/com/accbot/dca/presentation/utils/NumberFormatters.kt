@@ -54,8 +54,8 @@ object NumberFormatters {
         return nf.format(value)
     }
 
-    /** Format crypto amounts: strip trailing zeros, up to 8 decimals, with grouping */
-    fun crypto(value: BigDecimal): String {
+    /** Compact crypto for chart axis labels: strip trailing zeros, up to 8 decimals */
+    fun cryptoCompact(value: BigDecimal): String {
         val stripped = value.stripTrailingZeros()
         val scale = stripped.scale().coerceIn(0, 8)
         val nf = NumberFormat.getInstance(Locale.getDefault())
@@ -63,6 +63,16 @@ object NumberFormatters {
         nf.maximumFractionDigits = scale.coerceAtLeast(2)
         nf.isGroupingUsed = true
         return nf.format(stripped)
+    }
+
+    /** Format crypto amounts: sub-1 values always show 8 decimals for satoshi readability, larger values preserve original precision */
+    fun crypto(value: BigDecimal): String {
+        val scale = if (value.abs() < BigDecimal.ONE) 8 else value.scale().coerceIn(2, 8)
+        val nf = NumberFormat.getInstance(Locale.getDefault())
+        nf.minimumFractionDigits = scale
+        nf.maximumFractionDigits = scale
+        nf.isGroupingUsed = true
+        return nf.format(value.setScale(scale, RoundingMode.HALF_UP))
     }
 
     /** Format percentages: 2 decimal places, no grouping */
