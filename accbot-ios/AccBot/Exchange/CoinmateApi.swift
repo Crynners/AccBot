@@ -191,8 +191,25 @@ final class CoinmateApi: ExchangeApi {
     }
 
     func validateCredentials() async throws -> Bool {
-        let balance = await getBalance(currency: "BTC")
-        return balance != nil
+        let nonce = CryptoUtils.currentTimestampMs()
+        let signature = createSignature(nonce: nonce)
+
+        let body: [String: String] = [
+            "clientId": clientId,
+            "publicKey": credentials.apiKey,
+            "nonce": "\(nonce)",
+            "signature": signature,
+        ]
+
+        let (data, _) = try await client.postForm(url: "\(baseUrl)/balances", body: body)
+        let json = try parseJson(data)
+
+        if json["error"] as? Bool == true {
+            let errorMessage = json["errorMessage"] as? String ?? "Unknown error"
+            throw ExchangeError.apiError(errorMessage)
+        }
+
+        return json["data"] != nil
     }
 
     func getOrderStatus(orderId: String) async -> Transaction? {

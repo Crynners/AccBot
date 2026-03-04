@@ -244,10 +244,10 @@ private struct OnboardingCredentialsCard: View {
 
     private var canValidate: Bool {
         !isValidating &&
-        !apiKey.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !apiSecret.trimmingCharacters(in: .whitespaces).isEmpty &&
-        (!exchange.requiresPassphrase || !passphrase.trimmingCharacters(in: .whitespaces).isEmpty) &&
-        (!exchange.requiresClientId || !clientId.trimmingCharacters(in: .whitespaces).isEmpty)
+        !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !apiSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        (!exchange.requiresPassphrase || !passphrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) &&
+        (!exchange.requiresClientId || !clientId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 }
 
@@ -328,10 +328,10 @@ private class ExchangeSetupViewModel: ObservableObject {
 
         let credentials = ExchangeCredentials(
             exchange: exchange,
-            apiKey: apiKey.trimmingCharacters(in: .whitespaces),
-            apiSecret: apiSecret.trimmingCharacters(in: .whitespaces),
-            passphrase: exchange.requiresPassphrase ? passphrase.trimmingCharacters(in: .whitespaces) : nil,
-            clientId: exchange.requiresClientId ? clientId.trimmingCharacters(in: .whitespaces) : nil
+            apiKey: apiKey.trimmingCharacters(in: .whitespacesAndNewlines),
+            apiSecret: apiSecret.trimmingCharacters(in: .whitespacesAndNewlines),
+            passphrase: exchange.requiresPassphrase ? passphrase.trimmingCharacters(in: .whitespacesAndNewlines) : nil,
+            clientId: exchange.requiresClientId ? clientId.trimmingCharacters(in: .whitespacesAndNewlines) : nil
         )
 
         do {

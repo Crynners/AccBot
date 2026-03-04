@@ -58,12 +58,12 @@ struct AddExchangeView: View {
 
     private var canValidate: Bool {
         guard let exchange = currentExchange else { return false }
-        let hasKey = !apiKey.trimmingCharacters(in: .whitespaces).isEmpty
-        let hasSecret = !apiSecret.trimmingCharacters(in: .whitespaces).isEmpty
+        let hasKey = !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasSecret = !apiSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let hasPassphrase = !exchange.requiresPassphrase
-            || !passphrase.trimmingCharacters(in: .whitespaces).isEmpty
+            || !passphrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let hasClientId = !exchange.requiresClientId
-            || !clientId.trimmingCharacters(in: .whitespaces).isEmpty
+            || !clientId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         return !isValidating && hasKey && hasSecret && hasPassphrase && hasClientId
     }
 
@@ -761,13 +761,13 @@ struct AddExchangeView: View {
 
         let credentials = ExchangeCredentials(
             exchange: exchange,
-            apiKey: apiKey.trimmingCharacters(in: .whitespaces),
-            apiSecret: apiSecret.trimmingCharacters(in: .whitespaces),
+            apiKey: apiKey.trimmingCharacters(in: .whitespacesAndNewlines),
+            apiSecret: apiSecret.trimmingCharacters(in: .whitespacesAndNewlines),
             passphrase: exchange.requiresPassphrase
-                ? passphrase.trimmingCharacters(in: .whitespaces)
+                ? passphrase.trimmingCharacters(in: .whitespacesAndNewlines)
                 : nil,
             clientId: exchange.requiresClientId
-                ? clientId.trimmingCharacters(in: .whitespaces)
+                ? clientId.trimmingCharacters(in: .whitespacesAndNewlines)
                 : nil
         )
 
