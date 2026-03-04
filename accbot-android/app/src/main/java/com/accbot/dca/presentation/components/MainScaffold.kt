@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
@@ -24,7 +25,8 @@ data class NavItem(
     val route: String,
     @StringRes val labelRes: Int,
     val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector
+    val unselectedIcon: ImageVector,
+    val testTagId: String
 )
 
 val bottomNavItems = listOf(
@@ -32,25 +34,29 @@ val bottomNavItems = listOf(
         route = Screen.Dashboard.route,
         labelRes = R.string.nav_dashboard,
         selectedIcon = Icons.Filled.Home,
-        unselectedIcon = Icons.Outlined.Home
+        unselectedIcon = Icons.Outlined.Home,
+        testTagId = "nav_dashboard"
     ),
     NavItem(
         route = Screen.Portfolio.route,
         labelRes = R.string.nav_portfolio,
         selectedIcon = Icons.Filled.PieChart,
-        unselectedIcon = Icons.Outlined.PieChart
+        unselectedIcon = Icons.Outlined.PieChart,
+        testTagId = "nav_portfolio"
     ),
     NavItem(
         route = Screen.Notifications.route,
         labelRes = R.string.nav_notifications,
         selectedIcon = Icons.Filled.Notifications,
-        unselectedIcon = Icons.Outlined.Notifications
+        unselectedIcon = Icons.Outlined.Notifications,
+        testTagId = "nav_notifications"
     ),
     NavItem(
         route = Screen.Settings.route,
         labelRes = R.string.nav_settings,
         selectedIcon = Icons.Filled.Settings,
-        unselectedIcon = Icons.Outlined.Settings
+        unselectedIcon = Icons.Outlined.Settings,
+        testTagId = "nav_settings"
     )
 )
 
@@ -67,6 +73,7 @@ fun AccBotBottomNav(
     ) {
         bottomNavItems.forEachIndexed { index, item ->
             NavigationBarItem(
+                modifier = Modifier.testTag(item.testTagId),
                 selected = index == selectedIndex,
                 onClick = { onItemSelected(index) },
                 icon = {
@@ -117,6 +124,7 @@ fun AccBotNavRail(
     ) {
         bottomNavItems.forEachIndexed { index, item ->
             NavigationRailItem(
+                modifier = Modifier.testTag(item.testTagId),
                 selected = index == selectedIndex,
                 onClick = { onItemSelected(index) },
                 icon = {

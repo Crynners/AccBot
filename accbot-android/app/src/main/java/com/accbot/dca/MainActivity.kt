@@ -96,11 +96,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Request necessary permissions
-        checkPermissions()
+        if (!isInstrumentedTest()) {
+            // Request necessary permissions
+            checkPermissions()
 
-        // Request battery optimization exemption for reliable background execution
-        requestBatteryOptimizationExemption()
+            // Request battery optimization exemption for reliable background execution
+            requestBatteryOptimizationExemption()
+        }
 
         handleNotificationIntent(intent)
 
@@ -203,6 +205,15 @@ class MainActivity : AppCompatActivity() {
                 data = Uri.parse("package:$packageName")
             }
             startActivity(intent)
+        }
+    }
+
+    private fun isInstrumentedTest(): Boolean {
+        return try {
+            Class.forName("androidx.test.InstrumentationRegistry")
+            true
+        } catch (_: ClassNotFoundException) {
+            false
         }
     }
 }
