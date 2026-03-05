@@ -2,7 +2,6 @@ package com.accbot.dca.presentation.screens.exchanges
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -18,16 +17,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
@@ -35,10 +26,11 @@ import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.isStable
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.EmptyState
-import com.accbot.dca.presentation.components.ExchangeAvatar
+import com.accbot.dca.presentation.components.ExchangeSelectionTile
+import com.accbot.dca.presentation.components.ExperimentalExchangesToggle
+import com.accbot.dca.presentation.components.ExperimentalToggleDisclaimer
+import com.accbot.dca.presentation.components.RequestExchangeTile
 import com.accbot.dca.presentation.components.SectionHeader
-import com.accbot.dca.presentation.ui.theme.Warning
-import com.accbot.dca.presentation.ui.theme.successColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,23 +44,12 @@ fun ExchangeManagementScreen(
     var showExperimentalDisclaimer by remember { mutableStateOf(false) }
 
     if (showExperimentalDisclaimer) {
-        AlertDialog(
-            onDismissRequest = { showExperimentalDisclaimer = false },
-            title = { Text(stringResource(R.string.experimental_warning_title)) },
-            text = { Text(stringResource(R.string.experimental_warning_text)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showExperimentalDisclaimer = false
-                    viewModel.setExperimentalExchangesEnabled(true)
-                }) {
-                    Text(stringResource(R.string.experimental_warning_confirm))
-                }
+        ExperimentalToggleDisclaimer(
+            onConfirm = {
+                showExperimentalDisclaimer = false
+                viewModel.setExperimentalExchangesEnabled(true)
             },
-            dismissButton = {
-                TextButton(onClick = { showExperimentalDisclaimer = false }) {
-                    Text(stringResource(R.string.common_back))
-                }
-            }
+            onDismiss = { showExperimentalDisclaimer = false }
         )
     }
 
@@ -127,9 +108,10 @@ fun ExchangeManagementScreen(
                     }
 
                     items(uiState.connectedExchanges, key = { it.name }) { exchange ->
-                        ExchangeTile(
+                        ExchangeSelectionTile(
                             exchange = exchange,
                             isConnected = true,
+                            subtitle = stringResource(R.string.common_connected),
                             onClick = { onNavigateToExchangeDetail(exchange.name) }
                         )
                     }
@@ -146,9 +128,8 @@ fun ExchangeManagementScreen(
 
                 if (availableExchanges.isNotEmpty()) {
                     items(availableExchanges, key = { it.name }) { exchange ->
-                        ExchangeTile(
+                        ExchangeSelectionTile(
                             exchange = exchange,
-                            isConnected = false,
                             onClick = { onNavigateToAddExchange(exchange.name) }
                         )
                     }
@@ -183,159 +164,6 @@ fun ExchangeManagementScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun ExchangeTile(
-    exchange: Exchange,
-    isConnected: Boolean,
-    onClick: () -> Unit
-) {
-    val successCol = successColor()
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            ExchangeAvatar(
-                exchange = exchange,
-                size = 48.dp,
-                isConnected = isConnected
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = exchange.displayName,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = if (isConnected) {
-                    stringResource(R.string.common_connected)
-                } else {
-                    stringResource(R.string.add_exchange_cryptos, exchange.supportedCryptos.size)
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = if (isConnected) successCol else MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            if (!isConnected && !exchange.isStable) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.experimental_badge),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Warning,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RequestExchangeTile(
-    onClick: () -> Unit
-) {
-    OutlinedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        border = CardDefaults.outlinedCardBorder()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.add_exchange_request),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-private fun ExperimentalExchangesToggle(
-    isEnabled: Boolean,
-    onToggle: (Boolean) -> Unit
-) {
-    val haptic = LocalHapticFeedback.current
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp)
-            .clickable {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onToggle(!isEnabled)
-            }
-            .semantics(mergeDescendants = true) { role = Role.Switch },
-        colors = CardDefaults.cardColors(
-            containerColor = if (isEnabled) Warning.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Explore,
-                contentDescription = null,
-                tint = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.settings_experimental_exchanges),
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = if (isEnabled) {
-                        stringResource(R.string.settings_experimental_exchanges_enabled)
-                    } else {
-                        stringResource(R.string.settings_experimental_exchanges_disabled)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = isEnabled,
-                onCheckedChange = null,
-                modifier = Modifier.clearAndSetSemantics {},
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Warning,
-                    checkedTrackColor = Warning.copy(alpha = 0.5f)
-                )
-            )
         }
     }
 }
