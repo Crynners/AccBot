@@ -161,7 +161,8 @@ class MinOrderSizeRepository @Inject constructor(
         // Coinmate buyInstant minimum fiat total (not exposed via /tradingPairs API).
         // Only CZK is confirmed; EUR is left to the dynamic calculation.
         private val COINMATE_INSTANT_BUY_MIN = mapOf(
-            "CZK" to BigDecimal("50")
+            "CZK" to BigDecimal("50"),
+            "EUR" to BigDecimal("2")
         )
     }
 }

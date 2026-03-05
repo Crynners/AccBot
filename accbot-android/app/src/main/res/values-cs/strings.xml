@@ -462,7 +462,7 @@
     <string name="welcome_auto_dca_desc">Nastavte a zapomeňte. AccBot nakupuje krypto podle vašeho plánu.</string>
     <string name="welcome_self_custody_title">Vlastní správa</string>
     <string name="welcome_self_custody_desc">Vaše klíče zůstávají na vašem zařízení. Žádný cloud, žádné sledování.</string>
-    <string name="welcome_stack_sats_title">Hromaďte satoshi</string>
+    <string name="welcome_stack_sats_title">Štosujte satoshi</string>
     <string name="welcome_stack_sats_desc">Budujte bohatství postupně pomocí průměrování nákladů.</string>
     <string name="welcome_get_started">Začít</string>
 
@@ -490,7 +490,7 @@
     <!-- Onboarding - First Plan -->
     <string name="first_plan_title">První DCA plán</string>
     <string name="first_plan_setup">Nastavte si první DCA</string>
-    <string name="first_plan_setup_desc">Začněte automaticky hromadit satoshi. Vždy můžete později upravit.</string>
+    <string name="first_plan_setup_desc">Začněte automaticky štosovat satoshi. Vždy můžete později upravit.</string>
     <string name="first_plan_what_to_buy">Co nakoupit</string>
     <string name="first_plan_currency">Měna</string>
     <string name="first_plan_custom_amount">Vlastní částka</string>
