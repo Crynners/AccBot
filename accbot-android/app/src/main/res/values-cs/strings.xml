@@ -457,7 +457,7 @@
     <string name="sandbox_testnet_credentials_desc">Potřebujete testovací API přihlašovací údaje pro %1$s:</string>
 
     <!-- Onboarding - Welcome -->
-    <string name="welcome_tagline">Automatické DCA pro vaše kryptoměny</string>
+    <string name="welcome_tagline">DCA patří vám, ne burze ani žádné třetí straně</string>
     <string name="welcome_auto_dca_title">Automatické DCA</string>
     <string name="welcome_auto_dca_desc">Nastavte a zapomeňte. AccBot nakupuje krypto podle vašeho plánu.</string>
     <string name="welcome_self_custody_title">Vlastní správa</string>

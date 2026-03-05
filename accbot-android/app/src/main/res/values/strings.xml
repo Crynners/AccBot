@@ -456,7 +456,7 @@
     <string name="sandbox_testnet_credentials_desc">You need testnet API credentials for %1$s:</string>
 
     <!-- Onboarding - Welcome -->
-    <string name="welcome_tagline">Automated DCA for your crypto</string>
+    <string name="welcome_tagline">Own your DCA</string>
     <string name="welcome_auto_dca_title">Automatic DCA</string>
     <string name="welcome_auto_dca_desc">Set it and forget it. AccBot buys crypto on your schedule.</string>
     <string name="welcome_self_custody_title">Self-Custody</string>
