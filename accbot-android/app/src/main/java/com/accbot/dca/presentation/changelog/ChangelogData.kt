@@ -6,6 +6,76 @@ package com.accbot.dca.presentation.changelog
 object ChangelogData {
     val entries: List<ChangelogEntry> = listOf(
         ChangelogEntry(
+            versionCode = 25000,
+            version = "2.5.0",
+            titles = mapOf(
+                "cs" to "Sjednocené UX burz a vylepšení onboardingu",
+                "en" to "Unified Exchange UX & Onboarding Improvements",
+            ),
+            features = mapOf(
+                "cs" to listOf(
+                    "Experimentální burzy — vyzkoušejte nové burzy a požádejte o chybějící",
+                    "Informační list Market Pulse — vysvětlení Fear & Greed a vzdálenosti od ATH",
+                    "Onboarding obrazovka oprávnění — přehledné nastavení notifikací a baterie",
+                    "Sjednocené UI výběru burzy na všech obrazovkách",
+                    "Coinmate paste-only zadávání credentials s API URL dle jazyka",
+                    "Plná přesnost satoshi pro částky pod 1 jednotku kryptoměny",
+                    "Rychlé částky filtrované dle minimální velikosti objednávky",
+                    "Vylepšené instrukce při vytváření plánu a scrollovatelné kroky",
+                ),
+                "en" to listOf(
+                    "Experimental exchanges — try new exchanges and request missing ones",
+                    "Market Pulse info sheet — learn what Fear & Greed and ATH distance mean",
+                    "Onboarding Permissions screen — guided notification and battery setup",
+                    "Unified exchange selection UI across all screens",
+                    "Coinmate paste-only credential flow with locale-aware API URL",
+                    "Full satoshi precision for sub-1 crypto amounts",
+                    "Quick amounts filtered by exchange minimum order size",
+                    "Improved plan creation instructions and scrollable steps",
+                ),
+            )
+        ),
+        ChangelogEntry(
+            versionCode = 24200,
+            version = "2.4.2",
+            titles = mapOf(
+                "cs" to "Notifikace reagující na změnu jazyka",
+                "en" to "Locale-Aware Notifications",
+            ),
+            features = mapOf(
+                "cs" to listOf(
+                    "Notifikace se okamžitě přerenderují při přepnutí jazyka",
+                    "Strukturované šablony notifikací (templateArgs) pro jazykově nezávislé ukládání",
+                    "Podpora zálohování a obnovy notifikací",
+                ),
+                "en" to listOf(
+                    "Notifications re-render instantly when switching language",
+                    "Structured notification templates (templateArgs) for locale-independent storage",
+                    "Notification backup & restore support",
+                ),
+            )
+        ),
+        ChangelogEntry(
+            versionCode = 24100,
+            version = "2.4.1",
+            titles = mapOf(
+                "cs" to "Opravy stability a CI",
+                "en" to "Stability & CI Fixes",
+            ),
+            features = mapOf(
+                "cs" to listOf(
+                    "Oprava R8 obfuskace narušující parsování API odpovědí v release buildech",
+                    "Chytré cachování ATH dat — méně zbytečných síťových volání",
+                    "Oprava CI pipeline — odstranění závislosti na PAT pro release workflow",
+                ),
+                "en" to listOf(
+                    "Fix R8 obfuscation breaking API JSON parsing in release builds",
+                    "Smart ATH caching — reduces redundant network calls",
+                    "CI pipeline fix — remove PAT dependency for release workflow",
+                ),
+            )
+        ),
+        ChangelogEntry(
             versionCode = 24000,
             version = "2.4.0",
             titles = mapOf(

@@ -1,5 +1,35 @@
 [
   {
+    "versionCode": 25000,
+    "version": "2.5.0",
+    "title": {
+      "en": "Unified Exchange UX & Onboarding Improvements",
+      "cs": "Sjednocené UX burz a vylepšení onboardingu"
+    },
+    "features": {
+      "en": [
+        "Experimental exchanges — try new exchanges and request missing ones",
+        "Market Pulse info sheet — learn what Fear & Greed and ATH distance mean",
+        "Onboarding Permissions screen — guided notification and battery setup",
+        "Unified exchange selection UI across all screens",
+        "Coinmate paste-only credential flow with locale-aware API URL",
+        "Full satoshi precision for sub-1 crypto amounts",
+        "Quick amounts filtered by exchange minimum order size",
+        "Improved plan creation instructions and scrollable steps"
+      ],
+      "cs": [
+        "Experimentální burzy — vyzkoušejte nové burzy a požádejte o chybějící",
+        "Informační list Market Pulse — vysvětlení Fear & Greed a vzdálenosti od ATH",
+        "Onboarding obrazovka oprávnění — přehledné nastavení notifikací a baterie",
+        "Sjednocené UI výběru burzy na všech obrazovkách",
+        "Coinmate paste-only zadávání credentials s API URL dle jazyka",
+        "Plná přesnost satoshi pro částky pod 1 jednotku kryptoměny",
+        "Rychlé částky filtrované dle minimální velikosti objednávky",
+        "Vylepšené instrukce při vytváření plánu a scrollovatelné kroky"
+      ]
+    }
+  },
+  {
     "versionCode": 24200,
     "version": "2.4.2",
     "title": {
