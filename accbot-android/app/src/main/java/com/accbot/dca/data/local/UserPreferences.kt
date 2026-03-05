@@ -182,6 +182,16 @@ class UserPreferences @Inject constructor(
         prefs.edit().putBoolean(KEY_MARKET_PULSE_EXPANDED, expanded).apply()
     }
 
+    // ==================== Experimental Exchanges ====================
+
+    fun areExperimentalExchangesEnabled(): Boolean {
+        return prefs.getBoolean(KEY_EXPERIMENTAL_EXCHANGES, false)
+    }
+
+    fun setExperimentalExchangesEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_EXPERIMENTAL_EXCHANGES, enabled).apply()
+    }
+
     // ==================== Sandbox Mode ====================
 
     /**
@@ -215,5 +225,6 @@ class UserPreferences @Inject constructor(
         private const val KEY_LAST_SEEN_VERSION_CODE = "last_seen_version_code"
         private const val KEY_MARKET_PULSE_ENABLED = "market_pulse_enabled"
         private const val KEY_MARKET_PULSE_EXPANDED = "market_pulse_expanded"
+        private const val KEY_EXPERIMENTAL_EXCHANGES = "experimental_exchanges_enabled"
     }
 }

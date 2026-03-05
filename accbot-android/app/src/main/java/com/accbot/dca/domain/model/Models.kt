@@ -96,6 +96,11 @@ fun Exchange.supportsSandbox(): Boolean = sandboxSupport == SandboxSupport.FULL
 val Exchange.supportsApiImport: Boolean get() = this in setOf(Exchange.COINMATE, Exchange.BINANCE, Exchange.KRAKEN, Exchange.COINBASE)
 
 /**
+ * Whether this exchange has been fully tested and is considered stable.
+ */
+val Exchange.isStable: Boolean get() = this in setOf(Exchange.COINMATE, Exchange.BINANCE)
+
+/**
  * Get list of available exchanges based on sandbox mode.
  * In sandbox mode, only exchanges with full sandbox support are returned.
  * This is a cached list to avoid recreating on each call.

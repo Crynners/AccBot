@@ -14,6 +14,7 @@ import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.ExchangeInstructions
 import com.accbot.dca.domain.model.ExchangeInstructionsProvider
+import com.accbot.dca.domain.model.isStable
 import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.domain.model.supportsSandbox
 import com.accbot.dca.domain.usecase.ApiImportProgress
@@ -284,9 +285,11 @@ class AddExchangeViewModel @Inject constructor(
 
     fun getAvailableExchanges(): List<Exchange> {
         val isSandbox = userPreferences.isSandboxMode()
+        val showExperimental = userPreferences.areExperimentalExchangesEnabled()
         return Exchange.entries
             .filter { !credentialsStore.hasCredentials(it, isSandbox) }
             .filter { !isSandbox || it.supportsSandbox() }
+            .filter { showExperimental || it.isStable }
     }
 
     fun getInstructionsForExchange(exchange: Exchange): ExchangeInstructions {
