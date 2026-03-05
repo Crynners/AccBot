@@ -283,8 +283,14 @@ private class FirstPlanViewModel: ObservableObject {
     @Published var selectedFrequency: DcaFrequency = .daily
     @Published var availableCryptos: [String] = ["BTC", "ETH", "SOL", "ADA", "DOT"]
     @Published var availableFiats: [String] = ["EUR", "USD", "USDT", "CZK", "GBP"]
+    private var configuredExchange: Exchange?
 
-    let amountPresets = [25, 50, 100, 250, 500]
+    var amountPresets: [Int] {
+        let all = [25, 50, 100, 250, 500]
+        guard let exchange = configuredExchange,
+              let minSize = exchange.minOrderSize[selectedFiat] else { return all }
+        return all.filter { Decimal($0) >= minSize }
+    }
     let frequencyOptions: [DcaFrequency] = [.daily, .weekly]
 
     var canCreatePlan: Bool {
@@ -297,6 +303,7 @@ private class FirstPlanViewModel: ObservableObject {
         let configuredExchanges = dependencies.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
 
         if let exchange = configuredExchanges.first {
+            configuredExchange = exchange
             availableCryptos = exchange.supportedCryptos
             availableFiats = exchange.supportedFiats
             if !availableCryptos.contains(selectedCrypto) {

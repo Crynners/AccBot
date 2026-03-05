@@ -542,6 +542,8 @@ struct DashboardView: View {
             } label: {
                 Label(String(localized: "History"), systemImage: "clock.arrow.circlepath")
                     .font(AccBotFonts.label)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .padding(.vertical, Spacing.md)
                     .background(colors.surface)
@@ -554,6 +556,8 @@ struct DashboardView: View {
             } label: {
                 Label(String(localized: "Run Now"), systemImage: "bolt.fill")
                     .font(AccBotFonts.label)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .padding(.vertical, Spacing.md)
                     .background(colors.primary)

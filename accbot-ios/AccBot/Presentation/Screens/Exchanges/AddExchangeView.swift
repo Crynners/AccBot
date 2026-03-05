@@ -393,26 +393,28 @@ struct AddExchangeView: View {
                 Spacer()
             }
 
-            // Scan All Credentials button
-            Button {
-                showMultiFieldScanner = true
-            } label: {
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: "qrcode.viewfinder")
-                    Text(String(localized: "Scan All Credentials"))
+            // Scan All Credentials button (hidden for Coinmate — uses Client ID + Public/Private key)
+            if exchange != .coinmate {
+                Button {
+                    showMultiFieldScanner = true
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        Image(systemName: "qrcode.viewfinder")
+                        Text(String(localized: "Scan All Credentials"))
+                    }
+                    .font(AccBotFonts.headline)
+                    .foregroundStyle(colors.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.md)
+                    .background(colors.primary.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CornerRadius.md)
+                            .stroke(colors.primary.opacity(0.3), lineWidth: 1)
+                    )
                 }
-                .font(AccBotFonts.headline)
-                .foregroundStyle(colors.primary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, Spacing.md)
-                .background(colors.primary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
-                .overlay(
-                    RoundedRectangle(cornerRadius: CornerRadius.md)
-                        .stroke(colors.primary.opacity(0.3), lineWidth: 1)
-                )
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
             // Credential fields
             VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -741,7 +743,9 @@ struct AddExchangeView: View {
             }
         }
         switch exchange {
-        case .coinmate: return URL(string: "https://coinmate.io/apikeys")
+        case .coinmate:
+            let domain = Locale.current.language.languageCode?.identifier == "cs" ? "coinmate.cz" : "coinmate.io"
+            return URL(string: "https://\(domain)/apikeys?label=AccBot&permissions=T")
         case .binance: return URL(string: "https://www.binance.com/en/my/settings/api-management")
         case .kraken: return URL(string: "https://www.kraken.com/u/security/api")
         case .kucoin: return URL(string: "https://www.kucoin.com/account/api")

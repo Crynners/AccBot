@@ -32,7 +32,12 @@ class AddPlanViewModel: ObservableObject {
     }
     private var configuredExchanges: [Exchange] = []
 
-    let amountPresets = [25, 50, 100, 250, 500]
+    var amountPresets: [Int] {
+        let all = [25, 50, 100, 250, 500]
+        guard let exchange = selectedExchange,
+              let minSize = exchange.minOrderSize[selectedFiat] else { return all }
+        return all.filter { Decimal($0) >= minSize }
+    }
 
     // MARK: - Init
 
@@ -205,6 +210,14 @@ class AddPlanViewModel: ObservableObject {
             )
 
             try deps.activeDatabase.planDao.insert(plan)
+
+            // Auto-enable Market Pulse for strategies that depend on market data
+            if case .athBased = selectedStrategy {
+                deps.userPreferences.marketPulseEnabled = true
+            } else if case .fearAndGreed = selectedStrategy {
+                deps.userPreferences.marketPulseEnabled = true
+            }
+
             isSubmitting = false
             announceForVoiceOver(String(localized: "DCA plan created successfully"))
             return true
