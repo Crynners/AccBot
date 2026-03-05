@@ -415,6 +415,11 @@ accbot-ios/SourcePackages/
 accbot-ios/TestResults.xcresult
 
 # ======================================
+# Marketing (private drafts, not for repo)
+# ======================================
+Marketing/
+
+# ======================================
 # Miscellaneous
 # ======================================
 nul
