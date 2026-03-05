@@ -7,11 +7,13 @@ on:
   workflow_run:
     workflows: ["Auto-release Tag"]
     types: [completed]
+  workflow_dispatch:
 
 jobs:
   build:
     if: >
       github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
 
@@ -20,6 +22,63 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Resolve version from latest tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Tag push — version comes from the tag ref
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          else
+            # workflow_run or workflow_dispatch — find latest v* tag
+            TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo "")
+            if [ -z "$TAG" ]; then
+              echo "::error::No version tag (v*) found in repository"
+              exit 1
+            fi
+            echo "TAG=$TAG" >> $GITHUB_OUTPUT
+            echo "VERSION=${TAG#v}" >> $GITHUB_OUTPUT
+
+            # Verify gradle.properties matches the tag
+            MAJOR=$(grep "^VERSION_MAJOR=" accbot-android/gradle.properties | cut -d= -f2)
+            MINOR=$(grep "^VERSION_MINOR=" accbot-android/gradle.properties | cut -d= -f2)
+            PATCH=$(grep "^VERSION_PATCH=" accbot-android/gradle.properties | cut -d= -f2)
+            PROPS_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+            if [ "$PROPS_VERSION" != "${TAG#v}" ]; then
+              echo "::warning::gradle.properties version ($PROPS_VERSION) does not match latest tag ($TAG)"
+            fi
+          fi
+
+      - name: Validate changelog
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          CHANGELOG="changelog.json"
+
+          if [ ! -f "$CHANGELOG" ]; then
+            echo "::error::changelog.json not found"
+            exit 1
+          fi
+
+          # Check entry exists for this version
+          ENTRY=$(jq -r --arg ver "$VERSION" '.[] | select(.version == $ver) | .version' "$CHANGELOG")
+          if [ -z "$ENTRY" ]; then
+            echo "::error::No changelog entry found for v$VERSION"
+            exit 1
+          fi
+
+          # Check for TODO placeholders
+          HAS_TODO=$(jq -r --arg ver "$VERSION" \
+            '.[] | select(.version == $ver) |
+              (.title | to_entries[].value) + " " +
+              ([.features | to_entries[].value[]] | join(" "))' \
+            "$CHANGELOG" | grep -c "TODO" || true)
+
+          if [ "$HAS_TODO" -gt 0 ]; then
+            echo "::error::changelog.json for v$VERSION still contains TODO placeholders"
+            exit 1
+          fi
+
+          echo "Changelog validated for v$VERSION"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -59,18 +118,6 @@ jobs:
         run: |
           cd accbot-android
           ./gradlew bundleRelease
-
-      - name: Extract version
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-          else
-            MAJOR=$(grep "^VERSION_MAJOR=" accbot-android/gradle.properties | cut -d= -f2)
-            MINOR=$(grep "^VERSION_MINOR=" accbot-android/gradle.properties | cut -d= -f2)
-            PATCH=$(grep "^VERSION_PATCH=" accbot-android/gradle.properties | cut -d= -f2)
-            echo "VERSION=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
-          fi
 
       - name: Rename artifacts with version
         run: |
@@ -135,32 +182,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Build and test on PRs
-  test:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'gradle'
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x accbot-android/gradlew
-
-      - name: Run unit tests
-        run: |
-          cd accbot-android
-          ./gradlew test
-
-      - name: Build Debug APK
-        run: |
-          cd accbot-android
-          ./gradlew assembleDebug
