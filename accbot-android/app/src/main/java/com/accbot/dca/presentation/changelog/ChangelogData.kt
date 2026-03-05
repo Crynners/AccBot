@@ -6,6 +6,26 @@ package com.accbot.dca.presentation.changelog
 object ChangelogData {
     val entries: List<ChangelogEntry> = listOf(
         ChangelogEntry(
+            versionCode = 25100,
+            version = "2.5.1",
+            titles = mapOf(
+                "cs" to "Own your DCA — Branding a opravy",
+                "en" to "Own your DCA — Branding & Bugfixes",
+            ),
+            features = mapOf(
+                "cs" to listOf(
+                    "Nový slogan: DCA patří vám, ne burze ani žádné třetí straně",
+                    "Aktualizované texty na landing page a uvítací obrazovce",
+                    "Drobné opravy: reset časovače, minimum Coinmate EUR, auto-aktivace Market Pulse",
+                ),
+                "en" to listOf(
+                    "New tagline: Own your DCA — your keys, your data, your rules",
+                    "Updated landing page and welcome screen messaging",
+                    "Minor fixes: timer reset, Coinmate EUR minimum, Market Pulse auto-activation",
+                ),
+            )
+        ),
+        ChangelogEntry(
             versionCode = 25000,
             version = "2.5.0",
             titles = mapOf(
