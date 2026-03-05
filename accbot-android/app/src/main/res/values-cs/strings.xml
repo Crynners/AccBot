@@ -370,7 +370,7 @@
     <string name="add_exchange_open_testnet">Otevřít %1$s Testnet</string>
     <string name="add_exchange_open_api_page">Otevřít %1$s API stránku</string>
     <string name="add_exchange_testnet_info">Testovací přihlašovací údaje jsou oddělené od vašeho skutečného účtu na burze. Testovací prostředky jsou poskytovány zdarma.</string>
-    <string name="add_exchange_security_tip">Bezpečnostní tip: Povolte pouze obchodní oprávnění. Nikdy nepovolujte oprávnění k výběru pro DCA roboty.</string>
+    <string name="add_exchange_security_tip">Bezpečnostní tip: Povolte pouze obchodní oprávnění. Oprávnění k výběru udělujte pouze pokud plánujete používat automatický výběr.</string>
     <string name="add_exchange_i_have_keys">Mám své API klíče</string>
     <string name="add_exchange_enter_credentials">Zadejte přihlašovací údaje pro %1$s API</string>
     <string name="add_exchange_connect">Připojit burzu</string>
@@ -477,7 +477,7 @@
     <string name="security_keystore_desc">Šifrovací klíče chráněny hardwarovým zabezpečením</string>
     <string name="security_direct_title">Přímá API volání</string>
     <string name="security_direct_desc">Komunikace probíhá přímo s burzami přes HTTPS</string>
-    <string name="security_tip">Tip: Vytvořte API klíče pouze s oprávněním k obchodování. Nikdy nepovolujte oprávnění k výběru.</string>
+    <string name="security_tip">Tip: Vytvořte API klíče pouze s oprávněním k obchodování. Oprávnění k výběru udělujte pouze pokud plánujete používat automatický výběr.</string>
     <string name="security_i_understand">Rozumím</string>
 
     <!-- Onboarding - Exchange Setup -->
@@ -624,7 +624,11 @@
     <string name="import_api_no_new">Žádné nové transakce k importu</string>
     <string name="import_api_offer_title">Importovat historii transakcí?</string>
     <string name="import_api_offer_text">Chcete importovat existující historii transakcí z %1$s? Můžete to udělat i později v detailu burzy.</string>
-    <string name="import_api_dialog_text">Import historie obchodů pro %1$d plánů.</string>
+    <plurals name="import_api_dialog_text">
+        <item quantity="one">Import historie obchodů pro %1$d plán.</item>
+        <item quantity="few">Import historie obchodů pro %1$d plány.</item>
+        <item quantity="other">Import historie obchodů pro %1$d plánů.</item>
+    </plurals>
     <string name="import_api_from_label">Od</string>
     <string name="import_api_all_history">Celá historie</string>
     <string name="import_api_start">Importovat</string>

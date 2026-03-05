@@ -1,21 +1,21 @@
 package com.accbot.dca.presentation.screens.onboarding
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -23,11 +23,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.model.ExchangeInstructions
+import com.accbot.dca.domain.model.isStable
 import com.accbot.dca.presentation.components.CredentialsInputCard
+import com.accbot.dca.presentation.components.ExchangeSelectionGrid
+import com.accbot.dca.presentation.components.ExperimentalExchangeDisclaimer
+import com.accbot.dca.presentation.components.ExperimentalExchangesToggle
+import com.accbot.dca.presentation.components.ExperimentalToggleDisclaimer
+import com.accbot.dca.presentation.components.SandboxCredentialsInfoCard
 import com.accbot.dca.presentation.components.SandboxModeIndicator
 import com.accbot.dca.R
 import com.accbot.dca.presentation.ui.theme.accentColor
-import com.accbot.dca.presentation.ui.theme.successColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,6 +65,32 @@ fun ExchangeSetupScreen(
             )
         }
     ) { paddingValues ->
+        val context = LocalContext.current
+
+        // Experimental exchange disclaimer (selecting an experimental exchange)
+        var experimentalExchangePending by remember { mutableStateOf<Exchange?>(null) }
+        experimentalExchangePending?.let { exchange ->
+            ExperimentalExchangeDisclaimer(
+                onConfirm = {
+                    experimentalExchangePending = null
+                    viewModel.selectExchange(exchange)
+                },
+                onDismiss = { experimentalExchangePending = null }
+            )
+        }
+
+        // Experimental toggle disclaimer (enabling the toggle)
+        var showExperimentalDisclaimer by remember { mutableStateOf(false) }
+        if (showExperimentalDisclaimer) {
+            ExperimentalToggleDisclaimer(
+                onConfirm = {
+                    showExperimentalDisclaimer = false
+                    viewModel.setExperimentalExchangesEnabled(true)
+                },
+                onDismiss = { showExperimentalDisclaimer = false }
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -103,34 +135,56 @@ fun ExchangeSetupScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Exchange grid - using Column with chunked() to avoid nested scroll
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                uiState.availableExchanges.chunked(2).forEach { row ->
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        row.forEach { exchange ->
-                            ExchangeGridItem(
-                                exchange = exchange,
-                                isSelected = uiState.selectedExchange == exchange,
-                                onClick = { viewModel.selectExchange(exchange) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        // Spacer for odd count to maintain layout
-                        if (row.size == 1) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
+            // Exchange selection grid with request card
+            ExchangeSelectionGrid(
+                exchanges = uiState.availableExchanges,
+                onExchangeClick = { exchange ->
+                    if (exchange.isStable) {
+                        viewModel.selectExchange(exchange)
+                    } else {
+                        experimentalExchangePending = exchange
+                    }
+                },
+                selectedExchange = uiState.selectedExchange,
+                onRequestExchangeClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Crynners/AccBot/issues"))
+                    context.startActivity(intent)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Experimental exchanges toggle
+            ExperimentalExchangesToggle(
+                isEnabled = uiState.showExperimental,
+                onToggle = { enabled ->
+                    if (enabled) {
+                        showExperimentalDisclaimer = true
+                    } else {
+                        viewModel.setExperimentalExchangesEnabled(false)
                     }
                 }
-            }
+            )
 
-            // Credentials input (only show when exchange is selected)
+            // Instructions + credentials (only show when exchange is selected)
             if (uiState.selectedExchange != null) {
                 Spacer(modifier = Modifier.height(24.dp))
+
+                // Exchange setup instructions card
+                if (uiState.selectedExchangeInstructions != null) {
+                    if (uiState.isSandboxMode) {
+                        SandboxCredentialsInfoCard(
+                            exchange = uiState.selectedExchange!!,
+                            instructions = uiState.selectedExchangeInstructions!!
+                        )
+                    } else {
+                        ExchangeInstructionsCard(
+                            exchange = uiState.selectedExchange!!,
+                            instructions = uiState.selectedExchangeInstructions!!
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
                 CredentialsInputCard(
                     exchange = uiState.selectedExchange!!,
@@ -186,49 +240,75 @@ fun ExchangeSetupScreen(
 }
 
 @Composable
-internal fun ExchangeGridItem(
+private fun ExchangeInstructionsCard(
     exchange: Exchange,
-    isSelected: Boolean,
-    onClick: () -> Unit,
+    instructions: ExchangeInstructions,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val resolvedUrl = instructions.urlRes?.let { stringResource(it) } ?: instructions.url
+    val accentCol = accentColor()
+
     Card(
-        modifier = modifier
-            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                successColor().copy(alpha = 0.15f)
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = if (isSelected) {
-            CardDefaults.outlinedCardBorder().copy(
-                brush = androidx.compose.ui.graphics.SolidColor(successColor())
-            )
-        } else null
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Image(
-                painter = painterResource(exchange.logoRes),
-                contentDescription = exchange.displayName,
-                modifier = Modifier.size(40.dp),
-                contentScale = ContentScale.Fit
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             Text(
-                text = exchange.displayName,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isSelected) successColor() else MaterialTheme.colorScheme.onSurface
+                stringResource(R.string.add_exchange_api_setup),
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmall
             )
+
+            instructions.steps.forEachIndexed { index, stepResId ->
+                Row {
+                    Text(
+                        "${index + 1}.",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(24.dp)
+                    )
+                    Text(stringResource(stepResId), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            if (resolvedUrl.isNotBlank()) {
+                OutlinedButton(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl))
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = accentCol)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.add_exchange_open_api_page, exchange.displayName))
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = accentCol,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.add_exchange_security_tip),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

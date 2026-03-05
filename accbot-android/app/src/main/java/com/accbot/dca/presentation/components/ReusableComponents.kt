@@ -14,10 +14,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -27,7 +34,9 @@ import com.accbot.dca.R
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.TransactionStatus
+import com.accbot.dca.domain.model.isStable
 import com.accbot.dca.presentation.ui.theme.Error
+import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 
@@ -385,6 +394,287 @@ fun StrategyOption(
                     selectedColor = accentCol
                 )
             )
+        }
+    }
+}
+
+/**
+ * Unified exchange tile used across all exchange selection screens.
+ *
+ * @param exchange The exchange to display
+ * @param onClick Callback when tile is clicked
+ * @param isSelected Green bg + border (AddPlan, Onboarding selection)
+ * @param isConnected Green avatar bg (Management connected section)
+ * @param subtitle Override subtitle; default shows crypto count
+ */
+@Composable
+fun ExchangeSelectionTile(
+    exchange: Exchange,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isSelected: Boolean = false,
+    isConnected: Boolean = false,
+    subtitle: String? = null
+) {
+    val successCol = successColor()
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) {
+                successCol.copy(alpha = 0.15f)
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
+        border = if (isSelected) {
+            CardDefaults.outlinedCardBorder().copy(
+                brush = SolidColor(successCol)
+            )
+        } else null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            ExchangeAvatar(
+                exchange = exchange,
+                size = 48.dp,
+                isConnected = isConnected || isSelected
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = exchange.displayName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isSelected) successCol else MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = subtitle
+                    ?: stringResource(R.string.add_exchange_cryptos, exchange.supportedCryptos.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isConnected) successCol else MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            if (!isConnected && !exchange.isStable) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.experimental_badge),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Warning,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+/**
+ * "Request Exchange" card — OutlinedCard with Add icon, used in all exchange grids.
+ */
+@Composable
+fun RequestExchangeTile(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        border = CardDefaults.outlinedCardBorder()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.add_exchange_request),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+/**
+ * Toggle card for showing/hiding experimental exchanges.
+ */
+@Composable
+fun ExperimentalExchangesToggle(
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptic = LocalHapticFeedback.current
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onToggle(!isEnabled)
+            }
+            .semantics(mergeDescendants = true) { role = Role.Switch },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isEnabled) Warning.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Explore,
+                contentDescription = null,
+                tint = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_experimental_exchanges),
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = if (isEnabled) {
+                        stringResource(R.string.settings_experimental_exchanges_enabled)
+                    } else {
+                        stringResource(R.string.settings_experimental_exchanges_disabled)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Warning,
+                    checkedTrackColor = Warning.copy(alpha = 0.5f)
+                )
+            )
+        }
+    }
+}
+
+/**
+ * Disclaimer dialog shown when enabling the experimental exchanges toggle.
+ */
+@Composable
+fun ExperimentalToggleDisclaimer(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.experimental_warning_title)) },
+        text = { Text(stringResource(R.string.experimental_warning_text)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.experimental_warning_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_back))
+            }
+        }
+    )
+}
+
+/**
+ * Disclaimer dialog shown when selecting an experimental (non-stable) exchange.
+ */
+@Composable
+fun ExperimentalExchangeDisclaimer(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.experimental_exchange_warning_title)) },
+        text = { Text(stringResource(R.string.experimental_exchange_warning_text)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.experimental_warning_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_back))
+            }
+        }
+    )
+}
+
+/**
+ * 2-column exchange selection grid using chunked(2) + Row.
+ * Safe inside scrollable parents (unlike LazyVerticalGrid).
+ * Used by Onboarding, AddPlan, and AddExchange flat-selection screens.
+ */
+@Composable
+fun ExchangeSelectionGrid(
+    exchanges: List<Exchange>,
+    onExchangeClick: (Exchange) -> Unit,
+    modifier: Modifier = Modifier,
+    selectedExchange: Exchange? = null,
+    onRequestExchangeClick: (() -> Unit)? = null
+) {
+    // Build list of items: exchanges + optional request card sentinel
+    val hasRequestCard = onRequestExchangeClick != null
+    val totalItems = exchanges.size + if (hasRequestCard) 1 else 0
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // chunked(2) over indices
+        (0 until totalItems).chunked(2).forEach { rowIndices ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                rowIndices.forEach { index ->
+                    if (index < exchanges.size) {
+                        val exchange = exchanges[index]
+                        ExchangeSelectionTile(
+                            exchange = exchange,
+                            isSelected = selectedExchange == exchange,
+                            onClick = { onExchangeClick(exchange) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        // Request exchange card
+                        RequestExchangeTile(
+                            onClick = onRequestExchangeClick!!,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                // Spacer for odd-count row
+                if (rowIndices.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 }

@@ -10,6 +10,9 @@ import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.ExchangeFilter
+import com.accbot.dca.domain.model.ExchangeInstructions
+import com.accbot.dca.domain.model.ExchangeInstructionsProvider
+import com.accbot.dca.domain.model.isStable
 import com.accbot.dca.domain.usecase.CredentialValidationResult
 import com.accbot.dca.domain.usecase.ValidateAndSaveCredentialsUseCase
 import com.accbot.dca.exchange.MinOrderSizeRepository
@@ -27,9 +30,11 @@ data class OnboardingUiState(
     // Sandbox state (immutable after init)
     val isSandboxMode: Boolean = false,
     val availableExchanges: List<Exchange> = emptyList(),
+    val showExperimental: Boolean = false,
 
     // Exchange setup
     val selectedExchange: Exchange? = null,
+    val selectedExchangeInstructions: ExchangeInstructions? = null,
     val clientId: String = "",
     val apiKey: String = "",
     val apiSecret: String = "",
@@ -75,6 +80,7 @@ class OnboardingViewModel @Inject constructor(
     init {
         // Initialize sandbox state once - avoids repeated calls during recomposition
         val isSandbox = userPreferences.isSandboxMode()
+        val showExperimental = userPreferences.areExperimentalExchangesEnabled()
         // Detect already-configured exchange (e.g. credentials saved on ExchangeSetupScreen).
         // hiltViewModel() creates a separate instance per NavBackStackEntry, so FirstPlanScreen
         // needs to restore the selected exchange from persisted credentials.
@@ -82,7 +88,9 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 isSandboxMode = isSandbox,
-                availableExchanges = ExchangeFilter.getAvailableExchanges(isSandbox),
+                showExperimental = showExperimental,
+                availableExchanges = ExchangeFilter.getAvailableExchanges(isSandbox)
+                    .filter { exchange -> showExperimental || exchange.isStable },
                 selectedExchange = configured,
                 selectedCrypto = configured?.supportedCryptos?.firstOrNull() ?: "BTC",
                 selectedFiat = configured?.supportedFiats?.firstOrNull() ?: "EUR",
@@ -94,11 +102,26 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
+    fun setExperimentalExchangesEnabled(enabled: Boolean) {
+        userPreferences.setExperimentalExchangesEnabled(enabled)
+        val isSandbox = _uiState.value.isSandboxMode
+        _uiState.update {
+            it.copy(
+                showExperimental = enabled,
+                availableExchanges = ExchangeFilter.getAvailableExchanges(isSandbox)
+                    .filter { exchange -> enabled || exchange.isStable }
+            )
+        }
+    }
+
     // Exchange setup functions
     fun selectExchange(exchange: Exchange) {
+        val isSandbox = _uiState.value.isSandboxMode
+        val instructions = ExchangeInstructionsProvider.getInstructions(exchange, isSandbox)
         _uiState.update { state ->
             state.copy(
                 selectedExchange = exchange,
+                selectedExchangeInstructions = instructions,
                 selectedCrypto = exchange.supportedCryptos.firstOrNull() ?: "BTC",
                 selectedFiat = exchange.supportedFiats.firstOrNull() ?: "EUR",
                 clientId = "",

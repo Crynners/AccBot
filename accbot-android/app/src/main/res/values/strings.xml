@@ -369,7 +369,7 @@
     <string name="add_exchange_open_testnet">Open %1$s Testnet</string>
     <string name="add_exchange_open_api_page">Open %1$s API Page</string>
     <string name="add_exchange_testnet_info">Testnet credentials are separate from your real exchange account. Test funds are provided for free.</string>
-    <string name="add_exchange_security_tip">Security tip: Only enable trading permissions. Never enable withdrawal permissions for DCA bots.</string>
+    <string name="add_exchange_security_tip">Security tip: Only enable trading permissions. Grant withdrawal permissions only if you plan to use auto-withdrawal.</string>
     <string name="add_exchange_i_have_keys">I have my API keys</string>
     <string name="add_exchange_enter_credentials">Enter your %1$s API credentials</string>
     <string name="add_exchange_connect">Connect Exchange</string>
@@ -476,7 +476,7 @@
     <string name="security_keystore_desc">Encryption keys protected by hardware security</string>
     <string name="security_direct_title">Direct API Calls</string>
     <string name="security_direct_desc">Communication goes directly to exchanges via HTTPS</string>
-    <string name="security_tip">Tip: Create API keys with only trading permissions. Never enable withdrawal permissions.</string>
+    <string name="security_tip">Tip: Create API keys with only trading permissions. Grant withdrawal permissions only if you plan to use auto-withdrawal.</string>
     <string name="security_i_understand">I Understand</string>
 
     <!-- Onboarding - Exchange Setup -->
@@ -644,7 +644,10 @@
     <string name="import_api_no_new">No new transactions to import</string>
     <string name="import_api_offer_title">Import Transaction History?</string>
     <string name="import_api_offer_text">Would you like to import your existing transaction history from %1$s? You can also do this later from the exchange detail screen.</string>
-    <string name="import_api_dialog_text">Import trade history for %1$d plans.</string>
+    <plurals name="import_api_dialog_text">
+        <item quantity="one">Import trade history for %1$d plan.</item>
+        <item quantity="other">Import trade history for %1$d plans.</item>
+    </plurals>
     <string name="import_api_from_label">From</string>
     <string name="import_api_all_history">All history</string>
     <string name="import_api_start">Import</string>

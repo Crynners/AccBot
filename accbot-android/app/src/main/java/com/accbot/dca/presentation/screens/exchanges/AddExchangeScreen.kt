@@ -4,7 +4,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +39,9 @@ import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.CredentialsInputCard
+import com.accbot.dca.presentation.components.ExchangeSelectionTile
+import com.accbot.dca.presentation.components.ExperimentalExchangeDisclaimer
+import com.accbot.dca.presentation.components.RequestExchangeTile
 import com.accbot.dca.presentation.components.areCredentialsComplete
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.accentColor
@@ -166,23 +168,12 @@ private fun ExchangeSelectionStep(
 
     // Experimental exchange disclaimer dialog
     experimentalExchangePending?.let { exchange ->
-        AlertDialog(
-            onDismissRequest = { experimentalExchangePending = null },
-            title = { Text(stringResource(R.string.experimental_exchange_warning_title)) },
-            text = { Text(stringResource(R.string.experimental_exchange_warning_text)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    experimentalExchangePending = null
-                    onSelectExchange(exchange)
-                }) {
-                    Text(stringResource(R.string.experimental_warning_confirm))
-                }
+        ExperimentalExchangeDisclaimer(
+            onConfirm = {
+                experimentalExchangePending = null
+                onSelectExchange(exchange)
             },
-            dismissButton = {
-                TextButton(onClick = { experimentalExchangePending = null }) {
-                    Text(stringResource(R.string.common_back))
-                }
-            }
+            onDismiss = { experimentalExchangePending = null }
         )
     }
 
@@ -205,7 +196,7 @@ private fun ExchangeSelectionStep(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(availableExchanges, key = { it.name }) { exchange ->
-                ExchangeSelectionCard(
+                ExchangeSelectionTile(
                     exchange = exchange,
                     onClick = {
                         if (exchange.isStable) {
@@ -219,7 +210,7 @@ private fun ExchangeSelectionStep(
 
             // "Request Exchange" card
             item {
-                RequestExchangeCard(
+                RequestExchangeTile(
                     onClick = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Crynners/AccBot/issues"))
                         context.startActivity(intent)
@@ -252,94 +243,6 @@ private fun ExchangeSelectionStep(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-internal fun ExchangeSelectionCard(
-    exchange: Exchange,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Image(
-                painter = painterResource(exchange.logoRes),
-                contentDescription = exchange.displayName,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Fit
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = exchange.displayName,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Text(
-                text = stringResource(R.string.add_exchange_cryptos, exchange.supportedCryptos.size),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            if (!exchange.isStable) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.experimental_badge),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Warning,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RequestExchangeCard(
-    onClick: () -> Unit
-) {
-    OutlinedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        border = CardDefaults.outlinedCardBorder()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.add_exchange_request),
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
