@@ -40,8 +40,13 @@ fun FirstPlanScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Quick amount presets
-    val quickAmounts = listOf("25", "50", "100", "250", "500")
+    // Quick amount presets — filter out values below minimum order size
+    val quickAmounts = remember(uiState.minOrderSize) {
+        val allAmounts = listOf("25", "50", "100", "250", "500")
+        val min = uiState.minOrderSize
+        if (min != null) allAmounts.filter { it.toBigDecimal() >= min }
+        else allAmounts
+    }
 
     // Simplified frequency options for onboarding
     val frequencyOptions = listOf(

@@ -96,11 +96,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (!isInstrumentedTest()) {
-            // Request necessary permissions
+        if (!isInstrumentedTest() && onboardingPreferences.isOnboardingCompleted()) {
+            // Request necessary permissions (only for returning users;
+            // new users get permissions via the onboarding Permissions screen)
             checkPermissions()
-
-            // Request battery optimization exemption for reliable background execution
             requestBatteryOptimizationExemption()
         }
 
@@ -300,7 +299,7 @@ fun AccBotApp(
                     navController.navigate(Screen.FirstPlan.route)
                 },
                 onSkip = {
-                    navController.navigate(Screen.OnboardingComplete.route)
+                    navController.navigate(Screen.Permissions.route)
                 },
                 onBack = { navController.popBackStack() }
             )
@@ -309,9 +308,18 @@ fun AccBotApp(
         composable(Screen.FirstPlan.route) {
             FirstPlanScreen(
                 onContinue = {
-                    navController.navigate(Screen.OnboardingComplete.route)
+                    navController.navigate(Screen.Permissions.route)
                 },
                 onSkip = {
+                    navController.navigate(Screen.Permissions.route)
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Permissions.route) {
+            PermissionsScreen(
+                onContinue = {
                     navController.navigate(Screen.OnboardingComplete.route)
                 },
                 onBack = { navController.popBackStack() }

@@ -45,7 +45,7 @@ data class SettingsUiState(
     val isBiometricLockEnabled: Boolean = false,
     val withdrawalThresholds: List<WithdrawalThreshold> = emptyList(),
     val availableCryptoExchangePairs: List<Pair<String, Exchange>> = emptyList(),
-    val isMarketPulseEnabled: Boolean = true,
+    val isMarketPulseEnabled: Boolean = false,
     val appTheme: AppTheme = AppTheme.DARK,
     val dcaPlanCount: Int = 0,
     val transactionCount: Int = 0,

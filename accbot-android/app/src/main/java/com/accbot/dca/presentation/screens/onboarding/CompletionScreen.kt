@@ -135,43 +135,6 @@ fun CompletionScreen(
                     title = stringResource(R.string.completion_fine_tune_title),
                     description = stringResource(R.string.completion_fine_tune_desc)
                 )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                NextStepItem(
-                    icon = Icons.Default.Notifications,
-                    title = stringResource(R.string.completion_stay_informed_title),
-                    description = stringResource(R.string.completion_stay_informed_desc)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Tips card
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = accentColor().copy(alpha = 0.1f)
-            )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lightbulb,
-                    contentDescription = null,
-                    tint = accentColor(),
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = stringResource(R.string.completion_pro_tip),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
             }
         }
 

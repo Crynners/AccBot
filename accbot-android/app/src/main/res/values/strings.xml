@@ -511,9 +511,19 @@
     <string name="completion_start_service_desc">Toggle the service on from the dashboard</string>
     <string name="completion_fine_tune_title">Fine-tune your plan</string>
     <string name="completion_fine_tune_desc">Adjust amounts, add more cryptos, or change frequency</string>
-    <string name="completion_stay_informed_title">Stay informed</string>
-    <string name="completion_stay_informed_desc">Get notified after each purchase</string>
-    <string name="completion_pro_tip">Pro tip: For uninterrupted DCA, disable battery optimization for AccBot in your device settings.</string>
+    <!-- Permissions onboarding -->
+    <string name="permissions_title">Enable Reliable Purchases</string>
+    <string name="permissions_subtitle">AccBot needs these permissions to reliably execute purchases in the background</string>
+    <string name="permissions_notification_title">Notifications</string>
+    <string name="permissions_notification_desc">Get alerted on completed purchases, errors, and low balance warnings</string>
+    <string name="permissions_notification_enable">Enable Notifications</string>
+    <string name="permissions_notification_granted">Notifications Enabled</string>
+    <string name="permissions_battery_title">Unrestricted Background</string>
+    <string name="permissions_battery_desc">Allow AccBot to run reliably in the background so your DCA executes on schedule</string>
+    <string name="permissions_battery_enable">Disable Restrictions</string>
+    <string name="permissions_battery_granted">Unrestricted</string>
+    <string name="permissions_tip">You can change these settings anytime from the Settings screen.</string>
+    <string name="permissions_continue">Continue</string>
     <string name="completion_start_stacking">Start Stacking</string>
 
     <!-- Notifications -->

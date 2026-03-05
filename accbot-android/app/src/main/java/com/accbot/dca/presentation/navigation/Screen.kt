@@ -10,6 +10,7 @@ sealed class Screen(val route: String) {
     data object Security : Screen("onboarding/security")
     data object ExchangeSetup : Screen("onboarding/exchange_setup")
     data object FirstPlan : Screen("onboarding/first_plan")
+    data object Permissions : Screen("onboarding/permissions")
     data object OnboardingComplete : Screen("onboarding/complete")
 
     // Main screens (with bottom nav)

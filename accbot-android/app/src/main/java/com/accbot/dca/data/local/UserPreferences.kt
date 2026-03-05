@@ -167,7 +167,7 @@ class UserPreferences @Inject constructor(
     // ==================== Market Pulse ====================
 
     fun isMarketPulseEnabled(): Boolean {
-        return prefs.getBoolean(KEY_MARKET_PULSE_ENABLED, true)
+        return prefs.getBoolean(KEY_MARKET_PULSE_ENABLED, false)
     }
 
     fun setMarketPulseEnabled(enabled: Boolean) {

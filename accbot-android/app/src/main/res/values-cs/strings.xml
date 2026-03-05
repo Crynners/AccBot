@@ -512,9 +512,19 @@
     <string name="completion_start_service_desc">Zapněte službu z přehledu</string>
     <string name="completion_fine_tune_title">Doladit plán</string>
     <string name="completion_fine_tune_desc">Upravte částky, přidejte další kryptoměny nebo změňte frekvenci</string>
-    <string name="completion_stay_informed_title">Buďte informováni</string>
-    <string name="completion_stay_informed_desc">Dostávejte upozornění po každém nákupu</string>
-    <string name="completion_pro_tip">Pro tip: Pro nepřerušované DCA vypněte optimalizaci baterie pro AccBot v nastavení zařízení.</string>
+    <!-- Permissions onboarding -->
+    <string name="permissions_title">Povolte spolehlivé nákupy</string>
+    <string name="permissions_subtitle">AccBot potřebuje tato oprávnění, aby mohl spolehlivě nakupovat na pozadí</string>
+    <string name="permissions_notification_title">Oznámení</string>
+    <string name="permissions_notification_desc">Dostávejte upozornění na dokončené nákupy, chyby a nízký zůstatek</string>
+    <string name="permissions_notification_enable">Povolit oznámení</string>
+    <string name="permissions_notification_granted">Oznámení povolena</string>
+    <string name="permissions_battery_title">Neomezené běžení na pozadí</string>
+    <string name="permissions_battery_desc">Povolte AccBotu spolehlivě běžet na pozadí, aby se vaše DCA vykonávalo podle plánu</string>
+    <string name="permissions_battery_enable">Zrušit omezení</string>
+    <string name="permissions_battery_granted">Neomezeno</string>
+    <string name="permissions_tip">Tato nastavení můžete kdykoli změnit v Nastavení.</string>
+    <string name="permissions_continue">Pokračovat</string>
     <string name="completion_start_stacking">Začít nakupovat</string>
 
     <!-- Notifications -->
