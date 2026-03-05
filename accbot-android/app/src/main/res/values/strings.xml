@@ -570,6 +570,8 @@
     <string name="qr_mode_text">Text (OCR)</string>
     <string name="qr_no_text_detected">No text detected</string>
     <string name="credentials_scan_all">Scan All Credentials</string>
+    <string name="credentials_paste_all">Paste All</string>
+    <string name="credentials_paste">Paste</string>
     <string name="credentials_scan_all_desc">Scan multiple credentials at once</string>
     <string name="qr_assign_to_fields">Assign text to fields</string>
     <string name="qr_tap_field_then_text">Select a field, then tap detected text</string>
@@ -639,11 +641,11 @@
 
     <!-- Exchange Instructions - Coinmate -->
     <string name="exchange_instructions_coinmate_1">Go to coinmate.io and log in</string>
-    <string name="exchange_instructions_coinmate_2">Navigate to Settings > API</string>
-    <string name="exchange_instructions_coinmate_3">Note your Client ID (shown at the top)</string>
-    <string name="exchange_instructions_coinmate_4">Click \'Create new API key\'</string>
-    <string name="exchange_instructions_coinmate_5">Enable \'Trade\' permission only</string>
-    <string name="exchange_instructions_coinmate_6">Copy Client ID, Public Key, and Private Key</string>
+    <string name="exchange_instructions_coinmate_2">Navigate to Account > API</string>
+    <string name="exchange_instructions_coinmate_3">Generate API key</string>
+    <string name="exchange_instructions_coinmate_4">Enable trading permission</string>
+    <string name="exchange_instructions_coinmate_5">Click Generate API key and copy the credentials</string>
+    <string name="exchange_url_coinmate">https://coinmate.io/en/account-api?label=AccBot&amp;permissions=T</string>
 
     <!-- Exchange Instructions - Binance -->
     <string name="exchange_instructions_binance_1">Go to binance.com and log in</string>

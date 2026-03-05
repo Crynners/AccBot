@@ -572,6 +572,8 @@
     <string name="qr_mode_text">Text (OCR)</string>
     <string name="qr_no_text_detected">Žádný text nedetekován</string>
     <string name="credentials_scan_all">Skenovat všechny údaje</string>
+    <string name="credentials_paste_all">Vložit vše</string>
+    <string name="credentials_paste">Vložit</string>
     <string name="credentials_scan_all_desc">Skenovat více údajů najednou</string>
     <string name="qr_assign_to_fields">Přiřaďte text k polím</string>
     <string name="qr_tap_field_then_text">Vyberte pole a klepněte na text</string>
@@ -641,11 +643,11 @@
 
     <!-- Exchange Instructions - Coinmate -->
     <string name="exchange_instructions_coinmate_1">Přejděte na coinmate.io a přihlaste se</string>
-    <string name="exchange_instructions_coinmate_2">Přejděte do Nastavení > API</string>
-    <string name="exchange_instructions_coinmate_3">Poznamenejte si Client ID (zobrazeno nahoře)</string>
-    <string name="exchange_instructions_coinmate_4">Klikněte na \'Vytvořit nový API klíč\'</string>
-    <string name="exchange_instructions_coinmate_5">Povolte pouze oprávnění \'Obchodování\'</string>
-    <string name="exchange_instructions_coinmate_6">Zkopírujte Client ID, veřejný klíč a soukromý klíč</string>
+    <string name="exchange_instructions_coinmate_2">Přejděte do uživatelského účtu > API</string>
+    <string name="exchange_instructions_coinmate_3">Generovat API klíč</string>
+    <string name="exchange_instructions_coinmate_4">Povolte obchodování</string>
+    <string name="exchange_instructions_coinmate_5">Klikněte generovat API klíč a zkopírujte údaje</string>
+    <string name="exchange_url_coinmate">https://coinmate.io/cs/account-api?label=AccBot&amp;permissions=T</string>
 
     <!-- Exchange Instructions - Binance -->
     <string name="exchange_instructions_binance_1">Přejděte na binance.com a přihlaste se</string>

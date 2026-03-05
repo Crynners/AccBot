@@ -633,7 +633,7 @@ fun MultiFieldScannerDialog(
                 }
             }
 
-            // Text scan reticle for TEXT mode
+            // Text scan reticle + capture/rescan
             if (hasCameraPermission && scanMode == ScanMode.TEXT) {
                 TextScanReticle(
                     modifier = Modifier
@@ -641,7 +641,6 @@ fun MultiFieldScannerDialog(
                         .padding(bottom = 160.dp)
                 )
 
-                // Frozen overlay
                 if (isFrozen) {
                     Box(
                         modifier = Modifier
@@ -650,7 +649,6 @@ fun MultiFieldScannerDialog(
                     )
                 }
 
-                // Capture / Rescan button
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -772,7 +770,6 @@ fun MultiFieldScannerDialog(
                                 chipScale = chipScale,
                                 onClick = {
                                     if (isAssigned) {
-                                        // Clear assignment and make active
                                         assignments = assignments - field.key
                                         activeFieldKey = field.key
                                     } else {
@@ -787,13 +784,11 @@ fun MultiFieldScannerDialog(
                     Spacer(modifier = Modifier.height(12.dp))
                     if (scanMode == ScanMode.TEXT) {
                         if (detectedTexts.isNotEmpty()) {
-                            // Build reverse map: text -> field label for assigned texts
                             val textToFieldLabel = assignments.entries
                                 .filter { it.value.isNotBlank() }
                                 .associate { (key, value) ->
                                     value to targetFields.first { it.key == key }.label
                                 }
-                            // Sort: unassigned first, assigned at bottom
                             val sortedTexts = detectedTexts.sortedBy {
                                 if (textToFieldLabel.containsKey(it)) 1 else 0
                             }

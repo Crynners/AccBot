@@ -265,6 +265,9 @@ private fun InstructionsStep(
     onOpenUrl: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Resolve locale-aware URL if urlRes is set, otherwise use hardcoded url
+    val resolvedUrl = instructions.urlRes?.let { stringResource(it) } ?: instructions.url
+
     // Use orange theme color in sandbox mode
     val accentCol = if (isSandboxMode) Warning else accentColor()
 
@@ -376,7 +379,7 @@ private fun InstructionsStep(
 
         // Open website button
         OutlinedButton(
-            onClick = { onOpenUrl(instructions.url) },
+            onClick = { onOpenUrl(resolvedUrl) },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = accentCol
