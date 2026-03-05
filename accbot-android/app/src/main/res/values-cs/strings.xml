@@ -829,6 +829,26 @@
     <string name="fg_class_extreme_greed">Extrémní chamtivost</string>
     <string name="dashboard_purchase_amount_formula">%1$s %2$s (%3$s × %4$s) • %5$s</string>
 
+    <!-- Market Pulse Info Sheet -->
+    <string name="market_pulse_info_title">Tržní nálada</string>
+    <string name="market_pulse_info_subtitle">Vysvětlení tržních indikátorů</string>
+    <string name="market_pulse_info_overview">Tržní nálada zobrazuje dva klíčové indikátory, které vám pomohou rychle pochopit aktuální stav kryptoměnového trhu.</string>
+    <string name="market_pulse_info_fg_title">Index strachu a chamtivosti</string>
+    <string name="market_pulse_info_fg_description">Index strachu a chamtivosti měří celkovou náladu kryptotrhu na stupnici od 0 (extrémní strach) do 100 (extrémní chamtivost). Kombinuje signály jako volatilita, objem, sociální média a trendy.</string>
+    <string name="market_pulse_info_fg_extreme_fear">Extrémní strach (0–19)</string>
+    <string name="market_pulse_info_fg_extreme_fear_desc">Investoři mají velký strach — často příležitost k nákupu</string>
+    <string name="market_pulse_info_fg_fear">Strach (20–39)</string>
+    <string name="market_pulse_info_fg_fear_desc">Trh je opatrný — ceny mohou být podhodnocené</string>
+    <string name="market_pulse_info_fg_neutral">Neutrální (40–59)</string>
+    <string name="market_pulse_info_fg_neutral_desc">Vyvážená nálada — žádný silný signál</string>
+    <string name="market_pulse_info_fg_greed">Chamtivost (60–79)</string>
+    <string name="market_pulse_info_fg_greed_desc">Optimismus je vysoký — ceny mohou být nadsazené</string>
+    <string name="market_pulse_info_fg_extreme_greed">Extrémní chamtivost (80–100)</string>
+    <string name="market_pulse_info_fg_extreme_greed_desc">Euforie — trh může být přehřátý</string>
+    <string name="market_pulse_info_ath_title">Vzdálenost od ATH</string>
+    <string name="market_pulse_info_ath_description">Vzdálenost od ATH ukazuje, jak daleko je aktuální cena od svého historického maxima. Vzdálenost 0 % znamená, že cena je na ATH; 50 % znamená, že cena klesla na polovinu z maxima.</string>
+    <string name="market_pulse_info_dca_tip">Strategie DCA dle strachu a chamtivosti a dle ATH používají tyto indikátory k automatické úpravě nákupních částek — nakupují více, když je trh ve strachu nebo daleko od ATH, a méně, když je chamtivý nebo blízko vrcholu.</string>
+
     <!-- Settings: Market Pulse -->
     <string name="settings_market_pulse_title">Tržní nálada</string>
     <string name="settings_market_pulse_subtitle">Zobrazit tržní indikátory na přehledu</string>

@@ -824,6 +824,26 @@
     <string name="fg_class_extreme_greed">Extreme Greed</string>
     <string name="dashboard_purchase_amount_formula">%1$s %2$s (%3$s × %4$s) • %5$s</string>
 
+    <!-- Market Pulse Info Sheet -->
+    <string name="market_pulse_info_title">Market Pulse</string>
+    <string name="market_pulse_info_subtitle">Understanding market indicators</string>
+    <string name="market_pulse_info_overview">Market Pulse shows two key indicators that help you understand the current state of the crypto market at a glance.</string>
+    <string name="market_pulse_info_fg_title">Fear &amp; Greed Index</string>
+    <string name="market_pulse_info_fg_description">The Fear &amp; Greed Index measures overall crypto market sentiment on a scale from 0 (extreme fear) to 100 (extreme greed). It combines signals like volatility, volume, social media, and trends.</string>
+    <string name="market_pulse_info_fg_extreme_fear">Extreme Fear (0–19)</string>
+    <string name="market_pulse_info_fg_extreme_fear_desc">Investors are very worried — often a buying opportunity</string>
+    <string name="market_pulse_info_fg_fear">Fear (20–39)</string>
+    <string name="market_pulse_info_fg_fear_desc">Market is cautious — prices may be undervalued</string>
+    <string name="market_pulse_info_fg_neutral">Neutral (40–59)</string>
+    <string name="market_pulse_info_fg_neutral_desc">Balanced sentiment — no strong signal</string>
+    <string name="market_pulse_info_fg_greed">Greed (60–79)</string>
+    <string name="market_pulse_info_fg_greed_desc">Optimism is high — prices may be elevated</string>
+    <string name="market_pulse_info_fg_extreme_greed">Extreme Greed (80–100)</string>
+    <string name="market_pulse_info_fg_extreme_greed_desc">Euphoria — market may be overheated</string>
+    <string name="market_pulse_info_ath_title">ATH Distance</string>
+    <string name="market_pulse_info_ath_description">ATH Distance shows how far the current price is from its All-Time High. A distance of 0% means the price is at ATH; 50% means the price has dropped halfway from the peak.</string>
+    <string name="market_pulse_info_dca_tip">The Fear &amp; Greed and ATH-based DCA strategies use these indicators to automatically adjust your purchase amounts — buying more when the market is fearful or far from ATH, and less when it\'s greedy or near the peak.</string>
+
     <!-- Settings: Market Pulse -->
     <string name="settings_market_pulse_title">Market Pulse</string>
     <string name="settings_market_pulse_subtitle">Show market indicators on dashboard</string>

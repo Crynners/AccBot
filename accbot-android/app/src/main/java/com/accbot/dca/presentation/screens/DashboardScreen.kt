@@ -63,6 +63,7 @@ import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.presentation.components.CryptoIcon
 import com.accbot.dca.presentation.components.EmptyState
+import com.accbot.dca.presentation.components.MarketPulseInfoSheet
 import com.accbot.dca.presentation.components.SectionHeader
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
@@ -1217,9 +1218,14 @@ internal fun MarketPulseCard(
     onToggleExpand: () -> Unit = {}
 ) {
     val indicatorColor = MaterialTheme.colorScheme.onSurface
+    var showMarketPulseInfo by remember { mutableStateOf(false) }
 
     // Localized F&G classification
     val localizedClassification = fearGreedData?.let { localizedFearGreedClass(it.value) }
+
+    if (showMarketPulseInfo) {
+        MarketPulseInfoSheet(onDismiss = { showMarketPulseInfo = false })
+    }
 
     Card(
         modifier = Modifier
@@ -1243,8 +1249,21 @@ internal fun MarketPulseCard(
                 Text(
                     text = stringResource(R.string.dashboard_market_pulse),
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
                 )
+                IconButton(
+                    onClick = { showMarketPulseInfo = true },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = stringResource(R.string.market_pulse_info_title),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
