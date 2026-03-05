@@ -415,11 +415,18 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun refreshPreferences() {
+        val wasEnabled = _uiState.value.showMarketPulse
+        val nowEnabled = userPreferences.isMarketPulseEnabled()
         _uiState.update {
             it.copy(
-                showMarketPulse = userPreferences.isMarketPulseEnabled(),
+                showMarketPulse = nowEnabled,
                 isMarketPulseExpanded = userPreferences.isMarketPulseExpanded()
             )
+        }
+        if (!wasEnabled && nowEnabled) {
+            viewModelScope.launch {
+                fetchMarketIndicators(_uiState.value.activePlans.map { it.plan })
+            }
         }
     }
 

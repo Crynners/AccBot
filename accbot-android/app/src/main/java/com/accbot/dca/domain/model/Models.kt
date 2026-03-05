@@ -32,7 +32,7 @@ enum class Exchange(
         logoRes = R.drawable.ic_exchange_coinmate,
         supportedFiats = listOf("EUR", "CZK"),
         supportedCryptos = listOf("BTC", "ETH", "LTC"),
-        minOrderSize = mapOf("EUR" to BigDecimal("10"), "CZK" to BigDecimal("50")),
+        minOrderSize = mapOf("EUR" to BigDecimal("2"), "CZK" to BigDecimal("50")),
         sandboxSupport = SandboxSupport.NONE
     ),
     BINANCE(

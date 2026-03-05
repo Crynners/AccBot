@@ -1,5 +1,27 @@
 [
   {
+    "versionCode": 25100,
+    "version": "2.5.1",
+    "title": {
+      "en": "Bugfixes — Timer, Coinmate EUR & Market Pulse",
+      "cs": "Opravy — Časovač, Coinmate EUR a Market Pulse"
+    },
+    "features": {
+      "en": [
+        "Fix: Editing plan frequency preserves remaining time instead of resetting timer",
+        "Fix: Coinmate EUR minimum order size corrected to 2 EUR (was 10 EUR)",
+        "Fix: Market Pulse card auto-activates when creating or editing a market-aware strategy",
+        "Czech localization: \"Hromaďte\" → \"Štosujte\" (community term)"
+      ],
+      "cs": [
+        "Oprava: Změna frekvence plánu zachová zbývající čas místo resetování časovače",
+        "Oprava: Minimální objednávka Coinmate EUR opravena na 2 EUR (bylo 10 EUR)",
+        "Oprava: Market Pulse karta se automaticky aktivuje při vytvoření/editaci tržní strategie",
+        "Lokalizace: „Hromaďte" → „Štosujte" (zavedený žargon)"
+      ]
+    }
+  },
+  {
     "versionCode": 25000,
     "version": "2.5.0",
     "title": {

@@ -8,6 +8,7 @@ import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.usecase.CalculateMonthlyCostUseCase
 import com.accbot.dca.domain.util.CronUtils
+import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.exchange.MinOrderSizeRepository
 import com.accbot.dca.presentation.model.MonthlyCostEstimate
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -110,7 +111,8 @@ private fun isValidGenericAddress(address: String, minLength: Int, maxLength: In
 class EditPlanViewModel @Inject constructor(
     private val dcaPlanDao: DcaPlanDao,
     private val calculateMonthlyCost: CalculateMonthlyCostUseCase,
-    private val minOrderSizeRepository: MinOrderSizeRepository
+    private val minOrderSizeRepository: MinOrderSizeRepository,
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditPlanUiState())
@@ -276,7 +278,16 @@ class EditPlanViewModel @Inject constructor(
                         CronUtils.getNextExecution(state.cronExpression, Instant.now())
                             ?: Instant.now().plus(Duration.ofMinutes(1440))
                     } else {
-                        Instant.now().plus(Duration.ofMinutes(state.selectedFrequency.intervalMinutes))
+                        val base = plan.lastExecutedAt ?: Instant.now()
+                        val next = base.plus(Duration.ofMinutes(state.selectedFrequency.intervalMinutes))
+                        if (next.isAfter(Instant.now())) {
+                            next
+                        } else if (plan.nextExecutionAt != null && plan.nextExecutionAt.isAfter(Instant.now())) {
+                            // Switching to shorter interval but existing timer is still valid — keep it
+                            plan.nextExecutionAt
+                        } else {
+                            Instant.now()
+                        }
                     }
                 } else {
                     plan.nextExecutionAt
@@ -294,6 +305,11 @@ class EditPlanViewModel @Inject constructor(
                 )
 
                 dcaPlanDao.updatePlan(updatedPlan)
+
+                // Auto-enable Market Pulse when saving a plan with market-aware strategy
+                if (state.selectedStrategy is DcaStrategy.AthBased || state.selectedStrategy is DcaStrategy.FearAndGreed) {
+                    userPreferences.setMarketPulseEnabled(true)
+                }
 
                 _uiState.update { it.copy(isSaving = false, isSuccess = true) }
                 onSuccess()
