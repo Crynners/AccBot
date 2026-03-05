@@ -1,5 +1,7 @@
 package com.accbot.dca.presentation.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,7 +18,10 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -31,6 +36,9 @@ import com.accbot.dca.R
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.model.isStable
+import com.accbot.dca.presentation.ui.theme.Warning
+import com.accbot.dca.presentation.components.ExchangeAvatar
 import com.accbot.dca.presentation.components.CredentialsInputCard
 import com.accbot.dca.presentation.components.MonthlyCostEstimateCard
 import com.accbot.dca.presentation.components.QrScannerButton
@@ -88,7 +96,7 @@ fun AddPlanScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.add_plan_title)) },
+                title = { Text(stringResource(R.string.add_plan_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
@@ -124,28 +132,108 @@ fun AddPlanScreen(
                 SandboxModeIndicator()
             }
 
+            // Experimental exchange disclaimer (selecting an experimental exchange)
+            var experimentalExchangePending by remember { mutableStateOf<Exchange?>(null) }
+            experimentalExchangePending?.let { exchange ->
+                AlertDialog(
+                    onDismissRequest = { experimentalExchangePending = null },
+                    title = { Text(stringResource(R.string.experimental_exchange_warning_title)) },
+                    text = { Text(stringResource(R.string.experimental_exchange_warning_text)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            experimentalExchangePending = null
+                            viewModel.selectExchange(exchange)
+                        }) {
+                            Text(stringResource(R.string.experimental_warning_confirm))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { experimentalExchangePending = null }) {
+                            Text(stringResource(R.string.common_back))
+                        }
+                    }
+                )
+            }
+
+            // Experimental toggle disclaimer (enabling the toggle)
+            var showExperimentalDisclaimer by remember { mutableStateOf(false) }
+            if (showExperimentalDisclaimer) {
+                AlertDialog(
+                    onDismissRequest = { showExperimentalDisclaimer = false },
+                    title = { Text(stringResource(R.string.experimental_warning_title)) },
+                    text = { Text(stringResource(R.string.experimental_warning_text)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showExperimentalDisclaimer = false
+                            viewModel.setExperimentalExchangesEnabled(true)
+                        }) {
+                            Text(stringResource(R.string.experimental_warning_confirm))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showExperimentalDisclaimer = false }) {
+                            Text(stringResource(R.string.common_back))
+                        }
+                    }
+                )
+            }
+
+            val addPlanContext = LocalContext.current
+
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                uiState.availableExchanges.chunked(3).forEach { row ->
+                // Build items: exchanges + request card tile
+                data class ExchangeItem(val exchange: Exchange?, val isRequestCard: Boolean = false)
+                val items = uiState.availableExchanges.map { ExchangeItem(it) } + ExchangeItem(null, isRequestCard = true)
+
+                items.chunked(2).forEach { row ->
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        row.forEach { exchange ->
-                            ExchangeCard(
-                                exchange = exchange,
-                                isSelected = uiState.selectedExchange == exchange,
-                                onClick = { viewModel.selectExchange(exchange) },
-                                modifier = Modifier.weight(1f)
-                            )
+                        row.forEach { item ->
+                            if (item.isRequestCard) {
+                                RequestExchangeTile(
+                                    onClick = {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Crynners/AccBot/issues"))
+                                        addPlanContext.startActivity(intent)
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            } else {
+                                ExchangeCard(
+                                    exchange = item.exchange!!,
+                                    isSelected = uiState.selectedExchange == item.exchange,
+                                    onClick = {
+                                        if (item.exchange.isStable) {
+                                            viewModel.selectExchange(item.exchange)
+                                        } else {
+                                            experimentalExchangePending = item.exchange
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
-                        // Fill remaining slots for incomplete rows
-                        repeat(3 - row.size) {
+                        // Fill remaining slot for incomplete row
+                        repeat(2 - row.size) {
                             Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
+
+                // Experimental exchanges toggle
+                ExperimentalToggleRow(
+                    isEnabled = uiState.showExperimental,
+                    onToggle = { enabled ->
+                        if (enabled) {
+                            showExperimentalDisclaimer = true
+                        } else {
+                            viewModel.setExperimentalExchangesEnabled(false)
+                        }
+                    }
+                )
             }
 
             // API Credentials
@@ -437,21 +525,131 @@ private fun ExchangeCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(
-                painter = painterResource(exchange.logoRes),
-                contentDescription = exchange.displayName,
-                modifier = Modifier.size(28.dp),
-                contentScale = ContentScale.Fit
+            ExchangeAvatar(
+                exchange = exchange,
+                size = 48.dp,
+                isConnected = isSelected
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = exchange.displayName,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.bodySmall,
                 color = if (isSelected) successCol else MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.add_exchange_cryptos, exchange.supportedCryptos.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (!exchange.isStable) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.experimental_badge),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Warning,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RequestExchangeTile(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedCard(
+        modifier = modifier
+            .clickable(onClick = onClick),
+        border = CardDefaults.outlinedCardBorder()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.add_exchange_request),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ExperimentalToggleRow(
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onToggle(!isEnabled)
+            }
+            .semantics(mergeDescendants = true) { role = Role.Switch },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isEnabled) Warning.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Explore,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_experimental_exchanges),
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = if (isEnabled) {
+                        stringResource(R.string.settings_experimental_exchanges_enabled)
+                    } else {
+                        stringResource(R.string.settings_experimental_exchanges_disabled)
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isEnabled) Warning else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = null,
+                modifier = Modifier
+                    .clearAndSetSemantics {}
+                    .height(24.dp),
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Warning,
+                    checkedTrackColor = Warning.copy(alpha = 0.5f)
+                )
             )
         }
     }

@@ -828,6 +828,18 @@
     <string name="settings_market_pulse_title">Market Pulse</string>
     <string name="settings_market_pulse_subtitle">Show market indicators on dashboard</string>
 
+    <!-- Experimental Exchanges -->
+    <string name="settings_experimental_exchanges">Experimental Exchanges</string>
+    <string name="settings_experimental_exchanges_enabled">Showing untested exchanges</string>
+    <string name="settings_experimental_exchanges_disabled">Only stable exchanges are shown</string>
+    <string name="experimental_badge">Experimental</string>
+    <string name="experimental_warning_title">Experimental Exchanges</string>
+    <string name="experimental_warning_text">These exchanges have not been fully tested. Bugs may occur. Please report any issues.</string>
+    <string name="experimental_exchange_warning_title">Experimental Exchange</string>
+    <string name="experimental_exchange_warning_text">This exchange has not been fully tested. Bugs may occur. Please report any issues.</string>
+    <string name="experimental_warning_confirm">I Understand</string>
+    <string name="add_exchange_request">Request Exchange</string>
+
     <!-- Accessibility -->
     <string name="a11y_retry">Retry</string>
 </resources>

@@ -833,6 +833,18 @@
     <string name="settings_market_pulse_title">Tržní nálada</string>
     <string name="settings_market_pulse_subtitle">Zobrazit tržní indikátory na přehledu</string>
 
+    <!-- Experimental Exchanges -->
+    <string name="settings_experimental_exchanges">Experimentální burzy</string>
+    <string name="settings_experimental_exchanges_enabled">Zobrazují se netestované burzy</string>
+    <string name="settings_experimental_exchanges_disabled">Zobrazují se pouze stabilní burzy</string>
+    <string name="experimental_badge">Experimentální</string>
+    <string name="experimental_warning_title">Experimentální burzy</string>
+    <string name="experimental_warning_text">Tyto burzy nebyly plně otestovány. Mohou se vyskytnout chyby. Prosím nahlaste problémy.</string>
+    <string name="experimental_exchange_warning_title">Experimentální burza</string>
+    <string name="experimental_exchange_warning_text">Tato burza nebyla plně otestována. Mohou se vyskytnout chyby. Prosím nahlaste problémy.</string>
+    <string name="experimental_warning_confirm">Rozumím</string>
+    <string name="add_exchange_request">Požádat o burzu</string>
+
     <!-- Accessibility -->
     <string name="a11y_retry">Opakovat</string>
 </resources>

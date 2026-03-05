@@ -14,6 +14,7 @@ import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.presentation.model.MonthlyCostEstimate
 import com.accbot.dca.domain.model.ExchangeFilter
 import com.accbot.dca.domain.model.ExchangeInstructions
+import com.accbot.dca.domain.model.isStable
 import com.accbot.dca.domain.model.ExchangeInstructionsProvider
 import com.accbot.dca.domain.usecase.CalculateMonthlyCostUseCase
 import com.accbot.dca.domain.usecase.CredentialValidationResult
@@ -35,6 +36,7 @@ data class AddPlanUiState(
     // Sandbox state (immutable after init)
     val isSandboxMode: Boolean = false,
     val availableExchanges: List<Exchange> = emptyList(),
+    val showExperimental: Boolean = false,
 
     // Exchange setup
     val selectedExchange: Exchange? = null,
@@ -105,10 +107,24 @@ class AddPlanViewModel @Inject constructor(
 
     init {
         // Initialize sandbox state once - avoids repeated calls during recomposition
+        val showExperimental = userPreferences.areExperimentalExchangesEnabled()
         _uiState.update {
             it.copy(
                 isSandboxMode = isSandbox,
+                showExperimental = showExperimental,
                 availableExchanges = ExchangeFilter.getAvailableExchanges(isSandbox)
+                    .filter { exchange -> showExperimental || exchange.isStable }
+            )
+        }
+    }
+
+    fun setExperimentalExchangesEnabled(enabled: Boolean) {
+        userPreferences.setExperimentalExchangesEnabled(enabled)
+        _uiState.update {
+            it.copy(
+                showExperimental = enabled,
+                availableExchanges = ExchangeFilter.getAvailableExchanges(isSandbox)
+                    .filter { exchange -> enabled || exchange.isStable }
             )
         }
     }

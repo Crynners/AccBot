@@ -53,7 +53,8 @@ data class SettingsUiState(
     val notificationsEnabled: Boolean = true,
     val purchaseNotificationsEnabled: Boolean = true,
     val errorNotificationsEnabled: Boolean = true,
-    val weeklySummaryEnabled: Boolean = false
+    val weeklySummaryEnabled: Boolean = false,
+    val isExperimentalExchangesEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -104,7 +105,8 @@ class SettingsViewModel @Inject constructor(
                 languageTag = userPreferences.getLanguageTag(),
                 appTheme = userPreferences.getAppTheme(),
                 isBiometricLockEnabled = userPreferences.isBiometricLockEnabled(),
-                isMarketPulseEnabled = userPreferences.isMarketPulseEnabled()
+                isMarketPulseEnabled = userPreferences.isMarketPulseEnabled(),
+                isExperimentalExchangesEnabled = userPreferences.areExperimentalExchangesEnabled()
             )
         }
     }
@@ -157,6 +159,11 @@ class SettingsViewModel @Inject constructor(
     @Deprecated("Use requestSandboxModeChange() instead - requires app restart")
     fun toggleSandboxMode() {
         requestSandboxModeChange()
+    }
+
+    fun setExperimentalExchangesEnabled(enabled: Boolean) {
+        userPreferences.setExperimentalExchangesEnabled(enabled)
+        _uiState.update { it.copy(isExperimentalExchangesEnabled = enabled) }
     }
 
     fun setMarketPulseEnabled(enabled: Boolean) {

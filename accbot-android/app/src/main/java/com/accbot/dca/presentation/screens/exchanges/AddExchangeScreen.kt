@@ -33,6 +33,7 @@ import com.accbot.dca.R
 import com.accbot.dca.data.local.DcaPlanEntity
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.ExchangeInstructions
+import com.accbot.dca.domain.model.isStable
 import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.presentation.components.AccBotTopAppBar
@@ -158,6 +159,31 @@ private fun ExchangeSelectionStep(
     onSelectExchange: (Exchange) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    var experimentalExchangePending by remember { mutableStateOf<Exchange?>(null) }
+
+    // Experimental exchange disclaimer dialog
+    experimentalExchangePending?.let { exchange ->
+        AlertDialog(
+            onDismissRequest = { experimentalExchangePending = null },
+            title = { Text(stringResource(R.string.experimental_exchange_warning_title)) },
+            text = { Text(stringResource(R.string.experimental_exchange_warning_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    experimentalExchangePending = null
+                    onSelectExchange(exchange)
+                }) {
+                    Text(stringResource(R.string.experimental_warning_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { experimentalExchangePending = null }) {
+                    Text(stringResource(R.string.common_back))
+                }
+            }
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -179,7 +205,23 @@ private fun ExchangeSelectionStep(
             items(availableExchanges, key = { it.name }) { exchange ->
                 ExchangeSelectionCard(
                     exchange = exchange,
-                    onClick = { onSelectExchange(exchange) }
+                    onClick = {
+                        if (exchange.isStable) {
+                            onSelectExchange(exchange)
+                        } else {
+                            experimentalExchangePending = exchange
+                        }
+                    }
+                )
+            }
+
+            // "Request Exchange" card
+            item {
+                RequestExchangeCard(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Crynners/AccBot/issues"))
+                        context.startActivity(intent)
+                    }
                 )
             }
         }
@@ -250,6 +292,50 @@ internal fun ExchangeSelectionCard(
             Text(
                 text = stringResource(R.string.add_exchange_cryptos, exchange.supportedCryptos.size),
                 style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (!exchange.isStable) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.experimental_badge),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Warning,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RequestExchangeCard(
+    onClick: () -> Unit
+) {
+    OutlinedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        border = CardDefaults.outlinedCardBorder()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = stringResource(R.string.add_exchange_request),
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

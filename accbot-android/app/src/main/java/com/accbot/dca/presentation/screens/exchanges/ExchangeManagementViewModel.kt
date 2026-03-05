@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.model.isStable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -17,7 +18,8 @@ import javax.inject.Inject
 data class ExchangeManagementUiState(
     val connectedExchanges: List<Exchange> = emptyList(),
     val isLoading: Boolean = false,
-    val isSandboxMode: Boolean = false
+    val isSandboxMode: Boolean = false,
+    val showExperimental: Boolean = false
 )
 
 @HiltViewModel
@@ -37,8 +39,14 @@ class ExchangeManagementViewModel @Inject constructor(
         viewModelScope.launch {
             val isSandbox = withContext(Dispatchers.IO) { userPreferences.isSandboxMode() }
             val connected = withContext(Dispatchers.IO) { credentialsStore.getConfiguredExchanges(isSandbox) }
-            _uiState.update { it.copy(connectedExchanges = connected, isSandboxMode = isSandbox) }
+            val showExperimental = withContext(Dispatchers.IO) { userPreferences.areExperimentalExchangesEnabled() }
+            _uiState.update { it.copy(connectedExchanges = connected, isSandboxMode = isSandbox, showExperimental = showExperimental) }
         }
+    }
+
+    fun setExperimentalExchangesEnabled(enabled: Boolean) {
+        userPreferences.setExperimentalExchangesEnabled(enabled)
+        _uiState.update { it.copy(showExperimental = enabled) }
     }
 
     fun removeExchange(exchange: Exchange) {
