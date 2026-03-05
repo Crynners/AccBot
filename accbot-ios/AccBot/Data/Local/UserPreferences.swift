@@ -98,7 +98,7 @@ final class UserPreferences: ObservableObject {
         self.appLanguage = defaults.string(forKey: Keys.appLanguage) ?? ""
         self.biometricLockEnabled = defaults.bool(forKey: Keys.biometricLockEnabled)
         self.sandboxMode = defaults.bool(forKey: Keys.sandboxMode)
-        self.marketPulseEnabled = defaults.object(forKey: Keys.marketPulseEnabled) as? Bool ?? true
+        self.marketPulseEnabled = defaults.object(forKey: Keys.marketPulseEnabled) as? Bool ?? false
         self.marketPulseExpanded = defaults.object(forKey: Keys.marketPulseExpanded) as? Bool ?? true
         self.lowBalanceThresholdDays = max(1, min(14, defaults.object(forKey: Keys.lowBalanceThresholdDays) as? Int ?? 2))
         self.lastSeenBuildNumber = defaults.integer(forKey: Keys.lastSeenBuildNumber)

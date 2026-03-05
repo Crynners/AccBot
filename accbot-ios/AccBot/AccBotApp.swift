@@ -103,7 +103,7 @@ struct OnboardingFlowView: View {
 
     /// Current step index (0-based) derived from the navigation path depth
     private var currentStep: Int { path.count }
-    private let totalSteps = 5
+    private let totalSteps = 6
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -118,7 +118,9 @@ struct OnboardingFlowView: View {
                             onSkip: { path.append(OnboardingStep.complete) }
                         )
                     case .firstPlan:
-                        FirstPlanView(onNext: { path.append(OnboardingStep.complete) })
+                        FirstPlanView(onNext: { path.append(OnboardingStep.permissions) })
+                    case .permissions:
+                        PermissionsView(onNext: { path.append(OnboardingStep.complete) })
                     case .complete:
                         CompletionView()
                     }
@@ -149,5 +151,6 @@ enum OnboardingStep: Hashable {
     case security
     case exchangeSetup
     case firstPlan
+    case permissions
     case complete
 }

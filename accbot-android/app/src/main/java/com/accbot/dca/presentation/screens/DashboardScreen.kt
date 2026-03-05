@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -975,7 +976,9 @@ internal fun QuickActionsRow(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.dashboard_history),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    autoSize = TextAutoSize.StepBased(maxFontSize = 14.sp)
                 )
             }
         }
@@ -988,7 +991,9 @@ internal fun QuickActionsRow(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.dashboard_run_now),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    autoSize = TextAutoSize.StepBased(maxFontSize = 14.sp)
                 )
             }
         }

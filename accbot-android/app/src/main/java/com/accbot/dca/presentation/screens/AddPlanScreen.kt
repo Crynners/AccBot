@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
@@ -44,6 +45,8 @@ import com.accbot.dca.presentation.components.MonthlyCostEstimateCard
 import com.accbot.dca.presentation.components.QrScannerButton
 import com.accbot.dca.presentation.components.SandboxCredentialsInfoCard
 import com.accbot.dca.presentation.components.SandboxModeIndicator
+import com.accbot.dca.domain.model.ExchangeInstructions
+import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.components.ScheduleBuilder
 import com.accbot.dca.presentation.components.SelectableChip
 import com.accbot.dca.presentation.components.StrategyInfoBottomSheet
@@ -238,12 +241,19 @@ fun AddPlanScreen(
 
             // API Credentials
             if (uiState.selectedExchange != null && !uiState.hasCredentials) {
-                // Sandbox credentials info card
-                if (uiState.isSandboxMode && uiState.selectedExchangeInstructions != null) {
-                    SandboxCredentialsInfoCard(
-                        exchange = uiState.selectedExchange!!,
-                        instructions = uiState.selectedExchangeInstructions!!
-                    )
+                // Exchange setup instructions card
+                if (uiState.selectedExchangeInstructions != null) {
+                    if (uiState.isSandboxMode) {
+                        SandboxCredentialsInfoCard(
+                            exchange = uiState.selectedExchange!!,
+                            instructions = uiState.selectedExchangeInstructions!!
+                        )
+                    } else {
+                        ExchangeInstructionsCard(
+                            exchange = uiState.selectedExchange!!,
+                            instructions = uiState.selectedExchangeInstructions!!
+                        )
+                    }
                 }
 
                 SectionTitle(stringResource(R.string.add_plan_api_credentials))
@@ -496,6 +506,80 @@ private fun SectionTitle(text: String) {
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(bottom = 12.dp)
     )
+}
+
+@Composable
+private fun ExchangeInstructionsCard(
+    exchange: Exchange,
+    instructions: ExchangeInstructions,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val resolvedUrl = instructions.urlRes?.let { stringResource(it) } ?: instructions.url
+    val accentCol = accentColor()
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                stringResource(R.string.add_exchange_api_setup),
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmall
+            )
+
+            instructions.steps.forEachIndexed { index, stepResId ->
+                Row {
+                    Text(
+                        "${index + 1}.",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(24.dp)
+                    )
+                    Text(stringResource(stepResId), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            if (resolvedUrl.isNotBlank()) {
+                OutlinedButton(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl))
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = accentCol)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.add_exchange_open_api_page, exchange.displayName))
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = accentCol,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.add_exchange_security_tip),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }
 
 @Composable

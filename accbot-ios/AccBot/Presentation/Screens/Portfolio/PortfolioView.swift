@@ -457,11 +457,19 @@ struct PortfolioView: View {
                     }
                 }
                 .chartYAxis {
-                    AxisMarks(values: .automatic) { _ in
+                    AxisMarks(values: .automatic) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                             .foregroundStyle(colors.onSurfaceVariant.opacity(0.5))
-                        AxisValueLabel()
-                            .foregroundStyle(colors.onSurfaceVariant)
+                        if viewModel.denomination == .crypto,
+                           let doubleValue = value.as(Double.self) {
+                            AxisValueLabel {
+                                Text(AccBotFormatters.formatCryptoCompact(Decimal(doubleValue)))
+                                    .foregroundStyle(colors.onSurfaceVariant)
+                            }
+                        } else {
+                            AxisValueLabel()
+                                .foregroundStyle(colors.onSurfaceVariant)
+                        }
                     }
                 }
                 .frame(height: 220)

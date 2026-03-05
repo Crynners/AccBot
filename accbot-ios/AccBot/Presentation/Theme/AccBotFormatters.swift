@@ -22,6 +22,24 @@ enum AccBotFormatters {
         return f
     }()
 
+    static let cryptoSatoshi: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.minimumFractionDigits = 8
+        f.maximumFractionDigits = 8
+        f.locale = .current
+        return f
+    }()
+
+    static let cryptoCompact: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.minimumFractionDigits = 0
+        f.maximumFractionDigits = 4
+        f.locale = .current
+        return f
+    }()
+
     static let signedFiat: NumberFormatter = {
         let f = NumberFormatter()
         f.numberStyle = .decimal
@@ -101,12 +119,21 @@ enum AccBotFormatters {
 
     static func formatCrypto(_ value: Decimal, symbol: String) -> String {
         let number = NSDecimalNumber(decimal: value)
-        return "\(crypto.string(from: number) ?? "0") \(symbol)"
+        let absValue = value < 0 ? -value : value
+        let formatter = absValue < 1 ? cryptoSatoshi : crypto
+        return "\(formatter.string(from: number) ?? "0") \(symbol)"
     }
 
     static func formatCryptoPlain(_ value: Decimal) -> String {
         let number = NSDecimalNumber(decimal: value)
-        return crypto.string(from: number) ?? "0"
+        let absValue = value < 0 ? -value : value
+        let formatter = absValue < 1 ? cryptoSatoshi : crypto
+        return formatter.string(from: number) ?? "0"
+    }
+
+    static func formatCryptoCompact(_ value: Decimal) -> String {
+        let number = NSDecimalNumber(decimal: value)
+        return cryptoCompact.string(from: number) ?? "0"
     }
 
     static func formatTooltip(_ value: Decimal) -> String {
