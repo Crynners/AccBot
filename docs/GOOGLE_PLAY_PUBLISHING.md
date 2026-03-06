@@ -110,7 +110,7 @@ Add these secrets in GitHub repo settings (`Settings > Secrets and variables > A
 > Self-custody Bitcoin DCA. Stack sats automatically with 7 exchanges.
 
 **Czech:**
-> Bitcoin DCA bez třetí strany. Automatické hromadění satoshi na 7 burzách.
+> Bitcoin DCA bez třetí strany. Automatické štosování satoshi na 7 burzách.
 
 ### 3.4 Full Description (4000 chars max)
 
