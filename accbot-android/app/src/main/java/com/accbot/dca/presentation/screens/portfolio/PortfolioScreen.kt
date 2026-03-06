@@ -84,7 +84,8 @@ fun PortfolioScreen(
     // Landscape: two-pane layout — chart left, controls right
     if (isLandscape) {
         val chartData = uiState.chartData
-        val hasData = chartData.isNotEmpty()
+        val hasAnyData = chartData.isNotEmpty()
+        val hasData = chartData.size >= 2
         val currentPage = uiState.pages.getOrNull(uiState.selectedPageIndex)
         val isSinglePair = currentPage is PairPage.SinglePair
 
@@ -228,7 +229,7 @@ fun PortfolioScreen(
                     }
 
                     // KPI section (compact vertical layout for landscape)
-                    if (hasData) {
+                    if (hasAnyData) {
                         LandscapeKpiContent(
                             uiState = uiState,
                             isSinglePair = isSinglePair,
@@ -326,7 +327,8 @@ internal fun PortfolioContent(
     modifier: Modifier = Modifier
 ) {
     val chartData = uiState.chartData
-    val hasData = chartData.isNotEmpty()
+    val hasAnyData = chartData.isNotEmpty()
+    val hasData = chartData.size >= 2
 
     val pageCount = uiState.pages.size
     val pagerState = rememberPagerState(
@@ -424,7 +426,7 @@ internal fun PortfolioContent(
                                     fontWeight = FontWeight.SemiBold,
                                     color = accentColor()
                                 )
-                                if (hasData) {
+                                if (hasAnyData) {
                                     Spacer(Modifier.height(8.dp))
                                     KpiCardContent(
                                         uiState = uiState,
@@ -486,7 +488,7 @@ internal fun PortfolioContent(
                             fontWeight = FontWeight.SemiBold,
                             color = accentColor()
                         )
-                        if (hasData) {
+                        if (hasAnyData) {
                             Spacer(Modifier.height(8.dp))
                             KpiCardContent(
                                 uiState = uiState,
@@ -525,6 +527,12 @@ internal fun PortfolioContent(
                     zoomLevel = uiState.zoomLevel,
                     onScrub = { idx -> scrubbedIndex = idx ?: -1 },
                     modifier = Modifier.fillMaxWidth()
+                )
+            } else if (chartData.size == 1) {
+                EmptyState(
+                    icon = Icons.Default.ShowChart,
+                    title = stringResource(R.string.chart_no_data_title),
+                    description = stringResource(R.string.chart_insufficient_data_desc)
                 )
             } else if (!uiState.isPriceSyncing) {
                 EmptyState(

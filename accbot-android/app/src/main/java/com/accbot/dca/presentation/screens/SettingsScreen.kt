@@ -48,6 +48,7 @@ import com.accbot.dca.presentation.changelog.ChangelogData
 import com.accbot.dca.presentation.components.ChangelogSheet
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
+import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.showBiometricPrompt
 import kotlinx.coroutines.launch
@@ -811,6 +812,13 @@ fun SettingsScreen(
                         text = stringResource(R.string.settings_made_with_love),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "#OwnYourDCA",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor()
                     )
                 }
             }
