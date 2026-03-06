@@ -159,8 +159,19 @@ class CalculateChartDataUseCase @Inject constructor(
             val epochDay = currentDate.toEpochDay()
 
             // Resolve price for today BEFORE processing transactions
-            // so per-tx emission can use it
-            val price = priceMap[epochDay] ?: lastKnownPrice
+            // so per-tx emission can use it.
+            // Fallback: use the next transaction's execution price when no daily
+            // price data exists yet (e.g. first transaction today, sync not run).
+            var price = priceMap[epochDay] ?: lastKnownPrice
+            if (price == null) {
+                val tx = nextTx
+                if (tx != null) {
+                    val txDate = tx.executedAt.atZone(ZoneId.systemDefault()).toLocalDate()
+                    if (!txDate.isAfter(currentDate)) {
+                        price = tx.price
+                    }
+                }
+            }
             if (price != null) lastKnownPrice = price
 
             // Process transactions on this day
@@ -316,16 +327,19 @@ class CalculateChartDataUseCase @Inject constructor(
             var anyPriceFound = false
 
             for ((pair, state) in states) {
+                var lastTxPriceToday: BigDecimal? = null
                 while (state.nextTx != null) {
                     val txDate = state.nextTx!!.executedAt.atZone(ZoneId.systemDefault()).toLocalDate()
                     if (txDate.isAfter(currentDate)) break
                     state.cumulativeCrypto += state.nextTx!!.cryptoAmount
                     state.cumulativeInvested += state.nextTx!!.fiatAmount
+                    lastTxPriceToday = state.nextTx!!.price
                     state.nextTx = if (state.txIterator.hasNext()) state.txIterator.next() else null
                 }
 
                 val priceMap = pairPriceMaps[pair]!!
-                val price = priceMap[epochDay] ?: state.lastKnownPrice
+                // Fallback: use transaction execution price when no daily price exists
+                val price = priceMap[epochDay] ?: state.lastKnownPrice ?: lastTxPriceToday
                 if (price != null) {
                     state.lastKnownPrice = price
                     totalValue += state.cumulativeCrypto * price

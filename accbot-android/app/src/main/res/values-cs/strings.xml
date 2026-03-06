@@ -317,6 +317,7 @@
     <string name="chart_syncing_prices">Synchronizace cen…</string>
     <string name="chart_no_data_title">Žádná data grafu</string>
     <string name="chart_no_data_desc">Proveďte alespoň jeden DCA nákup pro zobrazení grafů výkonnosti</string>
+    <string name="chart_insufficient_data_desc">Pro zobrazení grafu jsou potřeba alespoň dvě transakce</string>
     <string name="chart_zoom_all_time">Celková historie</string>
     <string name="chart_filter_all_exchanges">Vše</string>
     <string name="chart_current_value">Aktuální hodnota</string>

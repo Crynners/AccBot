@@ -316,6 +316,7 @@
     <string name="chart_syncing_prices">Syncing prices…</string>
     <string name="chart_no_data_title">No Chart Data</string>
     <string name="chart_no_data_desc">Complete at least one DCA purchase to see performance charts</string>
+    <string name="chart_insufficient_data_desc">At least two transactions are needed to display the chart</string>
     <string name="chart_zoom_all_time">All Time</string>
     <string name="chart_filter_all_exchanges">All</string>
     <string name="chart_current_value">Current Value</string>
