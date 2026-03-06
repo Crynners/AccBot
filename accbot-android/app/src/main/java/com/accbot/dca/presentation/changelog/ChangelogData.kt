@@ -6,6 +6,26 @@ package com.accbot.dca.presentation.changelog
 object ChangelogData {
     val entries: List<ChangelogEntry> = listOf(
         ChangelogEntry(
+            versionCode = 25200,
+            version = "2.5.2",
+            titles = mapOf(
+                "cs" to "Oprava grafu a branding",
+                "en" to "Chart Fix & Branding",
+            ),
+            features = mapOf(
+                "cs" to listOf(
+                    "Oprava pádu grafu portfolia s jedinou transakcí",
+                    "Použití ceny transakce jako zálohy, když chybí denní cenová data",
+                    "#OwnYourDCA branding v Nastavení",
+                ),
+                "en" to listOf(
+                    "Fix portfolio chart crash with a single transaction",
+                    "Use transaction execution price as fallback when daily price data is missing",
+                    "#OwnYourDCA branding in Settings",
+                ),
+            )
+        ),
+        ChangelogEntry(
             versionCode = 25100,
             version = "2.5.1",
             titles = mapOf(
