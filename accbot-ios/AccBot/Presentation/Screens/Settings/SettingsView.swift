@@ -18,7 +18,7 @@ struct SettingsView: View {
             aboutSection
             dangerZoneSection
         }
-        .scrollContentBackground(.hidden)
+        .hideScrollContentBackground()
         .maxFormWidth()
         .background(colors.background)
         .navigationTitle(String(localized: "Settings"))
@@ -521,7 +521,7 @@ struct WithdrawalThresholdsSheet: View {
     @State private var thresholdValues: [String: String] = [:]
 
     var body: some View {
-        NavigationStack {
+        SheetNavigationWrapper {
             VStack(spacing: 0) {
                 if viewModel.availableCryptoExchangePairs.isEmpty {
                     VStack(spacing: Spacing.lg) {
@@ -557,7 +557,7 @@ struct WithdrawalThresholdsSheet: View {
                             }
                         }
                     }
-                    .scrollContentBackground(.hidden)
+                    .hideScrollContentBackground()
                 }
             }
             .background(colors.background)
@@ -681,7 +681,7 @@ struct NotificationInfoSheet: View {
     @Environment(\.accBotColors) private var colors
 
     var body: some View {
-        NavigationStack {
+        SheetNavigationWrapper {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     infoRow(

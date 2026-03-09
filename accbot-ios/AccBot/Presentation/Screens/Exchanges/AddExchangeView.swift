@@ -97,7 +97,7 @@ struct AddExchangeView: View {
                 .padding(.vertical, Spacing.lg)
             }
         }
-        .scrollDismissesKeyboard(.interactively)
+        .scrollDismissesKeyboardIfAvailable()
         .background(colors.background)
         .navigationTitle(currentStep.title)
         .navigationBarTitleDisplayMode(.inline)
@@ -528,8 +528,8 @@ struct AddExchangeView: View {
                 }
                 .font(AccBotFonts.mono)
                 .foregroundStyle(colors.onSurface)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
+                .noAutocorrection()
+                .noAutocapitalization()
                 .padding(Spacing.md)
                 .background(colors.surfaceVariant.opacity(0.3))
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))

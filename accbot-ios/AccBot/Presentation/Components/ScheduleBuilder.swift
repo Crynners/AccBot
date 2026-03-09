@@ -491,8 +491,8 @@ struct ScheduleBuilder: View {
                                 lineWidth: 1
                             )
                     )
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
+                    .noAutocorrection()
+                    .noAutocapitalization()
 
                     if !state.rawCronExpression.isEmpty {
                         if CronUtils.isValid(cron: state.rawCronExpression) {

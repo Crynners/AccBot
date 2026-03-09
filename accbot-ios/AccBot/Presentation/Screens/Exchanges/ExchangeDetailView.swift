@@ -84,7 +84,7 @@ struct ExchangeDetailView: View {
         .background(colors.background)
         .navigationTitle(exchange.displayName)
         .navigationBarTitleDisplayMode(.inline)
-        .scrollDismissesKeyboard(.interactively)
+        .scrollDismissesKeyboardIfAvailable()
         .onAppear {
             plans = (try? dependencies.activeDatabase.planDao.getPlansByExchange(exchange)) ?? []
             loadCachedBalances()
@@ -510,8 +510,8 @@ struct ExchangeDetailView: View {
                     }
                     .font(AccBotFonts.mono)
                     .foregroundStyle(colors.onSurface)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
+                    .noAutocorrection()
+                    .noAutocapitalization()
 
                     if isSecure {
                         Button {

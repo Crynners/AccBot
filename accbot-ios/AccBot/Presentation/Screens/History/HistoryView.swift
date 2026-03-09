@@ -239,7 +239,7 @@ struct HistoryView: View {
     // MARK: - Filter Sheet
 
     private var filterSheet: some View {
-        NavigationStack {
+        SheetNavigationWrapper {
             Form {
                 Section(String(localized: "Cryptocurrency")) {
                     Picker(String(localized: "Crypto"), selection: $viewModel.filterCrypto) {
@@ -280,7 +280,7 @@ struct HistoryView: View {
                     ), in: (viewModel.filterDateFrom ?? .distantPast)...Date(), displayedComponents: .date)
                 }
             }
-            .scrollContentBackground(.hidden)
+            .hideScrollContentBackground()
             .background(colors.background)
             .navigationTitle(String(localized: "Filters"))
             .navigationBarTitleDisplayMode(.inline)
@@ -298,6 +298,6 @@ struct HistoryView: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .mediumLargeDetents()
     }
 }

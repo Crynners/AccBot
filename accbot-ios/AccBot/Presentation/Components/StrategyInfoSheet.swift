@@ -7,7 +7,7 @@ struct StrategyInfoSheet: View {
     @Environment(\.accBotColors) private var colors
 
     var body: some View {
-        NavigationStack {
+        SheetNavigationWrapper {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xxl) {
                     classicSection

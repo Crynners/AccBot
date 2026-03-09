@@ -163,38 +163,38 @@ struct MainTabView: View {
     }
 
     private var dashboardTab: some View {
-        NavigationStack(path: $router.dashboardPath) {
+        AdaptiveNavigationStack(
+            stack: $router.dashboardStack,
+            routeDestination: { route in AnyView(routeDestination(route)) }
+        ) {
             DashboardView()
-                .navigationDestination(for: AppRoute.self) { route in
-                    routeDestination(route)
-                }
         }
     }
 
     private var portfolioTab: some View {
-        NavigationStack(path: $router.portfolioPath) {
+        AdaptiveNavigationStack(
+            stack: $router.portfolioStack,
+            routeDestination: { route in AnyView(routeDestination(route)) }
+        ) {
             PortfolioView()
-                .navigationDestination(for: AppRoute.self) { route in
-                    routeDestination(route)
-                }
         }
     }
 
     private var notificationsTab: some View {
-        NavigationStack(path: $router.notificationsPath) {
+        AdaptiveNavigationStack(
+            stack: $router.notificationsStack,
+            routeDestination: { route in AnyView(routeDestination(route)) }
+        ) {
             NotificationsView()
-                .navigationDestination(for: AppRoute.self) { route in
-                    routeDestination(route)
-                }
         }
     }
 
     private var settingsTab: some View {
-        NavigationStack(path: $router.settingsPath) {
+        AdaptiveNavigationStack(
+            stack: $router.settingsStack,
+            routeDestination: { route in AnyView(routeDestination(route)) }
+        ) {
             SettingsView()
-                .navigationDestination(for: AppRoute.self) { route in
-                    routeDestination(route)
-                }
         }
     }
 

@@ -20,7 +20,7 @@ struct DestructiveConfirmSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
+        SheetNavigationWrapper {
             VStack(spacing: Spacing.lg) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(AccBotFonts.iconLarge)
@@ -50,8 +50,8 @@ struct DestructiveConfirmSheet: View {
                                     lineWidth: 1
                                 )
                         )
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
+                        .noAutocorrection()
+                        .noAutocapitalization()
                         .focused($isFocused)
                         .accessibilityLabel(String(localized: "Confirmation text field"))
                         .accessibilityHint(String(localized: "Type the confirmation word to enable the button"))
@@ -85,7 +85,7 @@ struct DestructiveConfirmSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .mediumDetent()
         .onAppear { isFocused = true }
     }
 }

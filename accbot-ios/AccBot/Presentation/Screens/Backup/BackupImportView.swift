@@ -44,7 +44,7 @@ struct BackupImportView: View {
                 bottomBar
             }
         }
-        .scrollDismissesKeyboard(.interactively)
+        .scrollDismissesKeyboardIfAvailable()
         .background(colors.background)
         .animation(.easeInOut(duration: 0.3), value: viewModel.wizardStep)
         .navigationTitle(String(localized: "Import Backup"))

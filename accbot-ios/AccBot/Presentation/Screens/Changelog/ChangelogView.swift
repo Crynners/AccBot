@@ -6,7 +6,7 @@ struct ChangelogView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
+        SheetNavigationWrapper {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
                     ForEach(entries) { entry in

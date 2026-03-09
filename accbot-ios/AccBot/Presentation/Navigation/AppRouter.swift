@@ -1,13 +1,15 @@
 import SwiftUI
 
-/// NavigationPath management for the app
+/// Navigation state management for the app.
+/// Uses typed [AppRoute] arrays instead of NavigationPath so the class
+/// compiles on iOS 15 (NavigationPath requires iOS 16+).
 @MainActor
 final class AppRouter: ObservableObject {
     @Published var selectedTab: TabItem = .dashboard
-    @Published var dashboardPath = NavigationPath()
-    @Published var portfolioPath = NavigationPath()
-    @Published var notificationsPath = NavigationPath()
-    @Published var settingsPath = NavigationPath()
+    @Published var dashboardStack: [AppRoute] = []
+    @Published var portfolioStack: [AppRoute] = []
+    @Published var notificationsStack: [AppRoute] = []
+    @Published var settingsStack: [AppRoute] = []
 
     /// When set, Portfolio will auto-select this crypto/fiat pair
     @Published var portfolioSelectedCrypto: String?
@@ -27,10 +29,10 @@ final class AppRouter: ObservableObject {
         lastNavigationTime = now
 
         switch selectedTab {
-        case .dashboard: dashboardPath.append(route)
-        case .portfolio: portfolioPath.append(route)
-        case .notifications: notificationsPath.append(route)
-        case .settings: settingsPath.append(route)
+        case .dashboard: dashboardStack.append(route)
+        case .portfolio: portfolioStack.append(route)
+        case .notifications: notificationsStack.append(route)
+        case .settings: settingsStack.append(route)
         }
     }
 
@@ -43,30 +45,30 @@ final class AppRouter: ObservableObject {
 
         selectedTab = tab
         switch tab {
-        case .dashboard: dashboardPath.append(route)
-        case .portfolio: portfolioPath.append(route)
-        case .notifications: notificationsPath.append(route)
-        case .settings: settingsPath.append(route)
+        case .dashboard: dashboardStack.append(route)
+        case .portfolio: portfolioStack.append(route)
+        case .notifications: notificationsStack.append(route)
+        case .settings: settingsStack.append(route)
         }
     }
 
     /// Pop the current navigation stack
     func pop() {
         switch selectedTab {
-        case .dashboard: if !dashboardPath.isEmpty { dashboardPath.removeLast() }
-        case .portfolio: if !portfolioPath.isEmpty { portfolioPath.removeLast() }
-        case .notifications: if !notificationsPath.isEmpty { notificationsPath.removeLast() }
-        case .settings: if !settingsPath.isEmpty { settingsPath.removeLast() }
+        case .dashboard: if !dashboardStack.isEmpty { dashboardStack.removeLast() }
+        case .portfolio: if !portfolioStack.isEmpty { portfolioStack.removeLast() }
+        case .notifications: if !notificationsStack.isEmpty { notificationsStack.removeLast() }
+        case .settings: if !settingsStack.isEmpty { settingsStack.removeLast() }
         }
     }
 
     /// Pop to root of the current tab
     func popToRoot() {
         switch selectedTab {
-        case .dashboard: dashboardPath = NavigationPath()
-        case .portfolio: portfolioPath = NavigationPath()
-        case .notifications: notificationsPath = NavigationPath()
-        case .settings: settingsPath = NavigationPath()
+        case .dashboard: dashboardStack.removeAll()
+        case .portfolio: portfolioStack.removeAll()
+        case .notifications: notificationsStack.removeAll()
+        case .settings: settingsStack.removeAll()
         }
     }
 
@@ -80,26 +82,23 @@ final class AppRouter: ObservableObject {
             if let idStr = components.queryItems?.first(where: { $0.name == "id" })?.value,
                let id = Int64(idStr) {
                 selectedTab = .dashboard
-                dashboardPath = NavigationPath()
-                dashboardPath.append(AppRoute.planDetails(id))
+                dashboardStack = [.planDetails(id)]
             }
         case "history":
             selectedTab = .dashboard
-            dashboardPath = NavigationPath()
-            dashboardPath.append(AppRoute.history())
+            dashboardStack = [.history()]
         case "notifications":
             selectedTab = .notifications
-            notificationsPath = NavigationPath()
+            notificationsStack.removeAll()
         case "portfolio":
             selectedTab = .portfolio
-            portfolioPath = NavigationPath()
+            portfolioStack.removeAll()
         case "settings":
             selectedTab = .settings
-            settingsPath = NavigationPath()
+            settingsStack.removeAll()
         case "exchanges":
             selectedTab = .settings
-            settingsPath = NavigationPath()
-            settingsPath.append(AppRoute.exchangeManagement)
+            settingsStack = [.exchangeManagement]
         default:
             break
         }
