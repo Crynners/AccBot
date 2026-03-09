@@ -122,7 +122,7 @@ struct ExchangeSetupView: View {
                 .padding(.horizontal, Spacing.xxl)
             }
         }
-        .scrollDismissesKeyboardIfAvailable()
+        .scrollDismissesKeyboard(.interactively)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -273,8 +273,8 @@ private struct CredentialField: View {
                     .padding(Spacing.md)
                     .background(colors.background)
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                    .noAutocapitalization()
-                    .noAutocorrection()
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
             } else {
                 TextField(placeholder, text: $text)
                     .font(AccBotFonts.mono)
@@ -282,8 +282,8 @@ private struct CredentialField: View {
                     .padding(Spacing.md)
                     .background(colors.background)
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                    .noAutocapitalization()
-                    .noAutocorrection()
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
             }
         }
     }

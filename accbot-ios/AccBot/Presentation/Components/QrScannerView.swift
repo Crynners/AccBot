@@ -330,7 +330,7 @@ struct QrScannerSheet: View {
     @State private var detectedTexts: [String] = []
 
     var body: some View {
-        SheetNavigationWrapper {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Mode toggle
                 Picker(String(localized: "Scan Mode"), selection: $scanMode) {
@@ -510,7 +510,7 @@ struct MultiFieldScannerSheet: View {
     }
 
     var body: some View {
-        SheetNavigationWrapper {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Mode toggle
                 Picker(String(localized: "Scan Mode"), selection: $scanMode) {

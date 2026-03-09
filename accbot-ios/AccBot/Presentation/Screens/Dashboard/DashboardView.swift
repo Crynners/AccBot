@@ -687,8 +687,8 @@ struct DashboardView: View {
             }
         }
         .background(colors.background)
-        .mediumLargeDetents()
-        .showDragIndicator()
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 
     // MARK: - Select All

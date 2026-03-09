@@ -74,7 +74,7 @@ struct WelcomeView: View {
             }
             .padding(.horizontal, Spacing.xxl)
         }
-        .navigationBarHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             if reduceMotion {
                 titleOpacity = 1.0

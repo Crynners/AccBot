@@ -104,8 +104,8 @@ struct CredentialsInputCard: View {
                 .accessibilityLabel(label)
                 .font(AccBotFonts.mono)
                 .foregroundStyle(colors.onSurface)
-                .noAutocorrection()
-                .noAutocapitalization()
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
 
                 if let toggleVisibility {
                     Button {

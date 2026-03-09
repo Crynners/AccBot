@@ -119,8 +119,8 @@ struct SeedPhraseGrid: View {
                         }
                     ))
                     .font(AccBotFonts.bodySmall)
-                    .noAutocapitalization()
-                    .noAutocorrection()
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
                     .focused($focusedField, equals: index)
                     .onTapGesture {
                         focusedIndex = index

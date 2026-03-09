@@ -39,7 +39,7 @@ struct BackupExportView: View {
 
             bottomBar
         }
-        .scrollDismissesKeyboardIfAvailable()
+        .scrollDismissesKeyboard(.interactively)
         .background(colors.background)
         .animation(.easeInOut(duration: 0.3), value: viewModel.wizardStep)
         .navigationTitle(String(localized: "Export Backup"))

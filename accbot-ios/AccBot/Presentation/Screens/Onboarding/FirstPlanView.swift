@@ -175,7 +175,7 @@ struct FirstPlanView: View {
                 .padding(.horizontal, Spacing.xxl)
             }
         }
-        .scrollDismissesKeyboardIfAvailable()
+        .scrollDismissesKeyboard(.interactively)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             viewModel.configure(with: dependencies)

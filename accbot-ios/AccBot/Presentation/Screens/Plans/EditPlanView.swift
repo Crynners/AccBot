@@ -234,7 +234,7 @@ struct EditPlanView: View {
             .padding(.vertical, Spacing.lg)
             .maxFormWidth()
         }
-        .scrollDismissesKeyboardIfAvailable()
+        .scrollDismissesKeyboard(.interactively)
         .background(colors.background)
     }
 
@@ -463,8 +463,8 @@ struct EditPlanView: View {
                         )
                         .font(AccBotFonts.mono)
                         .foregroundStyle(colors.onSurface)
-                        .noAutocorrection()
-                        .noAutocapitalization()
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
                         .padding(Spacing.md)
                         .background(colors.surfaceVariant.opacity(0.3))
                         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))

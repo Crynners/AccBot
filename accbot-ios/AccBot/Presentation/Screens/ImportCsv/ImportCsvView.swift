@@ -282,7 +282,7 @@ struct ImportConfigSheet: View {
     @State private var selectedDate = Date()
 
     var body: some View {
-        SheetNavigationWrapper {
+        NavigationStack {
             VStack(spacing: Spacing.lg) {
                 Toggle(String(localized: "Filter by date"), isOn: $useDateFilter)
                     .padding(.horizontal, Spacing.lg)
