@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AccBotWizard.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="550"
+             x:Class="AccBotWizard.Views.AccumulationConfigView"
+             x:DataType="vm:AccumulationConfigViewModel">
+
+    <ScrollViewer>
+        <StackPanel Spacing="15" MaxWidth="500">
+            <TextBlock Text="DCA Configuration" Classes="header"/>
+            <TextBlock Text="Configure your Dollar Cost Averaging strategy."
+                       Classes="description"/>
+
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,10,0,0">
+                <!-- Bot Name -->
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Bot Name" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding BotName}" Margin="10,5"/>
+
+                <!-- Currency -->
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Currency to Buy" VerticalAlignment="Center"/>
+                <ComboBox Grid.Row="1" Grid.Column="1"
+                          ItemsSource="{Binding AvailableCurrencies}"
+                          SelectedItem="{Binding Currency}"
+                          Margin="10,5"
+                          HorizontalAlignment="Stretch"/>
+
+                <!-- Fiat -->
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Fiat Currency" VerticalAlignment="Center"/>
+                <ComboBox Grid.Row="2" Grid.Column="1"
+                          ItemsSource="{Binding AvailableFiats}"
+                          SelectedItem="{Binding Fiat}"
+                          Margin="10,5"
+                          HorizontalAlignment="Stretch"/>
+
+                <!-- Chunk Size -->
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Amount per Purchase" VerticalAlignment="Center"/>
+                <NumericUpDown Grid.Row="3" Grid.Column="1"
+                               Value="{Binding ChunkSize}"
+                               Minimum="1"
+                               Maximum="10000"
+                               Margin="10,5"/>
+
+                <!-- Frequency -->
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Buy Every (hours)" VerticalAlignment="Center"/>
+                <ComboBox Grid.Row="4" Grid.Column="1"
+                          ItemsSource="{Binding AvailableHourDividers}"
+                          SelectedItem="{Binding HourDivider}"
+                          Margin="10,5"
+                          HorizontalAlignment="Stretch"/>
+            </Grid>
+
+            <!-- Withdrawal Settings -->
+            <Border Padding="15" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                    Margin="0,20,0,0">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Withdrawal Settings" FontWeight="SemiBold"/>
+
+                    <CheckBox IsChecked="{Binding WithdrawalEnabled}">
+                        <TextBlock Text="Enable automatic withdrawal to wallet"/>
+                    </CheckBox>
+
+                    <StackPanel IsVisible="{Binding WithdrawalEnabled}" Spacing="10" Margin="20,0,0,0">
+                        <TextBlock Text="Withdrawal Address"/>
+                        <TextBox Text="{Binding WithdrawalAddress}"
+                                 Watermark="Your wallet address"/>
+                        <TextBlock Text="Withdrawals occur when the fee is below 0.1% of the balance"
+                                   Classes="description"
+                                   FontSize="12"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="Red"
+                       IsVisible="{Binding HasError}"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

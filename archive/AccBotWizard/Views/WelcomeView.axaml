@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AccBotWizard.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="AccBotWizard.Views.WelcomeView"
+             x:DataType="vm:WelcomeViewModel">
+
+    <ScrollViewer>
+        <StackPanel Spacing="20" MaxWidth="600" HorizontalAlignment="Center">
+            <TextBlock Text="{Binding WelcomeTitle}"
+                       Classes="header"
+                       HorizontalAlignment="Center"/>
+
+            <Border Padding="20" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                <TextBlock Text="{Binding WelcomeDescription}"
+                           Classes="description"
+                           LineHeight="24"/>
+            </Border>
+
+            <Border Padding="15" CornerRadius="8" Background="{DynamicResource SystemAccentColorLight3}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Important Security Notice" FontWeight="Bold"/>
+                    <TextBlock TextWrapping="Wrap" Classes="description">
+                        Your API keys are stored only in your chosen deployment environment (Azure, Docker, etc.).
+                        AccBot never sends your credentials anywhere else. Always use API keys with minimal permissions.
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

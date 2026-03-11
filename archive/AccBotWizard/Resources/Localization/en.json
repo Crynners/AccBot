@@ -1,0 +1,47 @@
+{
+  "app": {
+    "title": "AccBot Setup Wizard"
+  },
+  "steps": {
+    "welcome": "Welcome",
+    "exchange": "Select Exchange",
+    "credentials": "API Credentials",
+    "config": "DCA Configuration",
+    "telegram": "Telegram Setup",
+    "deployment": "Deployment",
+    "review": "Review & Deploy"
+  },
+  "welcome": {
+    "title": "Welcome to AccBot Setup Wizard",
+    "description": "AccBot is an open-source DCA bot that automatically buys cryptocurrency at regular intervals."
+  },
+  "exchange": {
+    "title": "Select Your Exchange",
+    "description": "Choose the cryptocurrency exchange where you have an account."
+  },
+  "credentials": {
+    "title": "API Credentials",
+    "description": "Enter your exchange API credentials."
+  },
+  "config": {
+    "title": "DCA Configuration",
+    "description": "Configure your Dollar Cost Averaging strategy."
+  },
+  "telegram": {
+    "title": "Telegram Notifications",
+    "description": "Set up Telegram to receive notifications about your purchases."
+  },
+  "deployment": {
+    "title": "Deployment Target",
+    "description": "Choose where to run your AccBot instance."
+  },
+  "review": {
+    "title": "Review and Deploy",
+    "description": "Review your configuration and deploy."
+  },
+  "buttons": {
+    "next": "Next",
+    "back": "Back",
+    "deploy": "Deploy"
+  }
+}

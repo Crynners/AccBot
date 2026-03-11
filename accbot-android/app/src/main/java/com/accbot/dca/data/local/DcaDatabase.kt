@@ -19,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         NotificationEntity::class,
         WithdrawalThresholdEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -186,6 +186,13 @@ abstract class DcaDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 14 to 15: Add [fiat, status] index on transactions
+        private val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_fiat_status ON transactions (fiat, status)")
+            }
+        }
+
         // Migration from version 9 to 10: Add notifications and withdrawal_thresholds tables
         private val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -288,7 +295,7 @@ abstract class DcaDatabase : RoomDatabase() {
                 DcaDatabase::class.java,
                 databaseName
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
                 // Only allow destructive migration on app downgrade, never on failed upgrade
                 // This protects user's transaction history from accidental deletion
                 .fallbackToDestructiveMigrationOnDowngrade()

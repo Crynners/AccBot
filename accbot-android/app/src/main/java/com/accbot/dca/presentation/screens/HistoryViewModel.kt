@@ -11,6 +11,8 @@ import com.accbot.dca.domain.usecase.ExportTransactionsToCsvUseCase
 import com.accbot.dca.presentation.utils.NumberFormatters
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -69,44 +71,55 @@ class HistoryViewModel @Inject constructor(
     private val initialFiat: String? = savedStateHandle["fiat"]
 
     private val _filterState = MutableStateFlow(HistoryFilter(crypto = initialCrypto))
+    private val _searchQuery = MutableStateFlow("")
     private val _sortOption = MutableStateFlow(SortOption.DATE_NEWEST)
 
     private val _uiExtras = MutableStateFlow(
         HistoryUiState()
     )
 
-    // Stage 1: expensive filter + sort only re-runs when data/filter/sort change
-    private val _computedTransactions: Flow<HistoryUiState> = combine(
-        transactionDao.getAllTransactions(),
-        _filterState,
-        _sortOption
-    ) { transactions, filter, sortOption ->
-        val filtered = transactions.filter { tx ->
-            val epochMillis = tx.executedAt.toEpochMilli()
-            val matchesChips = (filter.crypto == null || tx.crypto == filter.crypto) &&
-                (filter.exchange == null || tx.exchange.name == filter.exchange) &&
-                (filter.status == null || tx.status == filter.status) &&
-                (filter.dateFrom == null || epochMillis >= filter.dateFrom) &&
-                (filter.dateTo == null || epochMillis <= filter.dateTo + 86_400_000)
-            val matchesSearch = filter.searchQuery.isBlank() || listOf(
-                tx.crypto, tx.fiat, tx.exchange.name, tx.exchange.displayName,
-                NumberFormatters.fiat(tx.fiatAmount), NumberFormatters.crypto(tx.cryptoAmount),
-                tx.exchangeOrderId ?: "", tx.errorMessage ?: ""
-            ).any { it.contains(filter.searchQuery, ignoreCase = true) }
-            matchesChips && matchesSearch
-        }
+    // Extract SQL-pushable chip filters and switch DAO query only when they change
+    private data class ChipFilter(val crypto: String?, val exchange: String?, val status: String?)
 
-        val sorted = when (sortOption) {
-            SortOption.DATE_NEWEST -> filtered.sortedByDescending { it.executedAt }
-            SortOption.DATE_OLDEST -> filtered.sortedBy { it.executedAt }
-            SortOption.AMOUNT_HIGHEST -> filtered.sortedByDescending { it.fiatAmount }
-            SortOption.AMOUNT_LOWEST -> filtered.sortedBy { it.fiatAmount }
-            SortOption.PRICE_HIGHEST -> filtered.sortedByDescending { it.price }
-            SortOption.PRICE_LOWEST -> filtered.sortedBy { it.price }
-        }
+    @OptIn(FlowPreview::class)
+    private val _debouncedSearch = _searchQuery.debounce(300)
 
-        HistoryUiState(transactions = sorted, filter = filter, sortOption = sortOption, isLoading = false)
-    }
+    // Stage 1: SQL-filtered data + in-memory date/search/sort
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    private val _computedTransactions: Flow<HistoryUiState> = _filterState
+        .map { ChipFilter(it.crypto, it.exchange, it.status?.name) }
+        .distinctUntilChanged()
+        .flatMapLatest { chip ->
+            transactionDao.getFilteredTransactions(chip.crypto, chip.exchange, chip.status)
+        }
+        .combine(_filterState) { transactions, filter -> transactions to filter }
+        .combine(_debouncedSearch) { (transactions, filter), searchQuery ->
+            Triple(transactions, filter.copy(searchQuery = searchQuery), searchQuery)
+        }
+        .combine(_sortOption) { (transactions, filter, _), sortOption ->
+            val filtered = transactions.filter { tx ->
+                val epochMillis = tx.executedAt.toEpochMilli()
+                val matchesDates = (filter.dateFrom == null || epochMillis >= filter.dateFrom) &&
+                    (filter.dateTo == null || epochMillis <= filter.dateTo + 86_400_000)
+                val matchesSearch = filter.searchQuery.isBlank() || listOf(
+                    tx.crypto, tx.fiat, tx.exchange.name, tx.exchange.displayName,
+                    NumberFormatters.fiat(tx.fiatAmount), NumberFormatters.crypto(tx.cryptoAmount),
+                    tx.exchangeOrderId ?: "", tx.errorMessage ?: ""
+                ).any { it.contains(filter.searchQuery, ignoreCase = true) }
+                matchesDates && matchesSearch
+            }
+
+            val sorted = when (sortOption) {
+                SortOption.DATE_NEWEST -> filtered.sortedByDescending { it.executedAt }
+                SortOption.DATE_OLDEST -> filtered.sortedBy { it.executedAt }
+                SortOption.AMOUNT_HIGHEST -> filtered.sortedByDescending { it.fiatAmount }
+                SortOption.AMOUNT_LOWEST -> filtered.sortedBy { it.fiatAmount }
+                SortOption.PRICE_HIGHEST -> filtered.sortedByDescending { it.price }
+                SortOption.PRICE_LOWEST -> filtered.sortedBy { it.price }
+            }
+
+            HistoryUiState(transactions = sorted, filter = filter, sortOption = sortOption, isLoading = false)
+        }
 
     // Stage 2: merge transient UI state without re-filtering/re-sorting
     val uiState: StateFlow<HistoryUiState> = combine(
@@ -144,6 +157,7 @@ class HistoryViewModel @Inject constructor(
     }
 
     fun setSearchQuery(query: String) {
+        _searchQuery.value = query
         _filterState.update { it.copy(searchQuery = query) }
     }
 

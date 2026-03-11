@@ -145,7 +145,8 @@ data class DcaPlanEntity(
         Index(value = ["status"]),
         Index(value = ["executedAt"]),
         Index(value = ["planId", "status"]),
-        Index(value = ["crypto", "fiat", "status"])
+        Index(value = ["crypto", "fiat", "status"]),
+        Index(value = ["fiat", "status"])
     ]
 )
 @TypeConverters(Converters::class)

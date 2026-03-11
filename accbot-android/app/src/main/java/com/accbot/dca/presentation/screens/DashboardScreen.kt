@@ -106,7 +106,7 @@ fun DashboardScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.refreshPreferences()
+                viewModel.refreshIfStale()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

@@ -1,0 +1,47 @@
+{
+  "app": {
+    "title": "AccBot Instalacni Pruvodce"
+  },
+  "steps": {
+    "welcome": "Vitejte",
+    "exchange": "Vyber Burzy",
+    "credentials": "API Pristupove Udaje",
+    "config": "DCA Konfigurace",
+    "telegram": "Nastaveni Telegramu",
+    "deployment": "Nasazeni",
+    "review": "Kontrola a Nasazeni"
+  },
+  "welcome": {
+    "title": "Vitejte v pruvodci nastavenim AccBot",
+    "description": "AccBot je open-source DCA bot, ktery automaticky nakupuje kryptomeny v pravidelnych intervalech."
+  },
+  "exchange": {
+    "title": "Vyberte svou burzu",
+    "description": "Zvolte kryptomenovou burzu, kde mate ucet."
+  },
+  "credentials": {
+    "title": "API Pristupove Udaje",
+    "description": "Zadejte sve API pristupove udaje k burze."
+  },
+  "config": {
+    "title": "DCA Konfigurace",
+    "description": "Nastavte svou strategii Dollar Cost Averaging."
+  },
+  "telegram": {
+    "title": "Telegram Notifikace",
+    "description": "Nastavte Telegram pro prijimani notifikaci o nakupech."
+  },
+  "deployment": {
+    "title": "Cil Nasazeni",
+    "description": "Zvolte, kde chcete spustit svou instanci AccBot."
+  },
+  "review": {
+    "title": "Kontrola a Nasazeni",
+    "description": "Zkontrolujte konfiguraci a nasadte."
+  },
+  "buttons": {
+    "next": "Dalsi",
+    "back": "Zpet",
+    "deploy": "Nasadit"
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "title": "Charts",
+  "loading": "Loading charts...",
+  "no_data": "No data to display",
+  "error_loading": "Error loading data",
+  
+  "chart_types": {
+    "portfolio_value": {
+      "title": "Portfolio Value",
+      "description": "Portfolio value development over time",
+      "y_axis": "Value (CZK)"
+    },
+    "cumulative_investment": {
+      "title": "Cumulative Investment",
+      "description": "Total amount invested over time",
+      "y_axis": "Invested (CZK)"
+    },
+    "average_price": {
+      "title": "Average Purchase Price",
+      "description": "Average purchase price development over time",
+      "y_axis": "Price (CZK)"
+    },
+    "performance": {
+      "title": "Portfolio Performance",
+      "description": "ROI (Return on Investment) over time",
+      "y_axis": "ROI (%)"
+    }
+  },
+  
+  "filters": {
+    "time_range": "Time Range",
+    "custom_range": "Custom Range",
+    "date_from": "From",
+    "date_to": "To",
+    "reset_filters": "Reset Filters",
+    "apply_filters": "Apply Filters",
+    
+    "presets": {
+      "7D": "7 days",
+      "1M": "1 month", 
+      "3M": "3 months",
+      "6M": "6 months",
+      "1Y": "1 year",
+      "ALL": "All"
+    }
+  },
+  
+  "drill_down": {
+    "all_data": "All data",
+    "year_label": "Year {{year}}",
+    "quarter_label": "Q{{quarter}} {{year}}",
+    "month_label": "{{month}} {{year}}",
+    "week_label": "Week {{week}}, {{month}}",
+    "day_label": "{{day}}",
+    
+    "breadcrumb": {
+      "home": "Overview",
+      "back": "Back",
+      "reset": "Reset"
+    },
+    
+    "click_to_drill": "Click for details",
+    "double_click_hint": "Double-click to drill down",
+    "no_drill_down": "Maximum detail",
+    
+    "levels": {
+      "year": "years",
+      "quarter": "quarters", 
+      "month": "months",
+      "week": "weeks",
+      "day": "days"
+    },
+    
+    "aggregation": {
+      "showing_by": "Showing by: {{level}}",
+      "data_points": "{{count}} data points",
+      "aggregated_from": "Aggregated from {{count}} records"
+    }
+  },
+  
+  "interactions": {
+    "zoom": {
+      "title": "Zoom",
+      "reset": "Reset zoom",
+      "instruction": "Drag to zoom"
+    },
+    "tooltip": {
+      "value": "Value",
+      "date": "Date",
+      "total": "Total",
+      "average": "Average",
+      "count": "Count"
+    }
+  },
+  
+  "export": {
+    "title": "Export Chart",
+    "as_image": "Save as Image",
+    "as_pdf": "Save as PDF",
+    "as_csv": "Export Data (CSV)",
+    "success": "Chart exported successfully",
+    "error": "Error exporting chart"
+  },
+  
+  "performance_metrics": {
+    "total_invested": "Total Invested",
+    "current_value": "Current Value",
+    "profit_loss": "Profit/Loss",
+    "roi": "ROI",
+    "transaction_count": "Transaction Count",
+    "avg_price": "Average Price",
+    "first_purchase": "First Purchase",
+    "last_purchase": "Last Purchase",
+    "days_investing": "Days Investing"
+  },
+
+  "chart_navigation": {
+    "portfolio_overview": "Portfolio Overview",
+    "performance_analysis": "Performance Analysis", 
+    "dca_comparison": "DCA Plans Comparison",
+    "market_analysis": "Market Analysis"
+  },
+
+  "empty_states": {
+    "no_transactions": "No transactions to display",
+    "no_data_for_period": "No data for selected period",
+    "filter_too_restrictive": "Filters too restrictive"
+  },
+  
+  "portfolio_comparison_description": "Comparison of invested amount with current portfolio value. Green line above blue means profit, below blue means loss.",
+  "go_back": "Go Back",
+  "reset": "Reset",
+  "tap_to_drill_down": "Tap to drill down"
+} 
