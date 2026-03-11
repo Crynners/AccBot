@@ -71,6 +71,13 @@ class PortfolioViewModel @Inject constructor(
     private var portfolioJob: Job? = null
     private var syncJob: Job? = null
     private var chartJob: Job? = null
+    private var lastLoadedAt: Long = 0
+    private var lastTransactionsFetchedAt: Long = 0
+
+    companion object {
+        private const val STALENESS_THRESHOLD_MS = 5 * 60 * 1000L // 5 minutes
+        private const val TRANSACTION_REFRESH_THRESHOLD_MS = 30 * 1000L // 30 seconds
+    }
 
     init {
         loadPortfolio()
@@ -114,6 +121,7 @@ class PortfolioViewModel @Inject constructor(
 
                 updateNavigationState()
                 syncPricesAndLoadChart()
+                lastLoadedAt = System.currentTimeMillis()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -127,7 +135,8 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
-    private fun refreshTransactionsAndPairs() {
+    private fun refreshTransactionsAndPairs(force: Boolean = false) {
+        if (!force && System.currentTimeMillis() - lastTransactionsFetchedAt < TRANSACTION_REFRESH_THRESHOLD_MS) return
         viewModelScope.launch {
             try {
                 val completed = transactionDao.getCompletedTransactionsOrdered()
@@ -156,6 +165,7 @@ class PortfolioViewModel @Inject constructor(
                     )
                 }
                 updateNavigationState()
+                lastTransactionsFetchedAt = System.currentTimeMillis()
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) { }
@@ -319,7 +329,7 @@ class PortfolioViewModel @Inject constructor(
     }
 
     fun syncPricesAndLoadChart() {
-        refreshTransactionsAndPairs()
+        refreshTransactionsAndPairs(force = true)
         loadChartData()
         syncJob?.cancel()
         syncJob = viewModelScope.launch {
@@ -441,7 +451,13 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
-    fun refresh() {
+    fun refreshIfStale() {
+        if (System.currentTimeMillis() - lastLoadedAt > STALENESS_THRESHOLD_MS) {
+            loadPortfolio()
+        }
+    }
+
+    fun forceRefresh() {
         loadPortfolio()
     }
 }

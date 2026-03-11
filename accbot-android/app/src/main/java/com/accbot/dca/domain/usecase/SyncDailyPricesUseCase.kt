@@ -84,6 +84,19 @@ class SyncDailyPricesUseCase @Inject constructor(
                     delay(RATE_LIMIT_DELAY_MS)
                 }
 
+                // ── Phase 1b: Upsert today's real-time price (same source as Dashboard) ──
+                val realtimePrice = marketDataService.getCachedPrice(crypto, fiat)
+                if (realtimePrice != null) {
+                    dailyPriceDao.insertPrices(listOf(
+                        DailyPriceEntity(
+                            crypto = crypto,
+                            fiat = fiat,
+                            dateEpochDay = today.toEpochDay(),
+                            price = realtimePrice
+                        )
+                    ))
+                }
+
                 // ── Phase 2: Historical backfill (CryptoCompare, one-time, backwards in chunks) ──
                 val earliestCachedDay = dailyPriceDao.getEarliestDay(crypto, fiat)
                 if (earliestCachedDay != null && earliestCachedDay > desiredStartDate.toEpochDay() + 1) {

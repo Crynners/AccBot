@@ -34,11 +34,13 @@ class MarketDataService @Inject constructor(
 
     private val cryptoDataCache = ConcurrentHashMap<String, CryptoDataCache>()
     private val fetchMutexes = ConcurrentHashMap<String, Mutex>()
+    private var fearGreedCache: Pair<FearGreedData, Long>? = null
     companion object {
         private const val TAG = "MarketDataService"
         private const val PRICE_CACHE_TTL_MS = 60 * 60 * 1000L // 1 hour
         private const val ATH_CACHE_TTL_MS = 24 * 60 * 60 * 1000L // 24 hours
         private const val ATH_NEAR_THRESHOLD = 0.10f // refresh ATH when price is within 10%
+        private const val FEAR_GREED_CACHE_TTL_MS = 60 * 60 * 1000L // 1 hour
 
         // CoinGecko API (free, no auth required)
         private const val COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3"
@@ -161,8 +163,25 @@ class MarketDataService @Inject constructor(
         return getCachedCryptoData(crypto, fiat)?.currentPrice
     }
 
+    /**
+     * Get cached Fear & Greed index (1h TTL).
+     * Falls back to [getFearGreedIndex] on cache miss.
+     */
+    suspend fun getCachedFearGreedIndex(): FearGreedData? {
+        val cached = fearGreedCache
+        if (cached != null && System.currentTimeMillis() - cached.second < FEAR_GREED_CACHE_TTL_MS) {
+            return cached.first
+        }
+        val data = getFearGreedIndex()
+        if (data != null) {
+            fearGreedCache = data to System.currentTimeMillis()
+        }
+        return data ?: cached?.first
+    }
+
     fun invalidateCache() {
         cryptoDataCache.clear()
+        fearGreedCache = null
     }
 
     /**

@@ -98,6 +98,7 @@ class DashboardViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "DashboardViewModel"
+        private const val STALENESS_THRESHOLD_MS = 5 * 60 * 1000L // 5 minutes
     }
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -106,6 +107,8 @@ class DashboardViewModel @Inject constructor(
     private var lastServiceRunning: Boolean? = null
     private var loadDataJob: Job? = null
     private var refreshPricesJob: Job? = null
+    private var lastLoadedAt: Long = 0
+    private var lastMarketDataFetchedAt: Long = 0
 
     init {
         loadData()
@@ -177,11 +180,14 @@ class DashboardViewModel @Inject constructor(
 
                 // collectLatest cancels previous block on new emission,
                 // so these child coroutines are automatically cancelled
-                launch { fetchPricesForHoldings(mergedHoldings) }
-                launch { fetchBalancesForPlans(plans, isSandbox) }
+                // Fetch market indicators first (sequentially) to warm CryptoDataCache,
+                // so fetchPricesForHoldings gets cache hits via getCachedPrice
                 if (showMarketPulse) {
                     launch { fetchMarketIndicators(plans) }
                 }
+                launch { fetchPricesForHoldings(mergedHoldings) }
+                launch { fetchBalancesForPlans(plans, isSandbox) }
+                lastLoadedAt = System.currentTimeMillis()
             }
         }
     }
@@ -351,12 +357,14 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchMarketIndicators(plans: List<DcaPlan>) {
+    private suspend fun fetchMarketIndicators(plans: List<DcaPlan>, force: Boolean = false) {
+        val now = System.currentTimeMillis()
+        if (!force && now - lastMarketDataFetchedAt < STALENESS_THRESHOLD_MS) return
         _uiState.update { it.copy(isMarketDataLoading = true) }
         try {
             // Fetch Fear & Greed index
             val fearGreed = try {
-                marketDataService.getFearGreedIndex()
+                marketDataService.getCachedFearGreedIndex()
             } catch (e: Exception) {
                 Log.e(TAG, "Error fetching Fear & Greed index", e)
                 null
@@ -377,6 +385,7 @@ class DashboardViewModel @Inject constructor(
             }
 
             coroutineContext.ensureActive()
+            lastMarketDataFetchedAt = System.currentTimeMillis()
             val currentCryptos = plans.map { it.crypto }.toSet()
             _uiState.update { it.copy(
                 fearGreedData = fearGreed ?: it.fearGreedData,
@@ -414,6 +423,14 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    fun refreshIfStale() {
+        refreshPreferences()
+        if (System.currentTimeMillis() - lastLoadedAt > STALENESS_THRESHOLD_MS) {
+            marketDataService.invalidateCache()
+            loadData()
+        }
+    }
+
     fun refreshPreferences() {
         val wasEnabled = _uiState.value.showMarketPulse
         val nowEnabled = userPreferences.isMarketPulseEnabled()
@@ -425,7 +442,7 @@ class DashboardViewModel @Inject constructor(
         }
         if (!wasEnabled && nowEnabled) {
             viewModelScope.launch {
-                fetchMarketIndicators(_uiState.value.activePlans.map { it.plan })
+                fetchMarketIndicators(_uiState.value.activePlans.map { it.plan }, force = true)
             }
         }
     }
@@ -440,6 +457,7 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true, isPriceLoading = true) }
             marketDataService.invalidateCache()
+            lastMarketDataFetchedAt = 0
             refreshPricesJob?.cancel()
             try {
                 val state = _uiState.value
@@ -448,7 +466,7 @@ class DashboardViewModel @Inject constructor(
                     launch { loadData() }
                     launch { fetchPricesForHoldings(state.holdings, manageLoadingState = false) }
                     if (state.showMarketPulse) {
-                        launch { fetchMarketIndicators(plans) }
+                        launch { fetchMarketIndicators(plans, force = true) }
                     }
                 }
             } finally {

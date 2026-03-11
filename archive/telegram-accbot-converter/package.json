@@ -1,0 +1,23 @@
+{
+  "name": "telegram-accbot-converter",
+  "version": "1.0.0",
+  "description": "Konvertor Telegram exportu do AccBot import formátu",
+  "main": "dist/index.js",
+  "bin": {
+    "telegram-accbot-converter": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": ["telegram", "accbot", "converter", "cryptocurrency", "bitcoin"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
