@@ -46,6 +46,9 @@
   "features_qr_title": "Nastavení přes QR kód",
   "features_qr_desc": "Skenujte API klíče a adresy peněženek fotoaparátem. Žádné ruční zadávání dlouhých alfanumerických řetězců.",
 
+  "features_backup_title": "Šifrovaná záloha",
+  "features_backup_desc": "Zálohujte DCA plány, historii transakcí a volitelně i API přihlašovací údaje jedním klepnutím. Zálohy jsou šifrovány vaším heslem pomocí AES-256-GCM. Obnovení na novém telefonu je otázka pár sekund — žádný účet, žádná ztráta dat.",
+
   "exchanges_title": "Podporované burzy",
   "exchanges_subtitle": "Připojte se k libovolné ze 7 hlavních burz. Vytvořte více DCA plánů napříč různými burzami a obchodními páry.",
 
