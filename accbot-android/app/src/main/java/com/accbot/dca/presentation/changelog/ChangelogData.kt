@@ -36,6 +36,36 @@ object ChangelogData {
             )
         ),
         ChangelogEntry(
+            versionCode = 26000,
+            version = "2.6.0",
+            titles = mapOf(
+                "cs" to "Výkon a chytré obnovování",
+                "en" to "Performance & Smart Refresh",
+            ),
+            features = mapOf(
+                "cs" to listOf(
+                    "Chytré obnovování — Dashboard a Portfolio načítají data jen když jsou zastaralá (5 min)",
+                    "SQL filtrování v historii transakcí — rychlejší s velkým množstvím dat",
+                    "Debounce vyhledávání (300ms) — plynulejší psaní v historii",
+                    "Cachování Fear & Greed indexu (1h TTL) — méně API volání",
+                    "Real-time cena v grafu portfolia — dnešní bod se aktualizuje okamžitě",
+                    "Optimalizované pořadí načítání tržních dat — warm-up cache před dotazy na ceny",
+                    "Nový DB index na transakcích pro rychlejší filtrované dotazy",
+                    "Úklid repositáře — archivace neaktivních .NET, Docker a legacy projektů",
+                ),
+                "en" to listOf(
+                    "Smart refresh — Dashboard and Portfolio only reload when data is stale (5 min)",
+                    "SQL-level filtering in transaction history — faster with large datasets",
+                    "Search debounce (300ms) — smoother typing in history search",
+                    "Fear & Greed index caching (1h TTL) — fewer API calls",
+                    "Real-time price in portfolio chart — today's data point updates immediately",
+                    "Market data fetch order optimized — cache warm-up before price lookups",
+                    "New DB index on transactions for faster filtered queries",
+                    "Repository cleanup — archived inactive .NET, Docker and legacy projects",
+                ),
+            )
+        ),
+        ChangelogEntry(
             versionCode = 25200,
             version = "2.5.2",
             titles = mapOf(
