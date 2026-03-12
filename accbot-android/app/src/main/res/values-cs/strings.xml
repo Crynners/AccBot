@@ -513,6 +513,10 @@
     <string name="completion_start_service_desc">Zapněte službu z přehledu</string>
     <string name="completion_fine_tune_title">Doladit plán</string>
     <string name="completion_fine_tune_desc">Upravte částky, přidejte další kryptoměny nebo změňte frekvenci</string>
+    <string name="completion_plan_active_title">Váš plán je aktivní</string>
+    <string name="completion_plan_active_desc">DCA nákupy se začnou provádět automaticky</string>
+    <string name="completion_add_more_title">Přidat další plány</string>
+    <string name="completion_add_more_desc">Diverzifikujte napříč burzami, kryptoměnami nebo strategiemi</string>
     <!-- Permissions onboarding -->
     <string name="permissions_title">Povolte spolehlivé nákupy</string>
     <string name="permissions_subtitle">AccBot potřebuje tato oprávnění, aby mohl spolehlivě nakupovat na pozadí</string>
@@ -583,6 +587,7 @@
     <string name="qr_mode_text">Text (OCR)</string>
     <string name="qr_no_text_detected">Žádný text nedetekován</string>
     <string name="credentials_scan_all">Skenovat všechny údaje</string>
+    <string name="credentials_scan_qr">Skenovat QR</string>
     <string name="credentials_paste_all">Vložit vše</string>
     <string name="credentials_paste">Vložit</string>
     <string name="credentials_scan_all_desc">Skenovat více údajů najednou</string>
@@ -670,7 +675,7 @@
     <string name="exchange_instructions_binance_3">Vytvořte nový API klíč</string>
     <string name="exchange_instructions_binance_4">Povolte pouze \'Spot &amp; Margin obchodování\'</string>
     <string name="exchange_instructions_binance_5">Pokud možno, omezte na vaši IP adresu</string>
-    <string name="exchange_instructions_binance_6">Zkopírujte API klíč a tajný klíč</string>
+    <string name="exchange_instructions_binance_6">Naskenujte QR kód nebo zkopírujte API klíč a tajný klíč</string>
     <string name="exchange_instructions_binance_sandbox_1">Otevřete testnet.binance.vision</string>
     <string name="exchange_instructions_binance_sandbox_2">Přihlaste se pomocí GitHub účtu</string>
     <string name="exchange_instructions_binance_sandbox_3">Klikněte na \'Generate HMAC_SHA256 Key\'</string>

@@ -11,18 +11,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
+import com.accbot.dca.presentation.components.NextStepItem
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import kotlinx.coroutines.delay
@@ -32,6 +34,7 @@ fun CompletionScreen(
     onFinish: () -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // Success animation
     val scale = remember { Animatable(0f) }
     val checkScale = remember { Animatable(0f) }
@@ -122,19 +125,51 @@ fun CompletionScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                NextStepItem(
-                    icon = Icons.Default.PlayArrow,
-                    title = stringResource(R.string.completion_start_service_title),
-                    description = stringResource(R.string.completion_start_service_desc)
-                )
+                if (uiState.planCreated) {
+                    NextStepItem(
+                        icon = Icons.Default.CheckCircle,
+                        title = stringResource(R.string.completion_plan_active_title),
+                        description = stringResource(R.string.completion_plan_active_desc),
+                        size = 36.dp,
+                        iconSize = 18.dp,
+                        cornerRadius = 8.dp,
+                        spacing = 12.dp
+                    )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                NextStepItem(
-                    icon = Icons.Default.Tune,
-                    title = stringResource(R.string.completion_fine_tune_title),
-                    description = stringResource(R.string.completion_fine_tune_desc)
-                )
+                    NextStepItem(
+                        icon = Icons.Default.Add,
+                        title = stringResource(R.string.completion_add_more_title),
+                        description = stringResource(R.string.completion_add_more_desc),
+                        size = 36.dp,
+                        iconSize = 18.dp,
+                        cornerRadius = 8.dp,
+                        spacing = 12.dp
+                    )
+                } else {
+                    NextStepItem(
+                        icon = Icons.Default.PlayArrow,
+                        title = stringResource(R.string.completion_start_service_title),
+                        description = stringResource(R.string.completion_start_service_desc),
+                        size = 36.dp,
+                        iconSize = 18.dp,
+                        cornerRadius = 8.dp,
+                        spacing = 12.dp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    NextStepItem(
+                        icon = Icons.Default.Tune,
+                        title = stringResource(R.string.completion_fine_tune_title),
+                        description = stringResource(R.string.completion_fine_tune_desc),
+                        size = 36.dp,
+                        iconSize = 18.dp,
+                        cornerRadius = 8.dp,
+                        spacing = 12.dp
+                    )
+                }
             }
         }
 
@@ -164,41 +199,3 @@ fun CompletionScreen(
     }
 }
 
-@Composable
-internal fun NextStepItem(
-    icon: ImageVector,
-    title: String,
-    description: String
-) {
-    Row(
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(successColor().copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = successColor(),
-                modifier = Modifier.size(18.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(
-                text = title,
-                fontWeight = FontWeight.Medium,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}

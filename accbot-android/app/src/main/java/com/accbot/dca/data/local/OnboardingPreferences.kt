@@ -33,14 +33,29 @@ class OnboardingPreferences @Inject constructor(
     }
 
     /**
+     * Check if a DCA plan was created during onboarding.
+     */
+    fun isPlanCreatedDuringOnboarding(): Boolean {
+        return prefs.getBoolean(KEY_PLAN_CREATED, false)
+    }
+
+    fun setPlanCreatedDuringOnboarding(created: Boolean) {
+        prefs.edit().putBoolean(KEY_PLAN_CREATED, created).apply()
+    }
+
+    /**
      * Reset onboarding state (for testing or re-onboarding).
      */
     fun resetOnboarding() {
-        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, false).apply()
+        prefs.edit()
+            .putBoolean(KEY_ONBOARDING_COMPLETED, false)
+            .remove(KEY_PLAN_CREATED)
+            .apply()
     }
 
     companion object {
         private const val PREFS_NAME = "accbot_onboarding"
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
+        private const val KEY_PLAN_CREATED = "plan_created_during_onboarding"
     }
 }

@@ -27,6 +27,7 @@ import com.accbot.dca.domain.model.ExchangeInstructions
 import com.accbot.dca.domain.model.isStable
 import com.accbot.dca.presentation.components.CredentialsInputCard
 import com.accbot.dca.presentation.components.ExchangeSelectionGrid
+import com.accbot.dca.presentation.components.ExchangeInstructionsCard
 import com.accbot.dca.presentation.components.ExperimentalExchangeDisclaimer
 import com.accbot.dca.presentation.components.ExperimentalExchangesToggle
 import com.accbot.dca.presentation.components.ExperimentalToggleDisclaimer
@@ -239,76 +240,3 @@ fun ExchangeSetupScreen(
     }
 }
 
-@Composable
-private fun ExchangeInstructionsCard(
-    exchange: Exchange,
-    instructions: ExchangeInstructions,
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val resolvedUrl = instructions.urlRes?.let { stringResource(it) } ?: instructions.url
-    val accentCol = accentColor()
-
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                stringResource(R.string.add_exchange_api_setup),
-                fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.titleSmall
-            )
-
-            instructions.steps.forEachIndexed { index, stepResId ->
-                Row {
-                    Text(
-                        "${index + 1}.",
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.width(24.dp)
-                    )
-                    Text(stringResource(stepResId), style = MaterialTheme.typography.bodySmall)
-                }
-            }
-
-            if (resolvedUrl.isNotBlank()) {
-                OutlinedButton(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl))
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = accentCol)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.add_exchange_open_api_page, exchange.displayName))
-                }
-            }
-
-            Row(
-                verticalAlignment = Alignment.Top
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = accentCol,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.add_exchange_security_tip),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}

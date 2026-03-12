@@ -112,7 +112,8 @@ fun QrScannerButton(
 @Composable
 fun QrScannerDialog(
     onDismiss: () -> Unit,
-    onScanResult: (String) -> Unit
+    onScanResult: (String) -> Unit,
+    showTextMode: Boolean = true
 ) {
     val context = LocalContext.current
     var hasCameraPermission by remember {
@@ -218,8 +219,8 @@ fun QrScannerDialog(
                 // Spacer for symmetry
                 Spacer(modifier = Modifier.size(48.dp))
 
-                // Mode toggle
-                if (hasCameraPermission) {
+                // Mode toggle (hide when text mode is disabled)
+                if (hasCameraPermission && showTextMode) {
                     Row(
                         modifier = Modifier
                             .background(
@@ -244,6 +245,8 @@ fun QrScannerDialog(
                             onClick = { scanMode = ScanMode.TEXT }
                         )
                     }
+                } else {
+                    Spacer(modifier = Modifier.size(48.dp))
                 }
 
                 // Close button

@@ -69,7 +69,6 @@ object ExchangeInstructionsProvider {
                     R.string.exchange_instructions_binance_2,
                     R.string.exchange_instructions_binance_3,
                     R.string.exchange_instructions_binance_4,
-                    R.string.exchange_instructions_binance_5,
                     R.string.exchange_instructions_binance_6
                 ),
                 url = "https://www.binance.com/en/my/settings/api-management",

@@ -2,8 +2,6 @@ package com.accbot.dca.presentation.screens.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.accbot.dca.data.local.DcaPlanDao
-import com.accbot.dca.data.local.DcaPlanEntity
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.UserPreferences
@@ -13,15 +11,17 @@ import com.accbot.dca.domain.model.ExchangeFilter
 import com.accbot.dca.domain.model.ExchangeInstructions
 import com.accbot.dca.domain.model.ExchangeInstructionsProvider
 import com.accbot.dca.domain.model.isStable
+import com.accbot.dca.domain.usecase.CalculateMonthlyCostUseCase
+import com.accbot.dca.domain.usecase.CreateDcaPlanUseCase
 import com.accbot.dca.domain.usecase.CredentialValidationResult
 import com.accbot.dca.domain.usecase.ValidateAndSaveCredentialsUseCase
 import com.accbot.dca.exchange.MinOrderSizeRepository
+import com.accbot.dca.presentation.plan.PlanFormDelegate
+import com.accbot.dca.presentation.plan.PlanFormState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
-import java.time.Duration
-import java.time.Instant
 import androidx.compose.runtime.Immutable
 import javax.inject.Inject
 
@@ -43,69 +43,61 @@ data class OnboardingUiState(
     val credentialsValid: Boolean = false,
     val credentialsError: String? = null,
 
-    // First plan setup
-    val selectedCrypto: String = "BTC",
-    val selectedFiat: String = "EUR",
-    val amount: String = "100",
-    val selectedFrequency: DcaFrequency = DcaFrequency.DAILY,
-
-    // Min order size (fetched from API)
-    val minOrderSize: BigDecimal? = null,
+    // Plan form (from delegate)
+    val planForm: PlanFormState = PlanFormState(),
 
     // General state
     val isLoading: Boolean = false,
-    val error: String? = null
-) {
-    val amountBelowMinimum: Boolean
-        get() {
-            val min = minOrderSize ?: return false
-            val amt = amount.toBigDecimalOrNull() ?: return false
-            return amt < min
-        }
-}
+    val error: String? = null,
+    val planCreated: Boolean = false  // persisted via OnboardingPreferences
+)
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val credentialsStore: CredentialsStore,
     private val onboardingPreferences: OnboardingPreferences,
     private val validateAndSaveCredentialsUseCase: ValidateAndSaveCredentialsUseCase,
-    private val dcaPlanDao: DcaPlanDao,
+    private val createDcaPlanUseCase: CreateDcaPlanUseCase,
     private val userPreferences: UserPreferences,
-    private val minOrderSizeRepository: MinOrderSizeRepository
+    calculateMonthlyCost: CalculateMonthlyCostUseCase,
+    minOrderSizeRepository: MinOrderSizeRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(OnboardingUiState())
-    val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
+    val planForm = PlanFormDelegate(calculateMonthlyCost, minOrderSizeRepository, viewModelScope)
+
+    private val _localState = MutableStateFlow(OnboardingUiState())
+
+    val uiState: StateFlow<OnboardingUiState> = combine(
+        _localState,
+        planForm.state
+    ) { local, form -> local.copy(planForm = form) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), OnboardingUiState())
 
     init {
-        // Initialize sandbox state once - avoids repeated calls during recomposition
         val isSandbox = userPreferences.isSandboxMode()
         val showExperimental = userPreferences.areExperimentalExchangesEnabled()
         // Detect already-configured exchange (e.g. credentials saved on ExchangeSetupScreen).
-        // hiltViewModel() creates a separate instance per NavBackStackEntry, so FirstPlanScreen
-        // needs to restore the selected exchange from persisted credentials.
         val configured = credentialsStore.getConfiguredExchanges(isSandbox).firstOrNull()
-        _uiState.update {
+        _localState.update {
             it.copy(
                 isSandboxMode = isSandbox,
                 showExperimental = showExperimental,
                 availableExchanges = ExchangeFilter.getAvailableExchanges(isSandbox)
                     .filter { exchange -> showExperimental || exchange.isStable },
                 selectedExchange = configured,
-                selectedCrypto = configured?.supportedCryptos?.firstOrNull() ?: "BTC",
-                selectedFiat = configured?.supportedFiats?.firstOrNull() ?: "EUR",
-                credentialsValid = configured != null
+                credentialsValid = configured != null,
+                planCreated = onboardingPreferences.isPlanCreatedDuringOnboarding()
             )
         }
         if (configured != null) {
-            updateMinOrderSize()
+            planForm.initFromExchange(configured)
         }
     }
 
     fun setExperimentalExchangesEnabled(enabled: Boolean) {
         userPreferences.setExperimentalExchangesEnabled(enabled)
-        val isSandbox = _uiState.value.isSandboxMode
-        _uiState.update {
+        val isSandbox = _localState.value.isSandboxMode
+        _localState.update {
             it.copy(
                 showExperimental = enabled,
                 availableExchanges = ExchangeFilter.getAvailableExchanges(isSandbox)
@@ -116,44 +108,41 @@ class OnboardingViewModel @Inject constructor(
 
     // Exchange setup functions
     fun selectExchange(exchange: Exchange) {
-        val isSandbox = _uiState.value.isSandboxMode
+        val isSandbox = _localState.value.isSandboxMode
         val instructions = ExchangeInstructionsProvider.getInstructions(exchange, isSandbox)
-        _uiState.update { state ->
+        _localState.update { state ->
             state.copy(
                 selectedExchange = exchange,
                 selectedExchangeInstructions = instructions,
-                selectedCrypto = exchange.supportedCryptos.firstOrNull() ?: "BTC",
-                selectedFiat = exchange.supportedFiats.firstOrNull() ?: "EUR",
                 clientId = "",
                 apiKey = "",
                 apiSecret = "",
                 passphrase = "",
                 credentialsValid = false,
-                credentialsError = null,
-                minOrderSize = null
+                credentialsError = null
             )
         }
-        updateMinOrderSize()
+        planForm.initFromExchange(exchange)
     }
 
     fun setClientId(value: String) {
-        _uiState.update { it.copy(clientId = value, credentialsError = null) }
+        _localState.update { it.copy(clientId = value, credentialsError = null) }
     }
 
     fun setApiKey(value: String) {
-        _uiState.update { it.copy(apiKey = value, credentialsError = null) }
+        _localState.update { it.copy(apiKey = value, credentialsError = null) }
     }
 
     fun setApiSecret(value: String) {
-        _uiState.update { it.copy(apiSecret = value, credentialsError = null) }
+        _localState.update { it.copy(apiSecret = value, credentialsError = null) }
     }
 
     fun setPassphrase(value: String) {
-        _uiState.update { it.copy(passphrase = value, credentialsError = null) }
+        _localState.update { it.copy(passphrase = value, credentialsError = null) }
     }
 
     fun validateAndSaveCredentials(onSuccess: () -> Unit) {
-        val state = _uiState.value
+        val state = _localState.value
 
         // Guard against concurrent validation calls (race condition prevention)
         if (state.isValidatingCredentials) return
@@ -161,7 +150,7 @@ class OnboardingViewModel @Inject constructor(
         val exchange = state.selectedExchange ?: return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isValidatingCredentials = true, credentialsError = null) }
+            _localState.update { it.copy(isValidatingCredentials = true, credentialsError = null) }
 
             val result = validateAndSaveCredentialsUseCase.execute(
                 exchange = exchange,
@@ -173,7 +162,7 @@ class OnboardingViewModel @Inject constructor(
 
             when (result) {
                 is CredentialValidationResult.Success -> {
-                    _uiState.update {
+                    _localState.update {
                         it.copy(
                             isValidatingCredentials = false,
                             credentialsValid = true
@@ -182,7 +171,7 @@ class OnboardingViewModel @Inject constructor(
                     onSuccess()
                 }
                 is CredentialValidationResult.Error -> {
-                    _uiState.update {
+                    _localState.update {
                         it.copy(
                             isValidatingCredentials = false,
                             credentialsError = result.message
@@ -193,37 +182,9 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
-    private fun updateMinOrderSize() {
-        viewModelScope.launch {
-            val exchange = _uiState.value.selectedExchange ?: return@launch
-            val min = minOrderSizeRepository.getMinOrderSize(
-                exchange, _uiState.value.selectedCrypto, _uiState.value.selectedFiat
-            )
-            _uiState.update { it.copy(minOrderSize = min) }
-        }
-    }
-
-    // First plan functions
-    fun selectCrypto(crypto: String) {
-        _uiState.update { it.copy(selectedCrypto = crypto) }
-        updateMinOrderSize()
-    }
-
-    fun selectFiat(fiat: String) {
-        _uiState.update { it.copy(selectedFiat = fiat) }
-        updateMinOrderSize()
-    }
-
-    fun setAmount(amount: String) {
-        _uiState.update { it.copy(amount = amount) }
-    }
-
-    fun selectFrequency(frequency: DcaFrequency) {
-        _uiState.update { it.copy(selectedFrequency = frequency) }
-    }
-
     fun createFirstPlan(onSuccess: () -> Unit) {
-        val state = _uiState.value
+        val state = uiState.value
+        val form = state.planForm
 
         // Guard against concurrent plan creation calls (race condition prevention)
         if (state.isLoading) return
@@ -231,42 +192,38 @@ class OnboardingViewModel @Inject constructor(
         val exchange = state.selectedExchange
 
         if (exchange == null) {
-            _uiState.update { it.copy(error = "No exchange configured") }
+            _localState.update { it.copy(error = "No exchange configured") }
             return
         }
 
-        val amount = state.amount.toBigDecimalOrNull()
+        val amount = form.amount.toBigDecimalOrNull()
         if (amount == null || amount <= BigDecimal.ZERO) {
-            _uiState.update { it.copy(error = "Please enter a valid amount") }
+            _localState.update { it.copy(error = "Please enter a valid amount") }
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _localState.update { it.copy(isLoading = true, error = null) }
 
             try {
-                val now = Instant.now()
-                val nextExecution = now.plus(Duration.ofMinutes(state.selectedFrequency.intervalMinutes))
-
-                val plan = DcaPlanEntity(
+                createDcaPlanUseCase.execute(
                     exchange = exchange,
-                    crypto = state.selectedCrypto,
-                    fiat = state.selectedFiat,
+                    crypto = form.selectedCrypto,
+                    fiat = form.selectedFiat,
                     amount = amount,
-                    frequency = state.selectedFrequency,
-                    isEnabled = true,
-                    withdrawalEnabled = false,
-                    withdrawalAddress = null,
-                    createdAt = now,
-                    nextExecutionAt = nextExecution
+                    frequency = form.selectedFrequency,
+                    cronExpression = if (form.selectedFrequency == DcaFrequency.CUSTOM) form.cronExpression else null,
+                    strategy = form.selectedStrategy,
+                    withdrawalEnabled = form.withdrawalEnabled,
+                    withdrawalAddress = if (form.withdrawalEnabled) form.withdrawalAddress.trim() else null,
+                    targetAmount = form.targetAmount.toBigDecimalOrNull()
                 )
 
-                dcaPlanDao.insertPlan(plan)
-
-                _uiState.update { it.copy(isLoading = false) }
+                onboardingPreferences.setPlanCreatedDuringOnboarding(true)
+                _localState.update { it.copy(isLoading = false, planCreated = true) }
                 onSuccess()
             } catch (e: Exception) {
-                _uiState.update {
+                _localState.update {
                     it.copy(
                         isLoading = false,
                         error = e.message ?: "Failed to create plan"
@@ -279,6 +236,7 @@ class OnboardingViewModel @Inject constructor(
     // Completion
     fun completeOnboarding() {
         onboardingPreferences.setOnboardingCompleted(true)
+        onboardingPreferences.setPlanCreatedDuringOnboarding(false) // cleanup temp flag
     }
 
     fun hasConfiguredExchange(): Boolean {
