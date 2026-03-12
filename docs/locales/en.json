@@ -46,6 +46,9 @@
   "features_qr_title": "QR Code Setup",
   "features_qr_desc": "Scan your API keys and wallet addresses with your camera. No more error-prone manual entry of long alphanumeric strings.",
 
+  "features_backup_title": "Encrypted Backup",
+  "features_backup_desc": "Back up your DCA plans, transaction history, and optionally API credentials with a single tap. Backups are encrypted with your password using AES-256-GCM. Restore on a new phone in seconds — no account needed, no data lost.",
+
   "exchanges_title": "Supported Exchanges",
   "exchanges_subtitle": "Connect to any of 7 major exchanges. Create multiple DCA plans across different exchanges and trading pairs.",
 
