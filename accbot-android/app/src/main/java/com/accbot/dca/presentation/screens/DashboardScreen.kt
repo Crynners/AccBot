@@ -1011,12 +1011,9 @@ internal fun PortfolioSummaryCard(
 
     val totalValue = holdings.fold(BigDecimal.ZERO) { acc, h -> acc + (h.currentValue ?: BigDecimal.ZERO) }
     val totalInvested = holdings.fold(BigDecimal.ZERO) { acc, h -> acc + h.totalInvested }
-    val roiAbsolute = totalValue.subtract(totalInvested)
-    val roiPercent = if (totalInvested > BigDecimal.ZERO) {
-        roiAbsolute.divide(totalInvested, 4, RoundingMode.HALF_UP)
-            .multiply(BigDecimal(100))
-            .setScale(2, RoundingMode.HALF_UP)
-    } else null
+    val roiResult = NumberFormatters.roiValues(totalInvested, totalValue)
+    val roiAbsolute = roiResult?.first ?: BigDecimal.ZERO
+    val roiPercent = roiResult?.second
 
     val successCol = successColor()
     val isPositive = roiAbsolute >= BigDecimal.ZERO

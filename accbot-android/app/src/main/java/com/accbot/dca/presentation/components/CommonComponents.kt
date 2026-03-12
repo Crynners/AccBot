@@ -11,7 +11,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +38,8 @@ import com.accbot.dca.domain.model.*
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import com.accbot.dca.presentation.utils.DateFormatters
 import com.accbot.dca.presentation.utils.NumberFormatters
 import java.math.BigDecimal
@@ -140,6 +148,7 @@ fun PlanCard(
 fun getCryptoIconRes(crypto: String): Int? = when (crypto.uppercase()) {
     "BTC" -> R.drawable.ic_crypto_btc
     "ETH" -> R.drawable.ic_crypto_eth
+    "BNB" -> R.drawable.ic_crypto_bnb
     "SOL" -> R.drawable.ic_crypto_sol
     "LTC" -> R.drawable.ic_crypto_ltc
     "ADA" -> R.drawable.ic_crypto_ada
@@ -154,6 +163,7 @@ fun getFiatIconRes(fiat: String): Int? = when (fiat.uppercase()) {
     "CZK" -> R.drawable.ic_fiat_czk
     "GBP" -> R.drawable.ic_fiat_gbp
     "USDT" -> R.drawable.ic_fiat_usdt
+    "USDC" -> R.drawable.ic_fiat_usdc
     else -> null
 }
 
@@ -577,5 +587,165 @@ fun SectionHeader(
                 )
             }
         }
+    }
+}
+
+// ============================================
+// Chip Group (crypto/fiat selection with icons)
+// ============================================
+
+@Composable
+fun ChipGroup(
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit,
+    iconResolver: ((String) -> Int?)? = null
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.horizontalScroll(rememberScrollState())
+    ) {
+        options.forEach { option ->
+            val iconRes = iconResolver?.invoke(option)
+            SelectableChip(
+                text = option,
+                selected = option == selectedOption,
+                onClick = { onOptionSelected(option) },
+                leadingIcon = if (iconRes != null) {
+                    {
+                        Image(
+                            painter = painterResource(iconRes),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                } else null
+            )
+        }
+    }
+}
+
+// ============================================
+// Frequency Dropdown
+// ============================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FrequencyDropdown(
+    selectedFrequency: DcaFrequency,
+    onFrequencySelected: (DcaFrequency) -> Unit,
+    frequencies: List<DcaFrequency> = DcaFrequency.entries.toList()
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it }
+    ) {
+        OutlinedTextField(
+            value = stringResource(selectedFrequency.displayNameRes),
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            frequencies.forEach { frequency ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(frequency.displayNameRes)) },
+                    onClick = {
+                        onFrequencySelected(frequency)
+                        expanded = false
+                    },
+                    leadingIcon = if (frequency == selectedFrequency) {
+                        { Icon(Icons.Default.Check, contentDescription = null, tint = successColor()) }
+                    } else null
+                )
+            }
+        }
+    }
+}
+
+// ============================================
+// Section Title
+// ============================================
+
+@Composable
+fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+    )
+}
+
+// ============================================
+// Amount Input with Presets
+// ============================================
+
+/**
+ * Amount input field with quick preset chips.
+ * Used in both AddPlanScreen and onboarding FirstPlanScreen.
+ */
+@Composable
+fun AmountInputWithPresets(
+    amount: String,
+    onAmountChange: (String) -> Unit,
+    fiat: String,
+    minOrderSize: BigDecimal?,
+    amountBelowMinimum: Boolean
+) {
+    val quickAmounts = remember(minOrderSize) {
+        val allAmounts = listOf("5", "10", "25", "50", "100")
+        if (minOrderSize != null) allAmounts.filter { it.toBigDecimal() >= minOrderSize }
+        else allAmounts
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.horizontalScroll(rememberScrollState())
+        ) {
+            quickAmounts.forEach { preset ->
+                SelectableChip(
+                    text = "$preset $fiat",
+                    selected = amount == preset,
+                    onClick = { onAmountChange(preset) }
+                )
+            }
+        }
+
+        OutlinedTextField(
+            value = amount,
+            onValueChange = onAmountChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.common_amount)) },
+            suffix = { Text(fiat) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            singleLine = true,
+            isError = amountBelowMinimum,
+            supportingText = minOrderSize?.let { min ->
+                {
+                    Text(
+                        text = stringResource(R.string.min_order_size, min.stripTrailingZeros().toPlainString(), fiat),
+                        color = if (amountBelowMinimum) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        )
     }
 }

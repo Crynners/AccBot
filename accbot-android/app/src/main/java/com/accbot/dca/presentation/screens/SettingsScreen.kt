@@ -45,6 +45,7 @@ import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.WithdrawalThreshold
 import java.math.BigDecimal
 import com.accbot.dca.presentation.changelog.ChangelogData
+import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.ChangelogSheet
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
@@ -409,12 +410,7 @@ fun SettingsScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
+            AccBotTopAppBar(title = stringResource(R.string.settings_title))
         }
     ) { paddingValues ->
         Box(

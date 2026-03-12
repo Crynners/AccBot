@@ -1,12 +1,9 @@
 package com.accbot.dca.presentation.screens.onboarding
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
@@ -17,17 +14,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.domain.model.DcaFrequency
-import com.accbot.dca.presentation.components.SelectableChip
 import com.accbot.dca.R
+import com.accbot.dca.presentation.components.AccBotTopAppBar
+import com.accbot.dca.presentation.plan.PlanFormContent
 import com.accbot.dca.presentation.ui.theme.accentColor
-import com.accbot.dca.presentation.ui.theme.successColor
 import java.math.BigDecimal
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,37 +36,16 @@ fun FirstPlanScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Quick amount presets — filter out values below minimum order size
-    val quickAmounts = remember(uiState.minOrderSize) {
-        val allAmounts = listOf("25", "50", "100", "250", "500")
-        val min = uiState.minOrderSize
-        if (min != null) allAmounts.filter { it.toBigDecimal() >= min }
-        else allAmounts
-    }
-
-    // Simplified frequency options for onboarding
-    val frequencyOptions = listOf(
-        DcaFrequency.DAILY,
-        DcaFrequency.WEEKLY
-    )
-
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.first_plan_title), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
-                    }
-                },
+            AccBotTopAppBar(
+                title = stringResource(R.string.first_plan_title),
+                onNavigateBack = onBack,
                 actions = {
                     TextButton(onClick = onSkip) {
                         Text(stringResource(R.string.common_skip), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         }
     ) { paddingValues ->
@@ -112,186 +87,25 @@ fun FirstPlanScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Crypto selection
-            if (uiState.selectedExchange != null) {
-                Text(
-                    text = stringResource(R.string.first_plan_what_to_buy),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.align(Alignment.Start)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.horizontalScroll(rememberScrollState())
-                ) {
-                    uiState.selectedExchange!!.supportedCryptos.forEach { crypto ->
-                        SelectableChip(
-                            text = crypto,
-                            selected = crypto == uiState.selectedCrypto,
-                            onClick = { viewModel.selectCrypto(crypto) }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Fiat selection
-                Text(
-                    text = stringResource(R.string.first_plan_currency),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.align(Alignment.Start)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.horizontalScroll(rememberScrollState())
-                ) {
-                    uiState.selectedExchange!!.supportedFiats.forEach { fiat ->
-                        SelectableChip(
-                            text = fiat,
-                            selected = fiat == uiState.selectedFiat,
-                            onClick = { viewModel.selectFiat(fiat) }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Amount input with presets
-                Text(
-                    text = stringResource(R.string.add_plan_amount_per_purchase),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.align(Alignment.Start)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Quick amount buttons
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.horizontalScroll(rememberScrollState())
-                ) {
-                    quickAmounts.forEach { amount ->
-                        SelectableChip(
-                            text = "$amount ${uiState.selectedFiat}",
-                            selected = uiState.amount == amount,
-                            onClick = { viewModel.setAmount(amount) }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = uiState.amount,
-                    onValueChange = viewModel::setAmount,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.first_plan_custom_amount)) },
-                    suffix = { Text(uiState.selectedFiat) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    isError = uiState.amountBelowMinimum,
-                    supportingText = uiState.minOrderSize?.let { min ->
-                        {
-                            Text(
-                                text = stringResource(R.string.min_order_size, min.toPlainString(), uiState.selectedFiat),
-                                color = if (uiState.amountBelowMinimum) {
-                                    MaterialTheme.colorScheme.error
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                }
-                            )
-                        }
-                    }
+            if (uiState.credentialForm.selectedExchange != null) {
+                // Plan form (crypto, fiat, amount, frequency, strategy, withdrawal, target)
+                PlanFormContent(
+                    state = uiState.planForm,
+                    availableCryptos = uiState.credentialForm.selectedExchange!!.supportedCryptos,
+                    availableFiats = uiState.credentialForm.selectedExchange!!.supportedFiats,
+                    onCryptoSelected = viewModel.planForm::selectCrypto,
+                    onFiatSelected = viewModel.planForm::selectFiat,
+                    onAmountChanged = viewModel.planForm::setAmount,
+                    onFrequencySelected = viewModel.planForm::selectFrequency,
+                    onCronExpressionChanged = viewModel.planForm::setCronExpression,
+                    onStrategySelected = viewModel.planForm::selectStrategy,
+                    onWithdrawalEnabledChanged = viewModel.planForm::setWithdrawalEnabled,
+                    onWithdrawalAddressChanged = viewModel.planForm::setWithdrawalAddress,
+                    onTargetAmountChanged = viewModel.planForm::setTargetAmount,
+                    errorMessage = uiState.error
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
-
-                // Frequency selection
-                Text(
-                    text = stringResource(R.string.first_plan_how_often),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.align(Alignment.Start)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    frequencyOptions.forEach { frequency ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { viewModel.selectFrequency(frequency) },
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (uiState.selectedFrequency == frequency) {
-                                    successColor().copy(alpha = 0.15f)
-                                } else {
-                                    MaterialTheme.colorScheme.surface
-                                }
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(
-                                        text = stringResource(frequency.displayNameRes),
-                                        fontWeight = if (uiState.selectedFrequency == frequency) {
-                                            FontWeight.SemiBold
-                                        } else {
-                                            FontWeight.Normal
-                                        },
-                                        color = if (uiState.selectedFrequency == frequency) {
-                                            successColor()
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        }
-                                    )
-                                    Text(
-                                        text = stringResource(if (frequency == DcaFrequency.DAILY) {
-                                            R.string.first_plan_recommended
-                                        } else {
-                                            R.string.first_plan_lower_frequency
-                                        }),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                RadioButton(
-                                    selected = uiState.selectedFrequency == frequency,
-                                    onClick = { viewModel.selectFrequency(frequency) },
-                                    colors = RadioButtonDefaults.colors(
-                                        selectedColor = successColor()
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Error message
-                if (uiState.error != null) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = uiState.error!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
 
                 // Summary card
                 Card(
@@ -311,7 +125,13 @@ fun FirstPlanScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = stringResource(R.string.first_plan_summary, uiState.amount, uiState.selectedFiat, uiState.selectedCrypto, stringResource(uiState.selectedFrequency.displayNameRes).lowercase()),
+                            text = stringResource(
+                                R.string.first_plan_summary,
+                                uiState.planForm.amount,
+                                uiState.planForm.selectedFiat,
+                                uiState.planForm.selectedCrypto,
+                                stringResource(uiState.planForm.selectedFrequency.displayNameRes).lowercase()
+                            ),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -357,9 +177,8 @@ fun FirstPlanScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                enabled = uiState.selectedExchange != null &&
-                        uiState.amount.toBigDecimalOrNull()?.let { it > BigDecimal.ZERO } == true &&
-                        !uiState.amountBelowMinimum &&
+                enabled = uiState.credentialForm.selectedExchange != null &&
+                        uiState.planForm.isFormValid &&
                         !uiState.isLoading,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = accentColor()

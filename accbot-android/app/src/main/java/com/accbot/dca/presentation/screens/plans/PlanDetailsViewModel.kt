@@ -14,6 +14,7 @@ import com.accbot.dca.domain.usecase.ApiImportProgress
 import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.domain.usecase.ImportTradeHistoryUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
+import com.accbot.dca.presentation.utils.NumberFormatters
 import com.accbot.dca.presentation.utils.TimeUtils
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -147,12 +148,8 @@ class PlanDetailsViewModel @Inject constructor(
                 val price = marketDataService.getCachedPrice(plan.crypto, plan.fiat)
                 if (price != null && totalCrypto > BigDecimal.ZERO) {
                     val currentValue = totalCrypto.multiply(price).setScale(2, RoundingMode.HALF_UP)
-                    val roiAbsolute = currentValue.subtract(totalInvested)
-                    val roiPercent = if (totalInvested > BigDecimal.ZERO) {
-                        roiAbsolute.divide(totalInvested, 4, RoundingMode.HALF_UP)
-                            .multiply(BigDecimal(100))
-                            .setScale(2, RoundingMode.HALF_UP)
-                    } else null
+                    val (roiAbsolute, roiPercent) = NumberFormatters.roiValues(totalInvested, currentValue)
+                        ?: (BigDecimal.ZERO to BigDecimal.ZERO)
                     _uiState.update { it.copy(
                         currentPrice = price,
                         currentValue = currentValue,

@@ -30,6 +30,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.domain.model.TransactionStatus
+import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.EmptyState
 import com.accbot.dca.presentation.components.SelectableChip
 import com.accbot.dca.presentation.components.WarningOrange
@@ -145,13 +146,9 @@ fun HistoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.history_title), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
-                    }
-                },
+            AccBotTopAppBar(
+                title = stringResource(R.string.history_title),
+                onNavigateBack = onNavigateBack,
                 actions = {
                     // Search button
                     IconButton(onClick = {
@@ -204,10 +201,7 @@ fun HistoryScreen(
                             Icon(Icons.Default.FileDownload, contentDescription = stringResource(R.string.history_export_csv))
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         }
     ) { paddingValues ->

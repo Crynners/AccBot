@@ -7,9 +7,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import com.accbot.dca.domain.model.ExchangeInstructions
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -296,7 +305,11 @@ fun NextStepItem(
     icon: ImageVector,
     title: String,
     description: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    size: Dp = 40.dp,
+    iconSize: Dp = 20.dp,
+    cornerRadius: Dp = 10.dp,
+    spacing: Dp = 16.dp
 ) {
     val successCol = successColor()
     Row(
@@ -304,19 +317,19 @@ fun NextStepItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconBadge(
-            size = 40.dp,
+            size = size,
             backgroundColor = successCol.copy(alpha = 0.1f),
-            cornerRadius = 10.dp
+            cornerRadius = cornerRadius
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = successCol,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(iconSize)
             )
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(spacing))
 
         Column {
             Text(
@@ -676,5 +689,126 @@ fun ExchangeSelectionGrid(
                 }
             }
         }
+    }
+}
+
+/**
+ * Exchange setup instructions card with numbered steps and link to API page.
+ * Used in both onboarding ExchangeSetupScreen and AddPlanScreen.
+ */
+@Composable
+fun ExchangeInstructionsCard(
+    exchange: Exchange,
+    instructions: ExchangeInstructions,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val resolvedUrl = instructions.urlRes?.let { stringResource(it) } ?: instructions.url
+    val accentCol = accentColor()
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                stringResource(R.string.add_exchange_api_setup),
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmall
+            )
+
+            instructions.steps.forEachIndexed { index, stepResId ->
+                Row {
+                    Text(
+                        "${index + 1}.",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(24.dp)
+                    )
+                    Text(stringResource(stepResId), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            if (resolvedUrl.isNotBlank()) {
+                OutlinedButton(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl))
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = accentCol)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.add_exchange_open_api_page, exchange.displayName))
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = accentCol,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.add_exchange_security_tip),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Strategy selection section with strategy option cards and info bottom sheet.
+ * Used in both AddPlanScreen and onboarding FirstPlanScreen.
+ */
+@Composable
+fun StrategySelectionSection(
+    selectedStrategy: DcaStrategy,
+    onStrategySelected: (DcaStrategy) -> Unit
+) {
+    val strategies = remember {
+        listOf(
+            DcaStrategy.Classic,
+            DcaStrategy.AthBased(),
+            DcaStrategy.FearAndGreed()
+        )
+    }
+    var showStrategyInfo by remember { mutableStateOf<DcaStrategy?>(null) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        strategies.forEach { strategy ->
+            val isSelected = when {
+                selectedStrategy is DcaStrategy.Classic && strategy is DcaStrategy.Classic -> true
+                selectedStrategy is DcaStrategy.AthBased && strategy is DcaStrategy.AthBased -> true
+                selectedStrategy is DcaStrategy.FearAndGreed && strategy is DcaStrategy.FearAndGreed -> true
+                else -> false
+            }
+            StrategyOption(
+                strategy = strategy,
+                isSelected = isSelected,
+                onClick = { onStrategySelected(strategy) },
+                onInfoClick = { showStrategyInfo = strategy }
+            )
+        }
+    }
+
+    showStrategyInfo?.let { strategy ->
+        StrategyInfoBottomSheet(
+            strategy = strategy,
+            onDismiss = { showStrategyInfo = null }
+        )
     }
 }

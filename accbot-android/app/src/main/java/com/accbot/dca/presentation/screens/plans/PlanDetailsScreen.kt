@@ -28,7 +28,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.supportsApiImport
-import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.presentation.components.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
@@ -181,36 +180,7 @@ fun PlanDetailsScreen(
 
     // API import result dialog
     uiState.apiImportResult?.let { result ->
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissImportResult() },
-            title = {
-                Text(
-                    when (result) {
-                        is ApiImportResultState.Success -> stringResource(R.string.import_api_success_title)
-                        is ApiImportResultState.Error -> stringResource(R.string.import_api_error_title)
-                    }
-                )
-            },
-            text = {
-                Text(
-                    when (result) {
-                        is ApiImportResultState.Success -> {
-                            if (result.imported == 0) {
-                                stringResource(R.string.import_api_no_new)
-                            } else {
-                                stringResource(R.string.import_api_success_message, result.imported, result.skipped)
-                            }
-                        }
-                        is ApiImportResultState.Error -> result.message
-                    }
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.dismissImportResult() }) {
-                    Text(stringResource(R.string.common_done))
-                }
-            }
-        )
+        ApiImportResultDialog(result = result, onDismiss = { viewModel.dismissImportResult() })
     }
 
     Scaffold(

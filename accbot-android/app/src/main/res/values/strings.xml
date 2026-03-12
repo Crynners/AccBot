@@ -512,6 +512,10 @@
     <string name="completion_start_service_desc">Toggle the service on from the dashboard</string>
     <string name="completion_fine_tune_title">Fine-tune your plan</string>
     <string name="completion_fine_tune_desc">Adjust amounts, add more cryptos, or change frequency</string>
+    <string name="completion_plan_active_title">Your plan is active</string>
+    <string name="completion_plan_active_desc">DCA purchases will start running automatically</string>
+    <string name="completion_add_more_title">Add more plans</string>
+    <string name="completion_add_more_desc">Diversify across exchanges, cryptos, or strategies</string>
     <!-- Permissions onboarding -->
     <string name="permissions_title">Enable Reliable Purchases</string>
     <string name="permissions_subtitle">AccBot needs these permissions to reliably execute purchases in the background</string>
@@ -581,6 +585,7 @@
     <string name="qr_mode_text">Text (OCR)</string>
     <string name="qr_no_text_detected">No text detected</string>
     <string name="credentials_scan_all">Scan All Credentials</string>
+    <string name="credentials_scan_qr">Scan QR</string>
     <string name="credentials_paste_all">Paste All</string>
     <string name="credentials_paste">Paste</string>
     <string name="credentials_scan_all_desc">Scan multiple credentials at once</string>
@@ -667,7 +672,7 @@
     <string name="exchange_instructions_binance_3">Create a new API key</string>
     <string name="exchange_instructions_binance_4">Enable \'Spot &amp; Margin Trading\' only</string>
     <string name="exchange_instructions_binance_5">Restrict to your IP if possible</string>
-    <string name="exchange_instructions_binance_6">Copy the API Key and Secret</string>
+    <string name="exchange_instructions_binance_6">Scan the QR code or copy the API Key and Secret</string>
     <string name="exchange_instructions_binance_sandbox_1">Open testnet.binance.vision</string>
     <string name="exchange_instructions_binance_sandbox_2">Log in with your GitHub account</string>
     <string name="exchange_instructions_binance_sandbox_3">Click \'Generate HMAC_SHA256 Key\'</string>

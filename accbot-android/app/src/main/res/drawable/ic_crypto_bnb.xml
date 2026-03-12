@@ -1,0 +1,42 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- BNB - Yellow circle -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#F3BA2F"/>
+    <!-- Diamond shape -->
+    <path
+        android:pathData="M64,32L82,50L64,68L46,50Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Top diamond -->
+    <path
+        android:pathData="M64,22L72,30L64,38L56,30Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Bottom diamond -->
+    <path
+        android:pathData="M64,62L72,70L64,78L56,70Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Left diamond -->
+    <path
+        android:pathData="M36,50L44,42L52,50L44,58Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Right diamond -->
+    <path
+        android:pathData="M76,50L84,42L92,50L84,58Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Bottom outer left -->
+    <path
+        android:pathData="M44,70L52,62L60,70L52,78Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Bottom outer right -->
+    <path
+        android:pathData="M68,70L76,62L84,70L76,78Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- Very bottom diamond -->
+    <path
+        android:pathData="M64,82L72,90L64,98L56,90Z"
+        android:fillColor="#FFFFFF"/>
+</vector>

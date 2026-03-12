@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.accbot.dca.R
 import com.accbot.dca.data.local.NotificationType
 import com.accbot.dca.domain.model.AppNotification
+import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.EmptyState
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.LocalSandboxMode
@@ -72,13 +73,8 @@ fun NotificationsScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(R.string.notifications_title),
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+            AccBotTopAppBar(
+                title = stringResource(R.string.notifications_title),
                 actions = {
                     if (LocalSandboxMode.current) {
                         IconButton(onClick = { viewModel.createTestNotifications() }) {
@@ -97,10 +93,7 @@ fun NotificationsScreen(
                             Text(stringResource(R.string.notifications_delete_all))
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         },
     ) { paddingValues ->

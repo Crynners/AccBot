@@ -6,6 +6,36 @@ package com.accbot.dca.presentation.changelog
 object ChangelogData {
     val entries: List<ChangelogEntry> = listOf(
         ChangelogEntry(
+            versionCode = 26100,
+            version = "2.6.1",
+            titles = mapOf(
+                "cs" to "DRY refaktoring a Binance USDC",
+                "en" to "DRY Refactor & Binance USDC",
+            ),
+            features = mapOf(
+                "cs" to listOf(
+                    "Sdílený CredentialFormDelegate — méně duplicitního kódu napříč 4 ViewModely",
+                    "Sdílený dialog výsledku API importu na 3 obrazovkách",
+                    "Jednotný AccBotTopAppBar na 11 obrazovkách",
+                    "Binance: přechod z USDT na USDC, minimální objednávka snížena na 5",
+                    "Rychlé částky: 5, 10, 25, 50, 100 (dříve 25–500)",
+                    "Výchozí částka DCA plánu nastavena na minimum burzy",
+                    "Oprava zobrazení minimální částky — bez zbytečných nul",
+                    "Extrakce KuCoin signed-request helperu a ROI výpočtu",
+                ),
+                "en" to listOf(
+                    "Shared CredentialFormDelegate — less duplicate code across 4 ViewModels",
+                    "Shared API import result dialog across 3 screens",
+                    "Unified AccBotTopAppBar across 11 screens",
+                    "Binance: switch from USDT to USDC, min order lowered to 5",
+                    "Quick amounts: 5, 10, 25, 50, 100 (was 25–500)",
+                    "Default DCA plan amount set to exchange minimum",
+                    "Fix min order size display — strip trailing zeros",
+                    "Extract KuCoin signed-request helper and ROI calculation",
+                ),
+            )
+        ),
+        ChangelogEntry(
             versionCode = 25200,
             version = "2.5.2",
             titles = mapOf(

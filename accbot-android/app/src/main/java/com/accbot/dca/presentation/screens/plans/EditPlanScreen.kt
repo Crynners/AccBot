@@ -1,38 +1,22 @@
 package com.accbot.dca.presentation.screens.plans
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
-import com.accbot.dca.domain.model.DcaFrequency
-import com.accbot.dca.domain.model.DcaStrategy
-import com.accbot.dca.presentation.components.ScheduleBuilder
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.LoadingState
 import com.accbot.dca.presentation.components.ErrorState
-import com.accbot.dca.presentation.components.MonthlyCostEstimateCard
-import com.accbot.dca.presentation.components.QrScannerButton
-import com.accbot.dca.presentation.components.StrategyInfoBottomSheet
-import com.accbot.dca.presentation.components.StrategyOption
+import com.accbot.dca.presentation.plan.PlanFormContent
 import com.accbot.dca.presentation.ui.theme.accentColor
-import com.accbot.dca.presentation.ui.theme.successColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,211 +111,24 @@ fun EditPlanScreen(
                         }
                     }
 
-                    // Amount input
+                    // Plan form (amount, frequency, strategy, withdrawal, target)
                     item {
-                        Text(
-                            text = stringResource(R.string.add_plan_amount_per_purchase),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                        PlanFormContent(
+                            state = uiState.planForm,
+                            availableCryptos = listOf(uiState.crypto),
+                            availableFiats = listOf(uiState.fiat),
+                            showCryptoFiatSelection = false,
+                            onCryptoSelected = viewModel.planForm::selectCrypto,
+                            onFiatSelected = viewModel.planForm::selectFiat,
+                            onAmountChanged = viewModel.planForm::setAmount,
+                            onFrequencySelected = viewModel.planForm::selectFrequency,
+                            onCronExpressionChanged = viewModel.planForm::setCronExpression,
+                            onStrategySelected = viewModel.planForm::selectStrategy,
+                            onWithdrawalEnabledChanged = viewModel.planForm::setWithdrawalEnabled,
+                            onWithdrawalAddressChanged = viewModel.planForm::setWithdrawalAddress,
+                            onTargetAmountChanged = viewModel.planForm::setTargetAmount,
+                            errorMessage = if (uiState.isSaving) uiState.error else null
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = uiState.amount,
-                            onValueChange = viewModel::setAmount,
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.common_amount)) },
-                            suffix = { Text(uiState.fiat) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            singleLine = true,
-                            isError = uiState.amountBelowMinimum || (uiState.error != null && uiState.isSaving),
-                            supportingText = uiState.minOrderSize?.let { min ->
-                                {
-                                    Text(
-                                        text = stringResource(R.string.min_order_size, min.toPlainString(), uiState.fiat),
-                                        color = if (uiState.amountBelowMinimum) MaterialTheme.colorScheme.error
-                                                else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        )
-                    }
-
-                    // Frequency selection
-                    item {
-                        Text(
-                            text = stringResource(R.string.add_plan_purchase_frequency),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            DcaFrequency.entries.forEach { frequency ->
-                                FrequencyOption(
-                                    frequency = frequency,
-                                    isSelected = uiState.selectedFrequency == frequency,
-                                    onClick = { viewModel.selectFrequency(frequency) }
-                                )
-                            }
-                        }
-
-                        // Schedule Builder (when Custom frequency is selected)
-                        if (uiState.selectedFrequency == DcaFrequency.CUSTOM) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            ScheduleBuilder(
-                                cronExpression = uiState.cronExpression,
-                                cronDescription = uiState.cronDescription,
-                                cronError = uiState.cronError,
-                                onCronExpressionChange = viewModel::setCronExpression
-                            )
-                        }
-                    }
-
-                    // Strategy selection
-                    item {
-                        var showStrategyInfo by remember { mutableStateOf<DcaStrategy?>(null) }
-
-                        Text(
-                            text = stringResource(R.string.add_plan_dca_strategy),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        val strategies = remember {
-                            listOf(
-                                DcaStrategy.Classic,
-                                DcaStrategy.AthBased(),
-                                DcaStrategy.FearAndGreed()
-                            )
-                        }
-
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            strategies.forEach { strategy ->
-                                val isSelected = when {
-                                    uiState.selectedStrategy is DcaStrategy.Classic && strategy is DcaStrategy.Classic -> true
-                                    uiState.selectedStrategy is DcaStrategy.AthBased && strategy is DcaStrategy.AthBased -> true
-                                    uiState.selectedStrategy is DcaStrategy.FearAndGreed && strategy is DcaStrategy.FearAndGreed -> true
-                                    else -> false
-                                }
-                                StrategyOption(
-                                    strategy = strategy,
-                                    isSelected = isSelected,
-                                    onClick = { viewModel.selectStrategy(strategy) },
-                                    onInfoClick = { showStrategyInfo = strategy }
-                                )
-                            }
-                        }
-
-                        // Strategy Info Bottom Sheet
-                        showStrategyInfo?.let { strategy ->
-                            StrategyInfoBottomSheet(
-                                strategy = strategy,
-                                onDismiss = { showStrategyInfo = null }
-                            )
-                        }
-                    }
-
-                    // Monthly Cost Estimate
-                    if (uiState.monthlyCostEstimate != null && uiState.amount.toBigDecimalOrNull() != null) {
-                        item {
-                            MonthlyCostEstimateCard(
-                                estimate = uiState.monthlyCostEstimate!!,
-                                fiat = uiState.fiat,
-                                isClassic = uiState.selectedStrategy is DcaStrategy.Classic
-                            )
-                        }
-                    }
-
-                    // Target Amount (optional goal)
-                    item {
-                        Text(
-                            text = stringResource(R.string.plan_target_amount),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = uiState.targetAmount,
-                            onValueChange = viewModel::setTargetAmount,
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.plan_target_amount)) },
-                            placeholder = { Text(stringResource(R.string.plan_target_amount_hint)) },
-                            suffix = { Text(uiState.crypto) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            singleLine = true,
-                            supportingText = {
-                                Text(
-                                    text = stringResource(R.string.plan_target_amount_description),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        )
-                    }
-
-                    // Auto-withdrawal toggle
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(role = Role.Switch) { viewModel.setWithdrawalEnabled(!uiState.withdrawalEnabled) }
-                                .semantics(mergeDescendants = true) { role = Role.Switch },
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.add_plan_auto_withdrawal),
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = stringResource(R.string.add_plan_auto_withdrawal_desc),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = uiState.withdrawalEnabled,
-                                onCheckedChange = null,
-                                modifier = Modifier.clearAndSetSemantics {},
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = successColor(),
-                                    checkedTrackColor = successColor().copy(alpha = 0.5f)
-                                )
-                            )
-                        }
-
-                        if (uiState.withdrawalEnabled) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            OutlinedTextField(
-                                value = uiState.withdrawalAddress,
-                                onValueChange = viewModel::setWithdrawalAddress,
-                                modifier = Modifier.fillMaxWidth(),
-                                label = { Text(stringResource(R.string.add_plan_wallet_address, uiState.crypto)) },
-                                singleLine = true,
-                                isError = uiState.addressError != null,
-                                supportingText = if (uiState.addressError != null) {
-                                    { Text(uiState.addressError!!, color = MaterialTheme.colorScheme.error) }
-                                } else if (uiState.withdrawalAddress.isBlank()) {
-                                    { Text(stringResource(R.string.edit_plan_enter_wallet, uiState.crypto)) }
-                                } else null,
-                                trailingIcon = {
-                                    QrScannerButton(
-                                        onScanResult = viewModel::setWithdrawalAddress
-                                    )
-                                }
-                            )
-                        }
-                    }
-
-                    // Error message
-                    if (uiState.error != null && uiState.isSaving) {
-                        item {
-                            Text(
-                                text = uiState.error!!,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
                     }
 
                     // Save button
@@ -365,46 +162,3 @@ fun EditPlanScreen(
         }
     }
 }
-
-@Composable
-internal fun FrequencyOption(
-    frequency: DcaFrequency,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val successCol = successColor()
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                successCol.copy(alpha = 0.15f)
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(frequency.displayNameRes),
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isSelected) successCol else MaterialTheme.colorScheme.onSurface
-            )
-            RadioButton(
-                selected = isSelected,
-                onClick = onClick,
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = successCol
-                )
-            )
-        }
-    }
-}
-

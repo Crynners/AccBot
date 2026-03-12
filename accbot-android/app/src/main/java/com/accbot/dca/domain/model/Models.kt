@@ -38,9 +38,9 @@ enum class Exchange(
     BINANCE(
         displayName = "Binance",
         logoRes = R.drawable.ic_exchange_binance,
-        supportedFiats = listOf("EUR", "USDT"),
-        supportedCryptos = listOf("BTC", "ETH", "SOL", "ADA", "DOT"),
-        minOrderSize = mapOf("EUR" to BigDecimal("10"), "USDT" to BigDecimal("10")),
+        supportedFiats = listOf("EUR", "USDC"),
+        supportedCryptos = listOf("BTC", "ETH", "BNB", "SOL", "ADA", "DOT"),
+        minOrderSize = mapOf("EUR" to BigDecimal("5"), "USDC" to BigDecimal("5")),
         sandboxSupport = SandboxSupport.FULL
     ),
     KRAKEN(

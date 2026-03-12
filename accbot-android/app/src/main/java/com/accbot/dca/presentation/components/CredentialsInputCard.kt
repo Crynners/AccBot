@@ -28,6 +28,7 @@ import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.ui.platform.LocalClipboardManager
+import org.json.JSONObject
 
 /**
  * Reusable credentials input card component.
@@ -71,12 +72,14 @@ fun CredentialsInputCard(
 ) {
     var showSecret by remember { mutableStateOf(false) }
     var showMultiScanner by remember { mutableStateOf(false) }
+    var showBinanceQrScanner by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val clipboardManager = LocalClipboardManager.current
 
     // Determine field requirements based on exchange
     val needsClientId = exchange == Exchange.COINMATE
     val needsPassphrase = exchange == Exchange.KUCOIN || exchange == Exchange.COINBASE
+    val isBinance = exchange == Exchange.BINANCE
     // The last field gets ImeAction.Done, others get ImeAction.Next
     val lastFieldImeAction = ImeAction.Done
     val lastFieldKeyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
@@ -113,6 +116,24 @@ fun CredentialsInputCard(
         )
     }
 
+    if (showBinanceQrScanner) {
+        QrScannerDialog(
+            onDismiss = { showBinanceQrScanner = false },
+            onScanResult = { result ->
+                try {
+                    val json = JSONObject(result)
+                    json.optString("apiKey").takeIf { it.isNotBlank() }?.let { onApiKeyChange(it) }
+                    json.optString("secretKey").takeIf { it.isNotBlank() }?.let { onApiSecretChange(it) }
+                } catch (_: Exception) {
+                    // Not JSON — treat as plain API key
+                    onApiKeyChange(result)
+                }
+                showBinanceQrScanner = false
+            },
+            showTextMode = false
+        )
+    }
+
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -125,15 +146,16 @@ fun CredentialsInputCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Scan All / Paste All buttons
+            // Scan / Paste buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (!needsClientId) {
+                if (isBinance) {
+                    // Binance: Scan QR only (parses JSON with apiKey + secretKey)
                     OutlinedButton(
-                        onClick = { showMultiScanner = true },
-                        modifier = Modifier.weight(1f),
+                        onClick = { showBinanceQrScanner = true },
+                        modifier = Modifier.fillMaxWidth(),
                         enabled = !isValidating,
                         border = BorderStroke(1.dp, accentColor()),
                     ) {
@@ -145,50 +167,71 @@ fun CredentialsInputCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = stringResource(R.string.credentials_scan_all),
+                            text = stringResource(R.string.credentials_scan_qr),
                             color = accentColor()
                         )
                     }
-                }
-                OutlinedButton(
-                    onClick = {
-                        val text = clipboardManager.getText()?.text ?: return@OutlinedButton
-                        val lines = text.lines().filter { it.isNotBlank() }
-                        when {
-                            needsClientId && lines.size >= 3 -> {
-                                // Coinmate: Private Key, Public Key, Client ID
-                                onApiSecretChange(lines[0].trim())
-                                onApiKeyChange(lines[1].trim())
-                                onClientIdChange(lines[2].trim())
-                            }
-                            needsPassphrase && lines.size >= 3 -> {
-                                // KuCoin/Coinbase: API Key, API Secret, Passphrase
-                                onApiKeyChange(lines[0].trim())
-                                onApiSecretChange(lines[1].trim())
-                                onPassphraseChange(lines[2].trim())
-                            }
-                            lines.size >= 2 -> {
-                                // Other exchanges: API Key, API Secret
-                                onApiKeyChange(lines[0].trim())
-                                onApiSecretChange(lines[1].trim())
-                            }
+                } else {
+                    if (!needsClientId) {
+                        OutlinedButton(
+                            onClick = { showMultiScanner = true },
+                            modifier = Modifier.weight(1f),
+                            enabled = !isValidating,
+                            border = BorderStroke(1.dp, accentColor()),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = null,
+                                tint = accentColor(),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.credentials_scan_all),
+                                color = accentColor()
+                            )
                         }
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = !isValidating,
-                    border = BorderStroke(1.dp, accentColor()),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentPaste,
-                        contentDescription = null,
-                        tint = accentColor(),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.credentials_paste_all),
-                        color = accentColor()
-                    )
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            val text = clipboardManager.getText()?.text ?: return@OutlinedButton
+                            val lines = text.lines().filter { it.isNotBlank() }
+                            when {
+                                needsClientId && lines.size >= 3 -> {
+                                    // Coinmate: Private Key, Public Key, Client ID
+                                    onApiSecretChange(lines[0].trim())
+                                    onApiKeyChange(lines[1].trim())
+                                    onClientIdChange(lines[2].trim())
+                                }
+                                needsPassphrase && lines.size >= 3 -> {
+                                    // KuCoin/Coinbase: API Key, API Secret, Passphrase
+                                    onApiKeyChange(lines[0].trim())
+                                    onApiSecretChange(lines[1].trim())
+                                    onPassphraseChange(lines[2].trim())
+                                }
+                                lines.size >= 2 -> {
+                                    // Other exchanges: API Key, API Secret
+                                    onApiKeyChange(lines[0].trim())
+                                    onApiSecretChange(lines[1].trim())
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = !isValidating,
+                        border = BorderStroke(1.dp, accentColor()),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentPaste,
+                            contentDescription = null,
+                            tint = accentColor(),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.credentials_paste_all),
+                            color = accentColor()
+                        )
+                    }
                 }
             }
 
@@ -308,6 +351,91 @@ fun CredentialsInputCard(
                                     imageVector = Icons.Default.ContentPaste,
                                     contentDescription = stringResource(R.string.credentials_paste),
                                     tint = accentColor()
+                                )
+                            }
+                        }
+                    }
+                )
+            } else if (isBinance) {
+                // Binance: API Key → API Secret with paste/clear buttons
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = onApiKeyChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.credentials_api_key)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = nextFieldKeyboardActions,
+                    isError = errorMessage != null,
+                    enabled = !isValidating,
+                    trailingIcon = {
+                        if (apiKey.isNotEmpty()) {
+                            IconButton(onClick = { onApiKeyChange("") }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = null
+                                )
+                            }
+                        } else {
+                            IconButton(onClick = {
+                                clipboardManager.getText()?.text?.trim()?.let { onApiKeyChange(it) }
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentPaste,
+                                    contentDescription = stringResource(R.string.credentials_paste),
+                                    tint = accentColor()
+                                )
+                            }
+                        }
+                    }
+                )
+
+                OutlinedTextField(
+                    value = apiSecret,
+                    onValueChange = onApiSecretChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.credentials_api_secret)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = lastFieldImeAction),
+                    keyboardActions = lastFieldKeyboardActions,
+                    visualTransformation = if (showSecret) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                    isError = errorMessage != null,
+                    enabled = !isValidating,
+                    trailingIcon = {
+                        Row {
+                            if (apiSecret.isNotEmpty()) {
+                                IconButton(onClick = { onApiSecretChange("") }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = null
+                                    )
+                                }
+                            } else {
+                                IconButton(onClick = {
+                                    clipboardManager.getText()?.text?.trim()?.let { onApiSecretChange(it) }
+                                }) {
+                                    Icon(
+                                        imageVector = Icons.Default.ContentPaste,
+                                        contentDescription = stringResource(R.string.credentials_paste),
+                                        tint = accentColor()
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { showSecret = !showSecret }) {
+                                Icon(
+                                    imageVector = if (showSecret) {
+                                        Icons.Default.VisibilityOff
+                                    } else {
+                                        Icons.Default.Visibility
+                                    },
+                                    contentDescription = stringResource(
+                                        if (showSecret) R.string.credentials_hide_password
+                                        else R.string.credentials_show_password
+                                    )
                                 )
                             }
                         }

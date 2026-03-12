@@ -38,6 +38,7 @@ import com.accbot.dca.domain.model.isStable
 import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.presentation.components.AccBotTopAppBar
+import com.accbot.dca.presentation.components.ApiImportResultDialog
 import com.accbot.dca.presentation.components.CredentialsInputCard
 import com.accbot.dca.presentation.components.ExchangeSelectionTile
 import com.accbot.dca.presentation.components.ExperimentalExchangeDisclaimer
@@ -60,7 +61,7 @@ fun AddExchangeScreen(
 
     // Import offer dialog after successful exchange connection
     if (uiState.showImportOffer) {
-        val exchangeName = uiState.selectedExchange?.displayName ?: ""
+        val exchangeName = uiState.credentialForm.selectedExchange?.displayName ?: ""
         AlertDialog(
             onDismissRequest = { viewModel.dismissImportOffer() },
             title = { Text(stringResource(R.string.import_api_offer_title)) },
@@ -68,7 +69,7 @@ fun AddExchangeScreen(
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.dismissImportOffer()
-                    uiState.selectedExchange?.let { exchange ->
+                    uiState.credentialForm.selectedExchange?.let { exchange ->
                         onNavigateToExchangeDetail?.invoke(exchange.name)
                     }
                 }) {
@@ -117,8 +118,8 @@ fun AddExchangeScreen(
                 modifier = Modifier.padding(paddingValues)
             )
             ExchangeSetupStep.INSTRUCTIONS -> InstructionsStep(
-                exchange = uiState.selectedExchange!!,
-                instructions = viewModel.getInstructionsForExchange(uiState.selectedExchange!!),
+                exchange = uiState.credentialForm.selectedExchange!!,
+                instructions = viewModel.getInstructionsForExchange(uiState.credentialForm.selectedExchange!!),
                 isSandboxMode = uiState.isSandboxMode,
                 onContinue = { viewModel.proceedToCredentials() },
                 onOpenUrl = { url ->
@@ -128,22 +129,22 @@ fun AddExchangeScreen(
                 modifier = Modifier.padding(paddingValues)
             )
             ExchangeSetupStep.CREDENTIALS -> CredentialsStep(
-                exchange = uiState.selectedExchange!!,
-                clientId = uiState.clientId,
-                apiKey = uiState.apiKey,
-                apiSecret = uiState.apiSecret,
-                passphrase = uiState.passphrase,
-                isValidating = uiState.isValidating,
-                error = uiState.error,
-                onClientIdChange = viewModel::setClientId,
-                onApiKeyChange = viewModel::setApiKey,
-                onApiSecretChange = viewModel::setApiSecret,
-                onPassphraseChange = viewModel::setPassphrase,
+                exchange = uiState.credentialForm.selectedExchange!!,
+                clientId = uiState.credentialForm.clientId,
+                apiKey = uiState.credentialForm.apiKey,
+                apiSecret = uiState.credentialForm.apiSecret,
+                passphrase = uiState.credentialForm.passphrase,
+                isValidating = uiState.credentialForm.isValidatingCredentials,
+                error = uiState.credentialForm.credentialsError,
+                onClientIdChange = viewModel.credentialForm::setClientId,
+                onApiKeyChange = viewModel.credentialForm::setApiKey,
+                onApiSecretChange = viewModel.credentialForm::setApiSecret,
+                onPassphraseChange = viewModel.credentialForm::setPassphrase,
                 onValidate = { viewModel.validateAndSave(onExchangeAdded) },
                 modifier = Modifier.padding(paddingValues)
             )
             ExchangeSetupStep.SUCCESS -> SuccessStep(
-                exchange = uiState.selectedExchange!!,
+                exchange = uiState.credentialForm.selectedExchange!!,
                 onFinish = onExchangeAdded,
                 plansForExchange = uiState.plansForExchange,
                 isApiImporting = uiState.isApiImporting,
@@ -519,36 +520,7 @@ private fun SuccessStep(
 
     // Import result dialog
     apiImportResult?.let { result ->
-        AlertDialog(
-            onDismissRequest = onDismissImportResult,
-            title = {
-                Text(
-                    when (result) {
-                        is ApiImportResultState.Success -> stringResource(R.string.import_api_success_title)
-                        is ApiImportResultState.Error -> stringResource(R.string.import_api_error_title)
-                    }
-                )
-            },
-            text = {
-                Text(
-                    when (result) {
-                        is ApiImportResultState.Success -> {
-                            if (result.imported == 0) {
-                                stringResource(R.string.import_api_no_new)
-                            } else {
-                                stringResource(R.string.import_api_success_message, result.imported, result.skipped)
-                            }
-                        }
-                        is ApiImportResultState.Error -> result.message
-                    }
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = onDismissImportResult) {
-                    Text(stringResource(R.string.common_done))
-                }
-            }
-        )
+        ApiImportResultDialog(result = result, onDismiss = onDismissImportResult)
     }
 
     Column(
