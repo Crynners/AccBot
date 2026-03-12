@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.supportsApiImport
-import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.presentation.components.AccBotTopAppBar
+import com.accbot.dca.presentation.components.ApiImportResultDialog
 import com.accbot.dca.presentation.components.CredentialsInputCard
 import com.accbot.dca.presentation.components.ExchangeAvatar
 import com.accbot.dca.presentation.components.ImportConfigDialog
@@ -70,36 +70,7 @@ fun ExchangeDetailScreen(
 
     // Import result dialog
     uiState.apiImportResult?.let { result ->
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissImportResult() },
-            title = {
-                Text(
-                    when (result) {
-                        is ApiImportResultState.Success -> stringResource(R.string.import_api_success_title)
-                        is ApiImportResultState.Error -> stringResource(R.string.import_api_error_title)
-                    }
-                )
-            },
-            text = {
-                Text(
-                    when (result) {
-                        is ApiImportResultState.Success -> {
-                            if (result.imported == 0) {
-                                stringResource(R.string.import_api_no_new)
-                            } else {
-                                stringResource(R.string.import_api_success_message, result.imported, result.skipped)
-                            }
-                        }
-                        is ApiImportResultState.Error -> result.message
-                    }
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.dismissImportResult() }) {
-                    Text(stringResource(R.string.common_done))
-                }
-            }
-        )
+        ApiImportResultDialog(result = result, onDismiss = { viewModel.dismissImportResult() })
     }
 
     // Remove confirmation dialog
@@ -272,16 +243,16 @@ fun ExchangeDetailScreen(
                         Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
                             CredentialsInputCard(
                                 exchange = exchange,
-                                clientId = uiState.clientId,
-                                apiKey = uiState.apiKey,
-                                apiSecret = uiState.apiSecret,
-                                passphrase = uiState.passphrase,
-                                onClientIdChange = viewModel::setClientId,
-                                onApiKeyChange = viewModel::setApiKey,
-                                onApiSecretChange = viewModel::setApiSecret,
-                                onPassphraseChange = viewModel::setPassphrase,
-                                errorMessage = uiState.error,
-                                isValidating = uiState.isValidating
+                                clientId = uiState.credentialForm.clientId,
+                                apiKey = uiState.credentialForm.apiKey,
+                                apiSecret = uiState.credentialForm.apiSecret,
+                                passphrase = uiState.credentialForm.passphrase,
+                                onClientIdChange = viewModel.credentialForm::setClientId,
+                                onApiKeyChange = viewModel.credentialForm::setApiKey,
+                                onApiSecretChange = viewModel.credentialForm::setApiSecret,
+                                onPassphraseChange = viewModel.credentialForm::setPassphrase,
+                                errorMessage = uiState.credentialForm.credentialsError,
+                                isValidating = uiState.credentialForm.isValidatingCredentials
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
@@ -296,9 +267,9 @@ fun ExchangeDetailScreen(
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
-                                enabled = !uiState.isValidating
+                                enabled = !uiState.credentialForm.isValidatingCredentials
                             ) {
-                                if (uiState.isValidating) {
+                                if (uiState.credentialForm.isValidatingCredentials) {
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(20.dp),
                                         strokeWidth = 2.dp,

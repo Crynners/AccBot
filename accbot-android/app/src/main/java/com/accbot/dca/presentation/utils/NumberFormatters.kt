@@ -89,4 +89,14 @@ object NumberFormatters {
 
     /** Returns true if value is >= 0 */
     fun isPositiveRoi(value: BigDecimal): Boolean = value >= BigDecimal.ZERO
+
+    /** Compute ROI absolute and percentage from invested and current value. Returns null if totalInvested is zero. */
+    fun roiValues(totalInvested: BigDecimal, currentValue: BigDecimal): Pair<BigDecimal, BigDecimal>? {
+        if (totalInvested <= BigDecimal.ZERO) return null
+        val roiAbsolute = currentValue.subtract(totalInvested)
+        val roiPercent = roiAbsolute.divide(totalInvested, 4, RoundingMode.HALF_UP)
+            .multiply(BigDecimal(100))
+            .setScale(2, RoundingMode.HALF_UP)
+        return roiAbsolute to roiPercent
+    }
 }

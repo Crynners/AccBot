@@ -144,10 +144,13 @@ class PlanFormDelegate(
     /** Initialize form defaults from an exchange (used when exchange is selected). */
     fun initFromExchange(exchange: Exchange) {
         currentExchange = exchange
+        val fiat = exchange.supportedFiats.firstOrNull() ?: "EUR"
+        val minAmount = exchange.minOrderSize[fiat]
         _state.update {
             it.copy(
                 selectedCrypto = exchange.supportedCryptos.firstOrNull() ?: "BTC",
-                selectedFiat = exchange.supportedFiats.firstOrNull() ?: "EUR",
+                selectedFiat = fiat,
+                amount = minAmount?.stripTrailingZeros()?.toPlainString() ?: it.amount,
                 minOrderSize = null
             )
         }

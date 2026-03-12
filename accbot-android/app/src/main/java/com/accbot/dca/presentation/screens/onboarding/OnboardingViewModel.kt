@@ -6,16 +6,12 @@ import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.DcaFrequency
-import com.accbot.dca.domain.model.Exchange
-import com.accbot.dca.domain.model.ExchangeFilter
-import com.accbot.dca.domain.model.ExchangeInstructions
-import com.accbot.dca.domain.model.ExchangeInstructionsProvider
-import com.accbot.dca.domain.model.isStable
 import com.accbot.dca.domain.usecase.CalculateMonthlyCostUseCase
 import com.accbot.dca.domain.usecase.CreateDcaPlanUseCase
-import com.accbot.dca.domain.usecase.CredentialValidationResult
 import com.accbot.dca.domain.usecase.ValidateAndSaveCredentialsUseCase
 import com.accbot.dca.exchange.MinOrderSizeRepository
+import com.accbot.dca.presentation.credentials.CredentialFormDelegate
+import com.accbot.dca.presentation.credentials.CredentialFormState
 import com.accbot.dca.presentation.plan.PlanFormDelegate
 import com.accbot.dca.presentation.plan.PlanFormState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,21 +23,8 @@ import javax.inject.Inject
 
 @Immutable
 data class OnboardingUiState(
-    // Sandbox state (immutable after init)
-    val isSandboxMode: Boolean = false,
-    val availableExchanges: List<Exchange> = emptyList(),
-    val showExperimental: Boolean = false,
-
-    // Exchange setup
-    val selectedExchange: Exchange? = null,
-    val selectedExchangeInstructions: ExchangeInstructions? = null,
-    val clientId: String = "",
-    val apiKey: String = "",
-    val apiSecret: String = "",
-    val passphrase: String = "",
-    val isValidatingCredentials: Boolean = false,
-    val credentialsValid: Boolean = false,
-    val credentialsError: String? = null,
+    // Credential form (from delegate)
+    val credentialForm: CredentialFormState = CredentialFormState(),
 
     // Plan form (from delegate)
     val planForm: PlanFormState = PlanFormState(),
@@ -64,122 +47,37 @@ class OnboardingViewModel @Inject constructor(
 ) : ViewModel() {
 
     val planForm = PlanFormDelegate(calculateMonthlyCost, minOrderSizeRepository, viewModelScope)
+    val credentialForm = CredentialFormDelegate(credentialsStore, validateAndSaveCredentialsUseCase, userPreferences, viewModelScope)
 
     private val _localState = MutableStateFlow(OnboardingUiState())
 
     val uiState: StateFlow<OnboardingUiState> = combine(
         _localState,
-        planForm.state
-    ) { local, form -> local.copy(planForm = form) }
+        planForm.state,
+        credentialForm.state
+    ) { local, form, cred -> local.copy(planForm = form, credentialForm = cred) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), OnboardingUiState())
 
     init {
-        val isSandbox = userPreferences.isSandboxMode()
-        val showExperimental = userPreferences.areExperimentalExchangesEnabled()
+        credentialForm.initialize()
         // Detect already-configured exchange (e.g. credentials saved on ExchangeSetupScreen).
+        val isSandbox = userPreferences.isSandboxMode()
         val configured = credentialsStore.getConfiguredExchanges(isSandbox).firstOrNull()
         _localState.update {
             it.copy(
-                isSandboxMode = isSandbox,
-                showExperimental = showExperimental,
-                availableExchanges = ExchangeFilter.getAvailableExchanges(isSandbox)
-                    .filter { exchange -> showExperimental || exchange.isStable },
-                selectedExchange = configured,
-                credentialsValid = configured != null,
                 planCreated = onboardingPreferences.isPlanCreatedDuringOnboarding()
             )
         }
         if (configured != null) {
+            credentialForm.initWithExchange(configured)
             planForm.initFromExchange(configured)
         }
     }
 
-    fun setExperimentalExchangesEnabled(enabled: Boolean) {
-        userPreferences.setExperimentalExchangesEnabled(enabled)
-        val isSandbox = _localState.value.isSandboxMode
-        _localState.update {
-            it.copy(
-                showExperimental = enabled,
-                availableExchanges = ExchangeFilter.getAvailableExchanges(isSandbox)
-                    .filter { exchange -> enabled || exchange.isStable }
-            )
-        }
-    }
-
     // Exchange setup functions
-    fun selectExchange(exchange: Exchange) {
-        val isSandbox = _localState.value.isSandboxMode
-        val instructions = ExchangeInstructionsProvider.getInstructions(exchange, isSandbox)
-        _localState.update { state ->
-            state.copy(
-                selectedExchange = exchange,
-                selectedExchangeInstructions = instructions,
-                clientId = "",
-                apiKey = "",
-                apiSecret = "",
-                passphrase = "",
-                credentialsValid = false,
-                credentialsError = null
-            )
-        }
+    fun selectExchange(exchange: com.accbot.dca.domain.model.Exchange) {
+        credentialForm.selectExchange(exchange)
         planForm.initFromExchange(exchange)
-    }
-
-    fun setClientId(value: String) {
-        _localState.update { it.copy(clientId = value, credentialsError = null) }
-    }
-
-    fun setApiKey(value: String) {
-        _localState.update { it.copy(apiKey = value, credentialsError = null) }
-    }
-
-    fun setApiSecret(value: String) {
-        _localState.update { it.copy(apiSecret = value, credentialsError = null) }
-    }
-
-    fun setPassphrase(value: String) {
-        _localState.update { it.copy(passphrase = value, credentialsError = null) }
-    }
-
-    fun validateAndSaveCredentials(onSuccess: () -> Unit) {
-        val state = _localState.value
-
-        // Guard against concurrent validation calls (race condition prevention)
-        if (state.isValidatingCredentials) return
-
-        val exchange = state.selectedExchange ?: return
-
-        viewModelScope.launch {
-            _localState.update { it.copy(isValidatingCredentials = true, credentialsError = null) }
-
-            val result = validateAndSaveCredentialsUseCase.execute(
-                exchange = exchange,
-                apiKey = state.apiKey,
-                apiSecret = state.apiSecret,
-                passphrase = state.passphrase.takeIf { it.isNotBlank() },
-                clientId = state.clientId.takeIf { it.isNotBlank() }
-            )
-
-            when (result) {
-                is CredentialValidationResult.Success -> {
-                    _localState.update {
-                        it.copy(
-                            isValidatingCredentials = false,
-                            credentialsValid = true
-                        )
-                    }
-                    onSuccess()
-                }
-                is CredentialValidationResult.Error -> {
-                    _localState.update {
-                        it.copy(
-                            isValidatingCredentials = false,
-                            credentialsError = result.message
-                        )
-                    }
-                }
-            }
-        }
     }
 
     fun createFirstPlan(onSuccess: () -> Unit) {
@@ -189,7 +87,7 @@ class OnboardingViewModel @Inject constructor(
         // Guard against concurrent plan creation calls (race condition prevention)
         if (state.isLoading) return
 
-        val exchange = state.selectedExchange
+        val exchange = state.credentialForm.selectedExchange
 
         if (exchange == null) {
             _localState.update { it.copy(error = "No exchange configured") }

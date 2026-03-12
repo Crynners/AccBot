@@ -23,8 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.domain.model.Exchange
-import com.accbot.dca.domain.model.ExchangeInstructions
 import com.accbot.dca.domain.model.isStable
+import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.CredentialsInputCard
 import com.accbot.dca.presentation.components.ExchangeSelectionGrid
 import com.accbot.dca.presentation.components.ExchangeInstructionsCard
@@ -48,21 +48,14 @@ fun ExchangeSetupScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.exchange_setup_title), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
-                    }
-                },
+            AccBotTopAppBar(
+                title = stringResource(R.string.exchange_setup_title),
+                onNavigateBack = onBack,
                 actions = {
                     TextButton(onClick = onSkip) {
                         Text(stringResource(R.string.common_skip), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         }
     ) { paddingValues ->
@@ -86,7 +79,7 @@ fun ExchangeSetupScreen(
             ExperimentalToggleDisclaimer(
                 onConfirm = {
                     showExperimentalDisclaimer = false
-                    viewModel.setExperimentalExchangesEnabled(true)
+                    viewModel.credentialForm.setExperimentalExchangesEnabled(true)
                 },
                 onDismiss = { showExperimentalDisclaimer = false }
             )
@@ -131,14 +124,14 @@ fun ExchangeSetupScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Sandbox mode indicator
-            if (uiState.isSandboxMode) {
+            if (uiState.credentialForm.isSandboxMode) {
                 SandboxModeIndicator()
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
             // Exchange selection grid with request card
             ExchangeSelectionGrid(
-                exchanges = uiState.availableExchanges,
+                exchanges = uiState.credentialForm.availableExchanges,
                 onExchangeClick = { exchange ->
                     if (exchange.isStable) {
                         viewModel.selectExchange(exchange)
@@ -146,7 +139,7 @@ fun ExchangeSetupScreen(
                         experimentalExchangePending = exchange
                     }
                 },
-                selectedExchange = uiState.selectedExchange,
+                selectedExchange = uiState.credentialForm.selectedExchange,
                 onRequestExchangeClick = {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Crynners/AccBot/issues"))
                     context.startActivity(intent)
@@ -157,48 +150,49 @@ fun ExchangeSetupScreen(
 
             // Experimental exchanges toggle
             ExperimentalExchangesToggle(
-                isEnabled = uiState.showExperimental,
+                isEnabled = uiState.credentialForm.showExperimental,
                 onToggle = { enabled ->
                     if (enabled) {
                         showExperimentalDisclaimer = true
                     } else {
-                        viewModel.setExperimentalExchangesEnabled(false)
+                        viewModel.credentialForm.setExperimentalExchangesEnabled(false)
                     }
                 }
             )
 
             // Instructions + credentials (only show when exchange is selected)
-            if (uiState.selectedExchange != null) {
+            val cred = uiState.credentialForm
+            if (cred.selectedExchange != null) {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Exchange setup instructions card
-                if (uiState.selectedExchangeInstructions != null) {
-                    if (uiState.isSandboxMode) {
+                if (cred.selectedExchangeInstructions != null) {
+                    if (cred.isSandboxMode) {
                         SandboxCredentialsInfoCard(
-                            exchange = uiState.selectedExchange!!,
-                            instructions = uiState.selectedExchangeInstructions!!
+                            exchange = cred.selectedExchange!!,
+                            instructions = cred.selectedExchangeInstructions!!
                         )
                     } else {
                         ExchangeInstructionsCard(
-                            exchange = uiState.selectedExchange!!,
-                            instructions = uiState.selectedExchangeInstructions!!
+                            exchange = cred.selectedExchange!!,
+                            instructions = cred.selectedExchangeInstructions!!
                         )
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
                 CredentialsInputCard(
-                    exchange = uiState.selectedExchange!!,
-                    clientId = uiState.clientId,
-                    apiKey = uiState.apiKey,
-                    apiSecret = uiState.apiSecret,
-                    passphrase = uiState.passphrase,
-                    onClientIdChange = viewModel::setClientId,
-                    onApiKeyChange = viewModel::setApiKey,
-                    onApiSecretChange = viewModel::setApiSecret,
-                    onPassphraseChange = viewModel::setPassphrase,
-                    errorMessage = uiState.credentialsError,
-                    isValidating = uiState.isValidatingCredentials
+                    exchange = cred.selectedExchange!!,
+                    clientId = cred.clientId,
+                    apiKey = cred.apiKey,
+                    apiSecret = cred.apiSecret,
+                    passphrase = cred.passphrase,
+                    onClientIdChange = viewModel.credentialForm::setClientId,
+                    onApiKeyChange = viewModel.credentialForm::setApiKey,
+                    onApiSecretChange = viewModel.credentialForm::setApiSecret,
+                    onPassphraseChange = viewModel.credentialForm::setPassphrase,
+                    errorMessage = cred.credentialsError,
+                    isValidating = cred.isValidatingCredentials
                 )
             }
 
@@ -207,23 +201,23 @@ fun ExchangeSetupScreen(
             // Continue button
             Button(
                 onClick = {
-                    if (uiState.selectedExchange != null) {
-                        viewModel.validateAndSaveCredentials(onSuccess = onContinue)
+                    if (cred.selectedExchange != null) {
+                        viewModel.credentialForm.validateAndSaveCredentials(onSuccess = onContinue)
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                enabled = uiState.selectedExchange != null &&
-                        uiState.apiKey.isNotBlank() &&
-                        uiState.apiSecret.isNotBlank() &&
-                        (uiState.selectedExchange != Exchange.COINMATE || uiState.clientId.isNotBlank()) &&
-                        !uiState.isValidatingCredentials,
+                enabled = cred.selectedExchange != null &&
+                        cred.apiKey.isNotBlank() &&
+                        cred.apiSecret.isNotBlank() &&
+                        (cred.selectedExchange != Exchange.COINMATE || cred.clientId.isNotBlank()) &&
+                        !cred.isValidatingCredentials,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = accentColor()
                 )
             ) {
-                if (uiState.isValidatingCredentials) {
+                if (cred.isValidatingCredentials) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary

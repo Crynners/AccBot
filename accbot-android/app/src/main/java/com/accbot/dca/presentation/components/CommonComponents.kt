@@ -163,6 +163,7 @@ fun getFiatIconRes(fiat: String): Int? = when (fiat.uppercase()) {
     "CZK" -> R.drawable.ic_fiat_czk
     "GBP" -> R.drawable.ic_fiat_gbp
     "USDT" -> R.drawable.ic_fiat_usdt
+    "USDC" -> R.drawable.ic_fiat_usdc
     else -> null
 }
 
@@ -708,7 +709,7 @@ fun AmountInputWithPresets(
     amountBelowMinimum: Boolean
 ) {
     val quickAmounts = remember(minOrderSize) {
-        val allAmounts = listOf("25", "50", "100", "250", "500")
+        val allAmounts = listOf("5", "10", "25", "50", "100")
         if (minOrderSize != null) allAmounts.filter { it.toBigDecimal() >= minOrderSize }
         else allAmounts
     }
@@ -739,7 +740,7 @@ fun AmountInputWithPresets(
             supportingText = minOrderSize?.let { min ->
                 {
                     Text(
-                        text = stringResource(R.string.min_order_size, min.toPlainString(), fiat),
+                        text = stringResource(R.string.min_order_size, min.stripTrailingZeros().toPlainString(), fiat),
                         color = if (amountBelowMinimum) MaterialTheme.colorScheme.error
                                 else MaterialTheme.colorScheme.onSurfaceVariant
                     )

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +23,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.EncryptionMode
+import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.QrScannerDialog
 import com.accbot.dca.presentation.components.SeedPhraseGrid
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -63,16 +63,9 @@ fun BackupImportScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.backup_import_title), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+            AccBotTopAppBar(
+                title = stringResource(R.string.backup_import_title),
+                onNavigateBack = onNavigateBack
             )
         }
     ) { paddingValues ->

@@ -69,7 +69,8 @@ class MarketDataService @Inject constructor(
             "EUR" to "eur",
             "GBP" to "gbp",
             "CZK" to "czk",
-            "USDT" to "usd"  // Treat USDT as USD
+            "USDT" to "usd",  // Treat USDT as USD
+            "USDC" to "usd"   // Treat USDC as USD
         )
     }
 
@@ -247,7 +248,7 @@ class MarketDataService @Inject constructor(
         limit: Int
     ): List<Pair<LocalDate, BigDecimal>>? = withContext(Dispatchers.IO) {
         val fsym = crypto.uppercase()
-        val tsym = if (fiat.uppercase() == "USDT") "USD" else fiat.uppercase()
+        val tsym = if (fiat.uppercase() in listOf("USDT", "USDC")) "USD" else fiat.uppercase()
 
         try {
             val toUnix = toDate.plusDays(1).atStartOfDay(ZoneOffset.UTC).toEpochSecond()

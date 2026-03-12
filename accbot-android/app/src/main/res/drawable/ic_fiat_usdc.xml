@@ -1,0 +1,40 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- USDC - Blue circle with $ symbol -->
+    <path
+        android:pathData="M64,8A56,56 0,1 1,64,120A56,56 0,1 1,64,8z"
+        android:fillColor="#2775CA"/>
+    <!-- $ vertical bar top -->
+    <path
+        android:pathData="M64,34L64,42"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- $ curve top -->
+    <path
+        android:pathData="M76,48C76,42 70,38 64,38C58,38 52,42 52,48C52,54 58,56 64,58"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+    <!-- $ curve bottom -->
+    <path
+        android:pathData="M64,58C70,60 76,62 76,68C76,74 70,78 64,78C58,78 52,74 52,68"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+    <!-- $ vertical bar bottom -->
+    <path
+        android:pathData="M64,78L64,86"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+</vector>

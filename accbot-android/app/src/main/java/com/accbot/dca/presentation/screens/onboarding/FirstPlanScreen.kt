@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.R
+import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.plan.PlanFormContent
 import com.accbot.dca.presentation.ui.theme.accentColor
 import java.math.BigDecimal
@@ -37,21 +38,14 @@ fun FirstPlanScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.first_plan_title), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
-                    }
-                },
+            AccBotTopAppBar(
+                title = stringResource(R.string.first_plan_title),
+                onNavigateBack = onBack,
                 actions = {
                     TextButton(onClick = onSkip) {
                         Text(stringResource(R.string.common_skip), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         }
     ) { paddingValues ->
@@ -93,12 +87,12 @@ fun FirstPlanScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            if (uiState.selectedExchange != null) {
+            if (uiState.credentialForm.selectedExchange != null) {
                 // Plan form (crypto, fiat, amount, frequency, strategy, withdrawal, target)
                 PlanFormContent(
                     state = uiState.planForm,
-                    availableCryptos = uiState.selectedExchange!!.supportedCryptos,
-                    availableFiats = uiState.selectedExchange!!.supportedFiats,
+                    availableCryptos = uiState.credentialForm.selectedExchange!!.supportedCryptos,
+                    availableFiats = uiState.credentialForm.selectedExchange!!.supportedFiats,
                     onCryptoSelected = viewModel.planForm::selectCrypto,
                     onFiatSelected = viewModel.planForm::selectFiat,
                     onAmountChanged = viewModel.planForm::setAmount,
@@ -183,7 +177,7 @@ fun FirstPlanScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                enabled = uiState.selectedExchange != null &&
+                enabled = uiState.credentialForm.selectedExchange != null &&
                         uiState.planForm.isFormValid &&
                         !uiState.isLoading,
                 colors = ButtonDefaults.buttonColors(

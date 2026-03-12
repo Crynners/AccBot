@@ -20,6 +20,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.isStable
+import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.CredentialsInputCard
 import com.accbot.dca.presentation.components.ExchangeInstructionsCard
 import com.accbot.dca.presentation.components.ExchangeSelectionGrid
@@ -49,7 +50,7 @@ fun AddPlanScreen(
 
     // Import offer dialog after creating plan with new credentials
     if (uiState.showImportDialog) {
-        val exchangeName = uiState.selectedExchange?.displayName ?: ""
+        val exchangeName = uiState.credentialForm.selectedExchange?.displayName ?: ""
         AlertDialog(
             onDismissRequest = { viewModel.dismissImportDialog() },
             title = { Text(stringResource(R.string.import_api_offer_title)) },
@@ -57,7 +58,7 @@ fun AddPlanScreen(
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.dismissImportDialog()
-                    uiState.selectedExchange?.let { exchange ->
+                    uiState.credentialForm.selectedExchange?.let { exchange ->
                         onNavigateToExchangeDetail?.invoke(exchange.name)
                     }
                 }) {
@@ -74,16 +75,9 @@ fun AddPlanScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.add_plan_title), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+            AccBotTopAppBar(
+                title = stringResource(R.string.add_plan_title),
+                onNavigateBack = onNavigateBack
             )
         }
     ) { paddingValues ->
@@ -107,7 +101,7 @@ fun AddPlanScreen(
             SectionTitle(stringResource(R.string.add_plan_select_exchange))
 
             // Sandbox mode indicator
-            if (uiState.isSandboxMode) {
+            if (uiState.credentialForm.isSandboxMode) {
                 SandboxModeIndicator()
             }
 
@@ -129,7 +123,7 @@ fun AddPlanScreen(
                 ExperimentalToggleDisclaimer(
                     onConfirm = {
                         showExperimentalDisclaimer = false
-                        viewModel.setExperimentalExchangesEnabled(true)
+                        viewModel.credentialForm.setExperimentalExchangesEnabled(true)
                     },
                     onDismiss = { showExperimentalDisclaimer = false }
                 )
@@ -141,7 +135,7 @@ fun AddPlanScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 ExchangeSelectionGrid(
-                    exchanges = uiState.availableExchanges,
+                    exchanges = uiState.credentialForm.availableExchanges,
                     onExchangeClick = { exchange ->
                         if (exchange.isStable) {
                             viewModel.selectExchange(exchange)
@@ -149,7 +143,7 @@ fun AddPlanScreen(
                             experimentalExchangePending = exchange
                         }
                     },
-                    selectedExchange = uiState.selectedExchange,
+                    selectedExchange = uiState.credentialForm.selectedExchange,
                     onRequestExchangeClick = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Crynners/AccBot/issues"))
                         addPlanContext.startActivity(intent)
@@ -158,30 +152,31 @@ fun AddPlanScreen(
 
                 // Experimental exchanges toggle
                 ExperimentalExchangesToggle(
-                    isEnabled = uiState.showExperimental,
+                    isEnabled = uiState.credentialForm.showExperimental,
                     onToggle = { enabled ->
                         if (enabled) {
                             showExperimentalDisclaimer = true
                         } else {
-                            viewModel.setExperimentalExchangesEnabled(false)
+                            viewModel.credentialForm.setExperimentalExchangesEnabled(false)
                         }
                     }
                 )
             }
 
             // API Credentials
-            if (uiState.selectedExchange != null && !uiState.hasCredentials) {
+            val cred = uiState.credentialForm
+            if (cred.selectedExchange != null && !cred.hasCredentials) {
                 // Exchange setup instructions card
-                if (uiState.selectedExchangeInstructions != null) {
-                    if (uiState.isSandboxMode) {
+                if (cred.selectedExchangeInstructions != null) {
+                    if (cred.isSandboxMode) {
                         SandboxCredentialsInfoCard(
-                            exchange = uiState.selectedExchange!!,
-                            instructions = uiState.selectedExchangeInstructions!!
+                            exchange = cred.selectedExchange!!,
+                            instructions = cred.selectedExchangeInstructions!!
                         )
                     } else {
                         ExchangeInstructionsCard(
-                            exchange = uiState.selectedExchange!!,
-                            instructions = uiState.selectedExchangeInstructions!!
+                            exchange = cred.selectedExchange!!,
+                            instructions = cred.selectedExchangeInstructions!!
                         )
                     }
                 }
@@ -189,26 +184,26 @@ fun AddPlanScreen(
                 SectionTitle(stringResource(R.string.add_plan_api_credentials))
                 // Use reusable CredentialsInputCard component
                 CredentialsInputCard(
-                    exchange = uiState.selectedExchange!!,
-                    clientId = uiState.clientId,
-                    apiKey = uiState.apiKey,
-                    apiSecret = uiState.apiSecret,
-                    passphrase = uiState.passphrase,
-                    onClientIdChange = viewModel::setClientId,
-                    onApiKeyChange = viewModel::setApiKey,
-                    onApiSecretChange = viewModel::setApiSecret,
-                    onPassphraseChange = viewModel::setPassphrase,
+                    exchange = cred.selectedExchange!!,
+                    clientId = cred.clientId,
+                    apiKey = cred.apiKey,
+                    apiSecret = cred.apiSecret,
+                    passphrase = cred.passphrase,
+                    onClientIdChange = viewModel.credentialForm::setClientId,
+                    onApiKeyChange = viewModel.credentialForm::setApiKey,
+                    onApiSecretChange = viewModel.credentialForm::setApiSecret,
+                    onPassphraseChange = viewModel.credentialForm::setPassphrase,
                     errorMessage = uiState.errorMessage,
                     isValidating = uiState.isLoading
                 )
             }
 
             // Plan form (crypto, fiat, amount, frequency, strategy, withdrawal, target)
-            if (uiState.selectedExchange != null) {
+            if (cred.selectedExchange != null) {
                 PlanFormContent(
                     state = uiState.planForm,
-                    availableCryptos = uiState.selectedExchange!!.supportedCryptos,
-                    availableFiats = uiState.selectedExchange!!.supportedFiats,
+                    availableCryptos = cred.selectedExchange!!.supportedCryptos,
+                    availableFiats = cred.selectedExchange!!.supportedFiats,
                     onCryptoSelected = viewModel.planForm::selectCrypto,
                     onFiatSelected = viewModel.planForm::selectFiat,
                     onAmountChanged = viewModel.planForm::setAmount,

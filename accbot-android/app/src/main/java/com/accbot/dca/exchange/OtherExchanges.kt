@@ -434,11 +434,27 @@ class KuCoinApi(
 
     private val baseUrl = ExchangeConfig.getBaseUrl(Exchange.KUCOIN, isSandbox)
 
+    private fun signedRequest(method: String, endpoint: String, body: String? = null): Request.Builder {
+        val timestamp = System.currentTimeMillis().toString()
+        val preSign = "$timestamp$method$endpoint${body ?: ""}"
+        val signature = CryptoUtils.hmacSha256Base64Secret(preSign, credentials.apiSecret)
+        val passphrase = credentials.passphrase?.let {
+            CryptoUtils.hmacSha256Base64Secret(it, credentials.apiSecret)
+        } ?: ""
+
+        return Request.Builder()
+            .url("$baseUrl$endpoint")
+            .header("KC-API-KEY", credentials.apiKey)
+            .header("KC-API-SIGN", signature)
+            .header("KC-API-TIMESTAMP", timestamp)
+            .header("KC-API-PASSPHRASE", passphrase)
+            .header("KC-API-KEY-VERSION", "2")
+    }
+
     override suspend fun marketBuy(crypto: String, fiat: String, fiatAmount: BigDecimal): DcaResult =
         withContext(Dispatchers.IO) {
             try {
                 val symbol = "$crypto-$fiat"
-                val timestamp = System.currentTimeMillis().toString()
                 val clientOid = java.util.UUID.randomUUID().toString()
 
                 val body = JSONObject().apply {
@@ -449,19 +465,7 @@ class KuCoinApi(
                     put("funds", fiatAmount.setScale(2, RoundingMode.DOWN).toPlainString())
                 }.toString()
 
-                val preSign = "${timestamp}POST/api/v1/orders$body"
-                val signature = CryptoUtils.hmacSha256Base64Secret(preSign, credentials.apiSecret)
-                val passphrase = credentials.passphrase?.let {
-                    CryptoUtils.hmacSha256Base64Secret(it, credentials.apiSecret)
-                } ?: ""
-
-                val request = Request.Builder()
-                    .url("$baseUrl/api/v1/orders")
-                    .header("KC-API-KEY", credentials.apiKey)
-                    .header("KC-API-SIGN", signature)
-                    .header("KC-API-TIMESTAMP", timestamp)
-                    .header("KC-API-PASSPHRASE", passphrase)
-                    .header("KC-API-KEY-VERSION", "2")
+                val request = signedRequest("POST", "/api/v1/orders", body)
                     .header("Content-Type", "application/json")
                     .post(body.toRequestBody())
                     .build()
@@ -508,20 +512,7 @@ class KuCoinApi(
 
     override suspend fun validateCredentials(): Boolean = withContext(Dispatchers.IO) {
         try {
-            val timestamp = System.currentTimeMillis().toString()
-            val preSign = "${timestamp}GET/api/v1/accounts"
-            val signature = CryptoUtils.hmacSha256Base64Secret(preSign, credentials.apiSecret)
-            val passphrase = credentials.passphrase?.let {
-                CryptoUtils.hmacSha256Base64Secret(it, credentials.apiSecret)
-            } ?: ""
-
-            val request = Request.Builder()
-                .url("$baseUrl/api/v1/accounts")
-                .header("KC-API-KEY", credentials.apiKey)
-                .header("KC-API-SIGN", signature)
-                .header("KC-API-TIMESTAMP", timestamp)
-                .header("KC-API-PASSPHRASE", passphrase)
-                .header("KC-API-KEY-VERSION", "2")
+            val request = signedRequest("GET", "/api/v1/accounts")
                 .get()
                 .build()
 

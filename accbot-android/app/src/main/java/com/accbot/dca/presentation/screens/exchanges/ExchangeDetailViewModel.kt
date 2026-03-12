@@ -13,10 +13,11 @@ import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.usecase.ApiImportProgress
 import com.accbot.dca.domain.usecase.ApiImportResultState
-import com.accbot.dca.domain.usecase.CredentialValidationResult
-import com.accbot.dca.domain.usecase.ImportTradeHistoryUseCase
 import com.accbot.dca.domain.usecase.ValidateAndSaveCredentialsUseCase
+import com.accbot.dca.domain.usecase.ImportTradeHistoryUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
+import com.accbot.dca.presentation.credentials.CredentialFormDelegate
+import com.accbot.dca.presentation.credentials.CredentialFormState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
@@ -28,20 +29,15 @@ import javax.inject.Inject
 @Immutable
 data class ExchangeDetailUiState(
     val exchange: Exchange? = null,
-    val clientId: String = "",
-    val apiKey: String = "",
-    val apiSecret: String = "",
-    val passphrase: String = "",
-    val isValidating: Boolean = false,
-    val error: String? = null,
-    val isSandboxMode: Boolean = false,
     val credentialsExpanded: Boolean = false,
     val plans: List<DcaPlanEntity> = emptyList(),
     val isApiImporting: Boolean = false,
     val apiImportProgress: String = "",
     val apiImportResult: ApiImportResultState? = null,
     val showImportDialog: Boolean = false,
-    val importSinceMillis: Long? = null
+    val importSinceMillis: Long? = null,
+    // Credential form (from delegate)
+    val credentialForm: CredentialFormState = CredentialFormState()
 )
 
 @HiltViewModel
@@ -57,11 +53,17 @@ class ExchangeDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ExchangeDetailUiState())
-    val uiState: StateFlow<ExchangeDetailUiState> = _uiState.asStateFlow()
+    val credentialForm = CredentialFormDelegate(credentialsStore, validateAndSaveCredentialsUseCase, userPreferences, viewModelScope)
+
+    private val _localState = MutableStateFlow(ExchangeDetailUiState())
+    val uiState: StateFlow<ExchangeDetailUiState> = combine(
+        _localState,
+        credentialForm.state
+    ) { local, cred -> local.copy(credentialForm = cred) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ExchangeDetailUiState())
 
     init {
-        val isSandbox = userPreferences.isSandboxMode()
+        credentialForm.initialize()
         val exchangeName = savedStateHandle.get<String>("exchange")
         val autoImport = savedStateHandle.get<Boolean>("autoImport") ?: false
         val exchange = exchangeName?.let { name ->
@@ -69,23 +71,14 @@ class ExchangeDetailViewModel @Inject constructor(
         }
 
         if (exchange != null) {
-            val credentials = credentialsStore.getCredentials(exchange, isSandbox)
-            _uiState.update {
-                it.copy(
-                    exchange = exchange,
-                    isSandboxMode = isSandbox,
-                    apiKey = credentials?.apiKey ?: "",
-                    apiSecret = credentials?.apiSecret ?: "",
-                    passphrase = credentials?.passphrase ?: "",
-                    clientId = credentials?.clientId ?: ""
-                )
-            }
+            _localState.update { it.copy(exchange = exchange) }
+            credentialForm.initWithExchange(exchange)
 
             // Load plans for this exchange
             var autoImportTriggered = false
             viewModelScope.launch {
                 dcaPlanDao.getPlansByExchange(exchange).collect { plans ->
-                    _uiState.update { it.copy(plans = plans) }
+                    _localState.update { it.copy(plans = plans) }
                     // Auto-trigger import when navigated from import offer dialog
                     if (autoImport && !autoImportTriggered && plans.isNotEmpty()) {
                         autoImportTriggered = true
@@ -97,87 +90,45 @@ class ExchangeDetailViewModel @Inject constructor(
     }
 
     fun toggleCredentials() {
-        _uiState.update { it.copy(credentialsExpanded = !it.credentialsExpanded) }
-    }
-
-    fun setClientId(value: String) {
-        _uiState.update { it.copy(clientId = value, error = null) }
-    }
-
-    fun setApiKey(value: String) {
-        _uiState.update { it.copy(apiKey = value, error = null) }
-    }
-
-    fun setApiSecret(value: String) {
-        _uiState.update { it.copy(apiSecret = value, error = null) }
-    }
-
-    fun setPassphrase(value: String) {
-        _uiState.update { it.copy(passphrase = value, error = null) }
+        _localState.update { it.copy(credentialsExpanded = !it.credentialsExpanded) }
     }
 
     fun saveCredentials(onSuccess: () -> Unit) {
-        val state = _uiState.value
-        val exchange = state.exchange ?: return
-        if (state.isValidating) return
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isValidating = true, error = null) }
-
-            val result = validateAndSaveCredentialsUseCase.execute(
-                exchange = exchange,
-                apiKey = state.apiKey,
-                apiSecret = state.apiSecret,
-                passphrase = state.passphrase.takeIf { it.isNotBlank() },
-                clientId = state.clientId.takeIf { it.isNotBlank() }
-            )
-
-            when (result) {
-                is CredentialValidationResult.Success -> {
-                    _uiState.update { it.copy(isValidating = false) }
-                    onSuccess()
-                }
-                is CredentialValidationResult.Error -> {
-                    _uiState.update {
-                        it.copy(isValidating = false, error = result.message)
-                    }
-                }
-            }
-        }
+        credentialForm.validateAndSaveCredentials(onSuccess)
     }
 
     fun showImportDialog() {
-        _uiState.update { it.copy(showImportDialog = true, importSinceMillis = null) }
+        _localState.update { it.copy(showImportDialog = true, importSinceMillis = null) }
     }
 
     fun dismissImportDialog() {
-        _uiState.update { it.copy(showImportDialog = false) }
+        _localState.update { it.copy(showImportDialog = false) }
     }
 
     fun setImportSinceDate(millis: Long?) {
-        _uiState.update { it.copy(importSinceMillis = millis) }
+        _localState.update { it.copy(importSinceMillis = millis) }
     }
 
     fun confirmImport() {
-        val sinceMillis = _uiState.value.importSinceMillis
-        _uiState.update { it.copy(showImportDialog = false) }
+        val sinceMillis = _localState.value.importSinceMillis
+        _localState.update { it.copy(showImportDialog = false) }
         importViaApi(sinceMillis?.let { Instant.ofEpochMilli(it) })
     }
 
     fun importViaApi(sinceDate: Instant? = null) {
-        val state = _uiState.value
+        val state = _localState.value
         val exchange = state.exchange ?: return
         if (state.isApiImporting) return
         if (state.plans.isEmpty()) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isApiImporting = true, apiImportProgress = "", apiImportResult = null) }
+            _localState.update { it.copy(isApiImporting = true, apiImportProgress = "", apiImportResult = null) }
 
             try {
                 val isSandbox = userPreferences.isSandboxMode()
                 val credentials = credentialsStore.getCredentials(exchange, isSandbox)
                 if (credentials == null) {
-                    _uiState.update { it.copy(
+                    _localState.update { it.copy(
                         isApiImporting = false,
                         apiImportResult = ApiImportResultState.Error("No credentials found for ${exchange.displayName}")
                     ) }
@@ -201,19 +152,19 @@ class ExchangeDetailViewModel @Inject constructor(
                     ).collect { progress ->
                         when (progress) {
                             is ApiImportProgress.Fetching -> {
-                                _uiState.update { it.copy(
+                                _localState.update { it.copy(
                                     apiImportProgress = context.getString(
                                         com.accbot.dca.R.string.import_api_fetching, progress.page
                                     )
                                 ) }
                             }
                             is ApiImportProgress.Deduplicating -> {
-                                _uiState.update { it.copy(
+                                _localState.update { it.copy(
                                     apiImportProgress = context.getString(com.accbot.dca.R.string.import_api_deduplicating)
                                 ) }
                             }
                             is ApiImportProgress.Importing -> {
-                                _uiState.update { it.copy(
+                                _localState.update { it.copy(
                                     apiImportProgress = context.getString(
                                         com.accbot.dca.R.string.import_api_importing, progress.newCount
                                     )
@@ -232,14 +183,14 @@ class ExchangeDetailViewModel @Inject constructor(
 
                 val result = errorMessage?.let { ApiImportResultState.Error(it) }
                     ?: ApiImportResultState.Success(totalImported, totalSkipped)
-                _uiState.update { it.copy(
+                _localState.update { it.copy(
                     isApiImporting = false,
                     apiImportProgress = "",
                     apiImportResult = result
                 ) }
             } catch (e: Exception) {
                 Log.e(TAG, "API import failed", e)
-                _uiState.update { it.copy(
+                _localState.update { it.copy(
                     isApiImporting = false,
                     apiImportProgress = "",
                     apiImportResult = ApiImportResultState.Error(e.message ?: "Import failed")
@@ -249,17 +200,17 @@ class ExchangeDetailViewModel @Inject constructor(
     }
 
     fun dismissImportResult() {
-        _uiState.update { it.copy(apiImportResult = null) }
+        _localState.update { it.copy(apiImportResult = null) }
     }
 
     fun removeExchange(onRemoved: () -> Unit) {
-        val state = _uiState.value
+        val state = _localState.value
         val exchange = state.exchange ?: return
         viewModelScope.launch {
             // Delete transactions, plans and credentials for this exchange
             transactionDao.deleteTransactionsByExchange(exchange)
             dcaPlanDao.deletePlansByExchange(exchange)
-            credentialsStore.deleteCredentials(exchange, state.isSandboxMode)
+            credentialsStore.deleteCredentials(exchange, credentialForm.state.value.isSandboxMode)
             onRemoved()
         }
     }
