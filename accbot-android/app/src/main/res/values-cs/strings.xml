@@ -410,6 +410,7 @@
     <string name="credentials_hide_password">Skrýt heslo</string>
     <string name="credentials_required_for">Vyžadováno pro %1$s</string>
     <string name="credentials_stored_locally">Přihlašovací údaje uloženy lokálně se šifrováním</string>
+    <string name="error_no_internet">Žádné připojení k internetu. Zkontrolujte síť a zkuste to znovu.</string>
     <string name="credentials_encrypted_aes">Šifrováno lokálně pomocí AES-256</string>
 
     <!-- Strategy Info Bottom Sheet -->
@@ -496,6 +497,7 @@
     <string name="first_plan_currency">Měna</string>
     <string name="first_plan_custom_amount">Vlastní částka</string>
     <string name="min_order_size">Minimum: %1$s %2$s</string>
+    <string name="binance_lot_size_note">Binance zaokrouhluje nákup %1$s na %2$s %1$s. Skutečná částka nákupu může být o něco nižší, než je nastaveno.</string>
     <string name="first_plan_how_often">Jak často</string>
     <string name="first_plan_recommended">Doporučeno pro začátečníky</string>
     <string name="first_plan_lower_frequency">Nižší frekvence, větší nákupy</string>

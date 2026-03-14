@@ -111,6 +111,11 @@ class AddPlanViewModel @Inject constructor(
                             }
                             return@launch
                         }
+                        is CredentialValidationResult.NetworkError -> {
+                            credentialForm.notifyNetworkError()
+                            _localState.update { it.copy(isLoading = false) }
+                            return@launch
+                        }
                         is CredentialValidationResult.Success -> {
                             // Credentials validated and saved, continue with plan creation
                         }

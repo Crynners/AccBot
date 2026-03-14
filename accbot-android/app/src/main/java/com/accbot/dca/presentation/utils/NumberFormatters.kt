@@ -12,13 +12,13 @@ import java.util.Locale
  */
 object NumberFormatters {
 
-    /** Format fiat amounts: whole numbers, with grouping (e.g. 1,235 or 1 235) */
+    /** Format fiat amounts: 2 decimal places, with grouping (e.g. 1,235.00 or 1 235,00) */
     fun fiat(value: BigDecimal): String {
         val nf = NumberFormat.getInstance(Locale.getDefault())
-        nf.minimumFractionDigits = 0
-        nf.maximumFractionDigits = 0
+        nf.minimumFractionDigits = 2
+        nf.maximumFractionDigits = 2
         nf.isGroupingUsed = true
-        return nf.format(value.setScale(0, RoundingMode.HALF_UP))
+        return nf.format(value.setScale(2, RoundingMode.HALF_UP))
     }
 
     /** Format fee amounts: 2 decimal places, with grouping (e.g. 1.50 or 0.45) */
@@ -28,6 +28,15 @@ object NumberFormatters {
         nf.maximumFractionDigits = 2
         nf.isGroupingUsed = true
         return nf.format(value.setScale(2, RoundingMode.HALF_UP))
+    }
+
+    /** Format fiat as whole number: no decimal places, with grouping (e.g. 1,235 or 1 235). Used for chart axis labels. */
+    fun fiatWhole(value: BigDecimal): String {
+        val nf = NumberFormat.getInstance(Locale.getDefault())
+        nf.minimumFractionDigits = 0
+        nf.maximumFractionDigits = 0
+        nf.isGroupingUsed = true
+        return nf.format(value.setScale(0, RoundingMode.HALF_UP))
     }
 
     /** Compact fiat for Y-axis labels: 1800000 → "1.8M", 50000 → "50K", 800 → "800" */
@@ -42,7 +51,7 @@ object NumberFormatters {
                 val k = value.divide(BigDecimal(1_000), 1, RoundingMode.HALF_UP)
                 "${stripTrailingDecimalZero(k)}K"
             }
-            else -> fiat(value)
+            else -> fiatWhole(value)
         }
     }
 

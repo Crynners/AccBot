@@ -6,6 +6,7 @@ import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.DcaPlanEntity
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
+import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.usecase.CalculateMonthlyCostUseCase
 import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.data.local.UserPreferences
@@ -26,6 +27,7 @@ data class EditPlanUiState(
     val planId: Long = 0,
     val crypto: String = "",
     val fiat: String = "",
+    val exchange: Exchange? = null,
     val exchangeName: String = "",
 
     // Plan form (from delegate)
@@ -79,6 +81,7 @@ class EditPlanViewModel @Inject constructor(
                         planId = plan.id,
                         crypto = plan.crypto,
                         fiat = plan.fiat,
+                        exchange = plan.exchange,
                         exchangeName = plan.exchange.displayName,
                         isLoading = false
                     )

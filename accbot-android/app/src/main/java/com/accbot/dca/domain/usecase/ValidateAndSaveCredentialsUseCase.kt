@@ -5,6 +5,7 @@ import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.ExchangeCredentials
 import com.accbot.dca.exchange.ExchangeApiFactory
+import java.net.UnknownHostException
 import javax.inject.Inject
 
 /**
@@ -13,6 +14,7 @@ import javax.inject.Inject
 sealed class CredentialValidationResult {
     data object Success : CredentialValidationResult()
     data class Error(val message: String) : CredentialValidationResult()
+    data object NetworkError : CredentialValidationResult()
 }
 
 /**
@@ -82,6 +84,10 @@ class ValidateAndSaveCredentialsUseCase @Inject constructor(
                 } else ""
                 CredentialValidationResult.Error("Invalid API credentials.$hint")
             }
+        } catch (e: UnknownHostException) {
+            CredentialValidationResult.NetworkError
+        } catch (e: java.io.IOException) {
+            CredentialValidationResult.NetworkError
         } catch (e: Exception) {
             val isSandbox = userPreferences.isSandboxMode()
             val hint = if (isSandbox) {

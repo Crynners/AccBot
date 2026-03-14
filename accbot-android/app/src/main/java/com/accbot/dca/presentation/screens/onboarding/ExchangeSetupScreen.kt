@@ -26,6 +26,7 @@ import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.isStable
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.CredentialsInputCard
+import com.accbot.dca.presentation.credentials.resolvedCredentialsError
 import com.accbot.dca.presentation.components.ExchangeSelectionGrid
 import com.accbot.dca.presentation.components.ExchangeInstructionsCard
 import com.accbot.dca.presentation.components.ExperimentalExchangeDisclaimer
@@ -191,7 +192,7 @@ fun ExchangeSetupScreen(
                     onApiKeyChange = viewModel.credentialForm::setApiKey,
                     onApiSecretChange = viewModel.credentialForm::setApiSecret,
                     onPassphraseChange = viewModel.credentialForm::setPassphrase,
-                    errorMessage = cred.credentialsError,
+                    errorMessage = cred.resolvedCredentialsError,
                     isValidating = cred.isValidatingCredentials
                 )
             }

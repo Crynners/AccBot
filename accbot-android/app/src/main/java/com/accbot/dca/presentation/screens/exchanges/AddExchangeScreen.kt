@@ -40,6 +40,7 @@ import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.ApiImportResultDialog
 import com.accbot.dca.presentation.components.CredentialsInputCard
+import com.accbot.dca.presentation.credentials.resolvedCredentialsError
 import com.accbot.dca.presentation.components.ExchangeSelectionTile
 import com.accbot.dca.presentation.components.ExperimentalExchangeDisclaimer
 import com.accbot.dca.presentation.components.RequestExchangeTile
@@ -135,7 +136,7 @@ fun AddExchangeScreen(
                 apiSecret = uiState.credentialForm.apiSecret,
                 passphrase = uiState.credentialForm.passphrase,
                 isValidating = uiState.credentialForm.isValidatingCredentials,
-                error = uiState.credentialForm.credentialsError,
+                error = uiState.credentialForm.resolvedCredentialsError,
                 onClientIdChange = viewModel.credentialForm::setClientId,
                 onApiKeyChange = viewModel.credentialForm::setApiKey,
                 onApiSecretChange = viewModel.credentialForm::setApiSecret,

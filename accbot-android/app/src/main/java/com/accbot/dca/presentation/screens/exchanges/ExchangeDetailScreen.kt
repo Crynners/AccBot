@@ -29,6 +29,7 @@ import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.ApiImportResultDialog
 import com.accbot.dca.presentation.components.CredentialsInputCard
+import com.accbot.dca.presentation.credentials.resolvedCredentialsError
 import com.accbot.dca.presentation.components.ExchangeAvatar
 import com.accbot.dca.presentation.components.ImportConfigDialog
 import com.accbot.dca.presentation.ui.theme.Error
@@ -251,7 +252,7 @@ fun ExchangeDetailScreen(
                                 onApiKeyChange = viewModel.credentialForm::setApiKey,
                                 onApiSecretChange = viewModel.credentialForm::setApiSecret,
                                 onPassphraseChange = viewModel.credentialForm::setPassphrase,
-                                errorMessage = uiState.credentialForm.credentialsError,
+                                errorMessage = uiState.credentialForm.resolvedCredentialsError,
                                 isValidating = uiState.credentialForm.isValidatingCredentials
                             )
 

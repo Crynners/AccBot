@@ -213,6 +213,7 @@ fun AddPlanScreen(
                     onWithdrawalEnabledChanged = viewModel.planForm::setWithdrawalEnabled,
                     onWithdrawalAddressChanged = viewModel.planForm::setWithdrawalAddress,
                     onTargetAmountChanged = viewModel.planForm::setTargetAmount,
+                    exchange = cred.selectedExchange,
                     errorMessage = uiState.errorMessage
                 )
 

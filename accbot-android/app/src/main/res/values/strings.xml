@@ -409,6 +409,7 @@
     <string name="credentials_hide_password">Hide password</string>
     <string name="credentials_required_for">Required for %1$s</string>
     <string name="credentials_stored_locally">Credentials stored locally with encryption</string>
+    <string name="error_no_internet">No internet connection. Please check your network and try again.</string>
     <string name="credentials_encrypted_aes">Encrypted locally with AES-256</string>
 
     <!-- Strategy Info Bottom Sheet -->
@@ -495,6 +496,7 @@
     <string name="first_plan_currency">Currency</string>
     <string name="first_plan_custom_amount">Custom amount</string>
     <string name="min_order_size">Minimum: %1$s %2$s</string>
+    <string name="binance_lot_size_note">Binance rounds %1$s purchases to %2$s %1$s. The actual purchase amount may be slightly less than configured.</string>
     <string name="first_plan_how_often">How often</string>
     <string name="first_plan_recommended">Recommended for beginners</string>
     <string name="first_plan_lower_frequency">Lower frequency, larger purchases</string>

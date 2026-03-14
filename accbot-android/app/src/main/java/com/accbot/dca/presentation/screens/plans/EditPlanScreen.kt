@@ -127,6 +127,7 @@ fun EditPlanScreen(
                             onWithdrawalEnabledChanged = viewModel.planForm::setWithdrawalEnabled,
                             onWithdrawalAddressChanged = viewModel.planForm::setWithdrawalAddress,
                             onTargetAmountChanged = viewModel.planForm::setTargetAmount,
+                            exchange = uiState.exchange,
                             errorMessage = if (uiState.isSaving) uiState.error else null
                         )
                     }

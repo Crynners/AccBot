@@ -82,7 +82,19 @@ enum class Exchange(
         supportedCryptos = listOf("BTC", "ETH", "SOL", "ADA"),
         minOrderSize = mapOf("EUR" to BigDecimal("1"), "USD" to BigDecimal("1")),
         sandboxSupport = SandboxSupport.FULL
-    )
+    );
+
+    companion object {
+        /** Binance LOT_SIZE step sizes per crypto (from /api/v3/exchangeInfo). */
+        val binanceLotStepSize = mapOf(
+            "BTC" to "0.00001",
+            "ETH" to "0.0001",
+            "BNB" to "0.001",
+            "SOL" to "0.001",
+            "ADA" to "0.1",
+            "DOT" to "0.01"
+        )
+    }
 }
 
 /**

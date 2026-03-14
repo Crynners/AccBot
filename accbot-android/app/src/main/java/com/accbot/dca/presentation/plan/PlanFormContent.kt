@@ -3,6 +3,8 @@ package com.accbot.dca.presentation.plan
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
+import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.presentation.components.AmountInputWithPresets
 import com.accbot.dca.presentation.components.ChipGroup
 import com.accbot.dca.presentation.components.FrequencyDropdown
@@ -52,6 +55,7 @@ fun PlanFormContent(
     onWithdrawalAddressChanged: (String) -> Unit,
     onTargetAmountChanged: (String) -> Unit,
     modifier: Modifier = Modifier,
+    exchange: Exchange? = null,
     showCryptoFiatSelection: Boolean = true,
     errorMessage: String? = null
 ) {
@@ -93,6 +97,28 @@ fun PlanFormContent(
                 minOrderSize = state.minOrderSize,
                 amountBelowMinimum = state.amountBelowMinimum
             )
+            if (exchange == Exchange.BINANCE) {
+                val stepSize = Exchange.binanceLotStepSize[state.selectedCrypto]
+                if (stepSize != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.binance_lot_size_note, state.selectedCrypto, stepSize),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
 
         // Frequency selection
