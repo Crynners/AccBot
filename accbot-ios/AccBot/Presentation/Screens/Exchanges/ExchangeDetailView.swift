@@ -11,24 +11,14 @@ struct ExchangeDetailView: View {
     @State private var refreshError: String?
     @State private var showDeleteConfirmation = false
 
-    // Credentials editing
+    // Credentials editing (delegated)
     @State private var credentialsExpanded = false
-    @State private var apiKey = ""
-    @State private var apiSecret = ""
-    @State private var passphrase = ""
-    @State private var clientId = ""
-    @State private var isValidating = false
-    @State private var validationError: String?
+    @StateObject private var credentials = CredentialFormDelegate()
     @State private var credentialsSaved = false
 
-    // Credential visibility
+    // Credential visibility (unique to detail view)
     @State private var showSecret = false
     @State private var showPassphrase = false
-
-    // QR scanner
-    @State private var showQrScanner = false
-    @State private var qrScanTarget: CredentialScanTarget = .apiKey
-    @State private var showMultiFieldScanner = false
 
     // Import from API
     @State private var isImporting = false
@@ -86,34 +76,24 @@ struct ExchangeDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
+            credentials.selectedExchange = exchange
             plans = (try? dependencies.activeDatabase.planDao.getPlansByExchange(exchange)) ?? []
             loadCachedBalances()
         }
-        .sheet(isPresented: $showQrScanner) {
+        .sheet(isPresented: $credentials.showQrScanner) {
             QrScannerSheet(
                 title: String(localized: "Scan Credential"),
                 onScanned: { code in
-                    handleQrScan(code)
+                    credentials.handleQrScan(code)
                 }
             )
         }
-        .sheet(isPresented: $showMultiFieldScanner) {
+        .sheet(isPresented: $credentials.showMultiFieldScanner) {
             MultiFieldScannerSheet(
                 title: String(localized: "Scan All Credentials"),
-                fields: multiFieldScannerFields(),
+                fields: credentials.multiFieldScannerFields(),
                 onResult: { result in
-                    if let key = result["apiKey"] {
-                        apiKey = key
-                    }
-                    if let secret = result["apiSecret"] {
-                        apiSecret = secret
-                    }
-                    if let phrase = result["passphrase"] {
-                        passphrase = phrase
-                    }
-                    if let id = result["clientId"] {
-                        clientId = id
-                    }
+                    credentials.handleMultiFieldResult(result)
                 }
             )
         }
@@ -257,7 +237,7 @@ struct ExchangeDetailView: View {
 
                     // Scan All Credentials button
                     Button {
-                        showMultiFieldScanner = true
+                        credentials.showMultiFieldScanner = true
                     } label: {
                         HStack(spacing: Spacing.sm) {
                             Image(systemName: "qrcode.viewfinder")
@@ -279,7 +259,7 @@ struct ExchangeDetailView: View {
                     if exchange.requiresClientId {
                         credentialField(
                             label: String(localized: "Client ID"),
-                            text: $clientId,
+                            text: $credentials.clientId,
                             placeholder: String(localized: "Enter your client ID"),
                             isSecure: false,
                             scanTarget: .clientId
@@ -290,7 +270,7 @@ struct ExchangeDetailView: View {
                         label: exchange.requiresClientId
                             ? String(localized: "Public Key")
                             : String(localized: "API Key"),
-                        text: $apiKey,
+                        text: $credentials.apiKey,
                         placeholder: exchange.requiresClientId
                             ? String(localized: "Enter your public key")
                             : String(localized: "Enter your API key"),
@@ -303,7 +283,7 @@ struct ExchangeDetailView: View {
                         label: exchange.requiresClientId
                             ? String(localized: "Private Key")
                             : String(localized: "API Secret"),
-                        text: $apiSecret,
+                        text: $credentials.apiSecret,
                         placeholder: exchange.requiresClientId
                             ? String(localized: "Enter your private key")
                             : String(localized: "Enter your API secret"),
@@ -315,7 +295,7 @@ struct ExchangeDetailView: View {
                     if exchange.requiresPassphrase {
                         credentialField(
                             label: String(localized: "Passphrase"),
-                            text: $passphrase,
+                            text: $credentials.passphrase,
                             placeholder: String(localized: "Enter your passphrase"),
                             isSecure: true,
                             showContent: $showPassphrase,
@@ -324,7 +304,7 @@ struct ExchangeDetailView: View {
                     }
 
                     // Validation error
-                    if let error = validationError {
+                    if let error = credentials.validationError {
                         HStack(spacing: Spacing.sm) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundStyle(colors.error)
@@ -347,26 +327,39 @@ struct ExchangeDetailView: View {
 
                     // Save button
                     Button {
-                        Task { await validateAndSaveCredentials() }
+                        Task {
+                            let success = await credentials.validateAndSave(
+                                credentialsStore: dependencies.credentialsStore,
+                                exchangeApiFactory: dependencies.exchangeApiFactory,
+                                isSandbox: dependencies.userPreferences.sandboxMode
+                            )
+                            if success {
+                                credentialsSaved = true
+                                Task {
+                                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                                    withAnimation { credentialsSaved = false }
+                                }
+                            }
+                        }
                     } label: {
                         HStack(spacing: Spacing.sm) {
-                            if isValidating {
+                            if credentials.isValidating {
                                 ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: colors.onPrimary))
                                     .scaleEffect(0.8)
                             }
-                            Text(isValidating
+                            Text(credentials.isValidating
                                  ? String(localized: "Validating...")
                                  : String(localized: "Save"))
                                 .font(AccBotFonts.headline)
                         }
-                        .foregroundStyle(canSaveCredentials ? colors.onPrimary : colors.disabledForeground)
+                        .foregroundStyle(credentials.canValidate ? colors.onPrimary : colors.disabledForeground)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Spacing.md)
-                        .background(canSaveCredentials ? colors.primary : colors.disabledBackground)
+                        .background(credentials.canValidate ? colors.primary : colors.disabledBackground)
                         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
                     }
-                    .disabled(!canSaveCredentials)
+                    .disabled(!credentials.canValidate)
                 }
                 .padding(.horizontal, Spacing.lg)
                 .padding(.bottom, Spacing.lg)
@@ -476,16 +469,6 @@ struct ExchangeDetailView: View {
         }
     }
 
-    private var canSaveCredentials: Bool {
-        let hasKey = !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let hasSecret = !apiSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let hasPassphrase = !exchange.requiresPassphrase
-            || !passphrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let hasClientId = !exchange.requiresClientId
-            || !clientId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return !isValidating && hasKey && hasSecret && hasPassphrase && hasClientId
-    }
-
     private func credentialField(
         label: String,
         text: Binding<String>,
@@ -532,8 +515,8 @@ struct ExchangeDetailView: View {
 
                 if let target = scanTarget {
                     Button {
-                        qrScanTarget = target
-                        showQrScanner = true
+                        credentials.qrScanTarget = target
+                        credentials.showQrScanner = true
                     } label: {
                         Image(systemName: "qrcode.viewfinder")
                             .font(AccBotFonts.iconSmall)
@@ -800,89 +783,6 @@ struct ExchangeDetailView: View {
         } catch {
             balances = []
         }
-    }
-
-    private func multiFieldScannerFields() -> [ScanTargetField] {
-        var fields: [ScanTargetField] = []
-        if exchange.requiresClientId {
-            fields.append(ScanTargetField(id: "clientId", label: String(localized: "Client ID")))
-        }
-        fields.append(ScanTargetField(
-            id: "apiKey",
-            label: exchange.requiresClientId
-                ? String(localized: "Public Key")
-                : String(localized: "API Key")
-        ))
-        fields.append(ScanTargetField(
-            id: "apiSecret",
-            label: exchange.requiresClientId
-                ? String(localized: "Private Key")
-                : String(localized: "API Secret")
-        ))
-        if exchange.requiresPassphrase {
-            fields.append(ScanTargetField(id: "passphrase", label: String(localized: "Passphrase")))
-        }
-        return fields
-    }
-
-    private func handleQrScan(_ code: String) {
-        switch qrScanTarget {
-        case .apiKey:
-            apiKey = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        case .apiSecret:
-            apiSecret = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        case .passphrase:
-            passphrase = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        case .clientId:
-            clientId = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        case .scanAll:
-            // Handled by MultiFieldScannerSheet now
-            break
-        }
-    }
-
-    private func validateAndSaveCredentials() async {
-        isValidating = true
-        validationError = nil
-        credentialsSaved = false
-
-        let credentials = ExchangeCredentials(
-            exchange: exchange,
-            apiKey: apiKey.trimmingCharacters(in: .whitespacesAndNewlines),
-            apiSecret: apiSecret.trimmingCharacters(in: .whitespacesAndNewlines),
-            passphrase: exchange.requiresPassphrase
-                ? passphrase.trimmingCharacters(in: .whitespacesAndNewlines)
-                : nil,
-            clientId: exchange.requiresClientId
-                ? clientId.trimmingCharacters(in: .whitespacesAndNewlines)
-                : nil
-        )
-
-        let isSandbox = dependencies.userPreferences.sandboxMode
-
-        do {
-            let api = dependencies.exchangeApiFactory.create(
-                credentials: credentials,
-                isSandbox: isSandbox
-            )
-            let valid = try await api.validateCredentials()
-
-            if valid {
-                try dependencies.credentialsStore.save(credentials, isSandbox: isSandbox)
-                credentialsSaved = true
-                // Auto-dismiss after 3 seconds
-                Task {
-                    try? await Task.sleep(nanoseconds: 3_000_000_000)
-                    withAnimation { credentialsSaved = false }
-                }
-            } else {
-                validationError = String(localized: "Invalid credentials. Please check your API key and secret.")
-            }
-        } catch {
-            validationError = error.localizedDescription
-        }
-
-        isValidating = false
     }
 
     private func importFromApi(sinceDate: Date? = nil) async {

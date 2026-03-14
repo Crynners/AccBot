@@ -27,10 +27,18 @@ actor MarketDataService {
         case "ETH": return "ethereum"
         case "SOL": return "solana"
         case "ADA": return "cardano"
+        case "BNB": return "binancecoin"
         case "DOT": return "polkadot"
         case "LTC": return "litecoin"
         default: return crypto.lowercased()
         }
+    }
+
+    /// Map stablecoins to CoinGecko-supported vs_currency (USDT/USDC → usd).
+    private func coingeckoFiat(_ fiat: String) -> String {
+        let upper = fiat.uppercased()
+        if upper == "USDT" || upper == "USDC" { return "usd" }
+        return fiat.lowercased()
     }
 
     // MARK: - Current Price
@@ -38,7 +46,7 @@ actor MarketDataService {
     func getCurrentPrice(crypto: String, fiat: String) async -> Decimal? {
         do {
             let id = coinGeckoId(for: crypto)
-            let fiatLower = fiat.lowercased()
+            let fiatLower = coingeckoFiat(fiat)
             let (data, _) = try await client.get(
                 url: "\(coingeckoBase)/simple/price?ids=\(id)&vs_currencies=\(fiatLower)"
             )
@@ -65,7 +73,7 @@ actor MarketDataService {
 
         do {
             let id = coinGeckoId(for: crypto)
-            let fiatLower = fiat.lowercased()
+            let fiatLower = coingeckoFiat(fiat)
             let (data, _) = try await client.get(
                 url: "\(coingeckoBase)/coins/\(id)?localization=false&tickers=false&community_data=false&developer_data=false"
             )
@@ -113,7 +121,7 @@ actor MarketDataService {
     func getDailyPrices(crypto: String, fiat: String, days: Int) async -> [(date: Date, price: Decimal)]? {
         do {
             let id = coinGeckoId(for: crypto)
-            let fiatLower = fiat.lowercased()
+            let fiatLower = coingeckoFiat(fiat)
             let (data, _) = try await client.get(
                 url: "\(coingeckoBase)/coins/\(id)/market_chart?vs_currency=\(fiatLower)&days=\(days)&interval=daily"
             )

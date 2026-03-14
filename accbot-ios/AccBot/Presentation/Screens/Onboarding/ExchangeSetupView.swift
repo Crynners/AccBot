@@ -8,7 +8,7 @@ struct ExchangeSetupView: View {
 
     @EnvironmentObject var dependencies: AppDependencies
     @Environment(\.accBotColors) private var colors
-    @StateObject private var viewModel = ExchangeSetupViewModel()
+    @StateObject private var credentials = CredentialFormDelegate()
     @State private var showSkipConfirmation = false
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.md), count: 3)
@@ -43,10 +43,10 @@ struct ExchangeSetupView: View {
                         ForEach(Exchange.allCases) { exchange in
                             ExchangeGridItem(
                                 exchange: exchange,
-                                isSelected: viewModel.selectedExchange == exchange,
+                                isSelected: credentials.selectedExchange == exchange,
                                 onTap: {
                                     withAnimation(.easeInOut(duration: 0.2)) {
-                                        viewModel.selectExchange(exchange)
+                                        credentials.selectExchange(exchange)
                                     }
                                 }
                             )
@@ -55,19 +55,13 @@ struct ExchangeSetupView: View {
                     .padding(.horizontal, Spacing.sm)
 
                     // Credentials input card
-                    if let exchange = viewModel.selectedExchange {
+                    if let exchange = credentials.selectedExchange {
                         OnboardingCredentialsCard(
                             exchange: exchange,
-                            apiKey: $viewModel.apiKey,
-                            apiSecret: $viewModel.apiSecret,
-                            passphrase: $viewModel.passphrase,
-                            clientId: $viewModel.clientId,
-                            isValidating: viewModel.isValidating,
-                            validationError: viewModel.validationError,
-                            isValid: viewModel.isValid,
+                            credentials: credentials,
                             onValidate: {
                                 Task {
-                                    await viewModel.validateAndSave(
+                                    await credentials.validateAndSave(
                                         credentialsStore: dependencies.credentialsStore,
                                         exchangeApiFactory: dependencies.exchangeApiFactory,
                                         isSandbox: dependencies.userPreferences.sandboxMode
@@ -82,7 +76,7 @@ struct ExchangeSetupView: View {
 
                     // Action buttons
                     VStack(spacing: Spacing.md) {
-                        if viewModel.isValid {
+                        if credentials.isValid {
                             Button(action: onNext) {
                                 HStack(spacing: Spacing.sm) {
                                     Image(systemName: "checkmark.circle.fill")
@@ -124,6 +118,11 @@ struct ExchangeSetupView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: credentials.validationError) { _, newError in
+            if let error = newError {
+                UIAccessibility.post(notification: .announcement, argument: error)
+            }
+        }
     }
 }
 
@@ -170,35 +169,46 @@ private struct ExchangeGridItem: View {
 
 private struct OnboardingCredentialsCard: View {
     let exchange: Exchange
-    @Binding var apiKey: String
-    @Binding var apiSecret: String
-    @Binding var passphrase: String
-    @Binding var clientId: String
-    let isValidating: Bool
-    let validationError: String?
-    let isValid: Bool
+    @ObservedObject var credentials: CredentialFormDelegate
     let onValidate: () -> Void
     @Environment(\.accBotColors) private var colors
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            Text(String(localized: "\(exchange.displayName) API Credentials"))
-                .font(AccBotFonts.titleSmall)
-                .foregroundStyle(colors.onSurface)
+            HStack {
+                Text(String(localized: "\(exchange.displayName) API Credentials"))
+                    .font(AccBotFonts.titleSmall)
+                    .foregroundStyle(colors.onSurface)
 
-            CredentialField(label: String(localized: "API Key"), text: $apiKey, placeholder: String(localized: "Enter your API key"))
-            CredentialField(label: String(localized: "API Secret"), text: $apiSecret, placeholder: String(localized: "Enter your API secret"), isSecure: true)
+                Spacer()
+
+                // Paste All from clipboard
+                Button {
+                    credentials.pasteAllCredentials()
+                } label: {
+                    HStack(spacing: Spacing.xs) {
+                        Image(systemName: "doc.on.clipboard")
+                        Text(String(localized: "Paste All"))
+                    }
+                    .font(AccBotFonts.bodySmall)
+                    .foregroundStyle(colors.primary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            CredentialField(label: String(localized: "API Key"), text: $credentials.apiKey, placeholder: String(localized: "Enter your API key"))
+            CredentialField(label: String(localized: "API Secret"), text: $credentials.apiSecret, placeholder: String(localized: "Enter your API secret"), isSecure: true)
 
             if exchange.requiresPassphrase {
-                CredentialField(label: String(localized: "Passphrase"), text: $passphrase, placeholder: String(localized: "Enter your passphrase"), isSecure: true)
+                CredentialField(label: String(localized: "Passphrase"), text: $credentials.passphrase, placeholder: String(localized: "Enter your passphrase"), isSecure: true)
             }
 
             if exchange.requiresClientId {
-                CredentialField(label: String(localized: "Client ID"), text: $clientId, placeholder: String(localized: "Enter your client ID"))
+                CredentialField(label: String(localized: "Client ID"), text: $credentials.clientId, placeholder: String(localized: "Enter your client ID"))
             }
 
             // Validation status
-            if let error = validationError {
+            if let error = credentials.validationError {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(colors.error)
@@ -209,7 +219,7 @@ private struct OnboardingCredentialsCard: View {
                 }
             }
 
-            if isValid {
+            if credentials.isValid {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(colors.primary)
@@ -222,32 +232,24 @@ private struct OnboardingCredentialsCard: View {
             // Validate button
             Button(action: onValidate) {
                 HStack(spacing: Spacing.sm) {
-                    if isValidating {
+                    if credentials.isValidating {
                         ProgressView()
                             .tint(colors.onPrimary)
                     }
-                    Text(isValidating ? String(localized: "Validating...") : String(localized: "Validate & Connect"))
+                    Text(credentials.isValidating ? String(localized: "Validating...") : String(localized: "Validate & Connect"))
                 }
                 .font(AccBotFonts.headline)
-                .foregroundStyle(canValidate ? colors.onPrimary : colors.disabledForeground)
+                .foregroundStyle(credentials.canValidate ? colors.onPrimary : colors.disabledForeground)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.md)
-                .background(canValidate ? colors.primary : colors.disabledBackground)
+                .background(credentials.canValidate ? colors.primary : colors.disabledBackground)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
             }
-            .disabled(!canValidate)
+            .disabled(!credentials.canValidate)
         }
         .padding(Spacing.lg)
         .background(colors.surface)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
-    }
-
-    private var canValidate: Bool {
-        !isValidating &&
-        !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !apiSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        (!exchange.requiresPassphrase || !passphrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) &&
-        (!exchange.requiresClientId || !clientId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 }
 
@@ -286,71 +288,5 @@ private struct CredentialField: View {
                     .autocorrectionDisabled()
             }
         }
-    }
-}
-
-// MARK: - Exchange Setup ViewModel
-
-@MainActor
-private class ExchangeSetupViewModel: ObservableObject {
-    @Published var selectedExchange: Exchange?
-    @Published var apiKey = ""
-    @Published var apiSecret = ""
-    @Published var passphrase = ""
-    @Published var clientId = ""
-    @Published var isValidating = false
-    @Published var validationError: String?
-    @Published var isValid = false
-
-    func selectExchange(_ exchange: Exchange) {
-        if selectedExchange == exchange {
-            return
-        }
-        selectedExchange = exchange
-        apiKey = ""
-        apiSecret = ""
-        passphrase = ""
-        clientId = ""
-        validationError = nil
-        isValid = false
-    }
-
-    func validateAndSave(
-        credentialsStore: CredentialsStore,
-        exchangeApiFactory: ExchangeApiFactory,
-        isSandbox: Bool
-    ) async {
-        guard let exchange = selectedExchange else { return }
-
-        isValidating = true
-        validationError = nil
-        isValid = false
-
-        let credentials = ExchangeCredentials(
-            exchange: exchange,
-            apiKey: apiKey.trimmingCharacters(in: .whitespacesAndNewlines),
-            apiSecret: apiSecret.trimmingCharacters(in: .whitespacesAndNewlines),
-            passphrase: exchange.requiresPassphrase ? passphrase.trimmingCharacters(in: .whitespacesAndNewlines) : nil,
-            clientId: exchange.requiresClientId ? clientId.trimmingCharacters(in: .whitespacesAndNewlines) : nil
-        )
-
-        do {
-            let api = exchangeApiFactory.create(credentials: credentials, isSandbox: isSandbox)
-            let valid = try await api.validateCredentials()
-            if valid {
-                try credentialsStore.save(credentials, isSandbox: isSandbox)
-                isValid = true
-            } else {
-                let errorMessage = String(localized: "Invalid credentials. Please verify your API key, secret, and required permissions (Read + Trade).")
-                validationError = errorMessage
-                UIAccessibility.post(notification: .announcement, argument: errorMessage)
-            }
-        } catch {
-            let errorMessage = error.localizedDescription
-            validationError = errorMessage
-            UIAccessibility.post(notification: .announcement, argument: errorMessage)
-        }
-
-        isValidating = false
     }
 }

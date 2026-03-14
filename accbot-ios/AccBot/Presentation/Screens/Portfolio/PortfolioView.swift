@@ -400,11 +400,21 @@ struct PortfolioView: View {
             }
 
             if viewModel.chartData.isEmpty {
-                Text(String(localized: "Not enough data for chart"))
-                    .font(AccBotFonts.bodySmall)
-                    .foregroundStyle(colors.onSurfaceVariant)
-                    .frame(height: 200)
-                    .frame(maxWidth: .infinity)
+                EmptyStateView(
+                    systemImage: "chart.line.uptrend.xyaxis",
+                    title: String(localized: "Not enough data for chart"),
+                    subtitle: String(localized: "Complete your first DCA purchase to see portfolio analytics")
+                )
+                .frame(height: 200)
+                .frame(maxWidth: .infinity)
+            } else if Set(viewModel.chartData.map { $0.date }).count < 2 {
+                EmptyStateView(
+                    systemImage: "chart.line.uptrend.xyaxis",
+                    title: String(localized: "Not enough data for chart"),
+                    subtitle: String(localized: "You need at least 2 transactions to view the portfolio chart")
+                )
+                .frame(height: 200)
+                .frame(maxWidth: .infinity)
             } else {
                 Chart {
                     ForEach(viewModel.chartData) { point in

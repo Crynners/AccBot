@@ -8,6 +8,8 @@ struct AddPlanView: View {
     @State private var showStrategyInfo = false
     @State private var showQrScanner = false
     @State private var showDiscardAlert = false
+    @State private var showExperimentalDisclaimer = false
+    @State private var experimentalPendingExchange: Exchange?
 
     @Environment(\.accBotColors) private var colors
 
@@ -29,20 +31,21 @@ struct AddPlanView: View {
                     // Fiat selection
                     fiatSection
 
-                    // Amount input
-                    amountSection
-
-                    // Frequency
-                    frequencySection
-
-                    // Strategy
-                    strategySection
-
-                    // Auto-withdrawal
-                    withdrawalSection
-
-                    // Goal tracking (optional target amount)
-                    targetAmountSection
+                    // Plan form content (amount, frequency, strategy, withdrawal, target)
+                    PlanFormContent(
+                        exchange: viewModel.selectedExchange,
+                        amount: $viewModel.amount,
+                        selectedFiat: viewModel.selectedFiat,
+                        selectedCrypto: viewModel.selectedCrypto,
+                        selectedFrequency: $viewModel.selectedFrequency,
+                        cronExpression: $viewModel.cronExpression,
+                        selectedStrategy: $viewModel.selectedStrategy,
+                        withdrawalEnabled: $viewModel.withdrawalEnabled,
+                        withdrawalAddress: $viewModel.withdrawalAddress,
+                        targetAmount: $viewModel.targetAmount,
+                        showStrategyInfo: $showStrategyInfo,
+                        showQrScanner: $showQrScanner
+                    )
 
                     // Monthly cost estimate
                     if let estimate = viewModel.monthlyCostEstimate {
@@ -160,15 +163,104 @@ struct AddPlanView: View {
                         exchangeGridItem(exchange)
                     }
                 }
+
+                // Experimental exchanges toggle
+                if viewModel.hasExperimentalExchanges {
+                    experimentalToggle
+                }
+
+                // Request Exchange tile
+                requestExchangeTile
             }
         }
+    }
+
+    // MARK: - Experimental Toggle
+
+    private var experimentalToggle: some View {
+        Button {
+            if dependencies.userPreferences.showExperimentalExchanges {
+                dependencies.userPreferences.showExperimentalExchanges = false
+                viewModel.loadConfiguredExchanges()
+            } else {
+                showExperimentalDisclaimer = true
+            }
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "flask")
+                    .font(AccBotFonts.body)
+                    .foregroundStyle(colors.warning)
+
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text(String(localized: "Experimental Exchanges"))
+                        .font(AccBotFonts.label)
+                        .foregroundStyle(colors.onSurface)
+                    Text(String(localized: "Show additional exchanges that haven't been fully tested"))
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
+
+                Spacer()
+
+                Image(systemName: dependencies.userPreferences.showExperimentalExchanges ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(dependencies.userPreferences.showExperimentalExchanges ? colors.primary : colors.onSurfaceVariant)
+            }
+            .padding(Spacing.md)
+            .background(colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+        }
+        .buttonStyle(.plain)
+        .alert(String(localized: "Enable Experimental Exchanges?"), isPresented: $showExperimentalDisclaimer) {
+            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Enable")) {
+                dependencies.userPreferences.showExperimentalExchanges = true
+                viewModel.loadConfiguredExchanges()
+            }
+        } message: {
+            Text(String(localized: "These exchanges haven't been fully tested with AccBot. Use at your own risk. Please report any issues on GitHub."))
+        }
+    }
+
+    // MARK: - Request Exchange
+
+    private var requestExchangeTile: some View {
+        Button {
+            if let url = URL(string: "https://github.com/Crynners/AccBot/issues") {
+                UIApplication.shared.open(url)
+            }
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "plus.circle")
+                    .font(AccBotFonts.body)
+                    .foregroundStyle(colors.onSurfaceVariant)
+                Text(String(localized: "Request Exchange"))
+                    .font(AccBotFonts.label)
+                    .foregroundStyle(colors.onSurfaceVariant)
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(AccBotFonts.captionSmall)
+                    .foregroundStyle(colors.onSurfaceVariant)
+            }
+            .padding(Spacing.md)
+            .background(colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.md)
+                    .stroke(colors.onSurfaceVariant.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func exchangeGridItem(_ exchange: Exchange) -> some View {
         let isSelected = viewModel.selectedExchange == exchange
         return Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                viewModel.selectExchange(exchange)
+            if exchange.isStable || dependencies.userPreferences.showExperimentalExchanges {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewModel.selectExchange(exchange)
+                }
+            } else {
+                experimentalPendingExchange = exchange
             }
         } label: {
             VStack(spacing: Spacing.sm) {
@@ -182,6 +274,16 @@ struct AddPlanView: View {
                     .font(AccBotFonts.caption)
                     .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
+
+                if !exchange.isStable {
+                    Text(String(localized: "EXPERIMENTAL"))
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(colors.warning)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(colors.warning.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 2))
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.md)
@@ -228,274 +330,6 @@ struct AddPlanView: View {
                 icon: { FiatIcon(symbol: $0, size: 18) },
                 onSelect: { viewModel.selectedFiat = $0 }
             )
-        }
-    }
-
-    // MARK: - Amount Input
-
-    private var amountSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            sectionHeader(String(localized: "Amount per Purchase"))
-
-            HStack(spacing: Spacing.sm) {
-                TextField("0", text: $viewModel.amount)
-                    .font(AccBotFonts.titleMedium)
-                    .foregroundStyle(colors.onSurface)
-                    .keyboardType(.decimalPad)
-                    .padding(Spacing.md)
-                    .background(colors.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CornerRadius.sm)
-                            .strokeBorder(amountIsBelowMin ? colors.error : Color.clear, lineWidth: 1)
-                    )
-                    .accessibilityLabel(String(localized: "Amount per purchase"))
-                    .onChange(of: viewModel.amount) { newValue in
-                        let filtered = newValue.filter { $0.isNumber || $0 == "." || $0 == "," }
-                        let normalized = filtered.replacingOccurrences(of: ",", with: ".")
-                        // Allow only one decimal separator
-                        let parts = normalized.split(separator: ".", maxSplits: 2)
-                        let sanitized = parts.count > 1
-                            ? "\(parts[0]).\(parts.dropFirst().joined())"
-                            : normalized
-                        if sanitized != newValue {
-                            viewModel.amount = sanitized
-                        }
-                    }
-
-                Text(viewModel.selectedFiat)
-                    .font(AccBotFonts.headline)
-                    .foregroundStyle(colors.primary)
-            }
-
-            // Preset buttons
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Spacing.sm) {
-                    ForEach(viewModel.amountPresets, id: \.self) { preset in
-                        let isPresetSelected = viewModel.amount == "\(preset)"
-                        Button {
-                            viewModel.amount = "\(preset)"
-                        } label: {
-                            Text("\(preset)")
-                                .font(AccBotFonts.label)
-                                .foregroundStyle(
-                                    isPresetSelected
-                                        ? colors.onPrimary
-                                        : colors.primary
-                                )
-                                .padding(.horizontal, Spacing.md)
-                                .padding(.vertical, Spacing.sm)
-                                .frame(minWidth: 44, minHeight: 44)
-                                .background(
-                                    isPresetSelected
-                                        ? colors.primary
-                                        : colors.primary.opacity(0.15)
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                        }
-                        .accessibilityAddTraits(isPresetSelected ? .isSelected : [])
-                    }
-                }
-            }
-
-            // Min order size
-            if let minDisplay = viewModel.minOrderSizeDisplay {
-                let isBelowMin: Bool = {
-                    guard let amountValue = Decimal(string: viewModel.amount),
-                          let exchange = viewModel.selectedExchange,
-                          let minSize = exchange.minOrderSize[viewModel.selectedFiat] else { return false }
-                    return amountValue > 0 && amountValue < minSize
-                }()
-                Text(String(localized: "Minimum order: \(minDisplay)"))
-                    .font(AccBotFonts.caption)
-                    .foregroundStyle(isBelowMin ? colors.error : colors.onSurfaceVariant)
-            }
-        }
-    }
-
-    // MARK: - Frequency
-
-    private var frequencySection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            ScheduleBuilder(
-                selectedFrequency: $viewModel.selectedFrequency,
-                cronExpression: $viewModel.cronExpression
-            )
-        }
-    }
-
-    // MARK: - Strategy
-
-    private var strategySection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack {
-                sectionHeader(String(localized: "Strategy"))
-                Spacer()
-                Button {
-                    showStrategyInfo = true
-                } label: {
-                    Image(systemName: "info.circle")
-                        .font(AccBotFonts.body)
-                        .foregroundStyle(colors.primary)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .accessibilityLabel(String(localized: "Strategy information"))
-            }
-
-            HStack(spacing: Spacing.sm) {
-                ForEach(DcaStrategy.allStrategies, id: \.dbString) { strategy in
-                    strategyButton(strategy)
-                }
-            }
-        }
-    }
-
-    private func strategyButton(_ strategy: DcaStrategy) -> some View {
-        let isSelected = viewModel.selectedStrategy.dbString == strategy.dbString
-        return Button {
-            viewModel.selectedStrategy = strategy
-        } label: {
-            VStack(spacing: Spacing.xs) {
-                Image(systemName: strategyIcon(strategy))
-                    .font(AccBotFonts.body)
-                Text(strategy.displayName)
-                    .font(AccBotFonts.captionSmall)
-                    .lineLimit(1)
-            }
-            .foregroundStyle(isSelected ? colors.onPrimary : colors.onSurface)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.md)
-            .background(isSelected ? colors.primary : colors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-            .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.sm)
-                    .stroke(isSelected ? colors.primary : colors.onSurfaceVariant.opacity(0.3), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(String(localized: "\(strategy.displayName) strategy"))
-        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
-        .accessibilityValue(isSelected ? String(localized: "Selected") : String(localized: "Not selected"))
-    }
-
-    private func strategyIcon(_ strategy: DcaStrategy) -> String {
-        switch strategy {
-        case .classic: return "arrow.right"
-        case .athBased: return "chart.line.uptrend.xyaxis"
-        case .fearAndGreed: return "face.dashed"
-        }
-    }
-
-    // MARK: - Withdrawal
-
-    private var withdrawalSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            Toggle(isOn: $viewModel.withdrawalEnabled) {
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text(String(localized: "Auto-Withdrawal"))
-                        .font(AccBotFonts.headline)
-                        .foregroundStyle(colors.onSurface)
-                    Text(String(localized: "Automatically withdraw to your wallet after purchase"))
-                        .font(AccBotFonts.caption)
-                        .foregroundStyle(colors.onSurfaceVariant)
-                }
-            }
-            .tint(colors.primary)
-
-            if viewModel.withdrawalEnabled {
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(String(localized: "Wallet Address"))
-                        .font(AccBotFonts.caption)
-                        .foregroundStyle(colors.onSurfaceVariant)
-
-                    HStack(spacing: Spacing.sm) {
-                        TextField(
-                            String(localized: "Enter wallet address"),
-                            text: $viewModel.withdrawalAddress
-                        )
-                        .font(AccBotFonts.mono)
-                        .foregroundStyle(colors.onSurface)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .padding(Spacing.md)
-                        .background(colors.surfaceVariant.opacity(0.5))
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: CornerRadius.sm)
-                                .strokeBorder(
-                                    walletAddressBorderColor,
-                                    lineWidth: 1
-                                )
-                        )
-                        .accessibilityLabel(String(localized: "Wallet address"))
-
-                        Button {
-                            showQrScanner = true
-                        } label: {
-                            Image(systemName: "qrcode.viewfinder")
-                                .font(AccBotFonts.titleSmall)
-                                .foregroundStyle(colors.primary)
-                                .padding(Spacing.md)
-                                .frame(minWidth: 44, minHeight: 44)
-                                .background(colors.surface)
-                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                        }
-                        .accessibilityLabel(String(localized: "Scan wallet QR code"))
-                    }
-                }
-                // Wallet address validation hint
-                if !viewModel.withdrawalAddress.isEmpty && viewModel.withdrawalAddress.trimmingCharacters(in: .whitespaces).count < 26 {
-                    Text(String(localized: "Address looks too short"))
-                        .font(AccBotFonts.caption)
-                        .foregroundStyle(colors.warning)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-            }
-        }
-        .padding(Spacing.lg)
-        .background(colors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
-    }
-
-    // MARK: - Target Amount (Goal Tracking)
-
-    private var targetAmountSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            sectionHeader(String(localized: "Target Amount (optional)"))
-
-            HStack(spacing: Spacing.sm) {
-                TextField(
-                    String(localized: "e.g. 0.1"),
-                    text: $viewModel.targetAmount
-                )
-                .font(AccBotFonts.titleMedium)
-                .foregroundStyle(colors.onSurface)
-                .keyboardType(.decimalPad)
-                .padding(Spacing.md)
-                .background(colors.surface)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                .accessibilityLabel(String(localized: "Target crypto amount"))
-                .onChange(of: viewModel.targetAmount) { newValue in
-                    let filtered = newValue.filter { $0.isNumber || $0 == "." || $0 == "," }
-                    let normalized = filtered.replacingOccurrences(of: ",", with: ".")
-                    let parts = normalized.split(separator: ".", maxSplits: 2)
-                    let sanitized = parts.count > 1
-                        ? "\(parts[0]).\(parts.dropFirst().joined())"
-                        : normalized
-                    if sanitized != newValue {
-                        viewModel.targetAmount = sanitized
-                    }
-                }
-
-                Text(viewModel.selectedCrypto)
-                    .font(AccBotFonts.headline)
-                    .foregroundStyle(colors.primary)
-            }
-
-            Text(String(localized: "Shows a progress bar on the dashboard to visualize your goal"))
-                .font(AccBotFonts.caption)
-                .foregroundStyle(colors.onSurfaceVariant)
         }
     }
 
@@ -567,20 +401,6 @@ struct AddPlanView: View {
     }
 
     // MARK: - Helpers
-
-    private var walletAddressBorderColor: Color {
-        let addr = viewModel.withdrawalAddress.trimmingCharacters(in: .whitespaces)
-        if addr.isEmpty { return Color.clear }
-        if addr.count >= 26 { return colors.success }
-        return colors.warning
-    }
-
-    private var amountIsBelowMin: Bool {
-        guard let amountValue = Decimal(string: viewModel.amount),
-              let exchange = viewModel.selectedExchange,
-              let minSize = exchange.minOrderSize[viewModel.selectedFiat] else { return false }
-        return amountValue > 0 && amountValue < minSize
-    }
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title)

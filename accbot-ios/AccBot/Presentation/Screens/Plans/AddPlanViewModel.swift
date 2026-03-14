@@ -32,13 +32,6 @@ class AddPlanViewModel: ObservableObject {
     }
     private var configuredExchanges: [Exchange] = []
 
-    var amountPresets: [Int] {
-        let all = [25, 50, 100, 250, 500]
-        guard let exchange = selectedExchange,
-              let minSize = exchange.minOrderSize[selectedFiat] else { return all }
-        return all.filter { Decimal($0) >= minSize }
-    }
-
     // MARK: - Init
 
     func setup(_ dependencies: AppDependencies) {
@@ -51,7 +44,16 @@ class AddPlanViewModel: ObservableObject {
     // MARK: - Computed Properties
 
     var availableExchanges: [Exchange] {
-        configuredExchanges
+        let showExperimental = dependencies?.userPreferences.showExperimentalExchanges ?? false
+        if showExperimental {
+            return configuredExchanges
+        }
+        return configuredExchanges.filter { $0.isStable }
+    }
+
+    /// Whether there are configured exchanges that are experimental (hidden by default).
+    var hasExperimentalExchanges: Bool {
+        configuredExchanges.contains { !$0.isStable }
     }
 
     var availableCryptos: [String] {
@@ -60,12 +62,6 @@ class AddPlanViewModel: ObservableObject {
 
     var availableFiats: [String] {
         selectedExchange?.supportedFiats ?? []
-    }
-
-    var minOrderSizeDisplay: String? {
-        guard let exchange = selectedExchange,
-              let minSize = exchange.minOrderSize[selectedFiat] else { return nil }
-        return "\(minSize) \(selectedFiat)"
     }
 
     var monthlyCostEstimate: Decimal? {
@@ -90,60 +86,22 @@ class AddPlanViewModel: ObservableObject {
     }
 
     var isValid: Bool {
-        guard selectedExchange != nil else { return false }
-        guard !selectedCrypto.isEmpty, !selectedFiat.isEmpty else { return false }
-        guard let amountValue = Decimal(string: amount), amountValue > 0 else { return false }
-
-        // Check minimum order size
-        if let exchange = selectedExchange,
-           let minSize = exchange.minOrderSize[selectedFiat],
-           amountValue < minSize {
-            return false
-        }
-
-        // Custom frequency requires valid cron
-        if selectedFrequency == .custom && !CronUtils.isValid(cron: cronExpression) {
-            return false
-        }
-
-        // Withdrawal requires a valid address (minimum 26 characters for crypto addresses)
-        if withdrawalEnabled {
-            let trimmed = withdrawalAddress.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty || trimmed.count < 26 {
-                return false
-            }
-        }
-
-        return true
+        guard selectedExchange != nil, !selectedCrypto.isEmpty, !selectedFiat.isEmpty else { return false }
+        return validationHint == nil
     }
 
     /// Returns a user-facing hint explaining why the form is invalid, or nil if valid.
     var validationHint: String? {
-        guard selectedExchange != nil else { return nil } // don't show hint until exchange picked
-        if amount.isEmpty {
-            return String(localized: "Enter a purchase amount")
-        }
-        guard let amountValue = Decimal(string: amount), amountValue > 0 else {
-            return String(localized: "Enter a valid amount greater than 0")
-        }
-        if let exchange = selectedExchange,
-           let minSize = exchange.minOrderSize[selectedFiat],
-           amountValue < minSize {
-            return String(localized: "Amount below minimum order size (\("\(minSize)") \(selectedFiat))")
-        }
-        if selectedFrequency == .custom && !CronUtils.isValid(cron: cronExpression) {
-            return String(localized: "Enter a valid cron expression for custom frequency")
-        }
-        if withdrawalEnabled {
-            let trimmed = withdrawalAddress.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty {
-                return String(localized: "Enter a withdrawal wallet address")
-            }
-            if trimmed.count < 26 {
-                return String(localized: "Wallet address is too short (minimum 26 characters)")
-            }
-        }
-        return nil
+        guard selectedExchange != nil else { return nil }
+        return PlanFormContent.validate(
+            amount: amount,
+            selectedFiat: selectedFiat,
+            exchange: selectedExchange,
+            selectedFrequency: selectedFrequency,
+            cronExpression: cronExpression,
+            withdrawalEnabled: withdrawalEnabled,
+            withdrawalAddress: withdrawalAddress
+        )
     }
 
     // MARK: - Methods
@@ -167,6 +125,11 @@ class AddPlanViewModel: ObservableObject {
         }
         if !exchange.supportedFiats.contains(selectedFiat) {
             selectedFiat = exchange.supportedFiats.first ?? "EUR"
+        }
+
+        // Pre-fill amount with minimum order size
+        if amount.isEmpty, let minSize = exchange.minOrderSize[selectedFiat] {
+            amount = "\(minSize)"
         }
     }
 

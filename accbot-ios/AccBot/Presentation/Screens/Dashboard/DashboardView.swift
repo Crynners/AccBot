@@ -7,6 +7,7 @@ struct DashboardView: View {
     @Environment(\.accBotColors) private var colors
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var showRunConfirmation = false
+    @State private var showMarketPulseInfo = false
 
     private var isLandscape: Bool {
         verticalSizeClass == .compact
@@ -35,6 +36,9 @@ struct DashboardView: View {
                 }
                 .sheet(isPresented: $viewModel.showRunNowSheet) {
                     runNowSheet
+                }
+                .sheet(isPresented: $showMarketPulseInfo) {
+                    MarketPulseInfoSheet()
                 }
                 .alert(String(localized: "Error"), isPresented: Binding(
                     get: { viewModel.errorMessage != nil },
@@ -334,6 +338,16 @@ struct DashboardView: View {
                         .font(AccBotFonts.titleSmall)
                         .foregroundStyle(colors.onSurface)
                     Spacer()
+                    Button {
+                        showMarketPulseInfo = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(AccBotFonts.caption)
+                            .foregroundStyle(colors.primary)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                     Image(systemName: viewModel.isMarketPulseExpanded ? "chevron.up" : "chevron.down")
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.onSurfaceVariant)

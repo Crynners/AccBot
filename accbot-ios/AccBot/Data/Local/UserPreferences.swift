@@ -68,6 +68,12 @@ final class UserPreferences: ObservableObject {
         didSet { defaults.set(marketPulseExpanded, forKey: Keys.marketPulseExpanded) }
     }
 
+    // MARK: - Experimental Exchanges
+
+    @Published var showExperimentalExchanges: Bool {
+        didSet { defaults.set(showExperimentalExchanges, forKey: Keys.showExperimentalExchanges) }
+    }
+
     // MARK: - Changelog
 
     @Published var lastSeenBuildNumber: Int {
@@ -98,6 +104,7 @@ final class UserPreferences: ObservableObject {
         self.appLanguage = defaults.string(forKey: Keys.appLanguage) ?? ""
         self.biometricLockEnabled = defaults.bool(forKey: Keys.biometricLockEnabled)
         self.sandboxMode = defaults.bool(forKey: Keys.sandboxMode)
+        self.showExperimentalExchanges = defaults.bool(forKey: Keys.showExperimentalExchanges)
         self.marketPulseEnabled = defaults.object(forKey: Keys.marketPulseEnabled) as? Bool ?? false
         self.marketPulseExpanded = defaults.object(forKey: Keys.marketPulseExpanded) as? Bool ?? true
         self.lowBalanceThresholdDays = max(1, min(14, defaults.object(forKey: Keys.lowBalanceThresholdDays) as? Int ?? 2))
@@ -122,6 +129,7 @@ final class UserPreferences: ObservableObject {
         static let marketPulseEnabled = "marketPulseEnabled"
         static let marketPulseExpanded = "marketPulseExpanded"
         static let lowBalanceThresholdDays = "lowBalanceThresholdDays"
+        static let showExperimentalExchanges = "showExperimentalExchanges"
         static let lastSeenBuildNumber = "lastSeenBuildNumber"
         static let lastBackgroundRun = "lastBackgroundRun"
     }

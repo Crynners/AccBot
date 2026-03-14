@@ -47,7 +47,7 @@ enum Exchange: String, Codable, CaseIterable, Hashable, Identifiable, Sendable {
     var supportedFiats: [String] {
         switch self {
         case .coinmate: return ["EUR", "CZK"]
-        case .binance: return ["EUR", "USDT"]
+        case .binance: return ["EUR", "USDC"]
         case .kraken: return ["EUR", "USD", "GBP"]
         case .kucoin: return ["USDT"]
         case .bitfinex: return ["USD", "EUR"]
@@ -59,7 +59,7 @@ enum Exchange: String, Codable, CaseIterable, Hashable, Identifiable, Sendable {
     var supportedCryptos: [String] {
         switch self {
         case .coinmate: return ["BTC", "ETH", "LTC"]
-        case .binance: return ["BTC", "ETH", "SOL", "ADA", "DOT"]
+        case .binance: return ["BTC", "ETH", "BNB", "SOL", "ADA", "DOT"]
         case .kraken: return ["BTC", "ETH", "SOL", "DOT"]
         case .kucoin: return ["BTC", "ETH", "SOL", "ADA"]
         case .bitfinex: return ["BTC", "ETH"]
@@ -71,7 +71,7 @@ enum Exchange: String, Codable, CaseIterable, Hashable, Identifiable, Sendable {
     var minOrderSize: [String: Decimal] {
         switch self {
         case .coinmate: return ["EUR": 10, "CZK": 50]
-        case .binance: return ["EUR": 10, "USDT": 10]
+        case .binance: return ["EUR": 5, "USDC": 5]
         case .kraken: return ["EUR": 10, "USD": 10]
         case .kucoin: return ["USDT": 10]
         case .bitfinex: return ["USD": 25, "EUR": 25]
@@ -115,14 +115,34 @@ enum Exchange: String, Codable, CaseIterable, Hashable, Identifiable, Sendable {
     var requiresClientId: Bool {
         self == .coinmate
     }
+
+    /// Whether this exchange is considered stable (production-tested).
+    /// Unstable exchanges are hidden behind the "Experimental" toggle.
+    var isStable: Bool {
+        self == .coinmate || self == .binance
+    }
+
+    /// Binance LOT_SIZE step sizes per crypto (from /api/v3/exchangeInfo).
+    static let binanceLotStepSize: [String: String] = [
+        "BTC": "0.00001",
+        "ETH": "0.0001",
+        "BNB": "0.001",
+        "SOL": "0.001",
+        "ADA": "0.1",
+        "DOT": "0.01",
+    ]
 }
 
-/// Utility to filter exchanges based on sandbox mode
+/// Utility to filter exchanges based on sandbox mode and experimental toggle
 enum ExchangeFilter {
-    static func getAvailableExchanges(isSandboxMode: Bool) -> [Exchange] {
+    static func getAvailableExchanges(isSandboxMode: Bool, showExperimental: Bool = true) -> [Exchange] {
+        var exchanges = Exchange.allCases
         if isSandboxMode {
-            return Exchange.allCases.filter { $0.supportsSandbox }
+            exchanges = exchanges.filter { $0.supportsSandbox }
         }
-        return Array(Exchange.allCases)
+        if !showExperimental {
+            exchanges = exchanges.filter { $0.isStable }
+        }
+        return exchanges
     }
 }

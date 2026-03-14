@@ -34,12 +34,13 @@ struct FiatIcon: View {
         case "GBP": return String(localized: "British Pound")
         case "CZK": return String(localized: "Czech Koruna")
         case "USDT": return String(localized: "Tether")
+        case "USDC": return String(localized: "USD Coin")
         default: return symbol
         }
     }
 
     private var hasCanvasIcon: Bool {
-        ["USD", "EUR", "GBP", "CZK", "USDT"].contains(symbol)
+        ["USD", "EUR", "GBP", "CZK", "USDT", "USDC"].contains(symbol)
     }
 
     // MARK: - Fallback (text circle)
@@ -68,6 +69,7 @@ struct FiatIcon: View {
         case "GBP": drawGBP(context: &context, scale: scale)
         case "CZK": drawCZK(context: &context, scale: scale)
         case "USDT": drawUSDT(context: &context, scale: scale)
+        case "USDC": drawUSDC(context: &context, scale: scale)
         default: break
         }
     }
@@ -252,6 +254,42 @@ struct FiatIcon: View {
         context.stroke(vertBar, with: .color(.white),
                        style: StrokeStyle(lineWidth: 6 * scale, lineCap: .round))
     }
+    // MARK: - USDC (Blue circle + white $ sign)
+
+    private func drawUSDC(context: inout GraphicsContext, scale: CGFloat) {
+        let circle = Path(ellipseIn: CGRect(x: 8 * scale, y: 8 * scale, width: 112 * scale, height: 112 * scale))
+        context.fill(circle, with: .color(Color(hex: 0x2775CA)))
+
+        // S shape (dollar sign)
+        let sPath = Path { p in
+            p.move(to: CGPoint(x: 76 * scale, y: 48 * scale))
+            p.addCurve(
+                to: CGPoint(x: 52 * scale, y: 48 * scale),
+                control1: CGPoint(x: 76 * scale, y: 41 * scale),
+                control2: CGPoint(x: 52 * scale, y: 36 * scale)
+            )
+            p.addCurve(
+                to: CGPoint(x: 76 * scale, y: 68 * scale),
+                control1: CGPoint(x: 52 * scale, y: 55 * scale),
+                control2: CGPoint(x: 76 * scale, y: 62 * scale)
+            )
+            p.addCurve(
+                to: CGPoint(x: 52 * scale, y: 68 * scale),
+                control1: CGPoint(x: 76 * scale, y: 75 * scale),
+                control2: CGPoint(x: 52 * scale, y: 80 * scale)
+            )
+        }
+        context.stroke(sPath, with: .color(.white),
+                       style: StrokeStyle(lineWidth: 5 * scale, lineCap: .round))
+
+        // Vertical bar
+        let bar = Path { p in
+            p.move(to: CGPoint(x: 64 * scale, y: 30 * scale))
+            p.addLine(to: CGPoint(x: 64 * scale, y: 86 * scale))
+        }
+        context.stroke(bar, with: .color(.white),
+                       style: StrokeStyle(lineWidth: 3.5 * scale, lineCap: .round))
+    }
 }
 
 // MARK: - Preview
@@ -263,6 +301,7 @@ struct FiatIcon: View {
         FiatIcon(symbol: "GBP")
         FiatIcon(symbol: "CZK")
         FiatIcon(symbol: "USDT")
+        FiatIcon(symbol: "USDC")
         FiatIcon(symbol: "JPY")
     }
     .padding()

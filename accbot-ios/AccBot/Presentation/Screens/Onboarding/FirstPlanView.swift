@@ -282,11 +282,11 @@ private class FirstPlanViewModel: ObservableObject {
     @Published var amount = ""
     @Published var selectedFrequency: DcaFrequency = .daily
     @Published var availableCryptos: [String] = ["BTC", "ETH", "SOL", "ADA", "DOT"]
-    @Published var availableFiats: [String] = ["EUR", "USD", "USDT", "CZK", "GBP"]
+    @Published var availableFiats: [String] = ["EUR", "USD", "USDC", "USDT", "CZK", "GBP"]
     private var configuredExchange: Exchange?
 
     var amountPresets: [Int] {
-        let all = [25, 50, 100, 250, 500]
+        let all = [5, 10, 25, 50, 100]
         guard let exchange = configuredExchange,
               let minSize = exchange.minOrderSize[selectedFiat] else { return all }
         return all.filter { Decimal($0) >= minSize }

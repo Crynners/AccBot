@@ -3,6 +3,7 @@ import Foundation
 enum CredentialValidationResult {
     case success
     case error(String)
+    case networkError
 }
 
 /// Validates exchange credentials via API and saves to Keychain if valid.
@@ -58,6 +59,11 @@ final class ValidateAndSaveCredentialsUseCase {
                     : ""
                 return .error("Invalid API credentials.\(hint)")
             }
+        } catch let urlError as URLError where urlError.code == .notConnectedToInternet
+                    || urlError.code == .networkConnectionLost
+                    || urlError.code == .cannotFindHost
+                    || urlError.code == .timedOut {
+            return .networkError
         } catch {
             let isSandbox = userPreferences.isSandboxMode()
             let hint = isSandbox

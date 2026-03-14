@@ -25,18 +25,7 @@ struct AddExchangeView: View {
     @EnvironmentObject var router: AppRouter
 
     @State private var currentStep: ExchangeSetupStep = .selection
-    @State private var selectedExchange: Exchange?
-    @State private var apiKey = ""
-    @State private var apiSecret = ""
-    @State private var passphrase = ""
-    @State private var clientId = ""
-    @State private var isValidating = false
-    @State private var validationError: String?
-
-    // QR scanner state
-    @State private var showQrScanner = false
-    @State private var qrScanTarget: CredentialScanTarget = .apiKey
-    @State private var showMultiFieldScanner = false
+    @StateObject private var credentials = CredentialFormDelegate()
 
     // Import state
     @State private var showImportOffer = false
@@ -52,21 +41,6 @@ struct AddExchangeView: View {
         count: 2
     )
 
-    private var currentExchange: Exchange? {
-        selectedExchange ?? preselectedExchange
-    }
-
-    private var canValidate: Bool {
-        guard let exchange = currentExchange else { return false }
-        let hasKey = !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let hasSecret = !apiSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let hasPassphrase = !exchange.requiresPassphrase
-            || !passphrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let hasClientId = !exchange.requiresClientId
-            || !clientId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return !isValidating && hasKey && hasSecret && hasPassphrase && hasClientId
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             // Progress indicator (hidden on success step)
@@ -80,15 +54,15 @@ struct AddExchangeView: View {
                     case .selection:
                         selectionStep
                     case .instructions:
-                        if let exchange = currentExchange {
+                        if let exchange = credentials.selectedExchange {
                             instructionsStep(exchange)
                         }
                     case .credentials:
-                        if let exchange = currentExchange {
+                        if let exchange = credentials.selectedExchange {
                             credentialsStep(exchange)
                         }
                     case .success:
-                        if let exchange = currentExchange {
+                        if let exchange = credentials.selectedExchange {
                             successStep(exchange)
                         }
                     }
@@ -117,32 +91,21 @@ struct AddExchangeView: View {
                 }
             }
         }
-        .sheet(isPresented: $showQrScanner) {
+        .sheet(isPresented: $credentials.showQrScanner) {
             QrScannerSheet(
                 title: String(localized: "Scan Credential"),
                 onScanned: { code in
-                    handleQrScan(code)
+                    credentials.handleQrScan(code)
                 }
             )
         }
-        .sheet(isPresented: $showMultiFieldScanner) {
-            if let exchange = currentExchange {
+        .sheet(isPresented: $credentials.showMultiFieldScanner) {
+            if credentials.selectedExchange != nil {
                 MultiFieldScannerSheet(
                     title: String(localized: "Scan All Credentials"),
-                    fields: multiFieldScannerFields(for: exchange),
+                    fields: credentials.multiFieldScannerFields(),
                     onResult: { result in
-                        if let key = result["apiKey"] {
-                            apiKey = key
-                        }
-                        if let secret = result["apiSecret"] {
-                            apiSecret = secret
-                        }
-                        if let phrase = result["passphrase"] {
-                            passphrase = phrase
-                        }
-                        if let id = result["clientId"] {
-                            clientId = id
-                        }
+                        credentials.handleMultiFieldResult(result)
                     }
                 )
             }
@@ -157,7 +120,7 @@ struct AddExchangeView: View {
         }
         .onAppear {
             if let exchange = preselectedExchange {
-                selectedExchange = exchange
+                credentials.selectExchange(exchange)
                 currentStep = .instructions
             }
         }
@@ -232,12 +195,7 @@ struct AddExchangeView: View {
 
     private func exchangeGridItem(_ exchange: Exchange) -> some View {
         Button {
-            selectedExchange = exchange
-            apiKey = ""
-            apiSecret = ""
-            passphrase = ""
-            clientId = ""
-            validationError = nil
+            credentials.selectExchange(exchange)
             goToStep(.instructions)
         } label: {
             VStack(spacing: Spacing.sm) {
@@ -393,14 +351,38 @@ struct AddExchangeView: View {
                 Spacer()
             }
 
-            // Scan All Credentials button (hidden for Coinmate — uses Client ID + Public/Private key)
-            if exchange != .coinmate {
+            // Quick-fill buttons
+            HStack(spacing: Spacing.md) {
+                // Scan All Credentials (hidden for Coinmate — uses Client ID + Public/Private key)
+                if exchange != .coinmate {
+                    Button {
+                        credentials.showMultiFieldScanner = true
+                    } label: {
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "qrcode.viewfinder")
+                            Text(String(localized: "Scan All"))
+                        }
+                        .font(AccBotFonts.headline)
+                        .foregroundStyle(colors.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Spacing.md)
+                        .background(colors.primary.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CornerRadius.md)
+                                .stroke(colors.primary.opacity(0.3), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // Paste All from clipboard
                 Button {
-                    showMultiFieldScanner = true
+                    credentials.pasteAllCredentials()
                 } label: {
                     HStack(spacing: Spacing.sm) {
-                        Image(systemName: "qrcode.viewfinder")
-                        Text(String(localized: "Scan All Credentials"))
+                        Image(systemName: "doc.on.clipboard")
+                        Text(String(localized: "Paste All"))
                     }
                     .font(AccBotFonts.headline)
                     .foregroundStyle(colors.primary)
@@ -421,7 +403,7 @@ struct AddExchangeView: View {
                 if exchange.requiresClientId {
                     credentialField(
                         label: String(localized: "Client ID"),
-                        text: $clientId,
+                        text: $credentials.clientId,
                         placeholder: String(localized: "Enter your client ID"),
                         isSecure: false,
                         scanTarget: .clientId
@@ -432,7 +414,7 @@ struct AddExchangeView: View {
                     label: exchange.requiresClientId
                         ? String(localized: "Public Key")
                         : String(localized: "API Key"),
-                    text: $apiKey,
+                    text: $credentials.apiKey,
                     placeholder: exchange.requiresClientId
                         ? String(localized: "Enter your public key")
                         : String(localized: "Enter your API key"),
@@ -444,7 +426,7 @@ struct AddExchangeView: View {
                     label: exchange.requiresClientId
                         ? String(localized: "Private Key")
                         : String(localized: "API Secret"),
-                    text: $apiSecret,
+                    text: $credentials.apiSecret,
                     placeholder: exchange.requiresClientId
                         ? String(localized: "Enter your private key")
                         : String(localized: "Enter your API secret"),
@@ -455,7 +437,7 @@ struct AddExchangeView: View {
                 if exchange.requiresPassphrase {
                     credentialField(
                         label: String(localized: "Passphrase"),
-                        text: $passphrase,
+                        text: $credentials.passphrase,
                         placeholder: String(localized: "Enter your passphrase"),
                         isSecure: true,
                         scanTarget: .passphrase
@@ -467,7 +449,7 @@ struct AddExchangeView: View {
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
 
             // Validation error
-            if let error = validationError {
+            if let error = credentials.validationError {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(colors.error)
@@ -483,26 +465,33 @@ struct AddExchangeView: View {
 
             // Connect button
             Button {
-                Task { await validateAndSave() }
+                Task {
+                    let success = await credentials.validateAndSave(
+                        credentialsStore: dependencies.credentialsStore,
+                        exchangeApiFactory: dependencies.exchangeApiFactory,
+                        isSandbox: dependencies.userPreferences.sandboxMode
+                    )
+                    if success { goToStep(.success) }
+                }
             } label: {
                 HStack(spacing: Spacing.sm) {
-                    if isValidating {
+                    if credentials.isValidating {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: colors.onPrimary))
                             .scaleEffect(0.8)
                     }
-                    Text(isValidating
+                    Text(credentials.isValidating
                          ? String(localized: "Validating...")
                          : String(localized: "Connect"))
                         .font(AccBotFonts.headline)
                 }
-                .foregroundStyle(canValidate ? colors.onPrimary : colors.disabledForeground)
+                .foregroundStyle(credentials.canValidate ? colors.onPrimary : colors.disabledForeground)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.lg)
-                .background(canValidate ? colors.primary : colors.disabledBackground)
+                .background(credentials.canValidate ? colors.primary : colors.disabledBackground)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
             }
-            .disabled(!canValidate)
+            .disabled(!credentials.canValidate)
         }
     }
 
@@ -536,8 +525,8 @@ struct AddExchangeView: View {
 
                 if let target = scanTarget {
                     Button {
-                        qrScanTarget = target
-                        showQrScanner = true
+                        credentials.qrScanTarget = target
+                        credentials.showQrScanner = true
                     } label: {
                         Image(systemName: "qrcode.viewfinder")
                             .font(AccBotFonts.iconSmall)
@@ -757,85 +746,6 @@ struct AddExchangeView: View {
 
     // MARK: - Actions
 
-    private func validateAndSave() async {
-        guard let exchange = currentExchange else { return }
-
-        isValidating = true
-        validationError = nil
-
-        let credentials = ExchangeCredentials(
-            exchange: exchange,
-            apiKey: apiKey.trimmingCharacters(in: .whitespacesAndNewlines),
-            apiSecret: apiSecret.trimmingCharacters(in: .whitespacesAndNewlines),
-            passphrase: exchange.requiresPassphrase
-                ? passphrase.trimmingCharacters(in: .whitespacesAndNewlines)
-                : nil,
-            clientId: exchange.requiresClientId
-                ? clientId.trimmingCharacters(in: .whitespacesAndNewlines)
-                : nil
-        )
-
-        let isSandbox = dependencies.userPreferences.sandboxMode
-
-        do {
-            let api = dependencies.exchangeApiFactory.create(
-                credentials: credentials,
-                isSandbox: isSandbox
-            )
-            let valid = try await api.validateCredentials()
-
-            if valid {
-                try dependencies.credentialsStore.save(credentials, isSandbox: isSandbox)
-                goToStep(.success)
-            } else {
-                validationError = String(localized: "Invalid credentials. Please check your API key and secret.")
-            }
-        } catch {
-            validationError = error.localizedDescription
-        }
-
-        isValidating = false
-    }
-
-    private func multiFieldScannerFields(for exchange: Exchange) -> [ScanTargetField] {
-        var fields: [ScanTargetField] = []
-        if exchange.requiresClientId {
-            fields.append(ScanTargetField(id: "clientId", label: String(localized: "Client ID")))
-        }
-        fields.append(ScanTargetField(
-            id: "apiKey",
-            label: exchange.requiresClientId
-                ? String(localized: "Public Key")
-                : String(localized: "API Key")
-        ))
-        fields.append(ScanTargetField(
-            id: "apiSecret",
-            label: exchange.requiresClientId
-                ? String(localized: "Private Key")
-                : String(localized: "API Secret")
-        ))
-        if exchange.requiresPassphrase {
-            fields.append(ScanTargetField(id: "passphrase", label: String(localized: "Passphrase")))
-        }
-        return fields
-    }
-
-    private func handleQrScan(_ code: String) {
-        switch qrScanTarget {
-        case .apiKey:
-            apiKey = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        case .apiSecret:
-            apiSecret = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        case .passphrase:
-            passphrase = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        case .clientId:
-            clientId = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        case .scanAll:
-            // Handled by MultiFieldScannerSheet now
-            break
-        }
-    }
-
     private func importFromApi(_ exchange: Exchange) async {
         let isSandbox = dependencies.userPreferences.sandboxMode
 
@@ -907,16 +817,6 @@ struct AddExchangeView: View {
         }
         showImportResult = true
     }
-}
-
-// MARK: - Credential Scan Target
-
-enum CredentialScanTarget {
-    case apiKey
-    case apiSecret
-    case passphrase
-    case clientId
-    case scanAll
 }
 
 // MARK: - Preview
