@@ -118,7 +118,7 @@ struct ExchangeSetupView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: credentials.validationError) { _, newError in
+        .onChange(of: credentials.validationError) { newError in
             if let error = newError {
                 UIAccessibility.post(notification: .announcement, argument: error)
             }
