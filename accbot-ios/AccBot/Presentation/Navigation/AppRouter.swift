@@ -16,6 +16,16 @@ final class AppRouter: ObservableObject {
     /// Unread notification count for badge display
     @Published var unreadNotificationCount: Int = 0
 
+    /// Whether the current tab has navigated into a detail view (non-empty path)
+    var isInDetailView: Bool {
+        switch selectedTab {
+        case .dashboard: return !dashboardPath.isEmpty
+        case .portfolio: return !portfolioPath.isEmpty
+        case .notifications: return !notificationsPath.isEmpty
+        case .settings: return !settingsPath.isEmpty
+        }
+    }
+
     /// Debounce guard to prevent duplicate pushes from rapid taps
     private var lastNavigationTime = Date.distantPast
 

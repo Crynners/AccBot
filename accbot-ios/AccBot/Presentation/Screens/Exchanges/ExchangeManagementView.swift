@@ -4,6 +4,7 @@ struct ExchangeManagementView: View {
     @EnvironmentObject var dependencies: AppDependencies
     @EnvironmentObject var router: AppRouter
     @StateObject private var viewModel = ExchangeManagementViewModel()
+    @State private var showExperimentalDisclaimer = false
 
     @Environment(\.accBotColors) private var colors
 
@@ -17,6 +18,9 @@ struct ExchangeManagementView: View {
                 if !viewModel.availableExchanges.isEmpty {
                     availableSection
                 }
+
+                // Experimental toggle
+                experimentalToggle
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.lg)
@@ -84,6 +88,7 @@ struct ExchangeManagementView: View {
                     ExchangeTile(
                         exchange: exchange,
                         isConnected: false,
+                        showExperimentalBadge: !exchange.isStable,
                         colors: colors,
                         onTap: {
                             router.navigate(to: .addExchange(exchange))
@@ -93,6 +98,50 @@ struct ExchangeManagementView: View {
             }
         }
     }
+
+    // MARK: - Experimental Toggle
+
+    private var experimentalToggle: some View {
+        Button {
+            if viewModel.showExperimental {
+                viewModel.setExperimentalEnabled(false)
+            } else {
+                showExperimentalDisclaimer = true
+            }
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "flask")
+                    .font(AccBotFonts.body)
+                    .foregroundStyle(colors.warning)
+
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text(String(localized: "Experimental Exchanges"))
+                        .font(AccBotFonts.label)
+                        .foregroundStyle(colors.onSurface)
+                    Text(String(localized: "Show additional exchanges that haven't been fully tested"))
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
+
+                Spacer()
+
+                Image(systemName: viewModel.showExperimental ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(viewModel.showExperimental ? colors.primary : colors.onSurfaceVariant)
+            }
+            .padding(Spacing.md)
+            .background(colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+        }
+        .buttonStyle(.plain)
+        .alert(String(localized: "Enable Experimental Exchanges?"), isPresented: $showExperimentalDisclaimer) {
+            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Enable")) {
+                viewModel.setExperimentalEnabled(true)
+            }
+        } message: {
+            Text(String(localized: "These exchanges haven't been fully tested with AccBot. Use at your own risk. Please report any issues on GitHub."))
+        }
+    }
 }
 
 // MARK: - Exchange Tile (Grid item)
@@ -100,6 +149,7 @@ struct ExchangeManagementView: View {
 private struct ExchangeTile: View {
     let exchange: Exchange
     let isConnected: Bool
+    var showExperimentalBadge: Bool = false
     let colors: AccBotColors
     let onTap: () -> Void
 
@@ -117,17 +167,24 @@ private struct ExchangeTile: View {
                     .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
 
-                HStack(spacing: 4) {
-                    Image(systemName: isConnected ? "checkmark.circle.fill" : "circle")
+                if showExperimentalBadge {
+                    Text(String(localized: "EXPERIMENTAL"))
                         .font(AccBotFonts.captionSmall)
-                        .foregroundStyle(isConnected ? colors.success : colors.onSurfaceVariant)
-                        .accessibilityHidden(true)
-                    Text(isConnected
-                         ? String(localized: "Connected")
-                         : String(localized: "\(exchange.supportedCryptos.count) cryptos"))
-                        .font(AccBotFonts.captionSmall)
-                        .foregroundStyle(isConnected ? colors.success : colors.onSurfaceVariant)
+                        .foregroundStyle(colors.warning)
                         .lineLimit(1)
+                } else {
+                    HStack(spacing: 4) {
+                        Image(systemName: isConnected ? "checkmark.circle.fill" : "circle")
+                            .font(AccBotFonts.captionSmall)
+                            .foregroundStyle(isConnected ? colors.success : colors.onSurfaceVariant)
+                            .accessibilityHidden(true)
+                        Text(isConnected
+                             ? String(localized: "Connected")
+                             : String(localized: "\(exchange.supportedCryptos.count) cryptos"))
+                            .font(AccBotFonts.captionSmall)
+                            .foregroundStyle(isConnected ? colors.success : colors.onSurfaceVariant)
+                            .lineLimit(1)
+                    }
                 }
             }
             .frame(maxWidth: .infinity)

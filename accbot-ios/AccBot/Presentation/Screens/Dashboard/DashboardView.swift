@@ -68,14 +68,6 @@ struct DashboardView: View {
             ToolbarItem(placement: .principal) {
                 AccBotHeaderLogo(isSandbox: colors.isSandbox)
             }
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    router.navigate(to: .addPlan)
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel(String(localized: "Add DCA plan"))
-            }
         }
         .onAppear {
             viewModel.setup(dependencies)
@@ -894,28 +886,51 @@ struct AppLogoIcon: View {
                 context.fill(Path(rect), with: .color(.white))
             }
 
-            // Bitcoin B body (simplified)
-            var bBody = Path()
-            // Main body rectangle
-            bBody.addRoundedRect(in: CGRect(x: 46 * s, y: 43 * s, width: 17 * s, height: 22 * s), cornerSize: CGSize(width: 2 * s, height: 2 * s))
-            context.fill(bBody, with: .color(.white))
+            // Bitcoin B body with counter holes (evenOdd fill, from ic_launcher_foreground.xml)
+            let bShape = Path { p in
+                // Outer B shape
+                p.move(to: CGPoint(x: 46 * s, y: 43 * s))
+                p.addLine(to: CGPoint(x: 56 * s, y: 43 * s))
+                p.addCurve(to: CGPoint(x: 62 * s, y: 48.5 * s),
+                           control1: CGPoint(x: 60 * s, y: 43 * s),
+                           control2: CGPoint(x: 62 * s, y: 45.5 * s))
+                p.addCurve(to: CGPoint(x: 57 * s, y: 54 * s),
+                           control1: CGPoint(x: 62 * s, y: 51.5 * s),
+                           control2: CGPoint(x: 60 * s, y: 53.5 * s))
+                p.addCurve(to: CGPoint(x: 63 * s, y: 59.5 * s),
+                           control1: CGPoint(x: 60.5 * s, y: 54 * s),
+                           control2: CGPoint(x: 63 * s, y: 56.5 * s))
+                p.addCurve(to: CGPoint(x: 56.5 * s, y: 65 * s),
+                           control1: CGPoint(x: 63 * s, y: 62.5 * s),
+                           control2: CGPoint(x: 60.5 * s, y: 65 * s))
+                p.addLine(to: CGPoint(x: 46 * s, y: 65 * s))
+                p.closeSubpath()
 
-            // Top bump (upper lobe)
-            let topLobe = Path(ellipseIn: CGRect(x: 53 * s, y: 43 * s, width: 9 * s, height: 11 * s))
-            context.fill(topLobe, with: .color(.white))
+                // Top counter hole
+                p.move(to: CGPoint(x: 50 * s, y: 46 * s))
+                p.addLine(to: CGPoint(x: 55.5 * s, y: 46 * s))
+                p.addCurve(to: CGPoint(x: 59 * s, y: 48.5 * s),
+                           control1: CGPoint(x: 57.5 * s, y: 46 * s),
+                           control2: CGPoint(x: 59 * s, y: 47 * s))
+                p.addCurve(to: CGPoint(x: 55.5 * s, y: 51.5 * s),
+                           control1: CGPoint(x: 59 * s, y: 50 * s),
+                           control2: CGPoint(x: 57.5 * s, y: 51.5 * s))
+                p.addLine(to: CGPoint(x: 50 * s, y: 51.5 * s))
+                p.closeSubpath()
 
-            // Bottom bump (lower lobe, slightly wider)
-            let bottomLobe = Path(ellipseIn: CGRect(x: 53 * s, y: 54 * s, width: 10 * s, height: 11 * s))
-            context.fill(bottomLobe, with: .color(.white))
-
-            // Counter holes (dark, to make the B shape)
-            let topHole = Path(ellipseIn: CGRect(x: 50 * s, y: 46 * s, width: 9 * s, height: 5.5 * s))
-            context.fill(topHole, with: .color(centerColor))
-
-            let bottomHole = Path(ellipseIn: CGRect(x: 50 * s, y: 56.5 * s, width: 10 * s, height: 6 * s))
-            context.fill(bottomHole, with: .color(centerColor))
-
-            _ = center // suppress unused warning
+                // Bottom counter hole
+                p.move(to: CGPoint(x: 50 * s, y: 56.5 * s))
+                p.addLine(to: CGPoint(x: 56.5 * s, y: 56.5 * s))
+                p.addCurve(to: CGPoint(x: 60 * s, y: 59.5 * s),
+                           control1: CGPoint(x: 59 * s, y: 56.5 * s),
+                           control2: CGPoint(x: 60 * s, y: 58 * s))
+                p.addCurve(to: CGPoint(x: 56.5 * s, y: 62.5 * s),
+                           control1: CGPoint(x: 60 * s, y: 61 * s),
+                           control2: CGPoint(x: 59 * s, y: 62.5 * s))
+                p.addLine(to: CGPoint(x: 50 * s, y: 62.5 * s))
+                p.closeSubpath()
+            }
+            context.fill(bShape, with: .color(.white), style: FillStyle(eoFill: true))
         }
         .frame(width: size, height: size)
     }

@@ -233,6 +233,7 @@ struct EditPlanView: View {
                 selection: selectedCrypto,
                 label: { $0 },
                 icon: { CryptoIcon(symbol: $0, size: 18) },
+                wrapping: true,
                 onSelect: { selectedCrypto = $0 }
             )
         }
@@ -249,6 +250,7 @@ struct EditPlanView: View {
                 selection: selectedFiat,
                 label: { $0 },
                 icon: { FiatIcon(symbol: $0, size: 18) },
+                wrapping: true,
                 onSelect: { selectedFiat = $0 }
             )
         }

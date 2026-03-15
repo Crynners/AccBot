@@ -4,6 +4,7 @@ import Foundation
 class ExchangeManagementViewModel: ObservableObject {
     @Published var connectedExchanges: [Exchange] = []
     @Published var availableExchanges: [Exchange] = []
+    @Published var showExperimental: Bool = false
     private(set) var dependencies: AppDependencies?
     private var isSetUp = false
 
@@ -18,6 +19,7 @@ class ExchangeManagementViewModel: ObservableObject {
         guard !isSetUp else { return }
         isSetUp = true
         self.dependencies = dependencies
+        showExperimental = dependencies.userPreferences.showExperimentalExchanges
         loadExchanges()
     }
 
@@ -26,9 +28,18 @@ class ExchangeManagementViewModel: ObservableObject {
     func loadExchanges() {
         let isSandbox = deps.userPreferences.sandboxMode
         let configured = deps.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
-        let allAvailable = ExchangeFilter.getAvailableExchanges(isSandboxMode: isSandbox)
+        let allAvailable = ExchangeFilter.getAvailableExchanges(
+            isSandboxMode: isSandbox,
+            showExperimental: showExperimental
+        )
 
         connectedExchanges = configured
         availableExchanges = allAvailable.filter { !configured.contains($0) }
+    }
+
+    func setExperimentalEnabled(_ enabled: Bool) {
+        showExperimental = enabled
+        deps.userPreferences.showExperimentalExchanges = enabled
+        loadExchanges()
     }
 }

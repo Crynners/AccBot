@@ -312,6 +312,7 @@ struct AddPlanView: View {
                 selection: viewModel.selectedCrypto,
                 label: { $0 },
                 icon: { CryptoIcon(symbol: $0, size: 18) },
+                wrapping: true,
                 onSelect: { viewModel.selectedCrypto = $0 }
             )
         }
@@ -328,6 +329,7 @@ struct AddPlanView: View {
                 selection: viewModel.selectedFiat,
                 label: { $0 },
                 icon: { FiatIcon(symbol: $0, size: 18) },
+                wrapping: true,
                 onSelect: { viewModel.selectedFiat = $0 }
             )
         }
