@@ -145,7 +145,7 @@ final class PortfolioViewModel: ObservableObject {
         deps.activeDatabase.transactionDao.observeCount()
             .removeDuplicates()
             .dropFirst()
-            .receive(on: DispatchQueue.main)
+            .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
             .sink(
                 receiveCompletion: { _ in },
                 receiveValue: { [weak self] _ in
@@ -275,13 +275,24 @@ final class PortfolioViewModel: ObservableObject {
         reloadPage()
     }
 
-    /// Cancel any in-flight page load and start a new one.
+    /// Cancel any in-flight page load and start a new one after a short debounce.
+    private var reloadWorkItem: DispatchWorkItem?
+
     private func reloadPage() {
         activeTask?.cancel()
-        activeTask = Task { await loadPageData() }
+        reloadWorkItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            self?.activeTask = Task { await self?.loadPageData() }
+        }
+        reloadWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: item)
     }
 
     // MARK: - Private
+
+    /// Maximum chart points per series. SwiftUI Charts renders LineMark + AreaMark
+    /// per point, so 5 series × 150 points = 1500 marks — keeps rendering smooth.
+    private static let maxPointsPerSeries = 150
 
     private func adaptiveAggregate(_ points: [ChartPoint]) -> [ChartPoint] {
         guard !points.isEmpty else { return points }
@@ -291,24 +302,42 @@ final class PortfolioViewModel: ObservableObject {
         let spanDays = Int64(maxDate.timeIntervalSince(minDate) / 86400)
 
         let mode = CalculateChartDataUseCase.aggregationMode(zoomLevel: zoomLevel, spanDays: spanDays)
-        if mode == .daily { return points }
 
         // Group by series, aggregate each independently — last point per bucket wins
         let grouped = Dictionary(grouping: points) { $0.series }
         return grouped.values.flatMap { seriesPoints -> [ChartPoint] in
             let sorted = seriesPoints.sorted { $0.date < $1.date }
-            var result: [ChartPoint] = []
-            var currentBucketKey = -1
 
-            for point in sorted {
-                let key = CalculateChartDataUseCase.bucketKey(for: point.date, mode: mode)
-                if key != currentBucketKey {
-                    currentBucketKey = key
-                    result.append(point)
-                } else {
-                    result[result.count - 1] = point
+            var result: [ChartPoint]
+            if mode == .daily {
+                result = sorted
+            } else {
+                result = []
+                var currentBucketKey = -1
+                for point in sorted {
+                    let key = CalculateChartDataUseCase.bucketKey(for: point.date, mode: mode)
+                    if key != currentBucketKey {
+                        currentBucketKey = key
+                        result.append(point)
+                    } else {
+                        result[result.count - 1] = point
+                    }
                 }
             }
+
+            // Hard cap: downsample with every-Nth if still too many points
+            let maxPts = Self.maxPointsPerSeries
+            if result.count > maxPts {
+                let step = Double(result.count - 1) / Double(maxPts - 1)
+                var downsampled = [ChartPoint]()
+                downsampled.reserveCapacity(maxPts)
+                for i in 0..<maxPts {
+                    let idx = min(Int(Double(i) * step), result.count - 1)
+                    downsampled.append(result[idx])
+                }
+                result = downsampled
+            }
+
             return result
         }
     }

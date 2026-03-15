@@ -333,15 +333,19 @@ enum ActiveFilter: Identifiable {
         }
     }
 
+    private static let shortDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .short
+        return f
+    }()
+
     var label: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
         switch self {
         case .crypto(let v): return v
         case .exchange(let v): return v.displayName
         case .status(let v): return v.displayName
-        case .dateFrom(let d): return String(localized: "From") + " \(formatter.string(from: d))"
-        case .dateTo(let d): return String(localized: "To") + " \(formatter.string(from: d))"
+        case .dateFrom(let d): return String(localized: "From") + " \(Self.shortDateFormatter.string(from: d))"
+        case .dateTo(let d): return String(localized: "To") + " \(Self.shortDateFormatter.string(from: d))"
         }
     }
 }

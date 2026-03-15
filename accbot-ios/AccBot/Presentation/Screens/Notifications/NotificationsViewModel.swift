@@ -37,8 +37,11 @@ final class NotificationsViewModel: ObservableObject {
     }
 
     private func observeNotifications() {
+        // Combine both publishers into a single debounced update to avoid
+        // double view rebuilds when a single DB change fires both publishers.
         deps.activeDatabase.notificationDao.observeAll()
-            .receive(on: DispatchQueue.main)
+            .combineLatest(deps.activeDatabase.notificationDao.observeUnreadCount())
+            .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
             .sink(
                 receiveCompletion: { completion in
                     if case .failure(let error) = completion {
@@ -47,23 +50,8 @@ final class NotificationsViewModel: ObservableObject {
                         #endif
                     }
                 },
-                receiveValue: { [weak self] notifications in
+                receiveValue: { [weak self] notifications, count in
                     self?.notifications = notifications
-                }
-            )
-            .store(in: &cancellables)
-
-        deps.activeDatabase.notificationDao.observeUnreadCount()
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { completion in
-                    if case .failure(let error) = completion {
-                        #if DEBUG
-                        print("[NotificationsVM] Observation error: \(error.localizedDescription)")
-                        #endif
-                    }
-                },
-                receiveValue: { [weak self] count in
                     self?.unreadCount = count
                 }
             )

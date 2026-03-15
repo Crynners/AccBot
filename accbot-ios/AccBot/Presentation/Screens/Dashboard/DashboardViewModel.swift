@@ -114,13 +114,16 @@ final class DashboardViewModel: ObservableObject {
     }
 
     func loadDataAsync() async {
-        await loadPlans()
-        await loadHoldings()
+        async let plansResult: () = loadPlans()
+        async let holdingsResult: () = loadHoldings()
+        _ = await (plansResult, holdingsResult)
         announceForVoiceOver(String(localized: "Dashboard loaded"))
-        await fetchBalancesForPlans()
-        if showMarketPulse {
-            await fetchMarketData()
-        }
+        // Balances and market data can also run in parallel
+        async let balancesResult: () = fetchBalancesForPlans()
+        async let marketResult: () = {
+            if showMarketPulse { await fetchMarketData() }
+        }()
+        _ = await (balancesResult, marketResult)
     }
 
     func loadPlans() async {
@@ -205,7 +208,7 @@ final class DashboardViewModel: ObservableObject {
 
     private func observePlans() {
         deps.activeDatabase.planDao.observeAll()
-            .receive(on: DispatchQueue.main)
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
             .sink(
                 receiveCompletion: { completion in
                     if case .failure(let error) = completion {
@@ -233,7 +236,7 @@ final class DashboardViewModel: ObservableObject {
         deps.activeDatabase.transactionDao.observeCount()
             .removeDuplicates()
             .dropFirst()
-            .receive(on: DispatchQueue.main)
+            .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
             .sink(
                 receiveCompletion: { _ in },
                 receiveValue: { [weak self] _ in
