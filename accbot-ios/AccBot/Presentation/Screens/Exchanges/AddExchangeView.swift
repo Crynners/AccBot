@@ -27,6 +27,9 @@ struct AddExchangeView: View {
     @State private var currentStep: ExchangeSetupStep = .selection
     @StateObject private var credentials = CredentialFormDelegate()
 
+    // Experimental exchanges
+    @State private var showExperimentalDisclaimer = false
+
     // Import state
     @State private var showImportOffer = false
     @State private var isApiImporting = false
@@ -110,6 +113,14 @@ struct AddExchangeView: View {
                 )
             }
         }
+        .sheet(isPresented: $credentials.showBinanceQrScanner) {
+            QrScannerSheet(
+                title: String(localized: "Scan Binance QR"),
+                onScanned: { code in
+                    credentials.handleBinanceQrScan(code)
+                }
+            )
+        }
         .alert(
             String(localized: "Import Complete"),
             isPresented: $showImportResult
@@ -173,7 +184,10 @@ struct AddExchangeView: View {
                 .foregroundStyle(colors.onSurfaceVariant)
 
             let isSandbox = dependencies.userPreferences.sandboxMode
-            let available = ExchangeFilter.getAvailableExchanges(isSandboxMode: isSandbox)
+            let available = ExchangeFilter.getAvailableExchanges(
+                isSandboxMode: isSandbox,
+                showExperimental: dependencies.userPreferences.showExperimentalExchanges
+            )
             let alreadyConfigured = dependencies.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
             let unconfigured = available.filter { !alreadyConfigured.contains($0) }
 
@@ -190,6 +204,50 @@ struct AddExchangeView: View {
                     }
                 }
             }
+
+            experimentalToggle
+        }
+    }
+
+    private var experimentalToggle: some View {
+        Button {
+            if dependencies.userPreferences.showExperimentalExchanges {
+                dependencies.userPreferences.showExperimentalExchanges = false
+            } else {
+                showExperimentalDisclaimer = true
+            }
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "flask")
+                    .font(AccBotFonts.body)
+                    .foregroundStyle(colors.warning)
+
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text(String(localized: "Experimental Exchanges"))
+                        .font(AccBotFonts.label)
+                        .foregroundStyle(colors.onSurface)
+                    Text(String(localized: "Show additional exchanges that haven't been fully tested"))
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
+
+                Spacer()
+
+                Image(systemName: dependencies.userPreferences.showExperimentalExchanges ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(dependencies.userPreferences.showExperimentalExchanges ? colors.primary : colors.onSurfaceVariant)
+            }
+            .padding(Spacing.md)
+            .background(colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+        }
+        .buttonStyle(.plain)
+        .alert(String(localized: "Enable Experimental Exchanges?"), isPresented: $showExperimentalDisclaimer) {
+            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Enable")) {
+                dependencies.userPreferences.showExperimentalExchanges = true
+            }
+        } message: {
+            Text(String(localized: "These exchanges haven't been fully tested with AccBot. Use at your own risk. Please report any issues on GitHub."))
         }
     }
 
@@ -210,9 +268,19 @@ struct AddExchangeView: View {
                     .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
 
-                Text(String(localized: "\(exchange.supportedCryptos.count) cryptos"))
-                    .font(AccBotFonts.captionSmall)
-                    .foregroundStyle(colors.onSurfaceVariant)
+                if !exchange.isStable {
+                    Text(String(localized: "EXPERIMENTAL"))
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.warning)
+                        .padding(.horizontal, Spacing.xs)
+                        .padding(.vertical, 2)
+                        .background(colors.warning.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxs))
+                } else {
+                    Text(String(localized: "\(exchange.supportedCryptos.count) cryptos"))
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.lg)
@@ -353,14 +421,58 @@ struct AddExchangeView: View {
 
             // Quick-fill buttons
             HStack(spacing: Spacing.md) {
-                // Scan All Credentials (hidden for Coinmate — uses Client ID + Public/Private key)
-                if exchange != .coinmate {
+                if exchange == .binance {
+                    // Binance: Scan QR (parses Binance JSON QR), no Paste All
                     Button {
-                        credentials.showMultiFieldScanner = true
+                        credentials.showBinanceQrScanner = true
                     } label: {
                         HStack(spacing: Spacing.sm) {
                             Image(systemName: "qrcode.viewfinder")
-                            Text(String(localized: "Scan All"))
+                            Text(String(localized: "Scan QR"))
+                        }
+                        .font(AccBotFonts.headline)
+                        .foregroundStyle(colors.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Spacing.md)
+                        .background(colors.primary.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CornerRadius.md)
+                                .stroke(colors.primary.opacity(0.3), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    // Scan All Credentials (hidden for Coinmate — uses Client ID + Public/Private key)
+                    if exchange != .coinmate {
+                        Button {
+                            credentials.showMultiFieldScanner = true
+                        } label: {
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "qrcode.viewfinder")
+                                Text(String(localized: "Scan All"))
+                            }
+                            .font(AccBotFonts.headline)
+                            .foregroundStyle(colors.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Spacing.md)
+                            .background(colors.primary.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: CornerRadius.md)
+                                    .stroke(colors.primary.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // Paste All from clipboard
+                    Button {
+                        credentials.pasteAllCredentials()
+                    } label: {
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "doc.on.clipboard")
+                            Text(String(localized: "Paste All"))
                         }
                         .font(AccBotFonts.headline)
                         .foregroundStyle(colors.primary)
@@ -375,27 +487,6 @@ struct AddExchangeView: View {
                     }
                     .buttonStyle(.plain)
                 }
-
-                // Paste All from clipboard
-                Button {
-                    credentials.pasteAllCredentials()
-                } label: {
-                    HStack(spacing: Spacing.sm) {
-                        Image(systemName: "doc.on.clipboard")
-                        Text(String(localized: "Paste All"))
-                    }
-                    .font(AccBotFonts.headline)
-                    .foregroundStyle(colors.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.md)
-                    .background(colors.primary.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CornerRadius.md)
-                            .stroke(colors.primary.opacity(0.3), lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
             }
 
             // Credential fields
@@ -508,17 +599,46 @@ struct AddExchangeView: View {
                 .foregroundStyle(colors.onSurfaceVariant)
 
             HStack(spacing: Spacing.sm) {
-                Group {
-                    if isSecure {
-                        SecureField(placeholder, text: text)
+                HStack(spacing: 0) {
+                    Group {
+                        if isSecure {
+                            SecureField(placeholder, text: text)
+                        } else {
+                            TextField(placeholder, text: text)
+                        }
+                    }
+                    .font(AccBotFonts.mono)
+                    .foregroundStyle(colors.onSurface)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+
+                    // Paste (empty) or Clear (non-empty) button
+                    if text.wrappedValue.isEmpty {
+                        Button {
+                            if let clipboard = UIPasteboard.general.string {
+                                text.wrappedValue = clipboard.trimmingCharacters(in: .whitespacesAndNewlines)
+                            }
+                        } label: {
+                            Image(systemName: "doc.on.clipboard")
+                                .font(AccBotFonts.body)
+                                .foregroundStyle(colors.primary)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.leading, Spacing.sm)
+                        .accessibilityLabel(String(localized: "Paste"))
                     } else {
-                        TextField(placeholder, text: text)
+                        Button {
+                            text.wrappedValue = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(AccBotFonts.body)
+                                .foregroundStyle(colors.onSurfaceVariant)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.leading, Spacing.sm)
+                        .accessibilityLabel(String(localized: "Clear"))
                     }
                 }
-                .font(AccBotFonts.mono)
-                .foregroundStyle(colors.onSurface)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
                 .padding(Spacing.md)
                 .background(colors.surfaceVariant.opacity(0.3))
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))

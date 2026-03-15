@@ -27,6 +27,7 @@ class CredentialFormDelegate: ObservableObject {
     @Published var showQrScanner = false
     @Published var qrScanTarget: CredentialScanTarget = .apiKey
     @Published var showMultiFieldScanner = false
+    @Published var showBinanceQrScanner = false
 
     // MARK: - Computed Properties
 
@@ -137,6 +138,23 @@ class CredentialFormDelegate: ObservableObject {
     }
 
     // MARK: - QR Scanning
+
+    /// Parse a Binance QR code. Expected JSON: {"apiKey":"...","secretKey":"..."}.
+    /// Falls back to treating the entire string as the API key.
+    func handleBinanceQrScan(_ code: String) {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let data = trimmed.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let key = json["apiKey"] as? String {
+                apiKey = key.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            if let secret = json["secretKey"] as? String {
+                apiSecret = secret.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        } else {
+            apiKey = trimmed
+        }
+    }
 
     func handleQrScan(_ code: String) {
         let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)

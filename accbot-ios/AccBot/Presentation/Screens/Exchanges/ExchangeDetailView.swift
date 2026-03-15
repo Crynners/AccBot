@@ -97,6 +97,14 @@ struct ExchangeDetailView: View {
                 }
             )
         }
+        .sheet(isPresented: $credentials.showBinanceQrScanner) {
+            QrScannerSheet(
+                title: String(localized: "Scan Binance QR"),
+                onScanned: { code in
+                    credentials.handleBinanceQrScan(code)
+                }
+            )
+        }
         .alert(
             String(localized: "Delete Connection"),
             isPresented: $showDeleteConfirmation
@@ -235,26 +243,48 @@ struct ExchangeDetailView: View {
                     Divider()
                         .background(colors.surfaceVariant.opacity(0.3))
 
-                    // Scan All Credentials button
-                    Button {
-                        credentials.showMultiFieldScanner = true
-                    } label: {
-                        HStack(spacing: Spacing.sm) {
-                            Image(systemName: "qrcode.viewfinder")
-                            Text(String(localized: "Scan All Credentials"))
+                    // Scan button: Binance = Scan QR, Coinmate = hidden, Others = Scan All
+                    if exchange == .binance {
+                        Button {
+                            credentials.showBinanceQrScanner = true
+                        } label: {
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "qrcode.viewfinder")
+                                Text(String(localized: "Scan QR"))
+                            }
+                            .font(AccBotFonts.label)
+                            .foregroundStyle(colors.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Spacing.sm)
+                            .background(colors.primary.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: CornerRadius.sm)
+                                    .stroke(colors.primary.opacity(0.3), lineWidth: 1)
+                            )
                         }
-                        .font(AccBotFonts.label)
-                        .foregroundStyle(colors.primary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Spacing.sm)
-                        .background(colors.primary.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: CornerRadius.sm)
-                                .stroke(colors.primary.opacity(0.3), lineWidth: 1)
-                        )
+                        .buttonStyle(.plain)
+                    } else if exchange != .coinmate {
+                        Button {
+                            credentials.showMultiFieldScanner = true
+                        } label: {
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "qrcode.viewfinder")
+                                Text(String(localized: "Scan All Credentials"))
+                            }
+                            .font(AccBotFonts.label)
+                            .foregroundStyle(colors.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Spacing.sm)
+                            .background(colors.primary.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: CornerRadius.sm)
+                                    .stroke(colors.primary.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
 
                     if exchange.requiresClientId {
                         credentialField(
@@ -495,6 +525,33 @@ struct ExchangeDetailView: View {
                     .foregroundStyle(colors.onSurface)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
+
+                    // Paste (empty) or Clear (non-empty) button
+                    if text.wrappedValue.isEmpty {
+                        Button {
+                            if let clipboard = UIPasteboard.general.string {
+                                text.wrappedValue = clipboard.trimmingCharacters(in: .whitespacesAndNewlines)
+                            }
+                        } label: {
+                            Image(systemName: "doc.on.clipboard")
+                                .font(AccBotFonts.body)
+                                .foregroundStyle(colors.primary)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.leading, Spacing.sm)
+                        .accessibilityLabel(String(localized: "Paste"))
+                    } else {
+                        Button {
+                            text.wrappedValue = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(AccBotFonts.body)
+                                .foregroundStyle(colors.onSurfaceVariant)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.leading, Spacing.sm)
+                        .accessibilityLabel(String(localized: "Clear"))
+                    }
 
                     if isSecure {
                         Button {

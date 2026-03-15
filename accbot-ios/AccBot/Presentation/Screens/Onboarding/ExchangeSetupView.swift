@@ -39,8 +39,12 @@ struct ExchangeSetupView: View {
                     .padding(.top, Spacing.xxl)
 
                     // Exchange grid
+                    let availableExchanges = ExchangeFilter.getAvailableExchanges(
+                        isSandboxMode: dependencies.userPreferences.sandboxMode,
+                        showExperimental: dependencies.userPreferences.showExperimentalExchanges
+                    )
                     LazyVGrid(columns: columns, spacing: Spacing.md) {
-                        ForEach(Exchange.allCases) { exchange in
+                        ForEach(availableExchanges) { exchange in
                             ExchangeGridItem(
                                 exchange: exchange,
                                 isSelected: credentials.selectedExchange == exchange,
@@ -182,18 +186,20 @@ private struct OnboardingCredentialsCard: View {
 
                 Spacer()
 
-                // Paste All from clipboard
-                Button {
-                    credentials.pasteAllCredentials()
-                } label: {
-                    HStack(spacing: Spacing.xs) {
-                        Image(systemName: "doc.on.clipboard")
-                        Text(String(localized: "Paste All"))
+                // Paste All from clipboard (hidden for Binance — uses QR scan instead)
+                if exchange != .binance {
+                    Button {
+                        credentials.pasteAllCredentials()
+                    } label: {
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: "doc.on.clipboard")
+                            Text(String(localized: "Paste All"))
+                        }
+                        .font(AccBotFonts.bodySmall)
+                        .foregroundStyle(colors.primary)
                     }
-                    .font(AccBotFonts.bodySmall)
-                    .foregroundStyle(colors.primary)
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
 
             CredentialField(label: String(localized: "API Key"), text: $credentials.apiKey, placeholder: String(localized: "Enter your API key"))
@@ -268,25 +274,49 @@ private struct CredentialField: View {
                 .font(AccBotFonts.label)
                 .foregroundStyle(colors.onSurfaceVariant)
 
-            if isSecure {
-                SecureField(placeholder, text: $text)
-                    .font(AccBotFonts.mono)
-                    .foregroundStyle(colors.onSurface)
-                    .padding(Spacing.md)
-                    .background(colors.background)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-            } else {
-                TextField(placeholder, text: $text)
-                    .font(AccBotFonts.mono)
-                    .foregroundStyle(colors.onSurface)
-                    .padding(Spacing.md)
-                    .background(colors.background)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+            HStack(spacing: 0) {
+                Group {
+                    if isSecure {
+                        SecureField(placeholder, text: $text)
+                    } else {
+                        TextField(placeholder, text: $text)
+                    }
+                }
+                .font(AccBotFonts.mono)
+                .foregroundStyle(colors.onSurface)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+
+                // Paste (empty) or Clear (non-empty) button
+                if text.isEmpty {
+                    Button {
+                        if let clipboard = UIPasteboard.general.string {
+                            text = clipboard.trimmingCharacters(in: .whitespacesAndNewlines)
+                        }
+                    } label: {
+                        Image(systemName: "doc.on.clipboard")
+                            .font(AccBotFonts.body)
+                            .foregroundStyle(colors.primary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.leading, Spacing.sm)
+                    .accessibilityLabel(String(localized: "Paste"))
+                } else {
+                    Button {
+                        text = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(AccBotFonts.body)
+                            .foregroundStyle(colors.onSurfaceVariant)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.leading, Spacing.sm)
+                    .accessibilityLabel(String(localized: "Clear"))
+                }
             }
+            .padding(Spacing.md)
+            .background(colors.background)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
         }
     }
 }
