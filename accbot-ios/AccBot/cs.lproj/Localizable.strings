@@ -847,3 +847,56 @@
 "Skip Exchange Setup?" = "Přeskočit nastavení burzy?";
 "You can add exchanges later in Settings." = "Burzy můžete přidat později v Nastavení.";
 "Validate & Connect" = "Ověřit a připojit";
+
+/* ===== Round 2 — Market Pulse ===== */
+"Fear & Greed Index" = "Index strachu a chamtivosti";
+"ATH Distance" = "Vzdálenost od ATH";
+"Double tap to collapse" = "Dvojitým klepnutím sbalit";
+"Double tap to expand" = "Dvojitým klepnutím rozbalit";
+"Gain" = "Zisk";
+"Loss" = "Ztráta";
+
+/* ===== Round 2 — Market Pulse Info Sheet ===== */
+"Real-time market indicators to help you understand market conditions" = "Tržní ukazatele v reálném čase pro lepší porozumění podmínkám na trhu";
+"Market Pulse combines two key indicators to give you a quick snapshot of current market sentiment and price levels. These indicators can be used with DCA strategies to adjust purchase amounts automatically." = "Tržní nálada kombinuje dva klíčové ukazatele pro rychlý přehled o aktuálním sentimentu a cenových úrovních. Tyto ukazatele lze použít s DCA strategiemi k automatické úpravě nákupních částek.";
+"Measures overall market sentiment on a scale from 0 (Extreme Fear) to 100 (Extreme Greed). When the market is fearful, it may be a good opportunity to buy. When greedy, prices may be overextended." = "Měří celkový sentiment trhu na stupnici od 0 (extrémní strach) do 100 (extrémní chamtivost). Když trh panuje strach, může to být dobrá příležitost k nákupu. Při chamtivosti mohou být ceny přehnané.";
+"Buy more — market is very fearful" = "Kupovat více — trh je velmi vystrašený";
+"Buy slightly more than usual" = "Kupovat mírně více než obvykle";
+"Standard DCA amount" = "Standardní DCA částka";
+"Buy slightly less than usual" = "Kupovat mírně méně než obvykle";
+"Buy less — market may be overextended" = "Kupovat méně — trh může být přehnaný";
+"Shows how far the current price is from the All-Time High. A larger distance means the price has dropped more from its peak, potentially offering a better buying opportunity for long-term DCA investors." = "Ukazuje, jak daleko je aktuální cena od historického maxima (ATH). Větší vzdálenost znamená, že cena více klesla od svého vrcholu, což může nabídnout lepší příležitost k nákupu pro dlouhodobé DCA investory.";
+"DCA strategies like \"Fear & Greed\" and \"ATH-Based\" use these indicators to automatically adjust your purchase amounts. You don't need to act on them manually." = "DCA strategie jako \"Fear & Greed\" a \"DCA dle ATH\" používají tyto ukazatele k automatické úpravě nákupních částek. Nemusíte na ně reagovat ručně.";
+"Got It" = "Rozumím";
+
+/* ===== Round 2 — Settings missing translations ===== */
+"Show market indicators on dashboard" = "Zobrazit tržní ukazatele na přehledu";
+"What's New" = "Co je nového";
+"Get notified when DCA purchases complete" = "Upozornění po dokončení DCA nákupu";
+"Get notified when DCA purchases fail" = "Upozornění při selhání DCA nákupu";
+"Receive weekly DCA performance summary" = "Týdenní souhrn výkonnosti DCA";
+"Alerts & Security" = "Upozornění a zabezpečení";
+"Face ID or Touch ID is not configured on this device" = "Face ID ani Touch ID není na tomto zařízení nastaveno";
+"All data has been deleted." = "Všechna data byla smazána.";
+"Sandbox mode enabled. Using testnet APIs. Please close and reopen the app for changes to take effect." = "Sandbox režim zapnut. Používání testovacích API. Prosím zavřete a znovu otevřete aplikaci.";
+"Sandbox mode disabled. Using production APIs. Please close and reopen the app for changes to take effect." = "Sandbox režim vypnut. Používání produkčních API. Prosím zavřete a znovu otevřete aplikaci.";
+"Low balance warning threshold" = "Práh upozornění na nízký zůstatek";
+"Adjustable, from 1 to 14 days" = "Nastavitelné, od 1 do 14 dní";
+"Clear threshold" = "Vymazat práh";
+"Notification info" = "Informace o oznámeních";
+"Open notification settings" = "Otevřít nastavení oznámení";
+"General" = "Obecné";
+"Data" = "Data";
+"Add DCA plan" = "Přidat DCA plán";
+"Select at least one plan first" = "Nejprve vyberte alespoň jeden plán";
+
+/* ===== Round 2 — NotificationInfoSheet ===== */
+"How Notifications Work" = "Jak fungují oznámení";
+"AccBot sends local notifications when DCA purchases complete or fail. Notifications are processed on-device — no data is sent to external servers." = "AccBot odesílá lokální oznámení po dokončení nebo selhání DCA nákupu. Oznámení jsou zpracována na zařízení — žádná data nejsou odesílána na servery.";
+"iOS limits background execution to approximately every 15 minutes. For reliable DCA execution, open the app at least once daily. The app uses Background App Refresh when available." = "iOS omezuje běh na pozadí přibližně na každých 15 minut. Pro spolehlivé provádění DCA otevírejte aplikaci alespoň jednou denně.";
+"System Settings" = "Systémové nastavení";
+"Make sure notifications are enabled in iOS Settings → AccBot → Notifications. You can also configure alert style, sounds, and badges there." = "Ujistěte se, že oznámení jsou povolena v Nastavení iOS → AccBot → Oznámení.";
+"Battery Optimization" = "Optimalizace baterie";
+"Disable Low Power Mode for best results. iOS may delay or skip background tasks when battery is low." = "Pro nejlepší výsledky vypněte režim nízké spotřeby. iOS může zpozdit úlohy na pozadí při nízkém stavu baterie.";
+"Notification Info" = "Informace o oznámeních";
+"Made with love by Crynners" = "Vytvořeno s láskou od Crynners";

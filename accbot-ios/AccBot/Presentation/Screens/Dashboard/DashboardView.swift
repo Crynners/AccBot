@@ -82,14 +82,14 @@ struct DashboardView: View {
                 SandboxBanner()
             }
 
-            if viewModel.showMarketPulse && (viewModel.fearGreedValue != nil || !viewModel.athData.isEmpty) {
-                marketPulseCard
-            }
-
             if viewModel.holdings.isEmpty {
                 holdingsEmptyState
             } else {
                 holdingsPager
+            }
+
+            if viewModel.showMarketPulse && (viewModel.fearGreedValue != nil || !viewModel.athData.isEmpty) {
+                marketPulseCard
             }
 
             plansSection
@@ -108,11 +108,6 @@ struct DashboardView: View {
                     .padding(.horizontal, Spacing.lg)
             }
 
-            if viewModel.showMarketPulse && (viewModel.fearGreedValue != nil || !viewModel.athData.isEmpty) {
-                marketPulseCard
-                    .padding(.horizontal, Spacing.lg)
-            }
-
             HStack(alignment: .top, spacing: Spacing.lg) {
                 // Left column: Holdings + Quick Actions
                 VStack(spacing: Spacing.lg) {
@@ -125,8 +120,11 @@ struct DashboardView: View {
                 }
                 .frame(maxWidth: .infinity)
 
-                // Right column: DCA Plans
+                // Right column: Market Pulse + DCA Plans
                 VStack(spacing: Spacing.lg) {
+                    if viewModel.showMarketPulse && (viewModel.fearGreedValue != nil || !viewModel.athData.isEmpty) {
+                        marketPulseCard
+                    }
                     plansSection
                 }
                 .frame(maxWidth: .infinity)
@@ -356,7 +354,7 @@ struct DashboardView: View {
                 // Expanded: F&G labels above the bar
                 if let fgValue = viewModel.fearGreedValue, viewModel.isMarketPulseExpanded {
                     VStack(spacing: Spacing.xs) {
-                        Text(String(localized: "Fear & Greed"))
+                        Text(String(localized: "Fear & Greed Index"))
                             .font(AccBotFonts.caption)
                             .foregroundStyle(colors.onSurfaceVariant)
                             .frame(maxWidth: .infinity)
@@ -795,7 +793,7 @@ struct AccBotHeaderLogo: View {
                 .font(AccBotFonts.titleMedium)
                 .foregroundStyle(colors.onBackground)
 
-            AppLogoIcon(accent: colors.primary, size: 32, centerColor: colors.background)
+            AppLogoIcon(accent: colors.primary, size: 36, centerColor: colors.background)
 
             Text("ot")
                 .font(AccBotFonts.titleMedium)
@@ -815,51 +813,14 @@ struct AppLogoIcon: View {
     var body: some View {
         Canvas { context, canvasSize in
             let s = canvasSize.width / 108 // scale factor (Android viewport = 108x108)
-            let center = CGPoint(x: 54 * s, y: 54 * s)
 
-            // Outer ring (r=35.86)
-            let outerRing = Path(ellipseIn: CGRect(
-                x: (54 - 35.86) * s, y: (54 - 35.86) * s,
-                width: 71.72 * s, height: 71.72 * s
-            ))
-            context.stroke(outerRing, with: .color(accent.opacity(0.3)), lineWidth: 1.69 * s)
-
-            // Inner circle fill (r=29.53)
+            // Inner circle fill + stroke (r=29.53) — the main green circle
             let innerCircle = Path(ellipseIn: CGRect(
                 x: (54 - 29.53) * s, y: (54 - 29.53) * s,
                 width: 59.06 * s, height: 59.06 * s
             ))
             context.fill(innerCircle, with: .color(accent.opacity(0.05)))
             context.stroke(innerCircle, with: .color(accent), lineWidth: 0.84 * s)
-
-            // Bar chart (clipped to inner circle r≈29.11)
-            let clipCircle = Path(ellipseIn: CGRect(
-                x: (54 - 29.11) * s, y: (54 - 29.11) * s,
-                width: 58.22 * s, height: 58.22 * s
-            ))
-
-            context.clipToLayer(opacity: 1) { clipped in
-                clipped.clip(to: clipCircle)
-
-                let barWidth: CGFloat = 8.01 * s
-                let cornerR: CGFloat = 1.27 * s
-                let bars: [(x: CGFloat, top: CGFloat, opacity: Double)] = [
-                    (27.85, 59.06, 0.3),
-                    (42.61, 48.52, 0.5),
-                    (57.38, 35.86, 0.7),
-                    (72.15, 21.09, 0.9),
-                ]
-                let barBottom: CGFloat = 101.25 * s
-
-                for bar in bars {
-                    let rect = CGRect(
-                        x: bar.x * s, y: bar.top * s,
-                        width: barWidth, height: barBottom - bar.top * s
-                    )
-                    let barPath = Path(roundedRect: rect, cornerRadius: cornerR)
-                    clipped.fill(barPath, with: .color(accent.opacity(bar.opacity)))
-                }
-            }
 
             // Central dark circle (r=17.93)
             let darkCircle = Path(ellipseIn: CGRect(
@@ -868,13 +829,6 @@ struct AppLogoIcon: View {
             ))
             context.fill(darkCircle, with: .color(centerColor))
             context.stroke(darkCircle, with: .color(accent), lineWidth: 0.84 * s)
-
-            // Inner dashed circle (r=15.19)
-            let dashedCircle = Path(ellipseIn: CGRect(
-                x: (54 - 15.19) * s, y: (54 - 15.19) * s,
-                width: 30.38 * s, height: 30.38 * s
-            ))
-            context.stroke(dashedCircle, with: .color(accent.opacity(0.6)), lineWidth: 0.42 * s)
 
             // Bitcoin symbol — vertical strokes
             let vertStrokes: [(x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat)] = [

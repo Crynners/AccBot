@@ -423,7 +423,7 @@ struct SettingsView: View {
             }
             .listRowBackground(colors.surface)
 
-            Text("Made with \u{2764}\u{FE0F} by Crynners")
+            Text(String(localized: "Made with ❤️ by Crynners"))
                 .font(AccBotFonts.caption)
                 .foregroundStyle(colors.onSurfaceVariant)
                 .frame(maxWidth: .infinity)

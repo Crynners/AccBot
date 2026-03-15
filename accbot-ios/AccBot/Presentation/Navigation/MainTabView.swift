@@ -62,6 +62,12 @@ struct MainTabView: View {
                             // Lock direction on first significant movement
                             if isDraggingHorizontally == nil && (abs(h) > 10 || abs(v) > 10) {
                                 isDraggingHorizontally = abs(h) > abs(v) * 1.5
+                                // Preload adjacent tabs on first drag movement
+                                if isDraggingHorizontally == true {
+                                    let i = router.selectedTab.rawValue
+                                    if i > 0, let prev = TabItem(rawValue: i - 1) { loadedTabs.insert(prev) }
+                                    if i < TabItem.allCases.count - 1, let next = TabItem(rawValue: i + 1) { loadedTabs.insert(next) }
+                                }
                             }
                             guard isDraggingHorizontally == true else { return }
 
@@ -273,7 +279,7 @@ private struct LazyTab<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .modifier(ConditionalDrawingGroup(active: shouldRasterize))
+        .modifier(ConditionalDrawingGroup(active: shouldRasterize && loadedTabs.contains(tab)))
         .offset(x: xOffset)
         .allowsHitTesting(isSelected && dragOffset == 0)
         .accessibilityHidden(!isSelected)
