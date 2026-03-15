@@ -451,7 +451,6 @@ struct PortfolioView: View {
                     }
                 }
                 .frame(height: 220)
-                .drawingGroup() // Metal-accelerated rendering for chart
                 .overlay(alignment: .trailing) {
                     if viewModel.visibleSeries.contains(.accumulatedCrypto),
                        viewModel.accumulatedScaleMax > viewModel.accumulatedScaleMin {

@@ -13,11 +13,9 @@ final class AppRouter: ObservableObject {
     @Published var portfolioSelectedCrypto: String?
     @Published var portfolioSelectedFiat: String?
 
-    /// Unread notification count for badge display
-    @Published var unreadNotificationCount: Int = 0
-
-    /// Whether the portfolio chart is being scrubbed (blocks tab swiping)
-    @Published var isChartInteracting: Bool = false
+    /// Whether the portfolio chart is being scrubbed (blocks tab swiping).
+    /// Not @Published — only read by gesture handlers, no views depend on it.
+    var isChartInteracting: Bool = false
 
     /// Whether the current tab has navigated into a detail view (non-empty path)
     var isInDetailView: Bool {

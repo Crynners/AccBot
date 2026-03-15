@@ -26,6 +26,14 @@ struct MainTabView: View {
     /// Whether the current gesture has been identified as horizontal.
     @State private var isDraggingHorizontally: Bool? = nil
 
+    /// Throttle drag offset updates to ~30fps (every 33ms) instead of 60fps.
+    /// Halves view rebuilds during tab swipe on A12 devices.
+    @State private var lastDragUpdateTime: Date = .distantPast
+
+    /// Unread notification count — kept as local @State to avoid invalidating
+    /// the entire view tree via AppRouter (12+ views observe AppRouter).
+    @State private var unreadNotificationCount: Int = 0
+
     /// Changelog auto-show on version update.
     @State private var showChangelog = false
     @State private var changelogEntries: [ChangelogEntry] = []
@@ -70,6 +78,11 @@ struct MainTabView: View {
                                 }
                             }
                             guard isDraggingHorizontally == true else { return }
+
+                            // Throttle offset updates to ~30fps to reduce rebuilds on A12
+                            let now = Date()
+                            guard now.timeIntervalSince(lastDragUpdateTime) > 0.033 else { return }
+                            lastDragUpdateTime = now
 
                             let i = router.selectedTab.rawValue
                             // Rubber-band at edges (first/last tab)
@@ -121,7 +134,7 @@ struct MainTabView: View {
             if !router.isInDetailView {
                 CustomTabBar(
                     selectedTab: $router.selectedTab,
-                    unreadNotificationCount: router.unreadNotificationCount,
+                    unreadNotificationCount: unreadNotificationCount,
                     onTabSelected: { newTab in
                         if newTab == router.selectedTab {
                             router.popToRoot()
@@ -150,7 +163,7 @@ struct MainTabView: View {
                 .receive(on: DispatchQueue.main)
                 .removeDuplicates()
         ) { count in
-            router.unreadNotificationCount = count
+            unreadNotificationCount = count
         }
         .onAppear {
             let currentBuild = Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0") ?? 0

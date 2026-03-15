@@ -299,8 +299,9 @@ final class PortfolioViewModel: ObservableObject {
 
     // MARK: - Private
 
-    /// Maximum chart points per series. With 5 series × 100 points = 500 LineMarks.
-    private static let maxPointsPerSeries = 100
+    /// Maximum chart points per series. With 5 series × 60 = 300 LineMarks.
+    /// Keeps rendering smooth on A12 (iPhone XS) and newer.
+    private static let maxPointsPerSeries = 60
 
     private func adaptiveAggregate(_ points: [ChartPoint]) -> [ChartPoint] {
         guard !points.isEmpty else { return points }
