@@ -811,3 +811,39 @@
 
 /* Authentication */
 "Authentication is not available on this device. Please set up a device passcode in Settings." = "Ověření není na tomto zařízení k dispozici. Prosím nastavte kód zařízení v Nastavení.";
+
+/* ===== Missing translations — Portfolio, Import, Dashboard ===== */
+
+/* PortfolioView — chart insufficient data */
+"You need at least 2 transactions to view the portfolio chart" = "Pro zobrazení grafu portfolia potřebujete alespoň 2 transakce";
+"Swipe left or right to scrub through chart data points" = "Přejeďte doleva nebo doprava pro procházení datových bodů grafu";
+"Portfolio chart. Value: %@, ROI: %@, %lld transactions. Use legend to toggle series." = "Graf portfolia. Hodnota: %1$@, ROI: %2$@, %3$lld transakcí. Legendou přepínáte série.";
+
+/* DashboardView — execution complete */
+"Execution Complete" = "Provedení dokončeno";
+
+/* ImportCsvView — error messages */
+"Failed to read the selected file." = "Nepodařilo se přečíst vybraný soubor.";
+"Import failed: %@. No transactions were imported." = "Import selhal: %@. Žádné transakce nebyly importovány.";
+"No credentials found for %@" = "Přihlašovací údaje pro %@ nenalezeny";
+
+/* ===== Credential form — new per-field & QR buttons ===== */
+"Paste" = "Vložit";
+"Paste All" = "Vložit vše";
+"Scan All" = "Skenovat vše";
+"Scan QR" = "Skenovat QR";
+"Scan Binance QR" = "Skenovat Binance QR";
+"Toggle secret visibility" = "Přepnout viditelnost";
+
+/* ===== Experimental exchanges ===== */
+"Experimental Exchanges" = "Experimentální burzy";
+"Show additional exchanges that haven't been fully tested" = "Zobrazit další burzy, které nebyly plně otestovány";
+"Enable Experimental Exchanges?" = "Povolit experimentální burzy?";
+"These exchanges haven't been fully tested with AccBot. Use at your own risk. Please report any issues on GitHub." = "Tyto burzy nebyly plně otestovány s AccBot. Používáte na vlastní riziko. Prosím nahlaste problémy na GitHubu.";
+"Enable" = "Povolit";
+"EXPERIMENTAL" = "EXPERIMENTÁLNÍ";
+
+/* ===== Onboarding — Exchange Setup ===== */
+"Skip Exchange Setup?" = "Přeskočit nastavení burzy?";
+"You can add exchanges later in Settings." = "Burzy můžete přidat později v Nastavení.";
+"Validate & Connect" = "Ověřit a připojit";

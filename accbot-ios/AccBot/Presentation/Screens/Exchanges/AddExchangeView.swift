@@ -94,14 +94,6 @@ struct AddExchangeView: View {
                 }
             }
         }
-        .sheet(isPresented: $credentials.showQrScanner) {
-            QrScannerSheet(
-                title: String(localized: "Scan Credential"),
-                onScanned: { code in
-                    credentials.handleQrScan(code)
-                }
-            )
-        }
         .sheet(isPresented: $credentials.showMultiFieldScanner) {
             if credentials.selectedExchange != nil {
                 MultiFieldScannerSheet(
@@ -496,8 +488,7 @@ struct AddExchangeView: View {
                         label: String(localized: "Client ID"),
                         text: $credentials.clientId,
                         placeholder: String(localized: "Enter your client ID"),
-                        isSecure: false,
-                        scanTarget: .clientId
+                        isSecure: false
                     )
                 }
 
@@ -509,8 +500,7 @@ struct AddExchangeView: View {
                     placeholder: exchange.requiresClientId
                         ? String(localized: "Enter your public key")
                         : String(localized: "Enter your API key"),
-                    isSecure: false,
-                    scanTarget: .apiKey
+                    isSecure: false
                 )
 
                 credentialField(
@@ -521,8 +511,7 @@ struct AddExchangeView: View {
                     placeholder: exchange.requiresClientId
                         ? String(localized: "Enter your private key")
                         : String(localized: "Enter your API secret"),
-                    isSecure: true,
-                    scanTarget: .apiSecret
+                    isSecure: true
                 )
 
                 if exchange.requiresPassphrase {
@@ -530,8 +519,7 @@ struct AddExchangeView: View {
                         label: String(localized: "Passphrase"),
                         text: $credentials.passphrase,
                         placeholder: String(localized: "Enter your passphrase"),
-                        isSecure: true,
-                        scanTarget: .passphrase
+                        isSecure: true
                     )
                 }
             }
@@ -590,73 +578,56 @@ struct AddExchangeView: View {
         label: String,
         text: Binding<String>,
         placeholder: String,
-        isSecure: Bool,
-        scanTarget: CredentialScanTarget? = nil
+        isSecure: Bool
     ) -> some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(label)
                 .font(AccBotFonts.caption)
                 .foregroundStyle(colors.onSurfaceVariant)
 
-            HStack(spacing: Spacing.sm) {
-                HStack(spacing: 0) {
-                    Group {
-                        if isSecure {
-                            SecureField(placeholder, text: text)
-                        } else {
-                            TextField(placeholder, text: text)
-                        }
-                    }
-                    .font(AccBotFonts.mono)
-                    .foregroundStyle(colors.onSurface)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-
-                    // Paste (empty) or Clear (non-empty) button
-                    if text.wrappedValue.isEmpty {
-                        Button {
-                            if let clipboard = UIPasteboard.general.string {
-                                text.wrappedValue = clipboard.trimmingCharacters(in: .whitespacesAndNewlines)
-                            }
-                        } label: {
-                            Image(systemName: "doc.on.clipboard")
-                                .font(AccBotFonts.body)
-                                .foregroundStyle(colors.primary)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.leading, Spacing.sm)
-                        .accessibilityLabel(String(localized: "Paste"))
+            HStack(spacing: 0) {
+                Group {
+                    if isSecure {
+                        SecureField(placeholder, text: text)
                     } else {
-                        Button {
-                            text.wrappedValue = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(AccBotFonts.body)
-                                .foregroundStyle(colors.onSurfaceVariant)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.leading, Spacing.sm)
-                        .accessibilityLabel(String(localized: "Clear"))
+                        TextField(placeholder, text: text)
                     }
                 }
-                .padding(Spacing.md)
-                .background(colors.surfaceVariant.opacity(0.3))
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                .font(AccBotFonts.mono)
+                .foregroundStyle(colors.onSurface)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
 
-                if let target = scanTarget {
+                // Paste (empty) or Clear (non-empty) button
+                if text.wrappedValue.isEmpty {
                     Button {
-                        credentials.qrScanTarget = target
-                        credentials.showQrScanner = true
+                        if let clipboard = UIPasteboard.general.string {
+                            text.wrappedValue = clipboard.trimmingCharacters(in: .whitespacesAndNewlines)
+                        }
                     } label: {
-                        Image(systemName: "qrcode.viewfinder")
-                            .font(AccBotFonts.iconSmall)
+                        Image(systemName: "doc.on.clipboard")
+                            .font(AccBotFonts.body)
                             .foregroundStyle(colors.primary)
-                            .frame(minWidth: 44, minHeight: 44)
-                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .padding(.leading, Spacing.sm)
+                    .accessibilityLabel(String(localized: "Paste"))
+                } else {
+                    Button {
+                        text.wrappedValue = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(AccBotFonts.body)
+                            .foregroundStyle(colors.onSurfaceVariant)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.leading, Spacing.sm)
+                    .accessibilityLabel(String(localized: "Clear"))
                 }
             }
+            .padding(Spacing.md)
+            .background(colors.surfaceVariant.opacity(0.3))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
         }
     }
 
