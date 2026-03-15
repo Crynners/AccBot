@@ -42,6 +42,7 @@ struct MainTabView: View {
                             selectedTab: router.selectedTab,
                             dragOffset: dragOffset,
                             screenWidth: screenWidth,
+                            isSwipingTabs: isDraggingHorizontally == true,
                             loadedTabs: $loadedTabs
                         ) {
                             tabContent(for: tab)
@@ -53,7 +54,7 @@ struct MainTabView: View {
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 20)
                         .onChanged { value in
-                            guard !router.isInDetailView else { return }
+                            guard !router.isInDetailView && !router.isChartInteracting else { return }
 
                             let h = value.translation.width
                             let v = value.translation.height
@@ -79,7 +80,7 @@ struct MainTabView: View {
                             }
                         }
                         .onEnded { value in
-                            guard !router.isInDetailView else {
+                            guard !router.isInDetailView && !router.isChartInteracting else {
                                 isDraggingHorizontally = nil
                                 dragOffset = 0
                                 return
@@ -256,6 +257,7 @@ private struct LazyTab<Content: View>: View {
     let selectedTab: TabItem
     let dragOffset: CGFloat
     let screenWidth: CGFloat
+    let isSwipingTabs: Bool
     @Binding var loadedTabs: Set<TabItem>
     @ViewBuilder let content: () -> Content
 
@@ -272,6 +274,7 @@ private struct LazyTab<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .scrollDisabled(isSwipingTabs)
         .offset(x: xOffset)
         .allowsHitTesting(isSelected && dragOffset == 0)
         .accessibilityHidden(!isSelected)

@@ -64,6 +64,8 @@ struct DashboardView: View {
         }
         .navigationTitle(String(localized: "Dashboard"))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(colors.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 AccBotHeaderLogo(isSandbox: colors.isSandbox)

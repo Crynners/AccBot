@@ -39,6 +39,8 @@ struct PortfolioView: View {
         }
         .background(colors.background)
         .navigationTitle(String(localized: "Portfolio"))
+        .toolbarBackground(colors.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 if let pair = viewModel.currentPair, pair.crypto != "ALL" {
@@ -148,18 +150,6 @@ struct PortfolioView: View {
 
     private var controlsRow: some View {
         HStack(spacing: Spacing.md) {
-            // Denomination toggle
-            Picker(String(localized: "Denomination"), selection: Binding(
-                get: { viewModel.denomination },
-                set: { viewModel.setDenomination($0) }
-            )) {
-                Text(String(localized: "FIAT")).tag(PortfolioViewModel.Denomination.fiat)
-                Text(String(localized: "CRYPTO")).tag(PortfolioViewModel.Denomination.crypto)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(maxWidth: 150)
-
             Spacer()
 
             // Exchange filter
@@ -226,11 +216,9 @@ struct PortfolioView: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Spacing.sm) {
                 if let snap = scrubbedKpi, isScrubbing {
                     kpiCard(
-                        title: viewModel.denomination == .fiat ? String(localized: "Portfolio Value") : String(localized: "Crypto Held"),
-                        value: viewModel.denomination == .fiat
-                            ? formatFiat(snap.portfolioValue)
-                            : formatCrypto(snap.cumulativeCrypto),
-                        subtitle: viewModel.denomination == .fiat ? viewModel.currentPair?.fiat : viewModel.currentPair?.crypto
+                        title: String(localized: "Portfolio Value"),
+                        value: formatFiat(snap.portfolioValue),
+                        subtitle: viewModel.currentPair?.fiat
                     )
                     kpiCard(
                         title: String(localized: "ROI"),
@@ -250,11 +238,9 @@ struct PortfolioView: View {
                     )
                 } else {
                     kpiCard(
-                        title: viewModel.denomination == .fiat ? String(localized: "Portfolio Value") : String(localized: "Crypto Held"),
-                        value: viewModel.denomination == .fiat
-                            ? (viewModel.portfolioValue.map { formatFiat($0) } ?? "---")
-                            : formatCrypto(viewModel.totalCrypto),
-                        subtitle: viewModel.denomination == .fiat ? viewModel.currentPair?.fiat : viewModel.currentPair?.crypto
+                        title: String(localized: "Portfolio Value"),
+                        value: viewModel.portfolioValue.map { formatFiat($0) } ?? "---",
+                        subtitle: viewModel.currentPair?.fiat
                     )
                     kpiCard(
                         title: String(localized: "ROI"),
@@ -447,7 +433,8 @@ struct PortfolioView: View {
                 ])
                 .chartLegend(.hidden)
                 .chartXSelectionIfAvailable(value: $selectedDate)
-                .onChange(of: selectedDate) { _ in
+                .onChange(of: selectedDate) { newValue in
+                    router.isChartInteracting = (newValue != nil)
                     let now = Date()
                     if now.timeIntervalSince(lastHapticTime) > 0.1 {
                         lastHapticTime = now
@@ -467,22 +454,27 @@ struct PortfolioView: View {
                     }
                 }
                 .chartYAxis {
-                    AxisMarks(values: .automatic) { value in
+                    AxisMarks(values: .automatic) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                             .foregroundStyle(colors.onSurfaceVariant.opacity(0.5))
-                        if viewModel.denomination == .crypto,
-                           let doubleValue = value.as(Double.self) {
-                            AxisValueLabel {
-                                Text(AccBotFormatters.formatCryptoCompact(Decimal(doubleValue)))
-                                    .foregroundStyle(colors.onSurfaceVariant)
-                            }
-                        } else {
-                            AxisValueLabel()
-                                .foregroundStyle(colors.onSurfaceVariant)
-                        }
+                        AxisValueLabel()
+                            .foregroundStyle(colors.onSurfaceVariant)
                     }
                 }
                 .frame(height: 220)
+                .overlay(alignment: .trailing) {
+                    if viewModel.visibleSeries.contains(.accumulatedCrypto),
+                       viewModel.accumulatedScaleMax > viewModel.accumulatedScaleMin {
+                        VStack {
+                            Text(AccBotFormatters.formatCryptoCompact(viewModel.accumulatedScaleMax))
+                            Spacer()
+                            Text(AccBotFormatters.formatCryptoCompact(viewModel.accumulatedScaleMin))
+                        }
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.success)
+                        .padding(.vertical, Spacing.xs)
+                    }
+                }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(chartAccessibilitySummary)
                 .accessibilityHint(String(localized: "Swipe left or right to scrub through chart data points"))
@@ -527,9 +519,16 @@ struct PortfolioView: View {
                     Circle()
                         .fill(seriesColor(point.series))
                         .frame(width: 6, height: 6)
-                    Text("\(point.series.localizedName): \(formatTooltipValue(point.value))")
-                        .font(AccBotFonts.captionSmall)
-                        .foregroundStyle(colors.onSurface)
+                    if point.series == .accumulatedCrypto,
+                       let original = viewModel.accumulatedOriginalValues[point.date.timeIntervalSince1970] {
+                        Text("\(point.series.localizedName): \(formatTooltipValue(original))")
+                            .font(AccBotFonts.captionSmall)
+                            .foregroundStyle(colors.onSurface)
+                    } else {
+                        Text("\(point.series.localizedName): \(formatTooltipValue(point.value))")
+                            .font(AccBotFonts.captionSmall)
+                            .foregroundStyle(colors.onSurface)
+                    }
                 }
             }
         }
@@ -585,10 +584,7 @@ struct PortfolioView: View {
         if case .aggregate = viewModel.currentPage {
             return [.portfolioValue, .costBasis]
         }
-        if viewModel.denomination == .fiat {
-            return [.portfolioValue, .costBasis, .cryptoPrice, .avgBuyPrice, .accumulatedCrypto]
-        }
-        return [.portfolioValue, .costBasis, .cryptoPrice, .accumulatedCrypto]
+        return [.portfolioValue, .costBasis, .cryptoPrice, .avgBuyPrice, .accumulatedCrypto]
     }
 
     /// Distinct cost basis color that won't blend with chart grid lines.

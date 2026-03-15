@@ -42,6 +42,8 @@ struct NotificationsView: View {
         }
         .background(colors.background)
         .navigationTitle(String(localized: "Notifications"))
+        .toolbarBackground(colors.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 if viewModel.unreadCount > 0 {

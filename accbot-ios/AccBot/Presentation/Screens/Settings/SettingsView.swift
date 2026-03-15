@@ -22,6 +22,8 @@ struct SettingsView: View {
         .maxFormWidth()
         .background(colors.background)
         .navigationTitle(String(localized: "Settings"))
+        .toolbarBackground(colors.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .alert(
             viewModel.activeAlert?.title ?? "",
             isPresented: Binding(

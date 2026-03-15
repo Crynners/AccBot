@@ -474,7 +474,12 @@ final class DashboardViewModel: ObservableObject {
         deps.userPreferences.$marketPulseEnabled
             .receive(on: DispatchQueue.main)
             .sink { [weak self] enabled in
-                self?.showMarketPulse = enabled
+                guard let self else { return }
+                let wasDisabled = !self.showMarketPulse
+                self.showMarketPulse = enabled
+                if enabled && wasDisabled {
+                    Task { await self.fetchMarketData() }
+                }
             }
             .store(in: &cancellables)
     }

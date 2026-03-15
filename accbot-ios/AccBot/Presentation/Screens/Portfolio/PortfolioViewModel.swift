@@ -54,6 +54,10 @@ final class PortfolioViewModel: ObservableObject {
     @Published var kpiSnapshots: [KpiSnapshot] = []
     @Published var periodRoiPercent: Decimal?
     @Published var periodRoiLabel: String?
+    @Published var accumulatedScaleMin: Decimal = 0
+    @Published var accumulatedScaleMax: Decimal = 0
+    /// Maps chart date (timeIntervalSince1970) to original crypto value for tooltip display
+    var accumulatedOriginalValues: [Double: Double] = [:]
 
     struct KpiSnapshot {
         let date: Date
@@ -226,11 +230,6 @@ final class PortfolioViewModel: ObservableObject {
 
     func setExchangeFilter(_ exchange: Exchange?) {
         exchangeFilter = exchange
-        reloadPage()
-    }
-
-    func setDenomination(_ denom: Denomination) {
-        denomination = denom
         reloadPage()
     }
 
@@ -431,6 +430,38 @@ final class PortfolioViewModel: ObservableObject {
                 accumulatedByIndex.append(runningAccumulated)
                 avgBuyPriceByIndex.append(runningAccumulated > 0 ? runningCostBasis / runningAccumulated : 0)
             }
+
+            // Compute fiat range for normalizing accumulated crypto onto the same Y axis
+            var fiatMin: Decimal = Decimal.greatestFiniteMagnitude
+            var fiatMax: Decimal = -Decimal.greatestFiniteMagnitude
+            for series in visibleSeries where series != .accumulatedCrypto {
+                for (index, tx) in transactions.enumerated() {
+                    let value: Decimal
+                    switch series {
+                    case .portfolioValue: value = accumulatedByIndex[index] * (currentPrice ?? tx.price)
+                    case .costBasis: value = costBasisByIndex[index]
+                    case .cryptoPrice: value = tx.price
+                    case .avgBuyPrice: value = avgBuyPriceByIndex[index]
+                    case .accumulatedCrypto: continue
+                    }
+                    if value < fiatMin { fiatMin = value }
+                    if value > fiatMax { fiatMax = value }
+                }
+            }
+            // Fallback if only accumulated is visible
+            if fiatMin == Decimal.greatestFiniteMagnitude {
+                fiatMin = 0
+                fiatMax = 1
+            }
+
+            let cryptoMin = accumulatedByIndex.min() ?? 0
+            let cryptoMax = accumulatedByIndex.max() ?? 1
+            let cryptoRange = cryptoMax - cryptoMin
+            let fiatRange = fiatMax - fiatMin
+            accumulatedScaleMin = cryptoMin
+            accumulatedScaleMax = cryptoMax
+            var newOriginalValues: [Double: Double] = [:]
+
             for series in visibleSeries {
                 for (index, tx) in transactions.enumerated() {
                     let value: Decimal
@@ -444,11 +475,19 @@ final class PortfolioViewModel: ObservableObject {
                     case .avgBuyPrice:
                         value = avgBuyPriceByIndex[index]
                     case .accumulatedCrypto:
-                        value = accumulatedByIndex[index]
+                        let original = accumulatedByIndex[index]
+                        // Normalize to fiat range for visual alignment
+                        if cryptoRange > 0 && fiatRange > 0 {
+                            value = fiatMin + (original - cryptoMin) / cryptoRange * fiatRange
+                        } else {
+                            value = fiatMin
+                        }
+                        newOriginalValues[tx.executedAt.timeIntervalSince1970] = NSDecimalNumber(decimal: original).doubleValue
                     }
                     allChartData.append(ChartPoint(date: tx.executedAt, value: NSDecimalNumber(decimal: value).doubleValue, series: series))
                 }
             }
+            accumulatedOriginalValues = newOriginalValues
             chartData = adaptiveAggregate(allChartData)
             lastLoadedAt = Date()
         } catch {
@@ -500,6 +539,9 @@ final class PortfolioViewModel: ObservableObject {
         kpiSnapshots = []
         periodRoiPercent = nil
         periodRoiLabel = nil
+        accumulatedScaleMin = 0
+        accumulatedScaleMax = 0
+        accumulatedOriginalValues = [:]
     }
 
     private func announceForVoiceOver(_ message: String) {
