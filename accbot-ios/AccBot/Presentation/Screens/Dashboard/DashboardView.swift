@@ -427,11 +427,16 @@ struct DashboardView: View {
                 if !viewModel.athData.isEmpty, viewModel.isMarketPulseExpanded {
                     VStack(spacing: Spacing.xs) {
                         let athCenterText: String = {
+                            func formatDistance(_ info: DashboardViewModel.AthCryptoInfo) -> String {
+                                info.athDistancePercent == 0
+                                    ? String(localized: "ATH!")
+                                    : "-\(info.athDistancePercent) %"
+                            }
                             if viewModel.athData.count == 1, let info = viewModel.athData.first {
-                                return "-\(info.athDistancePercent) %"
+                                return formatDistance(info)
                             } else {
                                 return viewModel.athData
-                                    .map { "\($0.crypto) -\($0.athDistancePercent) %" }
+                                    .map { "\($0.crypto) \(formatDistance($0))" }
                                     .joined(separator: ", ")
                             }
                         }()

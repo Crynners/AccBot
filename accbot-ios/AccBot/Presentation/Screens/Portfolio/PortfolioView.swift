@@ -409,13 +409,6 @@ struct PortfolioView: View {
                             y: .value("Value", point.value)
                         )
                         .foregroundStyle(by: .value("Series", point.series.localizedName))
-
-                        AreaMark(
-                            x: .value("Date", point.date),
-                            y: .value("Value", point.value)
-                        )
-                        .foregroundStyle(by: .value("Series", point.series.localizedName))
-                        .opacity(0.1)
                     }
 
                     if let date = selectedDate {

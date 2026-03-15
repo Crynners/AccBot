@@ -448,11 +448,13 @@ final class DashboardViewModel: ObservableObject {
                     let ath = await athFetch
                     let price = await priceFetch
                     guard let ath, let price, ath > 0 else { return nil }
-                    let distance = NSDecimalNumber(decimal: (ath - price) / ath * 100).intValue
+                    // If price exceeds known ATH, use current price as ATH (new ATH)
+                    let effectiveAth = max(ath, price)
+                    let distance = NSDecimalNumber(decimal: (effectiveAth - price) / effectiveAth * 100).intValue
                     return AthCryptoInfo(
                         crypto: crypto,
                         currentPrice: price,
-                        ath: ath,
+                        ath: effectiveAth,
                         athDistancePercent: max(0, min(100, distance))
                     )
                 }

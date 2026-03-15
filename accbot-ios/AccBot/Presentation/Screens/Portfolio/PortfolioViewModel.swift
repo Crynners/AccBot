@@ -290,9 +290,8 @@ final class PortfolioViewModel: ObservableObject {
 
     // MARK: - Private
 
-    /// Maximum chart points per series. SwiftUI Charts renders LineMark + AreaMark
-    /// per point, so 5 series × 150 points = 1500 marks — keeps rendering smooth.
-    private static let maxPointsPerSeries = 150
+    /// Maximum chart points per series. With 5 series × 100 points = 500 LineMarks.
+    private static let maxPointsPerSeries = 100
 
     private func adaptiveAggregate(_ points: [ChartPoint]) -> [ChartPoint] {
         guard !points.isEmpty else { return points }
