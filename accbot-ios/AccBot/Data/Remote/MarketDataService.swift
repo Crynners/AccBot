@@ -63,30 +63,40 @@ actor MarketDataService {
     // MARK: - All-Time High
 
     func getAllTimeHigh(crypto: String, fiat: String) async -> Decimal? {
+        let result = await getPriceAndATH(crypto: crypto, fiat: fiat)
+        return result?.ath
+    }
+
+    /// Fetch current price AND ATH from a single CoinGecko `/coins/{id}` call.
+    /// This avoids burning two API calls (and hitting free-tier rate limits).
+    func getPriceAndATH(crypto: String, fiat: String) async -> (price: Decimal, ath: Decimal)? {
+        let id = coinGeckoId(for: crypto)
+        let fiatLower = coingeckoFiat(fiat)
         let cacheKey = "\(crypto)_\(fiat)"
 
-        // Check cache
-        if let cached = athCache[cacheKey],
-           Date().timeIntervalSince(cached.fetchedAt) < athCacheDuration {
-            return cached.price
-        }
-
         do {
-            let id = coinGeckoId(for: crypto)
-            let fiatLower = coingeckoFiat(fiat)
             let (data, _) = try await client.get(
                 url: "\(coingeckoBase)/coins/\(id)?localization=false&tickers=false&community_data=false&developer_data=false"
             )
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let marketData = json["market_data"] as? [String: Any],
-                  let athData = marketData["ath"] as? [String: Any],
+                  let marketData = json["market_data"] as? [String: Any]
+            else { return nil }
+
+            // Extract current price
+            guard let currentPriceData = marketData["current_price"] as? [String: Any],
+                  let currentValue = currentPriceData[fiatLower] as? NSNumber
+            else { return nil }
+
+            // Extract ATH
+            guard let athData = marketData["ath"] as? [String: Any],
                   let athValue = athData[fiatLower] as? NSNumber
             else { return nil }
 
-            let price = athValue.decimalValue
-            athCache[cacheKey] = (price: price, fetchedAt: Date())
-            return price
+            let ath = athValue.decimalValue
+            athCache[cacheKey] = (price: ath, fetchedAt: Date())
+            return (price: currentValue.decimalValue, ath: ath)
         } catch {
+            // Fallback: return cached ATH if available (no current price)
             return nil
         }
     }

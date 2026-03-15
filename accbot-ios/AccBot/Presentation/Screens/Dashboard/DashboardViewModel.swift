@@ -430,7 +430,8 @@ final class DashboardViewModel: ObservableObject {
             fearGreedLabel = FearGreedClassification.label(for: fgValue)
         }
 
-        // Collect unique crypto/fiat pairs from plans and fetch ATH data in parallel
+        // Collect unique crypto/fiat pairs from plans and fetch ATH data in parallel.
+        // Uses single API call per pair (getPriceAndATH) to avoid rate limiting.
         let uniquePairs = Array(Set(plans.map { "\($0.crypto)/\($0.fiat)" }))
 
         let newAthData: [AthCryptoInfo] = await withTaskGroup(of: AthCryptoInfo?.self) { group in
@@ -439,22 +440,15 @@ final class DashboardViewModel: ObservableObject {
                 let crypto = String(parts[0])
                 let fiat = String(parts[1])
                 group.addTask {
-                    async let athFetch = withTimeoutOrNil(seconds: 10) {
-                        await self.deps.marketDataService.getAllTimeHigh(crypto: crypto, fiat: fiat)
+                    let result = await withTimeoutOrNil(seconds: 15) {
+                        await self.deps.marketDataService.getPriceAndATH(crypto: crypto, fiat: fiat)
                     }
-                    async let priceFetch = withTimeoutOrNil(seconds: 10) {
-                        await self.deps.marketDataService.getCurrentPrice(crypto: crypto, fiat: fiat)
-                    }
-                    let ath = await athFetch
-                    let price = await priceFetch
-                    guard let ath, let price, ath > 0 else { return nil }
-                    // If price exceeds known ATH, use current price as ATH (new ATH)
-                    let effectiveAth = max(ath, price)
-                    let distance = NSDecimalNumber(decimal: (effectiveAth - price) / effectiveAth * 100).intValue
+                    guard let result, result.ath > 0 else { return nil }
+                    let distance = NSDecimalNumber(decimal: (result.ath - result.price) / result.ath * 100).intValue
                     return AthCryptoInfo(
                         crypto: crypto,
-                        currentPrice: price,
-                        ath: effectiveAth,
+                        currentPrice: result.price,
+                        ath: result.ath,
                         athDistancePercent: max(0, min(100, distance))
                     )
                 }

@@ -42,7 +42,16 @@ final class PortfolioViewModel: ObservableObject {
     @Published var transactionCount = 0
     @Published var roiPercent: Decimal?
     @Published var currentPrice: Decimal?
-    @Published var chartData: [ChartPoint] = []
+    @Published var chartData: [ChartPoint] = [] {
+        didSet {
+            sortedPointsBySeries = Dictionary(grouping: chartData) { $0.series }
+            chartDateCount = Set(chartData.map(\.date)).count
+        }
+    }
+    /// Pre-grouped chart data for binary-search tooltip lookup.
+    var sortedPointsBySeries: [ChartSeries: [ChartPoint]] = [:]
+    /// Number of unique dates in chart data (avoids O(n) recomputation in View body).
+    var chartDateCount: Int = 0
     @Published var selectedChartSeries: ChartSeries = .portfolioValue
     @Published var denomination: Denomination = .fiat
     @Published var exchangeFilter: Exchange?

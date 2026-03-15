@@ -10,7 +10,6 @@ struct PortfolioView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var selectedDate: Date?
     @State private var lastHapticTime: Date = .distantPast
-    @State private var sortedPointsBySeries: [PortfolioViewModel.ChartSeries: [PortfolioViewModel.ChartPoint]] = [:]
 
     private var isLandscape: Bool {
         verticalSizeClass == .compact
@@ -393,7 +392,7 @@ struct PortfolioView: View {
                 )
                 .frame(height: 200)
                 .frame(maxWidth: .infinity)
-            } else if Set(viewModel.chartData.map { $0.date }).count < 2 {
+            } else if viewModel.chartDateCount < 2 {
                 EmptyStateView(
                     systemImage: "chart.line.uptrend.xyaxis",
                     title: String(localized: "Not enough data for chart"),
@@ -435,9 +434,6 @@ struct PortfolioView: View {
                         generator.impactOccurred()
                     }
                 }
-                .onChange(of: viewModel.chartData.count) { _ in
-                    sortedPointsBySeries = Dictionary(grouping: viewModel.chartData) { $0.series }
-                }
                 .chartXAxis {
                     AxisMarks(values: .automatic) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
@@ -455,6 +451,7 @@ struct PortfolioView: View {
                     }
                 }
                 .frame(height: 220)
+                .drawingGroup() // Metal-accelerated rendering for chart
                 .overlay(alignment: .trailing) {
                     if viewModel.visibleSeries.contains(.accumulatedCrypto),
                        viewModel.accumulatedScaleMax > viewModel.accumulatedScaleMin {
@@ -483,7 +480,7 @@ struct PortfolioView: View {
     private func nearestChartPoints(to date: Date) -> [PortfolioViewModel.ChartPoint]? {
         var result = [PortfolioViewModel.ChartPoint]()
         let target = date.timeIntervalSince1970
-        for (_, points) in sortedPointsBySeries {
+        for (_, points) in viewModel.sortedPointsBySeries {
             guard !points.isEmpty else { continue }
             // Binary search for closest date
             var lo = 0, hi = points.count - 1
