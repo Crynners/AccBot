@@ -40,7 +40,6 @@ struct MainTabView: View {
                         LazyTab(
                             tab: tab,
                             selectedTab: router.selectedTab,
-                            isDragging: dragOffset != 0,
                             dragOffset: dragOffset,
                             screenWidth: screenWidth,
                             loadedTabs: $loadedTabs
@@ -255,7 +254,6 @@ struct MainTabView: View {
 private struct LazyTab<Content: View>: View {
     let tab: TabItem
     let selectedTab: TabItem
-    let isDragging: Bool
     let dragOffset: CGFloat
     let screenWidth: CGFloat
     @Binding var loadedTabs: Set<TabItem>
@@ -267,11 +265,6 @@ private struct LazyTab<Content: View>: View {
         CGFloat(tab.rawValue - selectedTab.rawValue) * screenWidth + dragOffset
     }
 
-    /// Rasterize into Metal texture during drag or for non-selected tabs to reduce compositing cost
-    private var shouldRasterize: Bool {
-        isDragging || !isSelected
-    }
-
     var body: some View {
         Group {
             if loadedTabs.contains(tab) {
@@ -279,7 +272,6 @@ private struct LazyTab<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .modifier(ConditionalDrawingGroup(active: shouldRasterize && loadedTabs.contains(tab)))
         .offset(x: xOffset)
         .allowsHitTesting(isSelected && dragOffset == 0)
         .accessibilityHidden(!isSelected)
@@ -287,20 +279,6 @@ private struct LazyTab<Content: View>: View {
             if newTab == tab {
                 loadedTabs.insert(tab)
             }
-        }
-    }
-}
-
-/// Applies `.drawingGroup()` when active to rasterize into a Metal texture,
-/// reducing compositing overhead during tab swipe transitions.
-private struct ConditionalDrawingGroup: ViewModifier {
-    let active: Bool
-
-    func body(content: Content) -> some View {
-        if active {
-            content.drawingGroup(opaque: false)
-        } else {
-            content
         }
     }
 }

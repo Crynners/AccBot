@@ -782,7 +782,7 @@ struct DashboardView: View {
 
 // MARK: - AccBot Header Logo
 
-/// Custom header matching Android's "Acc₿ot" logo with app icon overlay on the ₿ character.
+/// Plain-text "Acc₿ot" header using the Unicode Bitcoin symbol.
 struct AccBotHeaderLogo: View {
     var isSandbox: Bool = false
     @Environment(\.accBotColors) private var colors
@@ -792,100 +792,12 @@ struct AccBotHeaderLogo: View {
             Text("Acc")
                 .font(AccBotFonts.titleMedium)
                 .foregroundStyle(colors.onBackground)
-
-            AppLogoIcon(accent: colors.primary, size: 36, centerColor: colors.background)
-
+            Text("\u{20BF}")
+                .font(AccBotFonts.titleMedium)
+                .foregroundStyle(colors.primary)
             Text("ot")
                 .font(AccBotFonts.titleMedium)
                 .foregroundStyle(colors.onBackground)
         }
-    }
-}
-
-// MARK: - App Logo Icon (Vector reproduction of ic_launcher_foreground)
-
-/// SwiftUI reproduction of the Android vector app icon.
-struct AppLogoIcon: View {
-    var accent: Color = .accentTeal
-    var size: CGFloat = 32
-    var centerColor: Color = .backgroundDark
-
-    var body: some View {
-        Canvas { context, canvasSize in
-            let s = canvasSize.width / 108 // scale factor (Android viewport = 108x108)
-
-            // Inner circle fill + stroke (r=29.53) — the main green circle
-            let innerCircle = Path(ellipseIn: CGRect(
-                x: (54 - 29.53) * s, y: (54 - 29.53) * s,
-                width: 59.06 * s, height: 59.06 * s
-            ))
-            context.fill(innerCircle, with: .color(accent.opacity(0.05)))
-            context.stroke(innerCircle, with: .color(accent), lineWidth: 0.84 * s)
-
-            // Central dark circle (r=17.93)
-            let darkCircle = Path(ellipseIn: CGRect(
-                x: (54 - 17.93) * s, y: (54 - 17.93) * s,
-                width: 35.86 * s, height: 35.86 * s
-            ))
-            context.fill(darkCircle, with: .color(centerColor))
-            context.stroke(darkCircle, with: .color(accent), lineWidth: 0.84 * s)
-
-            // Bitcoin symbol — vertical strokes
-            let vertStrokes: [(x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat)] = [
-                (49, 40, 2, 3), (53.5, 40, 2, 3), // top
-                (49, 65, 2, 3), (53.5, 65, 2, 3), // bottom
-            ]
-            for vs in vertStrokes {
-                let rect = CGRect(x: vs.x * s, y: vs.y * s, width: vs.w * s, height: vs.h * s)
-                context.fill(Path(rect), with: .color(.white))
-            }
-
-            // Bitcoin B body with counter holes (evenOdd fill, from ic_launcher_foreground.xml)
-            let bShape = Path { p in
-                // Outer B shape
-                p.move(to: CGPoint(x: 46 * s, y: 43 * s))
-                p.addLine(to: CGPoint(x: 56 * s, y: 43 * s))
-                p.addCurve(to: CGPoint(x: 62 * s, y: 48.5 * s),
-                           control1: CGPoint(x: 60 * s, y: 43 * s),
-                           control2: CGPoint(x: 62 * s, y: 45.5 * s))
-                p.addCurve(to: CGPoint(x: 57 * s, y: 54 * s),
-                           control1: CGPoint(x: 62 * s, y: 51.5 * s),
-                           control2: CGPoint(x: 60 * s, y: 53.5 * s))
-                p.addCurve(to: CGPoint(x: 63 * s, y: 59.5 * s),
-                           control1: CGPoint(x: 60.5 * s, y: 54 * s),
-                           control2: CGPoint(x: 63 * s, y: 56.5 * s))
-                p.addCurve(to: CGPoint(x: 56.5 * s, y: 65 * s),
-                           control1: CGPoint(x: 63 * s, y: 62.5 * s),
-                           control2: CGPoint(x: 60.5 * s, y: 65 * s))
-                p.addLine(to: CGPoint(x: 46 * s, y: 65 * s))
-                p.closeSubpath()
-
-                // Top counter hole
-                p.move(to: CGPoint(x: 50 * s, y: 46 * s))
-                p.addLine(to: CGPoint(x: 55.5 * s, y: 46 * s))
-                p.addCurve(to: CGPoint(x: 59 * s, y: 48.5 * s),
-                           control1: CGPoint(x: 57.5 * s, y: 46 * s),
-                           control2: CGPoint(x: 59 * s, y: 47 * s))
-                p.addCurve(to: CGPoint(x: 55.5 * s, y: 51.5 * s),
-                           control1: CGPoint(x: 59 * s, y: 50 * s),
-                           control2: CGPoint(x: 57.5 * s, y: 51.5 * s))
-                p.addLine(to: CGPoint(x: 50 * s, y: 51.5 * s))
-                p.closeSubpath()
-
-                // Bottom counter hole
-                p.move(to: CGPoint(x: 50 * s, y: 56.5 * s))
-                p.addLine(to: CGPoint(x: 56.5 * s, y: 56.5 * s))
-                p.addCurve(to: CGPoint(x: 60 * s, y: 59.5 * s),
-                           control1: CGPoint(x: 59 * s, y: 56.5 * s),
-                           control2: CGPoint(x: 60 * s, y: 58 * s))
-                p.addCurve(to: CGPoint(x: 56.5 * s, y: 62.5 * s),
-                           control1: CGPoint(x: 60 * s, y: 61 * s),
-                           control2: CGPoint(x: 59 * s, y: 62.5 * s))
-                p.addLine(to: CGPoint(x: 50 * s, y: 62.5 * s))
-                p.closeSubpath()
-            }
-            context.fill(bShape, with: .color(.white), style: FillStyle(eoFill: true))
-        }
-        .frame(width: size, height: size)
     }
 }
