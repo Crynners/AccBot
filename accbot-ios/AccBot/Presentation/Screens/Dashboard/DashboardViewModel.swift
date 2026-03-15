@@ -119,10 +119,9 @@ final class DashboardViewModel: ObservableObject {
         _ = await (plansResult, holdingsResult)
         announceForVoiceOver(String(localized: "Dashboard loaded"))
         // Balances and market data can also run in parallel
+        let shouldFetchMarket = showMarketPulse
         async let balancesResult: () = fetchBalancesForPlans()
-        async let marketResult: () = {
-            if showMarketPulse { await fetchMarketData() }
-        }()
+        async let marketResult: () = shouldFetchMarket ? fetchMarketData() : ()
         _ = await (balancesResult, marketResult)
     }
 
