@@ -17,22 +17,20 @@ struct PlanCard: View {
     @Environment(\.accBotColors) private var colors
 
     var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                headerRow
-                Divider().background(colors.onSurfaceVariant.opacity(Opacity.divider))
-                detailsRow
-                nextExecutionRow
-                goalProgressRow
-                balanceDurationRow
-                withdrawalWarningRow
-            }
-            .padding(Spacing.lg)
-            .background(colors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
-            .contentShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            headerRow
+            Divider().background(colors.onSurfaceVariant.opacity(Opacity.divider))
+            detailsRow
+            nextExecutionRow
+            goalProgressRow
+            balanceDurationRow
+            withdrawalWarningRow
         }
-        .buttonStyle(.plain)
+        .padding(Spacing.lg)
+        .background(colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+        .contentShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+        .onTapGesture(perform: onTap)
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isButton)
     }

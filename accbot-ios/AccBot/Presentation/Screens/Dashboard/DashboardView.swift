@@ -319,37 +319,48 @@ struct DashboardView: View {
 
     private var marketPulseCard: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            // Header
-            Button {
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    viewModel.toggleMarketPulseExpanded()
-                }
-            } label: {
-                HStack {
+            // Header — three separate tap targets to prevent overlap
+            HStack {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        viewModel.toggleMarketPulseExpanded()
+                    }
+                } label: {
                     Text(String(localized: "Market Pulse"))
                         .font(AccBotFonts.titleSmall)
                         .foregroundStyle(colors.onSurface)
-                    Spacer()
-                    Button {
-                        showMarketPulseInfo = true
-                    } label: {
-                        Image(systemName: "info.circle")
-                            .font(AccBotFonts.caption)
-                            .foregroundStyle(colors.primary)
-                            .frame(minWidth: 44, minHeight: 44)
-                            .contentShape(Rectangle())
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(viewModel.isMarketPulseExpanded
+                    ? String(localized: "Double tap to collapse")
+                    : String(localized: "Double tap to expand"))
+
+                Button {
+                    showMarketPulseInfo = true
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(AccBotFonts.caption)
+                        .foregroundStyle(colors.primary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        viewModel.toggleMarketPulseExpanded()
                     }
-                    .buttonStyle(.plain)
+                } label: {
                     Image(systemName: viewModel.isMarketPulseExpanded ? "chevron.up" : "chevron.down")
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.onSurfaceVariant)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-            .accessibilityHint(viewModel.isMarketPulseExpanded
-                ? String(localized: "Double tap to collapse")
-                : String(localized: "Double tap to expand"))
 
             // Gauge area (single shared gauge matching Android layout)
             VStack(spacing: 0) {

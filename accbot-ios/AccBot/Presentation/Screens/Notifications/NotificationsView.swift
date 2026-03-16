@@ -16,25 +16,23 @@ struct NotificationsView: View {
             } else {
                 List {
                     ForEach(viewModel.notifications) { notification in
-                        Button {
-                            viewModel.markAsRead(notification)
-                        } label: {
-                            notificationRow(notification)
-                        }
-                        .buttonStyle(.plain)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                viewModel.deleteNotification(notification)
-                            } label: {
-                                Label(String(localized: "Delete"), systemImage: "trash")
+                        notificationRow(notification)
+                            .onTapGesture {
+                                viewModel.markAsRead(notification)
                             }
-                        }
-                        .listRowBackground(
-                            notification.isRead ? colors.surface : colors.primary.opacity(0.08)
-                        )
-                        .accessibilityValue(notification.isRead
-                            ? String(localized: "Read")
-                            : String(localized: "Unread"))
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    viewModel.deleteNotification(notification)
+                                } label: {
+                                    Label(String(localized: "Delete"), systemImage: "trash")
+                                }
+                            }
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: Spacing.xs, leading: Spacing.lg, bottom: Spacing.xs, trailing: Spacing.lg))
+                            .accessibilityValue(notification.isRead
+                                ? String(localized: "Read")
+                                : String(localized: "Unread"))
                     }
                 }
                 .listStyle(.plain)
@@ -111,7 +109,10 @@ struct NotificationsView: View {
                     .foregroundStyle(colors.onSurfaceVariant)
             }
         }
-        .padding(.vertical, Spacing.xs)
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(notification.isRead ? colors.surface : colors.primary.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(notificationAccessibilityLabel(notification))
     }
