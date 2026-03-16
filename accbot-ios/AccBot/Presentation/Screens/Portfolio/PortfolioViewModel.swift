@@ -65,6 +65,9 @@ final class PortfolioViewModel: ObservableObject {
     @Published var periodRoiLabel: String?
     @Published var accumulatedScaleMin: Decimal = 0
     @Published var accumulatedScaleMax: Decimal = 0
+    /// Fiat Y-axis range used for normalizing accumulated crypto; exposed for reverse-mapping on trailing axis.
+    var fiatScaleMin: Double = 0
+    var fiatScaleMax: Double = 0
     /// Maps chart date (timeIntervalSince1970) to original crypto value for tooltip display
     var accumulatedOriginalValues: [Double: Double] = [:]
 
@@ -498,6 +501,8 @@ final class PortfolioViewModel: ObservableObject {
             let fiatRange = fiatMax - fiatMin
             accumulatedScaleMin = cryptoMin
             accumulatedScaleMax = cryptoMax
+            fiatScaleMin = NSDecimalNumber(decimal: fiatMin).doubleValue
+            fiatScaleMax = NSDecimalNumber(decimal: fiatMax).doubleValue
             var newOriginalValues: [Double: Double] = [:]
 
             for series in visibleSeries {
@@ -579,6 +584,8 @@ final class PortfolioViewModel: ObservableObject {
         periodRoiLabel = nil
         accumulatedScaleMin = 0
         accumulatedScaleMax = 0
+        fiatScaleMin = 0
+        fiatScaleMax = 0
         accumulatedOriginalValues = [:]
     }
 

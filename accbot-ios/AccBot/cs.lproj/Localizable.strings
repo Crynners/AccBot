@@ -218,6 +218,10 @@
 "This will permanently delete all archived notifications." = "Trvale se smažou všechna archivovaná oznámení. Tuto akci nelze vrátit zpět.";
 "You're all caught up!" = "Vše přečteno!";
 "DCA alerts and updates will appear here" = "Oznámení o nákupech, chybách a upozorněních se zobrazí zde";
+"Delete All" = "Smazat vše";
+"Delete All?" = "Smazat vše?";
+"Mark All Read" = "Označit vše jako přečtené";
+"This will permanently delete all read notifications." = "Trvale se smažou všechna přečtená oznámení.";
 "Archive is empty" = "Archiv je prázdný";
 "Dismissed notifications will appear here" = "Zamítnutá oznámení se zobrazí zde";
 
@@ -428,11 +432,21 @@
 /* Note: "Low Balance Warning" already defined in Settings section */
 "Withdrawal Threshold Reached" = "Doporučen výběr";
 "DCA Plan Due" = "DCA plán k provedení";
-/* Format strings for notifications */
+/* Format strings for push notifications */
 "Bought %@ for %@ %@ on %@" = "Nakoupeno %1$@ za %2$@ %3$@ na %4$@";
 "%@: %@ %@ remaining (~%lld days)" = "%1$@: %2$@ %3$@ zbývá (~%4$lld dní)";
 "%@ %@ on %@ ready for withdrawal" = "%1$@ %2$@ na %3$@ připraveno k výběru";
 "Tap to execute: %@" = "Klepněte pro provedení: %@";
+/* In-app notification titles (DcaExecutionEngine) */
+"DCA Purchase" = "DCA nákup";
+"DCA Failed" = "DCA selhalo";
+"Withdrawal Threshold" = "Doporučen výběr";
+"Low Balance" = "Nízký zůstatek";
+/* In-app notification messages */
+"Bought %@ %@ for %@ %@" = "Nakoupeno %1$@ %2$@ za %3$@ %4$@";
+"Amount below minimum for %@" = "Částka pod minimem pro %@";
+"%@ %@ ready for withdrawal from %@" = "%1$@ %2$@ připraveno k výběru z %3$@";
+"%@: ~%lld days of %@ remaining" = "%1$@: ~%2$lld dní %3$@ zbývá";
 
 /* ===== Import CSV ===== */
 "Select a CSV file to import transaction history" = "Vyberte CSV soubor pro import historie transakcí";

@@ -95,6 +95,21 @@ final class DcaExecutionEngine {
             return
         }
 
+        // Atomically claim the plan to prevent double-purchase from concurrent BGTasks.
+        // Advances nextExecutionAt only if still in the past, returning false
+        // if another task already claimed it.
+        if !forceRun {
+            let nextExecution = calculateNextExecution(plan: plan, from: now)
+            let claimed = (try? activeDb.planDao.claimPlanForExecution(
+                id: plan.id, now: now, nextExecutionAt: nextExecution
+            )) ?? false
+            guard claimed else {
+                logger.info("Plan \(plan.id) already claimed by another task, skipping")
+                return
+            }
+            logger.info("Plan \(plan.id) claimed, nextExecution advanced to \(nextExecution)")
+        }
+
         // Get credentials
         let isSandbox = userPreferences.isSandboxMode()
         guard let credentials = credentialsStore.get(for: plan.exchange, isSandbox: isSandbox) else {
@@ -133,7 +148,7 @@ final class DcaExecutionEngine {
                 errorMessage: "Amount \(purchaseAmount) \(plan.fiat) below minimum \(minOrderSize) \(plan.fiat)"
             )
             saveTransactionAndAdvance(failedTx, plan: plan, now: now)
-            saveInAppNotification(type: .error, title: "DCA Failed", message: "Amount below minimum for \(plan.crypto)", plan: plan)
+            saveInAppNotification(type: .error, title: String(localized: "DCA Failed"), message: String(localized: "Amount below minimum for \(plan.crypto)"), plan: plan)
             return
         }
 
@@ -201,8 +216,8 @@ final class DcaExecutionEngine {
             }
             saveInAppNotification(
                 type: .purchase,
-                title: "DCA Purchase",
-                message: "Bought \(tx.cryptoAmount) \(plan.crypto) for \(tx.fiatAmount) \(plan.fiat)",
+                title: String(localized: "DCA Purchase"),
+                message: String(localized: "Bought \(tx.cryptoAmount) \(plan.crypto) for \(tx.fiatAmount) \(plan.fiat)"),
                 plan: plan
             )
 
@@ -241,7 +256,7 @@ final class DcaExecutionEngine {
                 if userPreferences.notificationsEnabled && userPreferences.errorNotifications {
                     notificationService.postErrorNotification(exchange: plan.exchange, message: msg)
                 }
-                saveInAppNotification(type: .error, title: "DCA Failed", message: "\(plan.crypto): \(msg)", plan: plan)
+                saveInAppNotification(type: .error, title: String(localized: "DCA Failed"), message: "\(plan.crypto): \(msg)", plan: plan)
             }
 
         case nil:
@@ -290,8 +305,8 @@ final class DcaExecutionEngine {
                 )
                 saveInAppNotification(
                     type: .withdrawalThreshold,
-                    title: "Withdrawal Threshold",
-                    message: "\(balance) \(plan.crypto) ready for withdrawal from \(plan.exchange.displayName)",
+                    title: String(localized: "Withdrawal Threshold"),
+                    message: String(localized: "\(balance) \(plan.crypto) ready for withdrawal from \(plan.exchange.displayName)"),
                     plan: plan
                 )
             }
@@ -322,8 +337,8 @@ final class DcaExecutionEngine {
                 }
                 saveInAppNotification(
                     type: .lowBalance,
-                    title: "Low Balance",
-                    message: "\(plan.exchange.displayName): ~\(Int(remainingDays)) days of \(plan.fiat) remaining",
+                    title: String(localized: "Low Balance"),
+                    message: String(localized: "\(plan.exchange.displayName): ~\(Int(remainingDays)) days of \(plan.fiat) remaining"),
                     plan: plan
                 )
             }

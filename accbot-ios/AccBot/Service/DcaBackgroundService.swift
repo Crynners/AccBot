@@ -21,12 +21,12 @@ final class DcaBackgroundService {
             self.logger.warning("BGAppRefreshTask expired")
         }
 
-        // Schedule the next refresh first (self-perpetuating)
-        scheduleAppRefresh()
-
         // Execute due plans (runtime ~30s, enough for 1-2 API calls)
         let deps = await MainActor.run { AppDependencies.shared ?? AppDependencies() }
         await deps.dcaExecutionEngine.executeDuePlans()
+
+        // Schedule the next refresh based on actual next plan execution time
+        scheduleAppRefresh(using: deps.activeDatabase)
 
         // Update last background run timestamp
         await MainActor.run {
@@ -47,16 +47,16 @@ final class DcaBackgroundService {
             self.logger.warning("BGProcessingTask expired")
         }
 
+        let deps = await MainActor.run { AppDependencies.shared ?? AppDependencies() }
+
+        // Resolve pending transactions and execute due plans
+        await deps.dcaExecutionEngine.executeDuePlans()
+
         // Schedule next processing task
         scheduleProcessingTask()
 
-        let deps = await MainActor.run { AppDependencies.shared ?? AppDependencies() }
-
-        // Resolve pending transactions
-        await deps.dcaExecutionEngine.executeDuePlans()
-
-        // Sync daily prices for portfolio charts
-        // await deps.marketDataService.syncDailyPrices(...)
+        // Also schedule next refresh for the nearest plan
+        scheduleAppRefresh(using: deps.activeDatabase)
 
         await MainActor.run {
             deps.userPreferences.lastBackgroundRun = Date()
@@ -69,19 +69,13 @@ final class DcaBackgroundService {
     // MARK: - Scheduling
 
     func scheduleAppRefresh() {
-        let request = BGAppRefreshTaskRequest(identifier: AppDelegate.bgRefreshIdentifier)
+        scheduleAppRefresh(at: Date(timeIntervalSinceNow: 3600))
+    }
 
-        // Set earliest begin date to next plan's execution time
-        // If no plans, default to 1 hour
-        // The actual date should be fetched from the database
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 3600)
-
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            logger.info("Scheduled BGAppRefreshTask")
-        } catch {
-            logger.error("Failed to schedule BGAppRefreshTask: \(error.localizedDescription)")
-        }
+    func scheduleAppRefresh(using database: DcaDatabase) {
+        let nextDate = (try? database.planDao.getNextExecutionDate())
+            ?? Date(timeIntervalSinceNow: 3600)
+        scheduleAppRefresh(at: nextDate)
     }
 
     func scheduleAppRefresh(at date: Date) {

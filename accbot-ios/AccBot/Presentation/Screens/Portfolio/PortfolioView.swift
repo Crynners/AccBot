@@ -443,27 +443,25 @@ struct PortfolioView: View {
                     }
                 }
                 .chartYAxis {
-                    AxisMarks(values: .automatic) { _ in
+                    AxisMarks(position: .leading, values: .automatic) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                             .foregroundStyle(colors.onSurfaceVariant.opacity(0.5))
                         AxisValueLabel()
                             .foregroundStyle(colors.onSurfaceVariant)
                     }
-                }
-                .frame(height: 220)
-                .overlay(alignment: .trailing) {
                     if viewModel.visibleSeries.contains(.accumulatedCrypto),
                        viewModel.accumulatedScaleMax > viewModel.accumulatedScaleMin {
-                        VStack {
-                            Text(AccBotFormatters.formatCryptoCompact(viewModel.accumulatedScaleMax))
-                            Spacer()
-                            Text(AccBotFormatters.formatCryptoCompact(viewModel.accumulatedScaleMin))
+                        AxisMarks(position: .trailing, values: .automatic) { value in
+                            AxisValueLabel {
+                                if let fiatVal = value.as(Double.self) {
+                                    Text(cryptoAxisLabel(for: fiatVal))
+                                }
+                            }
+                            .foregroundStyle(colors.success)
                         }
-                        .font(AccBotFonts.captionSmall)
-                        .foregroundStyle(colors.success)
-                        .padding(.vertical, Spacing.xs)
                     }
                 }
+                .frame(height: 220)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(chartAccessibilitySummary)
                 .accessibilityHint(String(localized: "Swipe left or right to scrub through chart data points"))
@@ -537,34 +535,32 @@ struct PortfolioView: View {
     // MARK: - Interactive Legend
 
     private var legendSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.sm) {
-                ForEach(applicableSeries, id: \.self) { series in
-                    let isVisible = viewModel.visibleSeries.contains(series)
-                    Button {
-                        viewModel.toggleSeries(series)
-                    } label: {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(seriesColor(series))
-                                .frame(width: 8, height: 8)
-                            Text(series.localizedName)
-                                .font(AccBotFonts.caption)
-                        }
-                        .padding(.horizontal, Spacing.md)
-                        .padding(.vertical, Spacing.xs)
-                        .frame(minHeight: 44)
-                        .background(isVisible ? seriesColor(series).opacity(0.2) : colors.surface)
-                        .foregroundStyle(isVisible ? colors.onSurface : colors.onSurfaceVariant)
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: CornerRadius.xl)
-                                .strokeBorder(isVisible ? seriesColor(series) : Color.clear, lineWidth: 1)
-                        )
+        FlowLayout(spacing: Spacing.sm) {
+            ForEach(applicableSeries, id: \.self) { series in
+                let isVisible = viewModel.visibleSeries.contains(series)
+                Button {
+                    viewModel.toggleSeries(series)
+                } label: {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(seriesColor(series))
+                            .frame(width: 8, height: 8)
+                        Text(series.localizedName)
+                            .font(AccBotFonts.caption)
                     }
-                    .accessibilityLabel(series.localizedName)
-                    .accessibilityValue(isVisible ? String(localized: "Visible") : String(localized: "Hidden"))
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, Spacing.xs)
+                    .frame(minHeight: 44)
+                    .background(isVisible ? seriesColor(series).opacity(0.2) : colors.surface)
+                    .foregroundStyle(isVisible ? colors.onSurface : colors.onSurfaceVariant)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CornerRadius.xl)
+                            .strokeBorder(isVisible ? seriesColor(series) : Color.clear, lineWidth: 1)
+                    )
                 }
+                .accessibilityLabel(series.localizedName)
+                .accessibilityValue(isVisible ? String(localized: "Visible") : String(localized: "Hidden"))
             }
         }
     }
@@ -604,8 +600,10 @@ struct PortfolioView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Spacing.sm) {
                         ForEach(viewModel.availableYears, id: \.self) { year in
-                            Button("\(year)") {
+                            Button {
                                 viewModel.drillDown(year: year)
+                            } label: {
+                                Text(verbatim: "\(year)")
                             }
                             .font(AccBotFonts.caption)
                             .padding(.horizontal, Spacing.md)
@@ -648,6 +646,17 @@ struct PortfolioView: View {
     }
 
     // MARK: - Formatters
+
+    /// Reverse-maps a fiat-range Y axis value back to the original crypto scale for the trailing axis.
+    private func cryptoAxisLabel(for fiatVal: Double) -> String {
+        let fiatRange = viewModel.fiatScaleMax - viewModel.fiatScaleMin
+        let cryptoMin = NSDecimalNumber(decimal: viewModel.accumulatedScaleMin).doubleValue
+        let cryptoMax = NSDecimalNumber(decimal: viewModel.accumulatedScaleMax).doubleValue
+        let cryptoRange = cryptoMax - cryptoMin
+        guard fiatRange > 0, cryptoRange > 0 else { return "" }
+        let cryptoVal = cryptoMin + (fiatVal - viewModel.fiatScaleMin) / fiatRange * cryptoRange
+        return AccBotFormatters.formatCryptoCompact(Decimal(cryptoVal))
+    }
 
     private func formatFiat(_ value: Decimal) -> String {
         AccBotFormatters.formatFiatPlain(value)

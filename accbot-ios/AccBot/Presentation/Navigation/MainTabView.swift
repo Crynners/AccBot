@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 
 /// Main tab view with 4 tabs: Dashboard, Portfolio, Notifications, Settings.
-/// Uses a manual ZStack + CustomTabBar instead of native TabView to avoid
+/// Uses a manual HStack + CustomTabBar instead of native TabView to avoid
 /// known SwiftUI TabView + NavigationStack lifecycle bugs and to provide
 /// a custom animated tab bar design.
 ///
@@ -43,21 +43,21 @@ struct MainTabView: View {
             GeometryReader { geo in
                 let screenWidth = geo.size.width
 
-                ZStack {
+                HStack(spacing: 0) {
                     ForEach(TabItem.allCases) { tab in
                         LazyTab(
                             tab: tab,
                             selectedTab: router.selectedTab,
-                            dragOffset: dragOffset,
-                            screenWidth: screenWidth,
                             isSwipingTabs: isDraggingHorizontally == true,
                             loadedTabs: $loadedTabs
                         ) {
                             tabContent(for: tab)
                         }
+                        .frame(width: screenWidth)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .offset(x: -CGFloat(router.selectedTab.rawValue) * screenWidth + dragOffset)
+                .frame(width: screenWidth, alignment: .leading)
                 .clipped()
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 20)
@@ -268,17 +268,11 @@ struct MainTabView: View {
 private struct LazyTab<Content: View>: View {
     let tab: TabItem
     let selectedTab: TabItem
-    let dragOffset: CGFloat
-    let screenWidth: CGFloat
     let isSwipingTabs: Bool
     @Binding var loadedTabs: Set<TabItem>
     @ViewBuilder let content: () -> Content
 
     private var isSelected: Bool { tab == selectedTab }
-
-    private var xOffset: CGFloat {
-        CGFloat(tab.rawValue - selectedTab.rawValue) * screenWidth + dragOffset
-    }
 
     var body: some View {
         Group {
@@ -288,8 +282,7 @@ private struct LazyTab<Content: View>: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .scrollDisabled(isSwipingTabs)
-        .offset(x: xOffset)
-        .allowsHitTesting(isSelected && dragOffset == 0)
+        .allowsHitTesting(isSelected && !isSwipingTabs)
         .accessibilityHidden(!isSelected)
         .onChange(of: selectedTab) { newTab in
             if newTab == tab {
