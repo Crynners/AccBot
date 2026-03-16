@@ -26,12 +26,12 @@ final class DcaBackgroundService {
         await deps.dcaExecutionEngine.executeDuePlans()
 
         // Schedule the next refresh based on actual next plan execution time
-        scheduleAppRefresh(using: deps.activeDatabase)
-
-        // Update last background run timestamp
-        await MainActor.run {
+        // and update last background run timestamp
+        let db = await MainActor.run {
             deps.userPreferences.lastBackgroundRun = Date()
+            return deps.activeDatabase
         }
+        scheduleAppRefresh(using: db)
 
         task.setTaskCompleted(success: true)
         logger.info("BGAppRefreshTask completed")
@@ -56,11 +56,12 @@ final class DcaBackgroundService {
         scheduleProcessingTask()
 
         // Also schedule next refresh for the nearest plan
-        scheduleAppRefresh(using: deps.activeDatabase)
-
-        await MainActor.run {
+        // and update last background run timestamp
+        let db = await MainActor.run {
             deps.userPreferences.lastBackgroundRun = Date()
+            return deps.activeDatabase
         }
+        scheduleAppRefresh(using: db)
 
         task.setTaskCompleted(success: true)
         logger.info("BGProcessingTask completed")
