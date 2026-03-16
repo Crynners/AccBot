@@ -104,6 +104,15 @@ final class DcaPlanDao {
         }
     }
 
+    func setNextExecution(id: Int64, nextExecutionAt: Date) throws {
+        try dbPool.write { db in
+            try db.execute(
+                sql: "UPDATE dca_plans SET nextExecutionAt = ? WHERE id = ?",
+                arguments: [nextExecutionAt.timeIntervalSince1970, id]
+            )
+        }
+    }
+
     func updateExecution(id: Int64, lastExecutedAt: Date, nextExecutionAt: Date?) throws {
         try dbPool.write { db in
             try db.execute(

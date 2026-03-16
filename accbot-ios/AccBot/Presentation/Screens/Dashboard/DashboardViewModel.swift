@@ -89,7 +89,7 @@ final class DashboardViewModel: ObservableObject {
         let crypto: String
         let currentPrice: Decimal
         let ath: Decimal
-        let athDistancePercent: Int  // 0-100, how far below ATH
+        let athDistancePercent: Double  // 0-100, how far below ATH
     }
 
     func setup(_ dependencies: AppDependencies) {
@@ -382,6 +382,11 @@ final class DashboardViewModel: ObservableObject {
     func togglePlan(_ plan: DcaPlan, enabled: Bool) {
         Task {
             try? deps.activeDatabase.planDao.setEnabled(id: plan.id, enabled: enabled)
+            // Recalculate next execution when re-enabling to avoid stale dates
+            if enabled {
+                let next = plan.calculateNextExecution()
+                try? deps.activeDatabase.planDao.setNextExecution(id: plan.id, nextExecutionAt: next)
+            }
         }
     }
 
@@ -444,7 +449,7 @@ final class DashboardViewModel: ObservableObject {
                         await self.deps.marketDataService.getPriceAndATH(crypto: crypto, fiat: fiat)
                     }
                     guard let result, result.ath > 0 else { return nil }
-                    let distance = NSDecimalNumber(decimal: (result.ath - result.price) / result.ath * 100).intValue
+                    let distance = NSDecimalNumber(decimal: (result.ath - result.price) / result.ath * 100).doubleValue
                     return AthCryptoInfo(
                         crypto: crypto,
                         currentPrice: result.price,

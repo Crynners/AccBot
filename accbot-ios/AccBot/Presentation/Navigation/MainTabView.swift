@@ -26,6 +26,10 @@ struct MainTabView: View {
     /// Whether the current gesture has been identified as horizontal.
     @State private var isDraggingHorizontally: Bool? = nil
 
+    /// Whether any drag gesture is active (set immediately on first .onChanged).
+    /// Used to suppress hit-testing during the initial direction-detection window.
+    @State private var isAnyDragActive: Bool = false
+
     /// Throttle drag offset updates to ~30fps (every 33ms) instead of 60fps.
     /// Halves view rebuilds during tab swipe on A12 devices.
     @State private var lastDragUpdateTime: Date = .distantPast
@@ -49,6 +53,7 @@ struct MainTabView: View {
                             tab: tab,
                             selectedTab: router.selectedTab,
                             isSwipingTabs: isDraggingHorizontally == true,
+                            isDragActive: isAnyDragActive,
                             loadedTabs: $loadedTabs
                         ) {
                             tabContent(for: tab)
@@ -63,6 +68,7 @@ struct MainTabView: View {
                     DragGesture(minimumDistance: 20)
                         .onChanged { value in
                             guard !router.isInDetailView && !router.isChartInteracting else { return }
+                            isAnyDragActive = true
 
                             let h = value.translation.width
                             let v = value.translation.height
@@ -93,6 +99,7 @@ struct MainTabView: View {
                             }
                         }
                         .onEnded { value in
+                            isAnyDragActive = false
                             guard !router.isInDetailView && !router.isChartInteracting else {
                                 isDraggingHorizontally = nil
                                 dragOffset = 0
@@ -269,6 +276,7 @@ private struct LazyTab<Content: View>: View {
     let tab: TabItem
     let selectedTab: TabItem
     let isSwipingTabs: Bool
+    let isDragActive: Bool
     @Binding var loadedTabs: Set<TabItem>
     @ViewBuilder let content: () -> Content
 
@@ -282,7 +290,7 @@ private struct LazyTab<Content: View>: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .scrollDisabled(isSwipingTabs)
-        .allowsHitTesting(isSelected && !isSwipingTabs)
+        .allowsHitTesting(isSelected && !isDragActive)
         .accessibilityHidden(!isSelected)
         .onChange(of: selectedTab) { newTab in
             if newTab == tab {

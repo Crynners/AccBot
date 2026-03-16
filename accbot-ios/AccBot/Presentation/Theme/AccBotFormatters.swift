@@ -50,15 +50,6 @@ enum AccBotFormatters {
         return f
     }()
 
-    static let tooltipNumber: NumberFormatter = {
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 4
-        f.locale = .current
-        return f
-    }()
-
     static let signedPercent: NumberFormatter = {
         let f = NumberFormatter()
         f.numberStyle = .decimal
@@ -136,9 +127,23 @@ enum AccBotFormatters {
         return cryptoCompact.string(from: number) ?? "0"
     }
 
-    static func formatTooltip(_ value: Decimal) -> String {
-        let number = NSDecimalNumber(decimal: value)
-        return tooltipNumber.string(from: number) ?? "0"
+    static func formatFiatAxisLabel(_ value: Double) -> String {
+        let absValue = abs(value)
+        if absValue >= 1000 {
+            let k = value / 1000.0
+            // Use 1 decimal if not a whole number, otherwise 0
+            if k.truncatingRemainder(dividingBy: 1) == 0 {
+                return String(format: "%.0fk", k)
+            } else {
+                return String(format: "%.1fk", k)
+            }
+        } else {
+            if absValue == 0 || value.truncatingRemainder(dividingBy: 1) == 0 {
+                return String(format: "%.0f", value)
+            } else {
+                return String(format: "%.1f", value)
+            }
+        }
     }
 
     static func formatSignedPercent(_ value: Double) -> String {

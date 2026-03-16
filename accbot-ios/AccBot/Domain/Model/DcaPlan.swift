@@ -54,4 +54,25 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
 
     /// Display string for the trading pair (e.g., "BTC/EUR")
     var pair: String { "\(crypto)/\(fiat)" }
+
+    /// Human-readable frequency label. For custom CRON plans, returns
+    /// a natural-language description (e.g. "Every day at 8:00") instead
+    /// of the raw CRON expression.
+    var frequencyDisplayName: String {
+        if frequency == .custom, let cron = cronExpression,
+           let description = CronUtils.describeCron(cron) {
+            return description
+        }
+        return frequency.displayName
+    }
+
+    /// Calculate the next execution date from a reference time.
+    func calculateNextExecution(from now: Date = Date()) -> Date {
+        if let cron = cronExpression {
+            return CronUtils.getNextExecution(cron: cron, from: now)
+                ?? now.addingTimeInterval(TimeInterval(frequency.intervalMinutes * 60))
+        }
+        let interval = frequency.intervalMinutes > 0 ? frequency.intervalMinutes : 1440
+        return now.addingTimeInterval(TimeInterval(interval * 60))
+    }
 }

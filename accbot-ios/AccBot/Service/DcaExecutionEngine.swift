@@ -277,12 +277,7 @@ final class DcaExecutionEngine {
     }
 
     private func calculateNextExecution(plan: DcaPlan, from now: Date) -> Date {
-        if let cron = plan.cronExpression {
-            return CronUtils.getNextExecution(cron: cron, from: now)
-                ?? now.addingTimeInterval(TimeInterval(plan.frequency.intervalMinutes * 60))
-        }
-        let interval = plan.frequency.intervalMinutes > 0 ? plan.frequency.intervalMinutes : 1440
-        return now.addingTimeInterval(TimeInterval(interval * 60))
+        plan.calculateNextExecution(from: now)
     }
 
     private func calculateStrategyMultiplier(

@@ -24,7 +24,7 @@ enum CronUtils {
         let maxDate = calendar.date(byAdding: .day, value: 366, to: from)!
 
         while candidate <= maxDate {
-            let components = calendar.dateComponents([.minute, .hour, .day, .month, .weekday], from: candidate)
+            let components = calendar.dateComponents([.year, .minute, .hour, .day, .month, .weekday], from: candidate)
             guard let minute = components.minute,
                   let hour = components.hour,
                   let day = components.day,

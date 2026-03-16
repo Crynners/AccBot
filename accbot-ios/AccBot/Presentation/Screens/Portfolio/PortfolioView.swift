@@ -379,11 +379,6 @@ struct PortfolioView: View {
 
     private var chartSection: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            // Scrub tooltip
-            if let date = selectedDate, let nearest = nearestChartPoints(to: date) {
-                scrubTooltip(date: date, points: nearest)
-            }
-
             if viewModel.chartData.isEmpty {
                 EmptyStateView(
                     systemImage: "chart.line.uptrend.xyaxis",
@@ -443,11 +438,15 @@ struct PortfolioView: View {
                     }
                 }
                 .chartYAxis {
-                    AxisMarks(position: .leading, values: .automatic) { _ in
+                    AxisMarks(position: .leading, values: .automatic) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                             .foregroundStyle(colors.onSurfaceVariant.opacity(0.5))
-                        AxisValueLabel()
-                            .foregroundStyle(colors.onSurfaceVariant)
+                        AxisValueLabel {
+                            if let v = value.as(Double.self) {
+                                Text(AccBotFormatters.formatFiatAxisLabel(v))
+                            }
+                        }
+                        .foregroundStyle(colors.onSurfaceVariant)
                     }
                     if viewModel.visibleSeries.contains(.accumulatedCrypto),
                        viewModel.accumulatedScaleMax > viewModel.accumulatedScaleMin {
@@ -462,6 +461,16 @@ struct PortfolioView: View {
                     }
                 }
                 .frame(height: 220)
+                .overlay(alignment: .leading) {
+                    if let fiat = viewModel.currentPair?.fiat {
+                        Text(fiat)
+                            .font(AccBotFonts.captionSmall)
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .rotationEffect(.degrees(-90))
+                            .fixedSize()
+                            .offset(x: -4)
+                    }
+                }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(chartAccessibilitySummary)
                 .accessibilityHint(String(localized: "Swipe left or right to scrub through chart data points"))
@@ -470,66 +479,6 @@ struct PortfolioView: View {
         .padding(Spacing.lg)
         .background(colors.surface)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
-    }
-
-    // MARK: - Scrub Tooltip
-
-    private func nearestChartPoints(to date: Date) -> [PortfolioViewModel.ChartPoint]? {
-        var result = [PortfolioViewModel.ChartPoint]()
-        let target = date.timeIntervalSince1970
-        for (_, points) in viewModel.sortedPointsBySeries {
-            guard !points.isEmpty else { continue }
-            // Binary search for closest date
-            var lo = 0, hi = points.count - 1
-            while lo < hi {
-                let mid = (lo + hi) / 2
-                if points[mid].date.timeIntervalSince1970 < target { lo = mid + 1 }
-                else { hi = mid }
-            }
-            // Check lo and lo-1 for closest
-            let candidates = [max(0, lo - 1), lo].map { points[min($0, points.count - 1)] }
-            if let nearest = candidates.min(by: { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }) {
-                result.append(nearest)
-            }
-        }
-        return result.isEmpty ? nil : result
-    }
-
-    private func scrubTooltip(date: Date, points: [PortfolioViewModel.ChartPoint]) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-            Text(date.formatted(date: .abbreviated, time: .omitted))
-                .font(AccBotFonts.captionSmall)
-                .foregroundStyle(colors.onSurfaceVariant)
-
-            ForEach(points, id: \.series) { point in
-                HStack(spacing: Spacing.xs) {
-                    Circle()
-                        .fill(seriesColor(point.series))
-                        .frame(width: 6, height: 6)
-                    if point.series == .accumulatedCrypto,
-                       let original = viewModel.accumulatedOriginalValues[point.date.timeIntervalSince1970] {
-                        Text("\(point.series.localizedName): \(formatTooltipValue(original))")
-                            .font(AccBotFonts.captionSmall)
-                            .foregroundStyle(colors.onSurface)
-                    } else {
-                        Text("\(point.series.localizedName): \(formatTooltipValue(point.value))")
-                            .font(AccBotFonts.captionSmall)
-                            .foregroundStyle(colors.onSurface)
-                    }
-                }
-            }
-        }
-        .padding(Spacing.sm)
-        .background(colors.surface.opacity(0.95))
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-        .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.sm)
-                .strokeBorder(colors.onSurfaceVariant.opacity(0.5), lineWidth: 1)
-        )
-    }
-
-    private func formatTooltipValue(_ value: Double) -> String {
-        AccBotFormatters.formatTooltip(Decimal(value))
     }
 
     // MARK: - Interactive Legend

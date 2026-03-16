@@ -143,6 +143,11 @@ class PlanDetailsViewModel: ObservableObject {
 
         do {
             try deps.activeDatabase.planDao.setEnabled(id: planId, enabled: newEnabled)
+            // Recalculate next execution when re-enabling to avoid stale dates
+            if newEnabled {
+                let next = plan.calculateNextExecution()
+                try deps.activeDatabase.planDao.setNextExecution(id: planId, nextExecutionAt: next)
+            }
             // Reload to reflect the change
             self.plan = try deps.activeDatabase.planDao.getById(planId)
         } catch {

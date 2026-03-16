@@ -410,7 +410,7 @@ struct DashboardView: View {
                         Canvas { context, size in
                             let w: CGFloat = 8, h: CGFloat = 6
                             for info in viewModel.athData {
-                                let x = CGFloat(100 - info.athDistancePercent) / 100.0 * size.width
+                                let x = CGFloat(100.0 - info.athDistancePercent) / 100.0 * size.width
                                 var path = Path()
                                 path.move(to: CGPoint(x: x, y: 0))
                                 path.addLine(to: CGPoint(x: x - w / 2, y: h))
@@ -428,9 +428,9 @@ struct DashboardView: View {
                     VStack(spacing: Spacing.xs) {
                         let athCenterText: String = {
                             func formatDistance(_ info: DashboardViewModel.AthCryptoInfo) -> String {
-                                info.athDistancePercent == 0
+                                info.athDistancePercent < 0.1
                                     ? String(localized: "ATH!")
-                                    : "-\(info.athDistancePercent) %"
+                                    : String(format: "-%.1f %%", info.athDistancePercent)
                             }
                             if viewModel.athData.count == 1, let info = viewModel.athData.first {
                                 return formatDistance(info)

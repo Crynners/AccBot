@@ -44,12 +44,9 @@ final class PortfolioViewModel: ObservableObject {
     @Published var currentPrice: Decimal?
     @Published var chartData: [ChartPoint] = [] {
         didSet {
-            sortedPointsBySeries = Dictionary(grouping: chartData) { $0.series }
             chartDateCount = Set(chartData.map(\.date)).count
         }
     }
-    /// Pre-grouped chart data for binary-search tooltip lookup.
-    var sortedPointsBySeries: [ChartSeries: [ChartPoint]] = [:]
     /// Number of unique dates in chart data (avoids O(n) recomputation in View body).
     var chartDateCount: Int = 0
     @Published var selectedChartSeries: ChartSeries = .portfolioValue
@@ -68,8 +65,6 @@ final class PortfolioViewModel: ObservableObject {
     /// Fiat Y-axis range used for normalizing accumulated crypto; exposed for reverse-mapping on trailing axis.
     var fiatScaleMin: Double = 0
     var fiatScaleMax: Double = 0
-    /// Maps chart date (timeIntervalSince1970) to original crypto value for tooltip display
-    var accumulatedOriginalValues: [Double: Double] = [:]
 
     struct KpiSnapshot {
         let date: Date
@@ -358,42 +353,43 @@ final class PortfolioViewModel: ObservableObject {
         guard let page = currentPage else { return }
 
         do {
-            var transactions: [Transaction]
+            var allTransactions: [Transaction]
 
             switch page {
             case .singlePair(let crypto, let fiat):
-                transactions = try deps.activeDatabase.transactionDao.getCompletedTransactions(
+                allTransactions = try deps.activeDatabase.transactionDao.getCompletedTransactions(
                     crypto: crypto, fiat: fiat
                 )
             case .aggregate(let fiat):
-                transactions = try deps.activeDatabase.transactionDao.getAllTransactionsOnce()
+                allTransactions = try deps.activeDatabase.transactionDao.getAllTransactionsOnce()
                     .filter { $0.fiat == fiat && ($0.status == .completed || $0.status == .partial) }
                     .sorted { $0.executedAt < $1.executedAt }
             }
 
             // Apply exchange filter
             if let filter = exchangeFilter {
-                transactions = transactions.filter { $0.exchange == filter }
+                allTransactions = allTransactions.filter { $0.exchange == filter }
             }
 
             // Collect available exchanges
-            availableExchanges = Array(Set(transactions.map { $0.exchange })).sorted { $0.rawValue < $1.rawValue }
+            availableExchanges = Array(Set(allTransactions.map { $0.exchange })).sorted { $0.rawValue < $1.rawValue }
 
-            // Apply zoom level filter
-            transactions = filterByZoom(transactions)
+            // Compute available years/months from ALL transactions (not zoom-filtered)
+            computeAvailableTimeRanges(from: allTransactions)
 
-            // Compute available years/months for drill-down
-            computeAvailableTimeRanges(from: transactions)
+            // Zoom-filtered subset for period-specific KPIs
+            let zoomTransactions = filterByZoom(allTransactions)
 
-            guard !transactions.isEmpty else {
+            guard !zoomTransactions.isEmpty else {
                 resetStats()
                 return
             }
 
-            totalCrypto = transactions.reduce(Decimal.zero) { $0 + $1.cryptoAmount }
-            totalInvested = transactions.reduce(Decimal.zero) { $0 + $1.fiatAmount }
+            // Period-specific KPIs from zoom window only
+            totalCrypto = zoomTransactions.reduce(Decimal.zero) { $0 + $1.cryptoAmount }
+            totalInvested = zoomTransactions.reduce(Decimal.zero) { $0 + $1.fiatAmount }
             avgBuyPrice = totalCrypto > 0 ? totalInvested / totalCrypto : 0
-            transactionCount = transactions.count
+            transactionCount = zoomTransactions.count
 
             // Current price (with 60s cache)
             if case .singlePair(let crypto, let fiat) = page {
@@ -421,25 +417,42 @@ final class PortfolioViewModel: ObservableObject {
                 nil
             }
 
-            // Build KPI snapshots by walking transactions chronologically
+            // Pre-compute cumulative running totals from ALL transactions
+            var runningCostBasis: Decimal = 0
+            var runningAccumulated: Decimal = 0
+            // Map transaction executedAt timestamp to cumulative values
+            struct CumulativeEntry {
+                let costBasis: Decimal
+                let accumulated: Decimal
+                let avgBuyPrice: Decimal
+            }
+            var cumulativeByTimestamp: [TimeInterval: CumulativeEntry] = [:]
+            for tx in allTransactions {
+                runningCostBasis += tx.fiatAmount
+                runningAccumulated += tx.cryptoAmount
+                let avg = runningAccumulated > 0 ? runningCostBasis / runningAccumulated : Decimal.zero
+                cumulativeByTimestamp[tx.executedAt.timeIntervalSince1970] = CumulativeEntry(
+                    costBasis: runningCostBasis,
+                    accumulated: runningAccumulated,
+                    avgBuyPrice: avg
+                )
+            }
+
+            // Build KPI snapshots using cumulative values, but only for zoom-window transactions
             var snapshots = [KpiSnapshot]()
-            var runningCrypto: Decimal = 0
-            var runningInvested: Decimal = 0
-            for (index, tx) in transactions.enumerated() {
-                runningCrypto += tx.cryptoAmount
-                runningInvested += tx.fiatAmount
-                let pv = runningCrypto * (currentPrice ?? tx.price)
-                let roi: Decimal? = runningInvested > 0
-                    ? ((pv - runningInvested) / runningInvested) * 100
+            for (index, tx) in zoomTransactions.enumerated() {
+                let entry = cumulativeByTimestamp[tx.executedAt.timeIntervalSince1970]!
+                let pv = entry.accumulated * (currentPrice ?? tx.price)
+                let roi: Decimal? = entry.costBasis > 0
+                    ? ((pv - entry.costBasis) / entry.costBasis) * 100
                     : nil
-                let avg = runningCrypto > 0 ? runningInvested / runningCrypto : 0
                 snapshots.append(KpiSnapshot(
                     date: tx.executedAt,
                     portfolioValue: pv,
-                    totalInvested: runningInvested,
+                    totalInvested: entry.costBasis,
                     roiPercent: roi,
-                    avgBuyPrice: avg,
-                    cumulativeCrypto: runningCrypto,
+                    avgBuyPrice: entry.avgBuyPrice,
+                    cumulativeCrypto: entry.accumulated,
                     transactionCount: index + 1
                 ))
             }
@@ -456,27 +469,23 @@ final class PortfolioViewModel: ObservableObject {
                 periodRoiLabel = nil
             }
 
-            // Build chart data for all visible series (O(n) per series)
+            // Build chart data — cumulative values, but only emit points for zoom window
             var allChartData = [ChartPoint]()
-            // Pre-compute running totals once to avoid O(n²) refiltering
-            var runningCostBasis: Decimal = 0
-            var runningAccumulated: Decimal = 0
             var costBasisByIndex = [Decimal]()
             var accumulatedByIndex = [Decimal]()
             var avgBuyPriceByIndex = [Decimal]()
-            for tx in transactions {
-                runningCostBasis += tx.fiatAmount
-                runningAccumulated += tx.cryptoAmount
-                costBasisByIndex.append(runningCostBasis)
-                accumulatedByIndex.append(runningAccumulated)
-                avgBuyPriceByIndex.append(runningAccumulated > 0 ? runningCostBasis / runningAccumulated : 0)
+            for tx in zoomTransactions {
+                let entry = cumulativeByTimestamp[tx.executedAt.timeIntervalSince1970]!
+                costBasisByIndex.append(entry.costBasis)
+                accumulatedByIndex.append(entry.accumulated)
+                avgBuyPriceByIndex.append(entry.avgBuyPrice)
             }
 
             // Compute fiat range for normalizing accumulated crypto onto the same Y axis
             var fiatMin: Decimal = Decimal.greatestFiniteMagnitude
             var fiatMax: Decimal = -Decimal.greatestFiniteMagnitude
             for series in visibleSeries where series != .accumulatedCrypto {
-                for (index, tx) in transactions.enumerated() {
+                for (index, tx) in zoomTransactions.enumerated() {
                     let value: Decimal
                     switch series {
                     case .portfolioValue: value = accumulatedByIndex[index] * (currentPrice ?? tx.price)
@@ -503,10 +512,9 @@ final class PortfolioViewModel: ObservableObject {
             accumulatedScaleMax = cryptoMax
             fiatScaleMin = NSDecimalNumber(decimal: fiatMin).doubleValue
             fiatScaleMax = NSDecimalNumber(decimal: fiatMax).doubleValue
-            var newOriginalValues: [Double: Double] = [:]
 
             for series in visibleSeries {
-                for (index, tx) in transactions.enumerated() {
+                for (index, tx) in zoomTransactions.enumerated() {
                     let value: Decimal
                     switch series {
                     case .portfolioValue:
@@ -525,12 +533,10 @@ final class PortfolioViewModel: ObservableObject {
                         } else {
                             value = fiatMin
                         }
-                        newOriginalValues[tx.executedAt.timeIntervalSince1970] = NSDecimalNumber(decimal: original).doubleValue
                     }
                     allChartData.append(ChartPoint(date: tx.executedAt, value: NSDecimalNumber(decimal: value).doubleValue, series: series))
                 }
             }
-            accumulatedOriginalValues = newOriginalValues
             chartData = adaptiveAggregate(allChartData)
             lastLoadedAt = Date()
         } catch {
@@ -586,7 +592,6 @@ final class PortfolioViewModel: ObservableObject {
         accumulatedScaleMax = 0
         fiatScaleMin = 0
         fiatScaleMax = 0
-        accumulatedOriginalValues = [:]
     }
 
     private func announceForVoiceOver(_ message: String) {

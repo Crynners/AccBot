@@ -727,6 +727,8 @@
 "Dismiss All?" = "Zamítnout vše?";
 "All active notifications will be archived." = "Všechna aktivní oznámení budou archivována.";
 "Notification filter" = "Filtr oznámení";
+"Read" = "Přečtené";
+"Unread" = "Nepřečtené";
 
 /* Biometric Lock */
 "Unlock AccBot to access your DCA plans" = "Odemkněte AccBot pro přístup k vašim DCA plánům";

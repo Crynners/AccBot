@@ -190,9 +190,7 @@ struct PlanDetailsView: View {
                 Spacer()
                 detailColumn(
                     label: String(localized: "Frequency"),
-                    value: plan.frequency == .custom
-                        ? plan.cronExpression ?? plan.frequency.displayName
-                        : plan.frequency.displayName
+                    value: plan.frequencyDisplayName
                 )
             }
         }

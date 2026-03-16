@@ -86,7 +86,7 @@ struct PlanCard: View {
 
             detailItem(
                 label: String(localized: "Frequency"),
-                value: plan.frequency.displayName
+                value: plan.frequencyDisplayName
             )
 
         }
@@ -115,7 +115,11 @@ struct PlanCard: View {
                     .foregroundStyle(colors.onSurfaceVariant)
                     .accessibilityHidden(true)
 
-                if let next = plan.nextExecutionAt {
+                if !plan.isEnabled {
+                    Text(String(localized: "Next execution: --"))
+                        .font(AccBotFonts.caption)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                } else if let next = plan.nextExecutionAt {
                     Text(String(localized: "Next: \(next.formatted(.relative(presentation: .named)))"))
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.onSurfaceVariant)
