@@ -217,7 +217,7 @@ final class DcaExecutionEngine {
             saveInAppNotification(
                 type: .purchase,
                 title: String(localized: "DCA Purchase"),
-                message: String(localized: "Bought \(tx.cryptoAmount) \(plan.crypto) for \(tx.fiatAmount) \(plan.fiat)"),
+                message: String(localized: "Bought \(tx.cryptoAmount as NSDecimalNumber) \(plan.crypto) for \(tx.fiatAmount as NSDecimalNumber) \(plan.fiat)"),
                 plan: plan
             )
 
@@ -306,7 +306,7 @@ final class DcaExecutionEngine {
                 saveInAppNotification(
                     type: .withdrawalThreshold,
                     title: String(localized: "Withdrawal Threshold"),
-                    message: String(localized: "\(balance) \(plan.crypto) ready for withdrawal from \(plan.exchange.displayName)"),
+                    message: String(localized: "\(balance as NSDecimalNumber) \(plan.crypto) ready for withdrawal from \(plan.exchange.displayName)"),
                     plan: plan
                 )
             }
