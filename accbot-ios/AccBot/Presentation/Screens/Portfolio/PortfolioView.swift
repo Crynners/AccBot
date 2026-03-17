@@ -226,7 +226,7 @@ struct PortfolioView: View {
                         .frame(maxWidth: .infinity)
                 }
 
-                if let snap = scrubbedKpi, isScrubbing {
+                if let snap = isScrubbing ? scrubbedKpi : viewModel.kpiSnapshots.last {
                     // Row 1: Portfolio Value | ROI
                     kpiRow(
                         leftTitle: String(localized: "Portfolio Value"),
@@ -250,41 +250,10 @@ struct PortfolioView: View {
                     if case .singlePair = viewModel.currentPage {
                         kpiRow(
                             leftTitle: String(localized: "Crypto Price"),
-                            leftValue: viewModel.currentPrice.map { formatFiat($0) } ?? "---",
+                            leftValue: formatFiat(snap.price),
                             leftSubtitle: viewModel.currentPair?.fiat,
                             rightTitle: String(localized: "Accumulated"),
                             rightValue: formatCrypto(snap.cumulativeCrypto),
-                            rightSubtitle: viewModel.currentPair?.crypto
-                        )
-                    }
-                } else {
-                    // Row 1: Portfolio Value | ROI
-                    kpiRow(
-                        leftTitle: String(localized: "Portfolio Value"),
-                        leftValue: viewModel.portfolioValue.map { formatFiat($0) } ?? "---",
-                        leftSubtitle: viewModel.currentPair?.fiat,
-                        rightTitle: String(localized: "ROI"),
-                        rightValue: viewModel.roiPercent.map { AccBotFormatters.formatSignedPercent($0) } ?? "---",
-                        rightSubtitle: (viewModel.roiPercent ?? 0) >= 0 ? String(localized: "Gain") : String(localized: "Loss"),
-                        rightValueColor: (viewModel.roiPercent ?? 0) >= 0 ? colors.primary : colors.error
-                    )
-                    // Row 2: Invested | Avg Buy Price
-                    kpiRow(
-                        leftTitle: String(localized: "Invested"),
-                        leftValue: formatFiat(viewModel.totalInvested),
-                        leftSubtitle: viewModel.currentPair?.fiat,
-                        rightTitle: String(localized: "Avg Buy Price"),
-                        rightValue: formatFiat(viewModel.avgBuyPrice),
-                        rightSubtitle: viewModel.currentPair?.fiat
-                    )
-                    // Row 3: Crypto Price | Accumulated (single pair only)
-                    if case .singlePair = viewModel.currentPage {
-                        kpiRow(
-                            leftTitle: String(localized: "Crypto Price"),
-                            leftValue: viewModel.currentPrice.map { formatFiat($0) } ?? "---",
-                            leftSubtitle: viewModel.currentPair?.fiat,
-                            rightTitle: String(localized: "Accumulated"),
-                            rightValue: formatCrypto(viewModel.totalCrypto),
                             rightSubtitle: viewModel.currentPair?.crypto
                         )
                     }

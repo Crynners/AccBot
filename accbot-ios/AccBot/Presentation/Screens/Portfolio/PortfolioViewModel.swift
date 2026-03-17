@@ -73,6 +73,7 @@ final class PortfolioViewModel: ObservableObject {
         let roiPercent: Decimal?
         let avgBuyPrice: Decimal
         let cumulativeCrypto: Decimal
+        let price: Decimal
         let transactionCount: Int
     }
 
@@ -297,9 +298,9 @@ final class PortfolioViewModel: ObservableObject {
 
     // MARK: - Private
 
-    /// Maximum chart points per series. With 5 series × 60 = 300 LineMarks.
-    /// Keeps rendering smooth on A12 (iPhone XS) and newer.
-    private static let maxPointsPerSeries = 60
+    /// Maximum chart points per series. Matches Android (90 points).
+    /// With 5 series × 90 = 450 LineMarks — smooth on A12+.
+    private static let maxPointsPerSeries = 90
 
     private func adaptiveAggregate(_ points: [ChartPoint]) -> [ChartPoint] {
         guard !points.isEmpty else { return points }
@@ -453,6 +454,7 @@ final class PortfolioViewModel: ObservableObject {
                     roiPercent: roi,
                     avgBuyPrice: entry.avgBuyPrice,
                     cumulativeCrypto: entry.accumulated,
+                    price: tx.price,
                     transactionCount: index + 1
                 ))
             }
