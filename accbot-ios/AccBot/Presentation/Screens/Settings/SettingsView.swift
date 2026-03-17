@@ -100,22 +100,20 @@ struct SettingsView: View {
             .listRowBackground(colors.surface)
 
             // Theme
-            Picker(String(localized: "Theme"), selection: $dependencies.userPreferences.appTheme) {
+            Picker(selection: $dependencies.userPreferences.appTheme) {
                 ForEach(AppTheme.allCases, id: \.self) { theme in
                     Text(theme.displayName).tag(theme)
                 }
+            } label: {
+                Label(String(localized: "Theme"), systemImage: "paintbrush")
             }
             .listRowBackground(colors.surface)
 
             // Market Pulse
             Toggle(isOn: $dependencies.userPreferences.marketPulseEnabled) {
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text(String(localized: "Market Pulse"))
-                    Text(String(localized: "Show market indicators on dashboard"))
-                        .font(AccBotFonts.captionSmall)
-                        .foregroundStyle(colors.onSurfaceVariant)
-                }
+                Label(String(localized: "Market Pulse"), systemImage: "chart.bar")
             }
+            .tint(colors.primary)
             .listRowBackground(colors.surface)
 
             // Language
@@ -125,7 +123,7 @@ struct SettingsView: View {
                 Button(String(localized: "Czech")) { viewModel.setLanguage("cs") }
             } label: {
                 HStack {
-                    Text(String(localized: "Language"))
+                    Label(String(localized: "Language"), systemImage: "globe")
                     Spacer()
                     Text(languageDisplayName)
                         .foregroundStyle(colors.onSurfaceVariant)
@@ -137,7 +135,10 @@ struct SettingsView: View {
 
             // Notifications toggle + info + system settings
             HStack {
-                Toggle(String(localized: "Notifications"), isOn: $dependencies.userPreferences.notificationsEnabled)
+                Toggle(isOn: $dependencies.userPreferences.notificationsEnabled) {
+                    Label(String(localized: "Notifications"), systemImage: "bell")
+                }
+                .tint(colors.primary)
                 Button {
                     showNotificationInfo = true
                 } label: {
@@ -148,36 +149,16 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(String(localized: "Notification info"))
-                Button {
-                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(colors.onSurfaceVariant)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(String(localized: "Open notification settings"))
             }
             .listRowBackground(colors.surface)
 
             // Background execution info
-            HStack {
+            HStack(spacing: Spacing.sm) {
                 Image(systemName: "info.circle")
                     .foregroundStyle(colors.warning)
                     .accessibilityHidden(true)
                 Text(String(localized: "iOS executes DCA plans approximately. Open the app daily for reliable execution."))
-                    .font(AccBotFonts.bodySmall)
-                    .foregroundStyle(colors.onSurfaceVariant)
-            }
-            .listRowBackground(colors.surface)
-
-            HStack {
-                Text(String(localized: "Last Background Run"))
-                Spacer()
-                Text(viewModel.lastBackgroundRunText)
+                    .font(AccBotFonts.captionSmall)
                     .foregroundStyle(colors.onSurfaceVariant)
             }
             .listRowBackground(colors.surface)
@@ -212,39 +193,27 @@ struct SettingsView: View {
             // Notification sub-toggles (only when notifications enabled)
             if dependencies.userPreferences.notificationsEnabled {
                 Toggle(isOn: $dependencies.userPreferences.purchaseNotifications) {
-                    VStack(alignment: .leading, spacing: Spacing.xxs) {
-                        Text(String(localized: "Purchase Alerts"))
-                        Text(String(localized: "Get notified when DCA purchases complete"))
-                            .font(AccBotFonts.captionSmall)
-                            .foregroundStyle(colors.onSurfaceVariant)
-                    }
+                    Label(String(localized: "Purchase Alerts"), systemImage: "checkmark.circle")
                 }
+                .tint(colors.primary)
                 .listRowBackground(colors.surface)
 
                 Toggle(isOn: $dependencies.userPreferences.errorNotifications) {
-                    VStack(alignment: .leading, spacing: Spacing.xxs) {
-                        Text(String(localized: "Error Alerts"))
-                        Text(String(localized: "Get notified when DCA purchases fail"))
-                            .font(AccBotFonts.captionSmall)
-                            .foregroundStyle(colors.onSurfaceVariant)
-                    }
+                    Label(String(localized: "Error Alerts"), systemImage: "exclamationmark.circle")
                 }
+                .tint(colors.primary)
                 .listRowBackground(colors.surface)
 
                 Toggle(isOn: $dependencies.userPreferences.weeklySummaryNotifications) {
-                    VStack(alignment: .leading, spacing: Spacing.xxs) {
-                        Text(String(localized: "Weekly Summary"))
-                        Text(String(localized: "Receive weekly DCA performance summary"))
-                            .font(AccBotFonts.captionSmall)
-                            .foregroundStyle(colors.onSurfaceVariant)
-                    }
+                    Label(String(localized: "Weekly Summary"), systemImage: "calendar")
                 }
+                .tint(colors.primary)
                 .listRowBackground(colors.surface)
             }
 
             // Low Balance Warning
             HStack {
-                Text(String(localized: "Low Balance Warning"))
+                Label(String(localized: "Low Balance Warning"), systemImage: "exclamationmark.triangle")
                 Spacer()
                 Text(String(localized: "\(dependencies.userPreferences.lowBalanceThresholdDays) days"))
                     .foregroundStyle(colors.onSurfaceVariant)

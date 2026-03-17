@@ -490,8 +490,8 @@ struct PortfolioView: View {
                         }
                     }
                 }
-                .frame(height: 220)
-                .clipped()
+                .padding(.top, Spacing.sm)
+                .frame(height: 230)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(chartAccessibilitySummary)
                 .accessibilityHint(String(localized: "Swipe left or right to scrub through chart data points"))
