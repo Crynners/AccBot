@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 /// GRDB Record for notifications table
-struct NotificationRecord: Codable, FetchableRecord, PersistableRecord, Identifiable {
+struct NotificationRecord: FetchableRecord, PersistableRecord, Identifiable {
     static let databaseTableName = "notifications"
 
     var id: Int64?
@@ -16,6 +16,52 @@ struct NotificationRecord: Codable, FetchableRecord, PersistableRecord, Identifi
     var isArchived: Bool
     var templateArgs: String?
     var createdAt: Double
+
+    // Custom row init to safely handle templateArgs column (may be missing in pre-v4 databases)
+    init(row: Row) {
+        id = row["id"]
+        type = row["type"]
+        title = row["title"]
+        message = row["message"]
+        planId = row["planId"]
+        crypto = row["crypto"]
+        exchange = row["exchange"]
+        isRead = row["isRead"]
+        isArchived = row["isArchived"]
+        templateArgs = row["templateArgs"]
+        createdAt = row["createdAt"]
+    }
+
+    // For PersistableRecord
+    func encode(to container: inout PersistenceContainer) {
+        container["id"] = id
+        container["type"] = type
+        container["title"] = title
+        container["message"] = message
+        container["planId"] = planId
+        container["crypto"] = crypto
+        container["exchange"] = exchange
+        container["isRead"] = isRead
+        container["isArchived"] = isArchived
+        container["templateArgs"] = templateArgs
+        container["createdAt"] = createdAt
+    }
+
+    init(id: Int64?, type: String, title: String, message: String,
+         planId: Int64?, crypto: String?, exchange: String?,
+         isRead: Bool, isArchived: Bool, templateArgs: String?, createdAt: Double) {
+        self.id = id
+        self.type = type
+        self.title = title
+        self.message = message
+        self.planId = planId
+        self.crypto = crypto
+        self.exchange = exchange
+        self.isRead = isRead
+        self.isArchived = isArchived
+        self.templateArgs = templateArgs
+        self.createdAt = createdAt
+    }
 
     func toDomain() -> AppNotification {
         AppNotification(
