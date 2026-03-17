@@ -238,6 +238,7 @@ final class BackupDataRestorer {
             exchange: n.exchange,
             isRead: n.isRead,
             isArchived: n.isArchived,
+            templateArgs: nil,
             createdAt: Double(n.createdAt) / 1000.0
         )
     }
