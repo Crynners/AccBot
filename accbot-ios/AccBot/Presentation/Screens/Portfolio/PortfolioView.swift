@@ -449,7 +449,6 @@ struct PortfolioView: View {
                     PortfolioViewModel.ChartSeries.accumulatedCrypto.localizedName: colors.success,
                 ])
                 .chartLegend(.hidden)
-                .chartYScale(domain: viewModel.fiatScaleMin...viewModel.fiatScaleMax)
                 .chartXSelectionIfAvailable(value: $selectedDate)
                 .onChange(of: selectedDate) { newValue in
                     router.isChartInteracting = (newValue != nil)
@@ -492,6 +491,7 @@ struct PortfolioView: View {
                     }
                 }
                 .frame(height: 220)
+                .clipped()
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(chartAccessibilitySummary)
                 .accessibilityHint(String(localized: "Swipe left or right to scrub through chart data points"))
@@ -646,7 +646,7 @@ struct PortfolioView: View {
         let cryptoMax = NSDecimalNumber(decimal: viewModel.accumulatedScaleMax).doubleValue
         let cryptoRange = cryptoMax - cryptoMin
         guard fiatRange > 0, cryptoRange > 0 else { return "" }
-        let cryptoVal = cryptoMin + (fiatVal - viewModel.fiatScaleMin) / fiatRange * cryptoRange
+        let cryptoVal = max(0, cryptoMin + (fiatVal - viewModel.fiatScaleMin) / fiatRange * cryptoRange)
         return AccBotFormatters.formatCryptoCompact(Decimal(cryptoVal))
     }
 
