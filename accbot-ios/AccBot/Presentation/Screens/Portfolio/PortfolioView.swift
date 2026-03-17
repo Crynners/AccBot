@@ -204,15 +204,24 @@ struct PortfolioView: View {
 
     private var kpiSection: some View {
         VStack(spacing: Spacing.sm) {
-            if isScrubbing, let snap = scrubbedKpi {
-                // Scrub date indicator
-                Text(snap.date.formatted(date: .abbreviated, time: .omitted))
-                    .font(AccBotFonts.caption)
-                    .foregroundStyle(colors.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
             VStack(spacing: Spacing.md) {
+                // Pair label (centered, like Android)
+                if let page = viewModel.currentPage {
+                    Text(page.label)
+                        .font(AccBotFonts.titleSmall)
+                        .foregroundStyle(colors.primary)
+                        .frame(maxWidth: .infinity)
+                }
+
+                // Scrub date (shown when dragging on chart)
+                if isScrubbing, let snap = scrubbedKpi {
+                    Text(snap.date.formatted(date: .abbreviated, time: .omitted))
+                        .font(AccBotFonts.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(colors.primary)
+                        .frame(maxWidth: .infinity)
+                }
+
                 if let snap = scrubbedKpi, isScrubbing {
                     // Row 1: Portfolio Value | ROI
                     kpiRow(
@@ -463,26 +472,20 @@ struct PortfolioView: View {
                     }
                 }
                 .frame(height: 220)
-                .overlay(alignment: .leading) {
+                .overlay(alignment: .topLeading) {
                     if let fiat = viewModel.currentPair?.fiat {
                         Text(fiat)
                             .font(AccBotFonts.captionSmall)
                             .foregroundStyle(colors.onSurfaceVariant)
-                            .rotationEffect(.degrees(-90))
-                            .fixedSize()
-                            .offset(x: -8)
                     }
                 }
-                .overlay(alignment: .trailing) {
+                .overlay(alignment: .topTrailing) {
                     if viewModel.visibleSeries.contains(.accumulatedCrypto),
                        viewModel.accumulatedScaleMax > viewModel.accumulatedScaleMin,
                        let crypto = viewModel.currentPair?.crypto {
                         Text(crypto)
                             .font(AccBotFonts.captionSmall)
                             .foregroundStyle(colors.success)
-                            .rotationEffect(.degrees(90))
-                            .fixedSize()
-                            .offset(x: 8)
                     }
                 }
                 .accessibilityElement(children: .ignore)
@@ -493,6 +496,11 @@ struct PortfolioView: View {
         .padding(Spacing.lg)
         .background(colors.surface)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 1)
+                .onChanged { _ in router.isChartInteracting = true }
+                .onEnded { _ in router.isChartInteracting = false }
+        )
     }
 
     // MARK: - Interactive Legend

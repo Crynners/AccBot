@@ -62,12 +62,11 @@ struct DashboardView: View {
                 }
             }
         }
-        .navigationTitle(String(localized: "Dashboard"))
-        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(colors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .principal) {
+            ToolbarItem(placement: .topBarLeading) {
                 AccBotHeaderLogo(isSandbox: colors.isSandbox)
             }
         }
@@ -225,30 +224,20 @@ struct DashboardView: View {
     }
 
     private func holdingCard(_ holding: DashboardViewModel.HoldingInfo) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            // Pair header
+            Text(holding.id)
+                .font(AccBotFonts.headline)
+                .foregroundStyle(colors.onSurface)
+
+            // Hero: accumulated crypto amount
+            Text(formatCrypto(holding.totalCrypto, symbol: holding.crypto))
+                .font(AccBotFonts.titleSmall)
+                .foregroundStyle(colors.success)
+
+            // Row: Invested | Avg Price
             HStack {
-                Text(holding.id)
-                    .font(AccBotFonts.headline)
-                    .foregroundStyle(colors.onSurface)
-                Spacer()
-                Text(String(localized: "\(holding.transactionCount) txns"))
-                    .font(AccBotFonts.caption)
-                    .foregroundStyle(colors.onSurfaceVariant)
-            }
-
-            HStack {
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(String(localized: "Amount"))
-                        .font(AccBotFonts.caption)
-                        .foregroundStyle(colors.onSurfaceVariant)
-                    Text(formatCrypto(holding.totalCrypto, symbol: holding.crypto))
-                        .font(AccBotFonts.body)
-                        .foregroundStyle(colors.onSurface)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: Spacing.xs) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(String(localized: "Invested"))
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.onSurfaceVariant)
@@ -256,44 +245,35 @@ struct DashboardView: View {
                         .font(AccBotFonts.body)
                         .foregroundStyle(colors.onSurface)
                 }
-            }
-
-            HStack {
-                VStack(alignment: .leading, spacing: Spacing.xs) {
+                Spacer()
+                VStack(alignment: .trailing, spacing: Spacing.xxs) {
                     Text(String(localized: "Avg Price"))
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.onSurfaceVariant)
                     Text(formatFiat(holding.avgPrice, symbol: holding.fiat))
-                        .font(AccBotFonts.bodySmall)
+                        .font(AccBotFonts.body)
                         .foregroundStyle(colors.onSurface)
                 }
+            }
 
-                Spacer()
-
+            // Row: Current Price | ROI
+            HStack {
                 if let currentPrice = holding.currentPrice {
-                    VStack(alignment: .trailing, spacing: Spacing.xs) {
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
                         Text(String(localized: "Current Price"))
                             .font(AccBotFonts.caption)
                             .foregroundStyle(colors.onSurfaceVariant)
                         Text(formatFiat(currentPrice, symbol: holding.fiat))
-                            .font(AccBotFonts.bodySmall)
+                            .font(AccBotFonts.body)
                             .foregroundStyle(colors.onSurface)
                     }
                 }
-            }
-
-            if let roi = holding.roi {
-                HStack {
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: Spacing.xs) {
-                        HStack(spacing: Spacing.xs) {
-                            Text(String(localized: "ROI"))
-                                .font(AccBotFonts.caption)
-                                .foregroundStyle(colors.onSurfaceVariant)
-                            Text(roi >= 0 ? String(localized: "Gain") : String(localized: "Loss"))
-                                .font(AccBotFonts.captionSmall)
-                                .foregroundStyle(roi >= 0 ? colors.success : colors.error)
-                        }
+                Spacer()
+                if let roi = holding.roi {
+                    VStack(alignment: .trailing, spacing: Spacing.xxs) {
+                        Text(String(localized: "ROI"))
+                            .font(AccBotFonts.caption)
+                            .foregroundStyle(colors.onSurfaceVariant)
                         if let fiatGainLoss = holding.fiatGainLoss {
                             let sign = fiatGainLoss >= 0 ? "+" : "-"
                             let fiatPart = "\(sign)\(formatFiatValue(abs(fiatGainLoss))) \(holding.fiat)"
@@ -309,6 +289,11 @@ struct DashboardView: View {
                     }
                 }
             }
+
+            // Transaction count
+            Text(String(localized: "\(holding.transactionCount) txns"))
+                .font(AccBotFonts.caption)
+                .foregroundStyle(colors.onSurfaceVariant)
         }
         .padding(Spacing.lg)
         .background(colors.surface)
@@ -319,23 +304,11 @@ struct DashboardView: View {
 
     private var marketPulseCard: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            // Header — three separate tap targets to prevent overlap
+            // Header — info next to title, chevron on right
             HStack {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        viewModel.toggleMarketPulseExpanded()
-                    }
-                } label: {
-                    Text(String(localized: "Market Pulse"))
-                        .font(AccBotFonts.titleSmall)
-                        .foregroundStyle(colors.onSurface)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint(viewModel.isMarketPulseExpanded
-                    ? String(localized: "Double tap to collapse")
-                    : String(localized: "Double tap to expand"))
+                Text(String(localized: "Market Pulse"))
+                    .font(AccBotFonts.titleSmall)
+                    .foregroundStyle(colors.onSurface)
 
                 Button {
                     showMarketPulseInfo = true
@@ -343,10 +316,12 @@ struct DashboardView: View {
                     Image(systemName: "info.circle")
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.primary)
-                        .frame(minWidth: 44, minHeight: 44)
+                        .frame(minWidth: 30, minHeight: 30)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+
+                Spacer()
 
                 Button {
                     withAnimation(.easeInOut(duration: 0.25)) {
@@ -360,6 +335,9 @@ struct DashboardView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityHint(viewModel.isMarketPulseExpanded
+                    ? String(localized: "Double tap to collapse")
+                    : String(localized: "Double tap to expand"))
             }
 
             // Gauge area (single shared gauge matching Android layout)
