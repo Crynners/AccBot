@@ -180,29 +180,10 @@ struct DashboardView: View {
 
     private var holdingsPager: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack {
-                Text(String(localized: "Total Accumulated"))
-                    .font(AccBotFonts.titleSmall)
-                    .foregroundStyle(colors.onSurface)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button {
-                    viewModel.refreshPrices()
-                } label: {
-                    if viewModel.isRefreshingPrices {
-                        ProgressView()
-                            .frame(width: 18, height: 18)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                            .font(AccBotFonts.label)
-                    }
-                }
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(Rectangle())
-                .foregroundStyle(colors.primary)
-                .disabled(viewModel.isRefreshingPrices)
-                .accessibilityLabel(String(localized: "Refresh prices"))
-            }
+            Text(String(localized: "Total Accumulated"))
+                .font(AccBotFonts.titleSmall)
+                .foregroundStyle(colors.onSurface)
+                .accessibilityAddTraits(.isHeader)
 
             TabView {
                 ForEach(viewModel.holdings) { holding in
@@ -225,11 +206,6 @@ struct DashboardView: View {
 
     private func holdingCard(_ holding: DashboardViewModel.HoldingInfo) -> some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            // Pair header
-            Text(holding.id)
-                .font(AccBotFonts.headline)
-                .foregroundStyle(colors.onSurface)
-
             // Hero: accumulated crypto amount
             Text(formatCrypto(holding.totalCrypto, symbol: holding.crypto))
                 .font(AccBotFonts.titleSmall)

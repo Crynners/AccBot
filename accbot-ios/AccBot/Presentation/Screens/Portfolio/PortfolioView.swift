@@ -72,7 +72,9 @@ struct PortfolioView: View {
 
     private var portraitLayout: some View {
         VStack(spacing: Spacing.lg) {
-            pairPager
+            if viewModel.pages.count > 1 {
+                pairPager
+            }
             controlsRow
             kpiSection
             chartSection
@@ -88,8 +90,10 @@ struct PortfolioView: View {
 
     private var landscapeLayout: some View {
         VStack(spacing: Spacing.sm) {
-            pairPager
-                .padding(.horizontal, Spacing.lg)
+            if viewModel.pages.count > 1 {
+                pairPager
+                    .padding(.horizontal, Spacing.lg)
+            }
 
             HStack(alignment: .top, spacing: Spacing.lg) {
                 // Left pane: chart
@@ -472,20 +476,26 @@ struct PortfolioView: View {
                     }
                 }
                 .frame(height: 220)
-                .overlay(alignment: .topLeading) {
+                .overlay(alignment: .leading) {
                     if let fiat = viewModel.currentPair?.fiat {
                         Text(fiat)
                             .font(AccBotFonts.captionSmall)
                             .foregroundStyle(colors.onSurfaceVariant)
+                            .rotationEffect(.degrees(-90))
+                            .fixedSize()
+                            .offset(x: -14)
                     }
                 }
-                .overlay(alignment: .topTrailing) {
+                .overlay(alignment: .trailing) {
                     if viewModel.visibleSeries.contains(.accumulatedCrypto),
                        viewModel.accumulatedScaleMax > viewModel.accumulatedScaleMin,
                        let crypto = viewModel.currentPair?.crypto {
                         Text(crypto)
                             .font(AccBotFonts.captionSmall)
                             .foregroundStyle(colors.success)
+                            .rotationEffect(.degrees(90))
+                            .fixedSize()
+                            .offset(x: 14)
                     }
                 }
                 .accessibilityElement(children: .ignore)
