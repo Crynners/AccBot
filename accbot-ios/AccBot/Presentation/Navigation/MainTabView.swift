@@ -67,7 +67,7 @@ struct MainTabView: View {
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 20)
                         .onChanged { value in
-                            guard !router.isInDetailView && !router.isChartInteracting else { return }
+                            guard !router.isInDetailView && !router.isChartInteracting && !router.isNotificationSwipeActive else { return }
                             isAnyDragActive = true
 
                             let h = value.translation.width
@@ -100,7 +100,7 @@ struct MainTabView: View {
                         }
                         .onEnded { value in
                             isAnyDragActive = false
-                            guard !router.isInDetailView && !router.isChartInteracting else {
+                            guard !router.isInDetailView && !router.isChartInteracting && !router.isNotificationSwipeActive else {
                                 isDraggingHorizontally = nil
                                 dragOffset = 0
                                 return

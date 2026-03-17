@@ -129,14 +129,18 @@ enum AccBotFormatters {
 
     static func formatFiatAxisLabel(_ value: Double) -> String {
         let absValue = abs(value)
-        if absValue >= 1000 {
+        if absValue >= 1_000_000_000 {
+            let b = value / 1_000_000_000.0
+            return b.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0fB", b) : String(format: "%.1fB", b)
+        } else if absValue >= 1_000_000 {
+            let m = value / 1_000_000.0
+            return m.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0fM", m) : String(format: "%.1fM", m)
+        } else if absValue >= 1000 {
             let k = value / 1000.0
-            // Use 1 decimal if not a whole number, otherwise 0
-            if k.truncatingRemainder(dividingBy: 1) == 0 {
-                return String(format: "%.0fk", k)
-            } else {
-                return String(format: "%.1fk", k)
-            }
+            return k.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0fk", k) : String(format: "%.1fk", k)
         } else {
             if absValue == 0 || value.truncatingRemainder(dividingBy: 1) == 0 {
                 return String(format: "%.0f", value)

@@ -212,82 +212,74 @@ struct PortfolioView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Spacing.sm) {
+            VStack(spacing: Spacing.md) {
                 if let snap = scrubbedKpi, isScrubbing {
-                    kpiCard(
-                        title: String(localized: "Portfolio Value"),
-                        value: formatFiat(snap.portfolioValue),
-                        subtitle: viewModel.currentPair?.fiat
+                    // Row 1: Portfolio Value | ROI
+                    kpiRow(
+                        leftTitle: String(localized: "Portfolio Value"),
+                        leftValue: formatFiat(snap.portfolioValue),
+                        leftSubtitle: viewModel.currentPair?.fiat,
+                        rightTitle: String(localized: "ROI"),
+                        rightValue: snap.roiPercent.map { AccBotFormatters.formatSignedPercent($0) } ?? "---",
+                        rightSubtitle: (snap.roiPercent ?? 0) >= 0 ? String(localized: "Gain") : String(localized: "Loss"),
+                        rightValueColor: (snap.roiPercent ?? 0) >= 0 ? colors.primary : colors.error
                     )
-                    kpiCard(
-                        title: String(localized: "ROI"),
-                        value: snap.roiPercent.map { AccBotFormatters.formatSignedPercent($0) } ?? "---",
-                        subtitle: (snap.roiPercent ?? 0) >= 0 ? String(localized: "Gain") : String(localized: "Loss"),
-                        valueColor: (snap.roiPercent ?? 0) >= 0 ? colors.primary : colors.error
+                    // Row 2: Invested | Avg Buy Price
+                    kpiRow(
+                        leftTitle: String(localized: "Invested"),
+                        leftValue: formatFiat(snap.totalInvested),
+                        leftSubtitle: viewModel.currentPair?.fiat,
+                        rightTitle: String(localized: "Avg Buy Price"),
+                        rightValue: formatFiat(snap.avgBuyPrice),
+                        rightSubtitle: viewModel.currentPair?.fiat
                     )
-                    kpiCard(
-                        title: String(localized: "Invested"),
-                        value: formatFiat(snap.totalInvested),
-                        subtitle: viewModel.currentPair?.fiat
-                    )
-                    kpiCard(
-                        title: String(localized: "Avg Buy Price"),
-                        value: formatFiat(snap.avgBuyPrice),
-                        subtitle: viewModel.currentPair?.fiat
-                    )
+                    // Row 3: Crypto Price | Accumulated (single pair only)
+                    if case .singlePair = viewModel.currentPage {
+                        kpiRow(
+                            leftTitle: String(localized: "Crypto Price"),
+                            leftValue: viewModel.currentPrice.map { formatFiat($0) } ?? "---",
+                            leftSubtitle: viewModel.currentPair?.fiat,
+                            rightTitle: String(localized: "Accumulated"),
+                            rightValue: formatCrypto(snap.cumulativeCrypto),
+                            rightSubtitle: viewModel.currentPair?.crypto
+                        )
+                    }
                 } else {
-                    kpiCard(
-                        title: String(localized: "Portfolio Value"),
-                        value: viewModel.portfolioValue.map { formatFiat($0) } ?? "---",
-                        subtitle: viewModel.currentPair?.fiat
+                    // Row 1: Portfolio Value | ROI
+                    kpiRow(
+                        leftTitle: String(localized: "Portfolio Value"),
+                        leftValue: viewModel.portfolioValue.map { formatFiat($0) } ?? "---",
+                        leftSubtitle: viewModel.currentPair?.fiat,
+                        rightTitle: String(localized: "ROI"),
+                        rightValue: viewModel.roiPercent.map { AccBotFormatters.formatSignedPercent($0) } ?? "---",
+                        rightSubtitle: (viewModel.roiPercent ?? 0) >= 0 ? String(localized: "Gain") : String(localized: "Loss"),
+                        rightValueColor: (viewModel.roiPercent ?? 0) >= 0 ? colors.primary : colors.error
                     )
-                    kpiCard(
-                        title: String(localized: "ROI"),
-                        value: viewModel.roiPercent.map { AccBotFormatters.formatSignedPercent($0) } ?? "---",
-                        subtitle: (viewModel.roiPercent ?? 0) >= 0 ? String(localized: "Gain") : String(localized: "Loss"),
-                        valueColor: (viewModel.roiPercent ?? 0) >= 0 ? colors.primary : colors.error
+                    // Row 2: Invested | Avg Buy Price
+                    kpiRow(
+                        leftTitle: String(localized: "Invested"),
+                        leftValue: formatFiat(viewModel.totalInvested),
+                        leftSubtitle: viewModel.currentPair?.fiat,
+                        rightTitle: String(localized: "Avg Buy Price"),
+                        rightValue: formatFiat(viewModel.avgBuyPrice),
+                        rightSubtitle: viewModel.currentPair?.fiat
                     )
-                    kpiCard(
-                        title: String(localized: "Invested"),
-                        value: formatFiat(viewModel.totalInvested),
-                        subtitle: viewModel.currentPair?.fiat
-                    )
-                    kpiCard(
-                        title: String(localized: "Avg Buy Price"),
-                        value: formatFiat(viewModel.avgBuyPrice),
-                        subtitle: viewModel.currentPair?.fiat
-                    )
-                }
-            }
-
-            // Single-pair extra KPIs: Crypto Price + Accumulated Crypto
-            if case .singlePair = viewModel.currentPage {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Spacing.sm) {
-                    if let snap = scrubbedKpi, isScrubbing {
-                        kpiCard(
-                            title: String(localized: "Crypto Price"),
-                            value: viewModel.currentPrice.map { formatFiat($0) } ?? "---",
-                            subtitle: viewModel.currentPair?.fiat
-                        )
-                        kpiCard(
-                            title: String(localized: "Accumulated"),
-                            value: formatCrypto(snap.cumulativeCrypto),
-                            subtitle: viewModel.currentPair?.crypto
-                        )
-                    } else {
-                        kpiCard(
-                            title: String(localized: "Crypto Price"),
-                            value: viewModel.currentPrice.map { formatFiat($0) } ?? "---",
-                            subtitle: viewModel.currentPair?.fiat
-                        )
-                        kpiCard(
-                            title: String(localized: "Accumulated"),
-                            value: formatCrypto(viewModel.totalCrypto),
-                            subtitle: viewModel.currentPair?.crypto
+                    // Row 3: Crypto Price | Accumulated (single pair only)
+                    if case .singlePair = viewModel.currentPage {
+                        kpiRow(
+                            leftTitle: String(localized: "Crypto Price"),
+                            leftValue: viewModel.currentPrice.map { formatFiat($0) } ?? "---",
+                            leftSubtitle: viewModel.currentPair?.fiat,
+                            rightTitle: String(localized: "Accumulated"),
+                            rightValue: formatCrypto(viewModel.totalCrypto),
+                            rightSubtitle: viewModel.currentPair?.crypto
                         )
                     }
                 }
             }
+            .padding(Spacing.lg)
+            .background(colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
 
             // Period ROI display when zoomed and not scrubbing
             if !isScrubbing,
@@ -307,25 +299,35 @@ struct PortfolioView: View {
         }
     }
 
-    private func kpiCard(title: String, value: String, subtitle: String?, valueColor: Color? = nil) -> some View {
-        let resolvedColor = valueColor ?? colors.onSurface
-        return VStack(alignment: .leading, spacing: Spacing.xs) {
+    private func kpiRow(
+        leftTitle: String, leftValue: String, leftSubtitle: String?,
+        rightTitle: String, rightValue: String, rightSubtitle: String?,
+        leftValueColor: Color? = nil, rightValueColor: Color? = nil
+    ) -> some View {
+        HStack {
+            kpiItem(title: leftTitle, value: leftValue, subtitle: leftSubtitle,
+                    valueColor: leftValueColor, alignment: .leading)
+            Spacer()
+            kpiItem(title: rightTitle, value: rightValue, subtitle: rightSubtitle,
+                    valueColor: rightValueColor, alignment: .trailing)
+        }
+    }
+
+    private func kpiItem(title: String, value: String, subtitle: String?,
+                         valueColor: Color? = nil, alignment: HorizontalAlignment = .leading) -> some View {
+        VStack(alignment: alignment, spacing: Spacing.xxs) {
             Text(title)
                 .font(AccBotFonts.caption)
                 .foregroundStyle(colors.onSurfaceVariant)
             Text(value)
                 .font(AccBotFonts.titleSmall)
-                .foregroundStyle(resolvedColor)
+                .foregroundStyle(valueColor ?? colors.onSurface)
             if let subtitle = subtitle {
                 Text(subtitle)
                     .font(AccBotFonts.captionSmall)
                     .foregroundStyle(colors.onSurfaceVariant)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spacing.md)
-        .background(colors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
     }
 
     // MARK: - Zoom Header
@@ -468,7 +470,19 @@ struct PortfolioView: View {
                             .foregroundStyle(colors.onSurfaceVariant)
                             .rotationEffect(.degrees(-90))
                             .fixedSize()
-                            .offset(x: -4)
+                            .offset(x: -8)
+                    }
+                }
+                .overlay(alignment: .trailing) {
+                    if viewModel.visibleSeries.contains(.accumulatedCrypto),
+                       viewModel.accumulatedScaleMax > viewModel.accumulatedScaleMin,
+                       let crypto = viewModel.currentPair?.crypto {
+                        Text(crypto)
+                            .font(AccBotFonts.captionSmall)
+                            .foregroundStyle(colors.success)
+                            .rotationEffect(.degrees(90))
+                            .fixedSize()
+                            .offset(x: 8)
                     }
                 }
                 .accessibilityElement(children: .ignore)

@@ -17,6 +17,9 @@ final class AppRouter: ObservableObject {
     /// Not @Published — only read by gesture handlers, no views depend on it.
     var isChartInteracting: Bool = false
 
+    /// Whether a notification row swipe-to-delete gesture is active (blocks tab swiping).
+    var isNotificationSwipeActive: Bool = false
+
     /// Whether the current tab has navigated into a detail view (non-empty path)
     var isInDetailView: Bool {
         switch selectedTab {

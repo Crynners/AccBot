@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NotificationsView: View {
     @EnvironmentObject var dependencies: AppDependencies
+    @EnvironmentObject var router: AppRouter
     @StateObject private var viewModel = NotificationsViewModel()
     @Environment(\.accBotColors) private var colors
 
@@ -20,6 +21,11 @@ struct NotificationsView: View {
                             .onTapGesture {
                                 viewModel.markAsRead(notification)
                             }
+                            .simultaneousGesture(
+                                DragGesture(minimumDistance: 5)
+                                    .onChanged { _ in router.isNotificationSwipeActive = true }
+                                    .onEnded { _ in router.isNotificationSwipeActive = false }
+                            )
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
                                     viewModel.deleteNotification(notification)
