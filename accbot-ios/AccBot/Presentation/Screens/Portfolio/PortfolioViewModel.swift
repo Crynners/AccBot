@@ -443,7 +443,7 @@ final class PortfolioViewModel: ObservableObject {
             var snapshots = [KpiSnapshot]()
             for (index, tx) in zoomTransactions.enumerated() {
                 let entry = cumulativeByTimestamp[tx.executedAt.timeIntervalSince1970]!
-                let pv = entry.accumulated * (currentPrice ?? tx.price)
+                let pv = entry.accumulated * tx.price
                 let roi: Decimal? = entry.costBasis > 0
                     ? ((pv - entry.costBasis) / entry.costBasis) * 100
                     : nil
@@ -490,7 +490,7 @@ final class PortfolioViewModel: ObservableObject {
                 for (index, tx) in zoomTransactions.enumerated() {
                     let value: Decimal
                     switch series {
-                    case .portfolioValue: value = accumulatedByIndex[index] * (currentPrice ?? tx.price)
+                    case .portfolioValue: value = accumulatedByIndex[index] * tx.price
                     case .costBasis: value = costBasisByIndex[index]
                     case .cryptoPrice: value = tx.price
                     case .avgBuyPrice: value = avgBuyPriceByIndex[index]

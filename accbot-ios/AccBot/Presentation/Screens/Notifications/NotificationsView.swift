@@ -46,6 +46,7 @@ struct NotificationsView: View {
         }
         .background(colors.background)
         .navigationTitle(String(localized: "Notifications"))
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(colors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {

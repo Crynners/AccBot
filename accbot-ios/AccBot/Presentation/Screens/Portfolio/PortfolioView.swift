@@ -38,6 +38,7 @@ struct PortfolioView: View {
         }
         .background(colors.background)
         .navigationTitle(String(localized: "Portfolio"))
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(colors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
@@ -203,6 +204,28 @@ struct PortfolioView: View {
     }
 
     private var isScrubbing: Bool { selectedDate != nil }
+
+    /// Find the nearest chart point per visible series for the scrub date.
+    private func scrubPoints(for date: Date) -> [PortfolioViewModel.ChartPoint] {
+        let target = date.timeIntervalSince1970
+        var result = [PortfolioViewModel.ChartPoint]()
+        let grouped = Dictionary(grouping: viewModel.chartData) { $0.series }
+        for (_, points) in grouped {
+            guard !points.isEmpty else { continue }
+            var lo = 0, hi = points.count - 1
+            while lo < hi {
+                let mid = (lo + hi) / 2
+                if points[mid].date.timeIntervalSince1970 < target { lo = mid + 1 }
+                else { hi = mid }
+            }
+            let candidates = [max(0, lo - 1), min(lo, points.count - 1)]
+            if let nearest = candidates.map({ points[$0] })
+                .min(by: { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }) {
+                result.append(nearest)
+            }
+        }
+        return result
+    }
 
     // MARK: - KPI Section
 
@@ -393,6 +416,16 @@ struct PortfolioView: View {
                         RuleMark(x: .value("Selected", date))
                             .foregroundStyle(colors.onSurfaceVariant)
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+
+                        // Dots at intersection of RuleMark with each visible series
+                        ForEach(scrubPoints(for: date)) { point in
+                            PointMark(
+                                x: .value("Date", point.date),
+                                y: .value("Value", point.value)
+                            )
+                            .foregroundStyle(by: .value("Series", point.series.localizedName))
+                            .symbolSize(36)
+                        }
                     }
                 }
                 .chartForegroundStyleScale([
