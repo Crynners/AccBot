@@ -476,31 +476,26 @@ struct PortfolioView: View {
                     }
                 }
                 .frame(height: 220)
-                .overlay(alignment: .leading) {
-                    if let fiat = viewModel.currentPair?.fiat {
-                        Text(fiat)
-                            .font(AccBotFonts.captionSmall)
-                            .foregroundStyle(colors.onSurfaceVariant)
-                            .rotationEffect(.degrees(-90))
-                            .fixedSize()
-                            .offset(x: -leadingAxisLabelOffset)
-                    }
-                }
-                .overlay(alignment: .trailing) {
-                    if viewModel.visibleSeries.contains(.accumulatedCrypto),
-                       viewModel.accumulatedScaleMax > viewModel.accumulatedScaleMin,
-                       let crypto = viewModel.currentPair?.crypto {
-                        Text(crypto)
-                            .font(AccBotFonts.captionSmall)
-                            .foregroundStyle(colors.success)
-                            .rotationEffect(.degrees(90))
-                            .fixedSize()
-                            .offset(x: trailingAxisLabelOffset)
-                    }
-                }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(chartAccessibilitySummary)
                 .accessibilityHint(String(localized: "Swipe left or right to scrub through chart data points"))
+            }
+
+            // Y-axis labels below chart
+            HStack {
+                if let fiat = viewModel.currentPair?.fiat {
+                    Text(fiat)
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
+                Spacer()
+                if viewModel.visibleSeries.contains(.accumulatedCrypto),
+                   viewModel.accumulatedScaleMax > viewModel.accumulatedScaleMin,
+                   let crypto = viewModel.currentPair?.crypto {
+                    Text(crypto)
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.success)
+                }
             }
         }
         .padding(Spacing.lg)
@@ -624,24 +619,6 @@ struct PortfolioView: View {
         let roi = viewModel.roiPercent.map { AccBotFormatters.formatSignedPercent($0) } ?? "---"
         let count = viewModel.transactionCount
         return String(localized: "Portfolio chart. Value: \(value), ROI: \(roi), \(count) transactions. Use legend to toggle series.")
-    }
-
-    // MARK: - Axis Label Offsets
-
-    /// Dynamic offset for the leading (fiat) Y-axis label, computed from the longest formatted axis value.
-    private var leadingAxisLabelOffset: CGFloat {
-        let maxVal = max(abs(viewModel.fiatScaleMin), abs(viewModel.fiatScaleMax))
-        let label = AccBotFormatters.formatFiatAxisLabel(maxVal)
-        return CGFloat(label.count) * 7 + 4
-    }
-
-    /// Dynamic offset for the trailing (crypto) Y-axis label, computed from the longest formatted axis value.
-    private var trailingAxisLabelOffset: CGFloat {
-        let cryptoMax = NSDecimalNumber(decimal: viewModel.accumulatedScaleMax).doubleValue
-        let cryptoMin = NSDecimalNumber(decimal: viewModel.accumulatedScaleMin).doubleValue
-        let maxVal = max(abs(cryptoMin), abs(cryptoMax))
-        let label = AccBotFormatters.formatCryptoCompact(Decimal(maxVal))
-        return CGFloat(label.count) * 7 + 4
     }
 
     // MARK: - Formatters

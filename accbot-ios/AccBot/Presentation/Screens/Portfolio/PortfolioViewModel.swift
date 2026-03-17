@@ -53,7 +53,7 @@ final class PortfolioViewModel: ObservableObject {
     @Published var denomination: Denomination = .fiat
     @Published var exchangeFilter: Exchange?
     @Published var zoomLevel: ChartZoomLevel = .overview
-    @Published var visibleSeries: Set<ChartSeries> = [.portfolioValue]
+    @Published var visibleSeries: Set<ChartSeries> = [.portfolioValue, .costBasis]
     @Published var availableExchanges: [Exchange] = []
     @Published var availableYears: [Int] = []
     @Published var availableMonths: [Int] = []
