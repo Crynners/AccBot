@@ -186,22 +186,20 @@ struct ScheduleBuilder: View {
     // MARK: - Frequency Chips
 
     private var frequencyChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.sm) {
-                ForEach(DcaFrequency.allCases, id: \.self) { frequency in
-                    SelectableChip(
-                        title: frequency.displayName,
-                        isSelected: selectedFrequency == frequency,
-                        onTap: {
-                            selectedFrequency = frequency
-                            if frequency != .custom {
-                                cronExpression = ""
-                            } else {
-                                emitCron()
-                            }
+        FlowLayout(spacing: Spacing.sm) {
+            ForEach(DcaFrequency.allCases, id: \.self) { frequency in
+                SelectableChip(
+                    title: frequency.displayName,
+                    isSelected: selectedFrequency == frequency,
+                    onTap: {
+                        selectedFrequency = frequency
+                        if frequency != .custom {
+                            cronExpression = ""
+                        } else {
+                            emitCron()
                         }
-                    )
-                }
+                    }
+                )
             }
         }
     }
@@ -320,8 +318,7 @@ struct ScheduleBuilder: View {
     }
 
     private var hourGrid: some View {
-        let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.xs), count: 6)
-        return LazyVGrid(columns: columns, spacing: Spacing.xs) {
+        FlowLayout(spacing: Spacing.xs) {
             ForEach(0..<24, id: \.self) { hour in
                 SelectableChip(
                     title: String(format: "%d:00", hour),
@@ -335,6 +332,7 @@ struct ScheduleBuilder: View {
                         emitCron()
                     }
                 )
+                .fixedSize()
             }
         }
     }

@@ -291,7 +291,7 @@ private class FirstPlanViewModel: ObservableObject {
               let minSize = exchange.minOrderSize[selectedFiat] else { return all }
         return all.filter { Decimal($0) >= minSize }
     }
-    let frequencyOptions: [DcaFrequency] = [.daily, .weekly]
+    let frequencyOptions: [DcaFrequency] = DcaFrequency.allCases
 
     var canCreatePlan: Bool {
         guard let amountValue = Decimal(string: amount), amountValue > 0 else { return false }
