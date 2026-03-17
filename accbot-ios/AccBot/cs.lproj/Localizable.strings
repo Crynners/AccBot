@@ -918,3 +918,158 @@
 "Disable Low Power Mode for best results. iOS may delay or skip background tasks when battery is low." = "Pro nejlepší výsledky vypněte režim nízké spotřeby. iOS může zpozdit úlohy na pozadí při nízkém stavu baterie.";
 "Notification Info" = "Informace o oznámeních";
 "Made with love by Crynners" = "Vytvořeno s láskou od Crynners";
+
+/* ===== Onboarding — Permissions ===== */
+"Stay Informed" = "Buďte informováni";
+"Get notified about completed purchases, errors, and weekly summaries. You can customize notifications later in Settings." = "Dostávejte upozornění o dokončených nákupech, chybách a týdenních přehledech. Oznámení můžete upravit později v Nastavení.";
+"Notifications Enabled" = "Oznámení povolena";
+"Allow Notifications" = "Povolit oznámení";
+
+/* ===== Onboarding — First Plan ===== */
+"Skip Plan Creation?" = "Přeskočit vytvoření plánu?";
+"You can create DCA plans later from the Dashboard." = "DCA plány můžete vytvořit později z Přehledu.";
+"No exchange configured." = "Žádná burza není nastavena.";
+"Failed to create plan. You can create plans later from the dashboard." = "Nepodařilo se vytvořit plán. Plány můžete vytvořit později z přehledu.";
+
+/* ===== Import CSV ===== */
+"Import Mode" = "Režim importu";
+"Import Configuration" = "Konfigurace importu";
+"Import Preview" = "Náhled importu";
+"All history will be imported" = "Bude importována celá historie";
+"Filter by date" = "Filtrovat podle data";
+"Import since" = "Importovat od";
+"Start Import" = "Zahájit import";
+"Import progress" = "Průběh importu";
+
+/* ===== Backup Export ===== */
+"Encryption method" = "Metoda šifrování";
+"12-Word Seed" = "12 slov (seed)";
+"Included" = "Zahrnuto";
+"Backup QR code" = "QR kód zálohy";
+"Do not copy or screenshot. Write down on paper only." = "Nekopírujte ani nefotografujte. Zapište pouze na papír.";
+
+/* ===== Backup Import ===== */
+"Decryption method" = "Metoda dešifrování";
+"Confirm Replace" = "Potvrdit nahrazení";
+"All existing data will be permanently deleted and replaced with backup data." = "Všechna stávající data budou trvale smazána a nahrazena daty ze zálohy.";
+"Delete & Restore" = "Smazat a obnovit";
+"Restore mode" = "Režim obnovení";
+
+/* ===== Plan Form ===== */
+"Amount per purchase" = "Částka na nákup";
+"Enter a purchase amount" = "Zadejte částku nákupu";
+"Enter a valid amount greater than 0" = "Zadejte platnou částku větší než 0";
+"Enter a valid cron expression for custom frequency" = "Zadejte platný CRON výraz pro vlastní frekvenci";
+"Enter a withdrawal wallet address" = "Zadejte adresu peněženky pro výběr";
+"Wallet address is too short (minimum 26 characters)" = "Adresa peněženky je příliš krátká (minimum 26 znaků)";
+"Target Amount (optional)" = "Cílová částka (volitelné)";
+"Target crypto amount" = "Cílová krypto částka";
+"e.g. 0.1" = "např. 0.1";
+"Shows a progress bar on the dashboard to visualize your goal" = "Zobrazí ukazatel průběhu na přehledu pro vizualizaci cíle";
+"Strategy information" = "Informace o strategii";
+"Scan wallet QR code" = "Naskenovat QR kód peněženky";
+"Address looks too short" = "Adresa vypadá příliš krátce";
+"Wallet address" = "Adresa peněženky";
+"Multiple hours can be selected" = "Lze vybrat více hodin";
+
+/* ===== Add Plan ===== */
+"Discard Changes?" = "Zahodit změny?";
+"Keep Editing" = "Pokračovat v úpravách";
+"Discard" = "Zahodit";
+"You have unsaved changes. Are you sure you want to go back?" = "Máte neuložené změny. Opravdu se chcete vrátit?";
+"Request Exchange" = "Požádat o burzu";
+"DCA plan created successfully" = "DCA plán byl úspěšně vytvořen";
+
+/* ===== QR Scanner ===== */
+"Camera not available" = "Kamera není dostupná";
+"Cannot access camera" = "Nelze přistoupit ke kameře";
+"Freeze scanning" = "Pozastavit skenování";
+"Resume scanning" = "Pokračovat ve skenování";
+"Assigned" = "Přiřazeno";
+"Scanning now" = "Probíhá skenování";
+
+/* ===== Biometric Lock ===== */
+"Authentication required" = "Vyžadováno ověření";
+"Open Settings" = "Otevřít nastavení";
+"Authentication is not available. Set up Face ID, Touch ID, or a device passcode in Settings to unlock AccBot." = "Ověření není dostupné. Pro odemknutí AccBot nastavte Face ID, Touch ID nebo přístupový kód v Nastavení.";
+
+/* ===== Dashboard extras ===== */
+"ATH" = "ATH";
+"Import via API" = "Importovat přes API";
+"Dashboard loaded" = "Přehled načten";
+"Prices refreshed" = "Ceny aktualizovány";
+
+/* ===== Portfolio extras ===== */
+"Crypto Price" = "Cena kryptoměny";
+"Hidden" = "Skryté";
+"Visible" = "Viditelné";
+"View transaction history" = "Zobrazit historii transakcí";
+"Zoom out to wider time range" = "Oddálit na širší časový rozsah";
+"Portfolio loaded" = "Portfolio načteno";
+"Portfolio refreshed" = "Portfolio aktualizováno";
+
+/* ===== History extras ===== */
+"Export transactions" = "Exportovat transakce";
+"Copied to clipboard" = "Zkopírováno do schránky";
+
+/* ===== Exchange extras ===== */
+"Double tap to collapse credentials" = "Dvojitým klepnutím sbalíte přihlašovací údaje";
+"Double tap to expand credentials" = "Dvojitým klepnutím rozbalíte přihlašovací údaje";
+
+/* ===== Components ===== */
+"Sandbox mode active, test trades only" = "Sandbox režim aktivní, pouze testovací obchody";
+"Validating credentials" = "Ověřování přihlašovacích údajů";
+"Confirmation text field" = "Potvrzovací textové pole";
+"Type the confirmation word to enable the button" = "Zadejte potvrzovací slovo pro aktivaci tlačítka";
+"Empty" = "Prázdné";
+"Invalid word" = "Neplatné slovo";
+"Enable plan" = "Zapnout plán";
+"Withdrawal ready, consider withdrawal" = "Připraveno k výběru, zvažte výběr";
+"View transaction details" = "Zobrazit detail transakce";
+"No internet connection. Please check your network and try again." = "Žádné připojení k internetu. Zkontrolujte síť a zkuste to znovu.";
+"AccBot DCA" = "AccBot DCA";
+"USD Coin" = "USD Coin";
+
+/* ===== Dynamic keys (with interpolation) ===== */
+"Are you sure you want to execute %lld plans? This will place real orders on the exchange." = "Opravdu chcete provést %lld plánů? Budou zadány reálné objednávky na burze.";
+"Goal reached! %@ / %@" = "Cíl dosažen! %1$@ / %2$@";
+"Binance rounds %@ orders to a step size of %@" = "Binance zaokrouhluje %1$@ objednávky na krok %2$@";
+"Amount below minimum order size (%@ %@)" = "Částka pod minimální velikostí objednávky (%1$@ %2$@)";
+"Status: %@" = "Stav: %@";
+"Toggle plan %@" = "Přepnout plán %@";
+"Low balance warning: %@" = "Upozornění na nízký zůstatek: %@";
+"Withdrawal warning: %@ on exchange, consider withdrawal" = "Upozornění: %@ na burze, zvažte výběr";
+"%lld attempts remaining" = "Zbývá %lld pokusů";
+"%lld plans executed successfully" = "%lld plánů úspěšně provedeno";
+"%@ on %@ ready for withdrawal" = "%1$@ na %2$@ připraveno k výběru";
+"Hide %@" = "Skrýt %@";
+"Show %@" = "Zobrazit %@";
+"%@. %lld seconds to undo." = "%1$@. %2$lld sekund na vrácení.";
+"%@ assigned" = "%@ přiřazeno";
+"%@ in %@" = "%1$@ za %2$@";
+"%@/%@ holding" = "%1$@/%2$@ portfolio";
+"%lld txns" = "%lld transakcí";
+"~%@ remaining" = "~%@ zbývá";
+"~%@ remaining (%lld exec)" = "~%@ zbývá (%lld provedení)";
+"%lld exchanges" = "%lld burz";
+"%lld transactions" = "%lld transakcí";
+"%lld notifications" = "%lld oznámení";
+"%lld plans" = "%lld plánů";
+"%lld withdrawals" = "%lld výběrů";
+"%lld connected" = "%lld připojeno";
+"%lld filters active" = "%lld aktivních filtrů";
+"%lldh" = "%lldh";
+"%@ strategy" = "%@ strategie";
+"%lld days" = "%lld dní";
+"%lld unread" = "%lld nepřečtených";
+"Error: %@" = "Chyba: %@";
+"Export failed: %@" = "Export selhal: %@";
+"Failed to load holdings: %@" = "Nepodařilo se načíst portfolio: %@";
+"Failed to load plans: %@" = "Nepodařilo se načíst plány: %@";
+"Onboarding step %lld of %lld" = "Krok %1$lld z %2$lld";
+"Suggestion: %@" = "Návrh: %@";
+"Word %lld" = "Slovo %lld";
+"Word %lld: %@" = "Slovo %1$lld: %2$@";
+"%@ API Credentials" = "%@ API přihlašovací údaje";
+"%lld cryptos" = "%lld kryptoměn";
+"%lld new transactions imported, %lld skipped" = "%1$lld nových transakcí importováno, %2$lld přeskočeno";
