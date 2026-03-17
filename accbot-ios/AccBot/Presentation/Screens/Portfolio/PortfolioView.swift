@@ -37,11 +37,15 @@ struct PortfolioView: View {
             .maxFormWidth()
         }
         .background(colors.background)
-        .navigationTitle(String(localized: "Portfolio"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(colors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Text(String(localized: "Portfolio"))
+                    .font(AccBotFonts.titleMedium)
+                    .foregroundStyle(colors.onBackground)
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 if let pair = viewModel.currentPair, pair.crypto != "ALL" {
                     Button {

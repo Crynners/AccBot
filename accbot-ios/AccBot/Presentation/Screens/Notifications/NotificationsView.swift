@@ -45,10 +45,16 @@ struct NotificationsView: View {
             }
         }
         .background(colors.background)
-        .navigationTitle(String(localized: "Notifications"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(colors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Text(String(localized: "Notifications"))
+                    .font(AccBotFonts.titleMedium)
+                    .foregroundStyle(colors.onBackground)
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 if viewModel.unreadCount > 0 {

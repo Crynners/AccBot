@@ -21,10 +21,16 @@ struct SettingsView: View {
         .scrollContentBackground(.hidden)
         .maxFormWidth()
         .background(colors.background)
-        .navigationTitle(String(localized: "Settings"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(colors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Text(String(localized: "Settings"))
+                    .font(AccBotFonts.titleMedium)
+                    .foregroundStyle(colors.onBackground)
+            }
+        }
         .alert(
             viewModel.activeAlert?.title ?? "",
             isPresented: Binding(
