@@ -506,8 +506,7 @@ final class PortfolioViewModel: ObservableObject {
                 fiatMax = 1
             }
 
-            let rawCryptoMin = accumulatedByIndex.min() ?? 0
-            let cryptoMin = min(rawCryptoMin, 0)
+            let cryptoMin: Decimal = 0
             let cryptoMax = accumulatedByIndex.max() ?? 1
             let cryptoRange = cryptoMax - cryptoMin
             let fiatRange = fiatMax - fiatMin

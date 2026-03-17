@@ -247,18 +247,17 @@ struct DashboardView: View {
                 Spacer()
                 if let roi = holding.roi {
                     VStack(alignment: .trailing, spacing: Spacing.xxs) {
-                        Text(String(localized: "ROI"))
-                            .font(AccBotFonts.caption)
-                            .foregroundStyle(colors.onSurfaceVariant)
+                        HStack(spacing: Spacing.xs) {
+                            Text(String(localized: "ROI"))
+                                .font(AccBotFonts.caption)
+                                .foregroundStyle(colors.onSurfaceVariant)
+                            Text(AccBotFormatters.formatSignedPercent(roi))
+                                .font(AccBotFonts.caption)
+                                .foregroundStyle(roi >= 0 ? colors.success : colors.error)
+                        }
                         if let fiatGainLoss = holding.fiatGainLoss {
                             let sign = fiatGainLoss >= 0 ? "+" : "-"
-                            let fiatPart = "\(sign)\(formatFiatValue(abs(fiatGainLoss))) \(holding.fiat)"
-                            let pctPart = AccBotFormatters.formatSignedPercent(roi)
-                            Text("\(fiatPart) (\(pctPart))")
-                                .font(AccBotFonts.headline)
-                                .foregroundStyle(roi >= 0 ? colors.success : colors.error)
-                        } else {
-                            Text(AccBotFormatters.formatSignedPercent(roi))
+                            Text("\(sign)\(formatFiatValue(abs(fiatGainLoss))) \(holding.fiat)")
                                 .font(AccBotFonts.headline)
                                 .foregroundStyle(roi >= 0 ? colors.success : colors.error)
                         }

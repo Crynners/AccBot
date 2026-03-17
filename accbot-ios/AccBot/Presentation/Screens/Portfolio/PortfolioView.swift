@@ -449,6 +449,7 @@ struct PortfolioView: View {
                     PortfolioViewModel.ChartSeries.accumulatedCrypto.localizedName: colors.success,
                 ])
                 .chartLegend(.hidden)
+                .chartYScale(domain: viewModel.fiatScaleMin...viewModel.fiatScaleMax)
                 .chartXSelectionIfAvailable(value: $selectedDate)
                 .onChange(of: selectedDate) { newValue in
                     router.isChartInteracting = (newValue != nil)
