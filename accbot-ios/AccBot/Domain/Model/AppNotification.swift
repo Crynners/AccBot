@@ -19,6 +19,7 @@ struct AppNotification: Identifiable, Equatable {
     let exchange: Exchange?
     let isRead: Bool
     let isArchived: Bool
+    let templateArgs: NotificationTemplateArgs?
     let createdAt: Date
 
     init(
@@ -31,6 +32,7 @@ struct AppNotification: Identifiable, Equatable {
         exchange: Exchange? = nil,
         isRead: Bool = false,
         isArchived: Bool = false,
+        templateArgs: NotificationTemplateArgs? = nil,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -42,6 +44,19 @@ struct AppNotification: Identifiable, Equatable {
         self.exchange = exchange
         self.isRead = isRead
         self.isArchived = isArchived
+        self.templateArgs = templateArgs
         self.createdAt = createdAt
+    }
+
+    /// Returns dynamically localized title. If templateArgs exist, renders from
+    /// them (supports language switching). Falls back to stored title.
+    var localizedTitle: String {
+        templateArgs?.render().title ?? title
+    }
+
+    /// Returns dynamically localized message. If templateArgs exist, renders from
+    /// them (supports language switching). Falls back to stored message.
+    var localizedMessage: String {
+        templateArgs?.render().message ?? message
     }
 }

@@ -204,6 +204,13 @@ final class DcaDatabase {
             }
         }
 
+        // Add templateArgs JSON column for dynamic notification localization
+        migrator.registerMigration("v4_notification_template_args") { db in
+            try db.alter(table: "notifications") { t in
+                t.add(column: "templateArgs", .text)
+            }
+        }
+
         try migrator.migrate(dbPool)
     }
 }

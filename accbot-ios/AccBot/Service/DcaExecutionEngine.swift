@@ -148,7 +148,8 @@ final class DcaExecutionEngine {
                 errorMessage: "Amount \(purchaseAmount) \(plan.fiat) below minimum \(minOrderSize) \(plan.fiat)"
             )
             saveTransactionAndAdvance(failedTx, plan: plan, now: now)
-            saveInAppNotification(type: .error, title: String(localized: "DCA Failed"), message: String(localized: "Amount below minimum for \(plan.crypto)"), plan: plan)
+            let args = NotificationTemplateArgs.belowMinimum(crypto: plan.crypto)
+            saveInAppNotification(type: .error, title: String(localized: "DCA Failed"), message: String(localized: "Amount below minimum for \(plan.crypto)"), plan: plan, templateArgs: args)
             return
         }
 
@@ -214,11 +215,16 @@ final class DcaExecutionEngine {
                     exchange: plan.exchange
                 )
             }
+            let purchaseArgs = NotificationTemplateArgs.purchase(
+                cryptoAmount: "\(tx.cryptoAmount)", crypto: plan.crypto,
+                fiatAmount: "\(tx.fiatAmount)", fiat: plan.fiat
+            )
             saveInAppNotification(
                 type: .purchase,
                 title: String(localized: "DCA Purchase"),
                 message: String(localized: "Bought \(tx.cryptoAmount as NSDecimalNumber) \(plan.crypto) for \(tx.fiatAmount as NSDecimalNumber) \(plan.fiat)"),
-                plan: plan
+                plan: plan,
+                templateArgs: purchaseArgs
             )
 
             // Check withdrawal threshold
@@ -256,7 +262,8 @@ final class DcaExecutionEngine {
                 if userPreferences.notificationsEnabled && userPreferences.errorNotifications {
                     notificationService.postErrorNotification(exchange: plan.exchange, message: msg)
                 }
-                saveInAppNotification(type: .error, title: String(localized: "DCA Failed"), message: "\(plan.crypto): \(msg)", plan: plan)
+                let errorArgs = NotificationTemplateArgs.error(crypto: plan.crypto, errorMessage: msg)
+                saveInAppNotification(type: .error, title: String(localized: "DCA Failed"), message: "\(plan.crypto): \(msg)", plan: plan, templateArgs: errorArgs)
             }
 
         case nil:
@@ -298,11 +305,15 @@ final class DcaExecutionEngine {
                     exchange: plan.exchange,
                     amount: balance
                 )
+                let wtArgs = NotificationTemplateArgs.withdrawalThreshold(
+                    amount: "\(balance)", crypto: plan.crypto, exchangeName: plan.exchange.displayName
+                )
                 saveInAppNotification(
                     type: .withdrawalThreshold,
                     title: String(localized: "Withdrawal Threshold"),
                     message: String(localized: "\(balance as NSDecimalNumber) \(plan.crypto) ready for withdrawal from \(plan.exchange.displayName)"),
-                    plan: plan
+                    plan: plan,
+                    templateArgs: wtArgs
                 )
             }
         } catch {
@@ -330,11 +341,15 @@ final class DcaExecutionEngine {
                         daysLeft: Int(remainingDays)
                     )
                 }
+                let lbArgs = NotificationTemplateArgs.lowBalance(
+                    exchangeName: plan.exchange.displayName, fiat: plan.fiat, remainingDays: Int(remainingDays)
+                )
                 saveInAppNotification(
                     type: .lowBalance,
                     title: String(localized: "Low Balance"),
                     message: String(localized: "\(plan.exchange.displayName): ~\(Int(remainingDays)) days of \(plan.fiat) remaining"),
-                    plan: plan
+                    plan: plan,
+                    templateArgs: lbArgs
                 )
             }
         } catch {
@@ -342,14 +357,15 @@ final class DcaExecutionEngine {
         }
     }
 
-    private func saveInAppNotification(type: NotificationType, title: String, message: String, plan: DcaPlan) {
+    private func saveInAppNotification(type: NotificationType, title: String, message: String, plan: DcaPlan, templateArgs: NotificationTemplateArgs? = nil) {
         let notification = AppNotification(
             type: type,
             title: title,
             message: message,
             planId: plan.id,
             crypto: plan.crypto,
-            exchange: plan.exchange
+            exchange: plan.exchange,
+            templateArgs: templateArgs
         )
         try? activeDb.notificationDao.insert(notification)
     }

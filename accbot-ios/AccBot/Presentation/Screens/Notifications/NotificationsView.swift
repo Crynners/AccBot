@@ -93,7 +93,7 @@ struct NotificationsView: View {
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 HStack {
-                    Text(notification.title)
+                    Text(notification.localizedTitle)
                         .font(notification.isRead ? AccBotFonts.body : AccBotFonts.headline)
                         .foregroundStyle(colors.onSurface)
 
@@ -105,7 +105,7 @@ struct NotificationsView: View {
                     }
                 }
 
-                Text(notification.message)
+                Text(notification.localizedMessage)
                     .font(AccBotFonts.bodySmall)
                     .foregroundStyle(colors.onSurfaceVariant)
                     .lineLimit(2)
@@ -125,7 +125,7 @@ struct NotificationsView: View {
 
     private func notificationAccessibilityLabel(_ notification: AppNotification) -> String {
         let readPrefix = notification.isRead ? "" : "\(String(localized: "Unread")), "
-        return "\(readPrefix)\(notification.title). \(notification.message). \(formatDate(notification.createdAt))"
+        return "\(readPrefix)\(notification.localizedTitle). \(notification.localizedMessage). \(formatDate(notification.createdAt))"
     }
 
     private func notificationIcon(_ type: NotificationType) -> some View {

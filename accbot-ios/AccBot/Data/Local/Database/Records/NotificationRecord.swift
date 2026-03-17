@@ -14,6 +14,7 @@ struct NotificationRecord: Codable, FetchableRecord, PersistableRecord, Identifi
     var exchange: String?
     var isRead: Bool
     var isArchived: Bool
+    var templateArgs: String?
     var createdAt: Double
 
     func toDomain() -> AppNotification {
@@ -27,6 +28,7 @@ struct NotificationRecord: Codable, FetchableRecord, PersistableRecord, Identifi
             exchange: exchange.flatMap { Exchange(rawValue: $0) },
             isRead: isRead,
             isArchived: isArchived,
+            templateArgs: templateArgs.flatMap { NotificationTemplateArgs.fromJSON($0) },
             createdAt: Date(timeIntervalSince1970: createdAt)
         )
     }
@@ -42,6 +44,7 @@ struct NotificationRecord: Codable, FetchableRecord, PersistableRecord, Identifi
             exchange: n.exchange?.rawValue,
             isRead: n.isRead,
             isArchived: n.isArchived,
+            templateArgs: n.templateArgs?.toJSON(),
             createdAt: n.createdAt.timeIntervalSince1970
         )
     }
