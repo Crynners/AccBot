@@ -483,7 +483,7 @@ struct PortfolioView: View {
                             .foregroundStyle(colors.onSurfaceVariant)
                             .rotationEffect(.degrees(-90))
                             .fixedSize()
-                            .offset(x: -14)
+                            .offset(x: -leadingAxisLabelOffset)
                     }
                 }
                 .overlay(alignment: .trailing) {
@@ -495,7 +495,7 @@ struct PortfolioView: View {
                             .foregroundStyle(colors.success)
                             .rotationEffect(.degrees(90))
                             .fixedSize()
-                            .offset(x: 14)
+                            .offset(x: trailingAxisLabelOffset)
                     }
                 }
                 .accessibilityElement(children: .ignore)
@@ -624,6 +624,24 @@ struct PortfolioView: View {
         let roi = viewModel.roiPercent.map { AccBotFormatters.formatSignedPercent($0) } ?? "---"
         let count = viewModel.transactionCount
         return String(localized: "Portfolio chart. Value: \(value), ROI: \(roi), \(count) transactions. Use legend to toggle series.")
+    }
+
+    // MARK: - Axis Label Offsets
+
+    /// Dynamic offset for the leading (fiat) Y-axis label, computed from the longest formatted axis value.
+    private var leadingAxisLabelOffset: CGFloat {
+        let maxVal = max(abs(viewModel.fiatScaleMin), abs(viewModel.fiatScaleMax))
+        let label = AccBotFormatters.formatFiatAxisLabel(maxVal)
+        return CGFloat(label.count) * 7 + 4
+    }
+
+    /// Dynamic offset for the trailing (crypto) Y-axis label, computed from the longest formatted axis value.
+    private var trailingAxisLabelOffset: CGFloat {
+        let cryptoMax = NSDecimalNumber(decimal: viewModel.accumulatedScaleMax).doubleValue
+        let cryptoMin = NSDecimalNumber(decimal: viewModel.accumulatedScaleMin).doubleValue
+        let maxVal = max(abs(cryptoMin), abs(cryptoMax))
+        let label = AccBotFormatters.formatCryptoCompact(Decimal(maxVal))
+        return CGFloat(label.count) * 7 + 4
     }
 
     // MARK: - Formatters

@@ -180,11 +180,6 @@ struct DashboardView: View {
 
     private var holdingsPager: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(String(localized: "Total Accumulated"))
-                .font(AccBotFonts.titleSmall)
-                .foregroundStyle(colors.onSurface)
-                .accessibilityAddTraits(.isHeader)
-
             TabView {
                 ForEach(viewModel.holdings) { holding in
                     Button {
@@ -205,11 +200,16 @@ struct DashboardView: View {
     }
 
     private func holdingCard(_ holding: DashboardViewModel.HoldingInfo) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            // Hero: accumulated crypto amount
+        VStack(spacing: Spacing.md) {
+            // Centered title + hero crypto amount
+            Text(String(localized: "Total Accumulated"))
+                .font(AccBotFonts.caption)
+                .foregroundStyle(colors.onSurfaceVariant)
+                .frame(maxWidth: .infinity)
             Text(formatCrypto(holding.totalCrypto, symbol: holding.crypto))
                 .font(AccBotFonts.titleSmall)
                 .foregroundStyle(colors.success)
+                .frame(maxWidth: .infinity)
 
             // Row: Invested | Avg Price
             HStack {
