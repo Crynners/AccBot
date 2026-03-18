@@ -51,7 +51,7 @@ targets:
     settings:
       base:
         INFOPLIST_FILE: AccBotWidget/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: com.accbot.dca.widget
+        PRODUCT_BUNDLE_IDENTIFIER: com.accbot.dca.AccBotWidget
         TARGETED_DEVICE_FAMILY: "1,2"
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../../Frameworks"
         SKIP_INSTALL: "YES"
