@@ -15,6 +15,7 @@ struct PlanCard: View {
     var goalReached: Bool = false
 
     @Environment(\.accBotColors) private var colors
+    @State private var showDisableConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
@@ -33,6 +34,14 @@ struct PlanCard: View {
         .onTapGesture(perform: onTap)
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isButton)
+        .alert(String(localized: "Disable Plan?"), isPresented: $showDisableConfirmation) {
+            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Disable"), role: .destructive) {
+                onToggle(false)
+            }
+        } message: {
+            Text(String(localized: "DCA purchases for \(plan.pair) will be paused until you re-enable the plan."))
+        }
     }
 
     // MARK: - Header
@@ -59,15 +68,20 @@ struct PlanCard: View {
 
             Spacer()
 
-            Toggle(isOn: Binding(
-                get: { plan.isEnabled },
-                set: { onToggle($0) }
-            )) {
-                Text(String(localized: "Enable plan"))
-            }
-            .labelsHidden()
-            .tint(colors.primary)
-            .accessibilityLabel(String(localized: "Toggle plan \(plan.pair)"))
+            Image(systemName: plan.isEnabled ? "checkmark.circle.fill" : "circle")
+                .font(.title2)
+                .foregroundStyle(plan.isEnabled ? colors.primary : colors.onSurfaceVariant)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if plan.isEnabled {
+                        showDisableConfirmation = true
+                    } else {
+                        onToggle(true)
+                    }
+                }
+                .accessibilityLabel(String(localized: "Toggle plan \(plan.pair)"))
+                .accessibilityValue(plan.isEnabled ? String(localized: "Enabled") : String(localized: "Disabled"))
         }
     }
 

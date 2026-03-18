@@ -1084,4 +1084,10 @@
 "Word %lld: %@" = "Slovo %1$lld: %2$@";
 "%@ API Credentials" = "%@ API přihlašovací údaje";
 "%lld cryptos" = "%lld kryptoměn";
-"%lld new transactions imported, %lld skipped" = "%1$lld nových transakcí importováno, %2$lld přeskočeno";
+
+/* ===== Plan Card ===== */
+"Disable Plan?" = "Deaktivovat plán?";
+"Disable" = "Deaktivovat";
+"Enabled" = "Aktivní";
+"Disabled" = "Neaktivní";
+"DCA purchases for %@ will be paused until you re-enable the plan." = "DCA nákupy pro %@ budou pozastaveny, dokud plán znovu neaktivujete.";
