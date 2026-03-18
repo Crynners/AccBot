@@ -28,9 +28,10 @@ enum NotificationTemplateArgs: Codable, Equatable {
                 "\(crypto): \(errorMessage)"
             )
         case .lowBalance(let exchangeName, let fiat, let remainingDays):
+            let days = max(1, remainingDays)
             return (
                 String(localized: "Low Balance"),
-                String(localized: "\(exchangeName): ~\(remainingDays) days of \(fiat) remaining")
+                String(localized: "\(exchangeName): ~\(days) days of \(fiat) remaining")
             )
         case .withdrawalThreshold(let amount, let crypto, let exchangeName):
             return (
