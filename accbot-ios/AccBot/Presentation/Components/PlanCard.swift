@@ -68,20 +68,21 @@ struct PlanCard: View {
 
             Spacer()
 
-            Image(systemName: plan.isEnabled ? "checkmark.circle.fill" : "circle")
-                .font(.title2)
-                .foregroundStyle(plan.isEnabled ? colors.primary : colors.onSurfaceVariant)
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    if plan.isEnabled {
+            Toggle(isOn: Binding(
+                get: { plan.isEnabled },
+                set: { newValue in
+                    if !newValue {
                         showDisableConfirmation = true
                     } else {
                         onToggle(true)
                     }
                 }
-                .accessibilityLabel(String(localized: "Toggle plan \(plan.pair)"))
-                .accessibilityValue(plan.isEnabled ? String(localized: "Enabled") : String(localized: "Disabled"))
+            )) {
+                Text(String(localized: "Enable plan"))
+            }
+            .labelsHidden()
+            .tint(colors.primary)
+            .accessibilityLabel(String(localized: "Toggle plan \(plan.pair)"))
         }
     }
 
