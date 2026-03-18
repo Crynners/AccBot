@@ -312,13 +312,8 @@ final class DashboardViewModel: ObservableObject {
 
             // Calculate remaining executions and days
             if let balance = fiatBalance, plan.amount > 0 {
-                let remainingExec = NSDecimalNumber(decimal: balance)
-                    .dividing(by: NSDecimalNumber(decimal: plan.amount),
-                              withBehavior: NSDecimalNumberHandler(
-                                roundingMode: .down, scale: 0,
-                                raiseOnExactness: false, raiseOnOverflow: false,
-                                raiseOnUnderflow: false, raiseOnDivideByZero: false))
-                    .intValue
+                let remainingExecDecimal = NSDecimalNumber(decimal: balance / plan.amount)
+                let remainingExec = Int(floor(remainingExecDecimal.doubleValue))
 
                 let rawInterval: Int
                 if let cron = plan.cronExpression {
@@ -327,8 +322,7 @@ final class DashboardViewModel: ObservableObject {
                     rawInterval = plan.frequency.intervalMinutes
                 }
                 let effectiveInterval = rawInterval > 0 ? rawInterval : 1440
-                let remainingMinutes = remainingExec * effectiveInterval
-                let remainingDaysVal = Double(remainingMinutes) / 1440.0
+                let remainingDaysVal = remainingExecDecimal.doubleValue * Double(effectiveInterval) / 1440.0
 
                 result.append(PlanWithBalance(
                     plan: plan,

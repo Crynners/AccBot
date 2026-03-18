@@ -325,12 +325,13 @@ final class DcaExecutionEngine {
         do {
             guard let balance = await api.getBalance(currency: plan.fiat) else { return }
             guard plan.amount > 0 else { return }
-            let remainingExec = NSDecimalNumber(decimal: balance / plan.amount).intValue
+            let remainingExec = NSDecimalNumber(decimal: balance / plan.amount).doubleValue
             let intervalMinutes = plan.cronExpression != nil
                 ? (CronUtils.getIntervalMinutesEstimate(cron: plan.cronExpression!) ?? 1440)
                 : plan.frequency.intervalMinutes
-            let remainingDays = Double(remainingExec * intervalMinutes) / 1440.0
+            let remainingDays = remainingExec * Double(intervalMinutes) / 1440.0
             let thresholdDays = userPreferences.lowBalanceThresholdDays
+            let displayDays = max(1, Int(ceil(remainingDays)))
 
             if remainingDays < Double(thresholdDays) {
                 if userPreferences.notificationsEnabled {
@@ -338,16 +339,16 @@ final class DcaExecutionEngine {
                         exchange: plan.exchange,
                         fiat: plan.fiat,
                         balance: balance,
-                        daysLeft: Int(remainingDays)
+                        daysLeft: displayDays
                     )
                 }
                 let lbArgs = NotificationTemplateArgs.lowBalance(
-                    exchangeName: plan.exchange.displayName, fiat: plan.fiat, remainingDays: Int(remainingDays)
+                    exchangeName: plan.exchange.displayName, fiat: plan.fiat, remainingDays: displayDays
                 )
                 saveInAppNotification(
                     type: .lowBalance,
                     title: String(localized: "Low Balance"),
-                    message: String(localized: "\(plan.exchange.displayName): ~\(Int(remainingDays)) days of \(plan.fiat) remaining"),
+                    message: String(localized: "\(plan.exchange.displayName): ~\(displayDays) days of \(plan.fiat) remaining"),
                     plan: plan,
                     templateArgs: lbArgs
                 )
