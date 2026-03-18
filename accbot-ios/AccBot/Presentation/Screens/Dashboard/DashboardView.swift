@@ -182,20 +182,19 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             TabView {
                 ForEach(viewModel.holdings) { holding in
-                    Button {
-                        router.portfolioSelectedCrypto = holding.crypto
-                        router.portfolioSelectedFiat = holding.fiat
-                        router.selectedTab = .portfolio
-                    } label: {
-                        holdingCard(holding)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(String(localized: "\(holding.crypto)/\(holding.fiat) holding"))
-                    .accessibilityHint(String(localized: "Tap to view in portfolio"))
+                    holdingCard(holding)
+                        .contentShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+                        .onTapGesture {
+                            router.portfolioSelectedCrypto = holding.crypto
+                            router.portfolioSelectedFiat = holding.fiat
+                            router.selectedTab = .portfolio
+                        }
+                        .accessibilityLabel(String(localized: "\(holding.crypto)/\(holding.fiat) holding"))
+                        .accessibilityHint(String(localized: "Tap to view in portfolio"))
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .automatic))
-            .frame(minHeight: 220)
+            .frame(minHeight: 280)
         }
     }
 
@@ -512,33 +511,29 @@ struct DashboardView: View {
 
     private var quickActions: some View {
         HStack(spacing: Spacing.md) {
-            Button {
-                router.navigate(to: .history())
-            } label: {
-                Label(String(localized: "History"), systemImage: "clock.arrow.circlepath")
-                    .font(AccBotFonts.label)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .padding(.vertical, Spacing.md)
-                    .background(colors.surface)
-                    .foregroundStyle(colors.onSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-            }
+            Label(String(localized: "History"), systemImage: "clock.arrow.circlepath")
+                .font(AccBotFonts.label)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .padding(.vertical, Spacing.md)
+                .background(colors.surface)
+                .foregroundStyle(colors.onSurface)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                .contentShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                .onTapGesture { router.navigate(to: .history()) }
 
-            Button {
-                viewModel.showRunNowSheet = true
-            } label: {
-                Label(String(localized: "Run Now"), systemImage: "bolt.fill")
-                    .font(AccBotFonts.label)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .padding(.vertical, Spacing.md)
-                    .background(colors.primary)
-                    .foregroundStyle(colors.onPrimary)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-            }
+            Label(String(localized: "Run Now"), systemImage: "bolt.fill")
+                .font(AccBotFonts.label)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .padding(.vertical, Spacing.md)
+                .background(colors.primary)
+                .foregroundStyle(colors.onPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                .contentShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                .onTapGesture { viewModel.showRunNowSheet = true }
         }
     }
 
