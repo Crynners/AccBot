@@ -62,6 +62,11 @@ final class DcaExecutionEngine {
         } catch {
             logger.error("Failed to fetch due plans: \(error.localizedDescription)")
         }
+
+        // Update widget data after execution
+        if let deps = await MainActor.run(body: { AppDependencies.shared }) {
+            await MainActor.run { WidgetDataService.update(from: deps) }
+        }
     }
 
     /// Execute a specific plan (for "Run Now")

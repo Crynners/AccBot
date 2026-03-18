@@ -123,6 +123,11 @@ final class DashboardViewModel: ObservableObject {
         async let balancesResult: () = fetchBalancesForPlans()
         async let marketResult: () = shouldFetchMarket ? fetchMarketData() : ()
         _ = await (balancesResult, marketResult)
+
+        // Update widget with latest data
+        if let deps = dependencies {
+            WidgetDataService.update(from: deps)
+        }
     }
 
     func loadPlans() async {

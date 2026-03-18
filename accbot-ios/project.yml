@@ -41,6 +41,20 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     dependencies:
       - package: GRDB
+      - target: AccBotWidget
+
+  AccBotWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: AccBotWidget
+    settings:
+      base:
+        INFOPLIST_FILE: AccBotWidget/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.accbot.dca.widget
+        TARGETED_DEVICE_FAMILY: "1,2"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../../Frameworks"
+        SKIP_INSTALL: "YES"
 
   AccBotTests:
     type: bundle.unit-test
@@ -60,6 +74,7 @@ schemes:
     build:
       targets:
         AccBot: all
+        AccBotWidget: all
         AccBotTests: [test]
     test:
       targets:
