@@ -919,6 +919,18 @@
 "Notification Info" = "Informace o oznámeních";
 "Made with love by Crynners" = "Vytvořeno s láskou od Crynners";
 
+/* ===== Shortcuts / Precise Scheduling ===== */
+"Precise Scheduling" = "Přesné spouštění";
+"iOS background execution is approximate. For precise DCA timing, create an automation in the Shortcuts app:" = "Spouštění na pozadí v iOS je přibližné. Pro přesné DCA časování vytvořte automatizaci v aplikaci Zkratky:";
+"Tap \"Open Shortcuts\" below" = "Klepněte na \"Otevřít Zkratky\" níže";
+"Go to Automation → + → Time of Day" = "Přejděte na Automatizace → + → Denní doba";
+"Set your times (e.g. 1:30 and 13:30)" = "Nastavte časy (např. 1:30 a 13:30)";
+"Add action → search \"AccBot\" → Run DCA" = "Přidat akci → hledat \"AccBot\" → Spustit DCA";
+"Disable \"Ask Before Running\"" = "Vypněte \"Zeptat se před spuštěním\"";
+"Open Shortcuts" = "Otevřít Zkratky";
+"DCA plans executed" = "DCA plány provedeny";
+"Run DCA Plans" = "Spustit DCA plány";
+
 /* ===== Onboarding — Permissions ===== */
 "Stay Informed" = "Buďte informováni";
 "Get notified about completed purchases, errors, and weekly summaries. You can customize notifications later in Settings." = "Dostávejte upozornění o dokončených nákupech, chybách a týdenních přehledech. Oznámení můžete upravit později v Nastavení.";

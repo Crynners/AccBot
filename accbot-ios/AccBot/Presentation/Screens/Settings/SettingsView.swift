@@ -13,6 +13,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             generalSection
+            shortcutsSection
             alertsAndSecuritySection
             dataSection
             aboutSection
@@ -165,6 +166,58 @@ struct SettingsView: View {
         } header: {
             Text(String(localized: "General"))
                 .accessibilityAddTraits(.isHeader)
+        }
+    }
+
+    // MARK: - Shortcuts (Precise Scheduling)
+
+    private var shortcutsSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text(String(localized: "iOS background execution is approximate. For precise DCA timing, create an automation in the Shortcuts app:"))
+                    .font(AccBotFonts.captionSmall)
+                    .foregroundStyle(colors.onSurfaceVariant)
+
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    stepRow(number: 1, text: String(localized: "Tap \"Open Shortcuts\" below"))
+                    stepRow(number: 2, text: String(localized: "Go to Automation → + → Time of Day"))
+                    stepRow(number: 3, text: String(localized: "Set your times (e.g. 1:30 and 13:30)"))
+                    stepRow(number: 4, text: String(localized: "Add action → search \"AccBot\" → Run DCA"))
+                    stepRow(number: 5, text: String(localized: "Disable \"Ask Before Running\""))
+                }
+            }
+            .listRowBackground(colors.surface)
+
+            Button {
+                if let url = URL(string: "shortcuts://") {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                HStack {
+                    Label(String(localized: "Open Shortcuts"), systemImage: "arrow.triangle.turn.up.right.diamond")
+                        .foregroundStyle(colors.primary)
+                    Spacer()
+                    Image(systemName: "arrow.up.forward.square")
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .font(AccBotFonts.captionSmall)
+                }
+            }
+            .listRowBackground(colors.surface)
+        } header: {
+            Text(String(localized: "Precise Scheduling"))
+                .accessibilityAddTraits(.isHeader)
+        }
+    }
+
+    private func stepRow(number: Int, text: String) -> some View {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            Text("\(number).")
+                .font(AccBotFonts.caption)
+                .foregroundStyle(colors.primary)
+                .frame(width: 16, alignment: .trailing)
+            Text(text)
+                .font(AccBotFonts.caption)
+                .foregroundStyle(colors.onSurface)
         }
     }
 
