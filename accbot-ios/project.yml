@@ -1,5 +1,6 @@
 name: AccBot
 options:
+  bundleIdPrefix: com.accbot.dca
   deploymentTarget:
     iOS: "16.0"
   xcodeVersion: "16.0"
