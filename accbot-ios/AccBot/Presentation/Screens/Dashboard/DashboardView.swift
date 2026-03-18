@@ -443,19 +443,16 @@ struct DashboardView: View {
                     .foregroundStyle(colors.onSurface)
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
-                Button {
-                    router.navigate(to: .addPlan)
-                } label: {
-                    Image(systemName: "plus")
-                        .font(AccBotFonts.label)
-                        .foregroundStyle(colors.primary)
-                        .frame(width: 28, height: 28)
-                        .background(colors.primary.opacity(0.15))
-                        .clipShape(Circle())
-                }
-                .accessibilityLabel(String(localized: "Add DCA plan"))
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(Rectangle())
+                Image(systemName: "plus")
+                    .font(AccBotFonts.label)
+                    .foregroundStyle(colors.primary)
+                    .frame(width: 28, height: 28)
+                    .background(colors.primary.opacity(0.15))
+                    .clipShape(Circle())
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+                    .onTapGesture { router.navigate(to: .addPlan) }
+                    .accessibilityLabel(String(localized: "Add DCA plan"))
             }
 
             if viewModel.plans.isEmpty {

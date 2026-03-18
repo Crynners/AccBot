@@ -30,8 +30,8 @@ struct ImportCsvView: View {
                     }
                 }
 
-                // Import mode selector
-                if viewModel.plan?.exchange.supportsApiImport == true {
+                // Import mode: API-only for supported exchanges, CSV for others
+                if viewModel.plan?.exchange.supportsApiImport != true {
                     Picker(String(localized: "Import Mode"), selection: $viewModel.importMode) {
                         ForEach(ImportCsvViewModel.ImportMode.allCases, id: \.self) { mode in
                             Text(mode.localizedName).tag(mode)

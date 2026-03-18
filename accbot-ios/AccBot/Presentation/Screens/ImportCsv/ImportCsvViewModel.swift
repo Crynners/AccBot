@@ -55,6 +55,10 @@ final class ImportCsvViewModel: ObservableObject {
 
     private func loadPlan() {
         cachedPlan = try? deps.activeDatabase.planDao.getById(planId)
+        // Default to API import for exchanges that support it
+        if cachedPlan?.exchange.supportsApiImport == true {
+            importMode = .api
+        }
     }
 
     var plan: DcaPlan? {
