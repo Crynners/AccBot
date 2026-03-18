@@ -76,6 +76,7 @@ jobs:
             -clonedSourcePackagesDirPath SourcePackages \
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
+            VALIDATE_EMBEDDED_BINARY_ID=NO \
             | xcpretty --color
 
       - name: Test
@@ -89,6 +90,7 @@ jobs:
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
+            VALIDATE_EMBEDDED_BINARY_ID=NO \
             | xcpretty --color
 
       - name: Upload test results
@@ -110,6 +112,7 @@ jobs:
             -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
+            VALIDATE_EMBEDDED_BINARY_ID=NO \
             | xcpretty --color
 
       - name: Package unsigned .ipa
