@@ -199,6 +199,12 @@ final class SettingsViewModel: ObservableObject {
             showError(error.localizedDescription)
         }
 
+        // Reschedule background layers (deleted plans should no longer trigger)
+        DcaBackgroundService.shared.rescheduleAllLayers(
+            using: deps.activeDatabase,
+            notificationService: deps.notificationService
+        )
+
         deleteTarget = nil
         loadData()
     }

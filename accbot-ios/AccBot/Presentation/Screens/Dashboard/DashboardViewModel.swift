@@ -379,13 +379,24 @@ final class DashboardViewModel: ObservableObject {
     }
 
     func togglePlan(_ plan: DcaPlan, enabled: Bool) {
-        Task {
-            try? deps.activeDatabase.planDao.setEnabled(id: plan.id, enabled: enabled)
-            // Recalculate next execution when re-enabling to avoid stale dates
+        do {
             if enabled {
-                let next = plan.calculateNextExecution()
-                try? deps.activeDatabase.planDao.setNextExecution(id: plan.id, nextExecutionAt: next)
+                // Atomically enable + recalculate next execution to avoid stale dates
+                let next = plan.calculateNextExecution(from: Date())
+                try deps.activeDatabase.planDao.setEnabledAndNextExecution(
+                    id: plan.id, enabled: true, nextExecutionAt: next
+                )
+            } else {
+                try deps.activeDatabase.planDao.setEnabled(id: plan.id, enabled: false)
             }
+
+            // Reschedule background layers to reflect the change
+            DcaBackgroundService.shared.rescheduleAllLayers(
+                using: deps.activeDatabase,
+                notificationService: deps.notificationService
+            )
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 

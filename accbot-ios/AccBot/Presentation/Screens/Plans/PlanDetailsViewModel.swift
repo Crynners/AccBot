@@ -142,14 +142,23 @@ class PlanDetailsViewModel: ObservableObject {
         let newEnabled = !plan.isEnabled
 
         do {
-            try deps.activeDatabase.planDao.setEnabled(id: planId, enabled: newEnabled)
-            // Recalculate next execution when re-enabling to avoid stale dates
             if newEnabled {
-                let next = plan.calculateNextExecution()
-                try deps.activeDatabase.planDao.setNextExecution(id: planId, nextExecutionAt: next)
+                // Atomically enable + recalculate next execution to avoid stale dates
+                let next = plan.calculateNextExecution(from: Date())
+                try deps.activeDatabase.planDao.setEnabledAndNextExecution(
+                    id: planId, enabled: true, nextExecutionAt: next
+                )
+            } else {
+                try deps.activeDatabase.planDao.setEnabled(id: planId, enabled: false)
             }
             // Reload to reflect the change
             self.plan = try deps.activeDatabase.planDao.getById(planId)
+
+            // Reschedule background layers to reflect the change
+            DcaBackgroundService.shared.rescheduleAllLayers(
+                using: deps.activeDatabase,
+                notificationService: deps.notificationService
+            )
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -161,6 +170,13 @@ class PlanDetailsViewModel: ObservableObject {
             try deps.activeDatabase.transactionDao.deleteByPlanId(planId)
             // Delete the plan
             try deps.activeDatabase.planDao.delete(id: planId)
+
+            // Reschedule background layers (removed plan may have been the next to execute)
+            DcaBackgroundService.shared.rescheduleAllLayers(
+                using: deps.activeDatabase,
+                notificationService: deps.notificationService
+            )
+
             return true
         } catch {
             errorMessage = error.localizedDescription

@@ -174,6 +174,12 @@ class AddPlanViewModel: ObservableObject {
 
             try deps.activeDatabase.planDao.insert(plan)
 
+            // Schedule all background layers so the plan actually executes
+            DcaBackgroundService.shared.rescheduleAllLayers(
+                using: deps.activeDatabase,
+                notificationService: deps.notificationService
+            )
+
             // Auto-enable Market Pulse for strategies that depend on market data
             if case .athBased = selectedStrategy {
                 deps.userPreferences.marketPulseEnabled = true

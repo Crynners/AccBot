@@ -350,6 +350,13 @@ private class FirstPlanViewModel: ObservableObject {
 
         do {
             try dependencies.activeDatabase.planDao.insert(plan)
+
+            // Schedule all background layers so the plan actually executes
+            DcaBackgroundService.shared.rescheduleAllLayers(
+                using: dependencies.activeDatabase,
+                notificationService: dependencies.notificationService
+            )
+
             return true
         } catch {
             errorMessage = String(localized: "Failed to create plan. You can create plans later from the dashboard.")

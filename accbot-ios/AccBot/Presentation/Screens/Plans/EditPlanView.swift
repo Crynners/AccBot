@@ -384,6 +384,13 @@ struct EditPlanView: View {
             )
 
             try dependencies.activeDatabase.planDao.update(updatedPlan)
+
+            // Reschedule background layers for the new execution time
+            DcaBackgroundService.shared.rescheduleAllLayers(
+                using: dependencies.activeDatabase,
+                notificationService: dependencies.notificationService
+            )
+
             isSubmitting = false
             UIAccessibility.post(notification: .announcement, argument: String(localized: "Plan saved successfully"))
             router.pop()

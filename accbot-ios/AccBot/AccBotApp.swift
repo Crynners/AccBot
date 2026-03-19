@@ -7,6 +7,13 @@ struct AccBotApp: App {
     @StateObject private var dependencies = {
         let deps = AppDependencies()
         AppDependencies.shared = deps
+        // Ensure background layers are scheduled on every cold start
+        // (reboot, app kill, update). Without this, no BGTask fires
+        // until the user opens the app AND scenePhase becomes .active.
+        DcaBackgroundService.shared.rescheduleAllLayers(
+            using: deps.activeDatabase,
+            notificationService: deps.notificationService
+        )
         return deps
     }()
     @StateObject private var router = AppRouter()
