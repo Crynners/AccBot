@@ -37,6 +37,10 @@ struct AccBotApp: App {
                         await dependencies.dcaExecutionEngine.executeDuePlans()
                         await MainActor.run {
                             dependencies.userPreferences.lastBackgroundRun = now
+                            DcaBackgroundService.shared.rescheduleAllLayers(
+                                using: dependencies.activeDatabase,
+                                notificationService: dependencies.notificationService
+                            )
                         }
                     }
                 }

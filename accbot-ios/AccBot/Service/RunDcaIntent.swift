@@ -28,8 +28,11 @@ struct RunDcaIntent: AppIntent {
         // Update last background run timestamp
         deps.userPreferences.lastBackgroundRun = Date()
 
-        // Reschedule background tasks
-        DcaBackgroundService.shared.scheduleAppRefresh(using: deps.activeDatabase)
+        // Reschedule all background layers
+        DcaBackgroundService.shared.rescheduleAllLayers(
+            using: deps.activeDatabase,
+            notificationService: deps.notificationService
+        )
 
         Self.logger.info("RunDcaIntent completed")
         return .result(value: String(localized: "DCA plans executed"))

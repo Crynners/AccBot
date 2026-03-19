@@ -115,6 +115,40 @@ final class NotificationService {
         UNUserNotificationCenter.current().add(request)
     }
 
+    /// Schedule reminder notifications for all enabled plans at their next execution times.
+    /// Called by rescheduleAllLayers() after each DCA execution.
+    func scheduleAllDcaReminders(using database: DcaDatabase) {
+        cancelAllDcaReminders()
+
+        guard let plans = try? database.planDao.getEnabledPlans() else { return }
+
+        for plan in plans {
+            guard let nextExec = plan.nextExecutionAt, nextExec > Date() else { continue }
+
+            let content = UNMutableNotificationContent()
+            content.title = String(localized: "DCA Plan Due")
+            content.body = String(localized: "Tap to execute: \(plan.crypto)/\(plan.fiat) on \(plan.exchange.displayName)")
+            content.sound = .default
+            content.categoryIdentifier = Self.dcaReminderCategory
+
+            let components = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute, .second],
+                from: nextExec
+            )
+            let trigger = UNCalendarNotificationTrigger(
+                dateMatching: components,
+                repeats: false
+            )
+
+            let request = UNNotificationRequest(
+                identifier: "dca_reminder_\(plan.id)",
+                content: content,
+                trigger: trigger
+            )
+            UNUserNotificationCenter.current().add(request)
+        }
+    }
+
     func cancelAllDcaReminders() {
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { requests in

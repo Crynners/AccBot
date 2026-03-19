@@ -25,13 +25,12 @@ final class DcaBackgroundService {
         let deps = await MainActor.run { AppDependencies.shared ?? AppDependencies() }
         await deps.dcaExecutionEngine.executeDuePlans()
 
-        // Schedule the next refresh based on actual next plan execution time
-        // and update last background run timestamp
-        let db = await MainActor.run {
+        // Reschedule all layers and update last background run timestamp
+        let (db, notifService) = await MainActor.run {
             deps.userPreferences.lastBackgroundRun = Date()
-            return deps.activeDatabase
+            return (deps.activeDatabase, deps.notificationService)
         }
-        scheduleAppRefresh(using: db)
+        rescheduleAllLayers(using: db, notificationService: notifService)
 
         task.setTaskCompleted(success: true)
         logger.info("BGAppRefreshTask completed")
@@ -52,19 +51,26 @@ final class DcaBackgroundService {
         // Resolve pending transactions and execute due plans
         await deps.dcaExecutionEngine.executeDuePlans()
 
-        // Schedule next processing task
-        scheduleProcessingTask()
-
-        // Also schedule next refresh for the nearest plan
-        // and update last background run timestamp
-        let db = await MainActor.run {
+        // Reschedule all layers and update last background run timestamp
+        let (db, notifService) = await MainActor.run {
             deps.userPreferences.lastBackgroundRun = Date()
-            return deps.activeDatabase
+            return (deps.activeDatabase, deps.notificationService)
         }
-        scheduleAppRefresh(using: db)
+        rescheduleAllLayers(using: db, notificationService: notifService)
 
         task.setTaskCompleted(success: true)
         logger.info("BGProcessingTask completed")
+    }
+
+    // MARK: - Coordinate All Layers
+
+    /// Re-schedule all background execution layers after any DCA execution.
+    /// Creates a self-healing system where each layer re-arms all others.
+    func rescheduleAllLayers(using database: DcaDatabase, notificationService: NotificationService) {
+        scheduleAppRefresh(using: database)
+        scheduleProcessingTask()
+        notificationService.scheduleAllDcaReminders(using: database)
+        BackgroundSessionService.shared.scheduleNextPing(using: database)
     }
 
     // MARK: - Scheduling

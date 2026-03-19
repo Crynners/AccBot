@@ -14,6 +14,16 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
+    func application(
+        _ application: UIApplication,
+        handleEventsForBackgroundURLSession identifier: String,
+        completionHandler: @escaping () -> Void
+    ) {
+        if identifier == BackgroundSessionService.sessionIdentifier {
+            BackgroundSessionService.shared.setCompletionHandler(completionHandler)
+        }
+    }
+
     private func registerBackgroundTasks() {
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.bgRefreshIdentifier,
