@@ -123,6 +123,19 @@ final class DcaExecutionEngine {
         let isSandbox = userPreferences.isSandboxMode()
         guard let credentials = credentialsStore.get(for: plan.exchange, isSandbox: isSandbox) else {
             logger.error("No credentials for \(plan.exchange.displayName) (sandbox=\(isSandbox))")
+            let failedTx = Transaction(
+                planId: plan.id,
+                exchange: plan.exchange,
+                crypto: plan.crypto,
+                fiat: plan.fiat,
+                fiatAmount: plan.amount,
+                cryptoAmount: 0,
+                price: 0,
+                fee: 0,
+                status: .failed,
+                errorMessage: "No API credentials configured (sandbox=\(isSandbox))"
+            )
+            saveTransactionAndAdvance(failedTx, plan: plan, now: now)
             return
         }
 
