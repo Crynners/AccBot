@@ -66,13 +66,25 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
         return frequency.displayName
     }
 
-    /// Calculate the next execution date from a reference time.
+    /// Calculate the next execution date.
+    /// For non-cron plans, advances from the original `nextExecutionAt`
+    /// (not from `now`) to prevent schedule drift when execution is late.
     func calculateNextExecution(from now: Date = Date()) -> Date {
         if let cron = cronExpression {
             return CronUtils.getNextExecution(cron: cron, from: now)
                 ?? now.addingTimeInterval(TimeInterval(frequency.intervalMinutes * 60))
         }
-        let interval = frequency.intervalMinutes > 0 ? frequency.intervalMinutes : 1440
-        return now.addingTimeInterval(TimeInterval(interval * 60))
+        let intervalSeconds = TimeInterval((frequency.intervalMinutes > 0 ? frequency.intervalMinutes : 1440) * 60)
+
+        // Anchor to the original scheduled time to prevent drift
+        if let scheduled = nextExecutionAt {
+            var next = scheduled.addingTimeInterval(intervalSeconds)
+            // If we're very late (missed multiple intervals), skip ahead
+            while next <= now {
+                next = next.addingTimeInterval(intervalSeconds)
+            }
+            return next
+        }
+        return now.addingTimeInterval(intervalSeconds)
     }
 }

@@ -78,7 +78,11 @@ struct PlanDetailsView: View {
             viewModel.loadData()
         }
         .onAppear {
-            viewModel.setup(dependencies)
+            if viewModel.dependencies == nil {
+                viewModel.setup(dependencies)
+            } else {
+                viewModel.loadData()
+            }
         }
         .sheet(isPresented: $showDeleteConfirmation) {
             DestructiveConfirmSheet(

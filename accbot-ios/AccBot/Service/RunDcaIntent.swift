@@ -12,6 +12,10 @@ struct RunDcaIntent: AppIntent {
     )
     static var openAppWhenRun: Bool = false
 
+    /// Shortcuts automations may fire slightly before the exact scheduled time.
+    /// A 2-minute tolerance ensures plans due within this window are included.
+    private static let toleranceSeconds: TimeInterval = 120
+
     private static let logger = Logger(subsystem: "com.accbot.dca", category: "RunDcaIntent")
 
     @MainActor
@@ -23,7 +27,11 @@ struct RunDcaIntent: AppIntent {
             AppDependencies.shared = deps
         }
 
-        await deps.dcaExecutionEngine.executeDuePlans()
+        // Use a tolerance window so plans scheduled at the same time as
+        // the Shortcuts automation are picked up even if Shortcuts fires
+        // a few seconds early.
+        let cutoff = Date().addingTimeInterval(Self.toleranceSeconds)
+        await deps.dcaExecutionEngine.executeDuePlans(before: cutoff)
 
         // Update last background run timestamp
         deps.userPreferences.lastBackgroundRun = Date()

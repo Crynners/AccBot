@@ -8,7 +8,7 @@ import Foundation
 enum NotificationTemplateArgs: Codable, Equatable {
     case purchase(cryptoAmount: String, crypto: String, fiatAmount: String, fiat: String)
     case error(crypto: String, errorMessage: String)
-    case lowBalance(exchangeName: String, fiat: String, remainingDays: Int)
+    case lowBalance(exchangeName: String, fiat: String, balance: String, remainingDays: Int)
     case withdrawalThreshold(amount: String, crypto: String, exchangeName: String)
     case belowMinimum(crypto: String)
 
@@ -27,11 +27,11 @@ enum NotificationTemplateArgs: Codable, Equatable {
                 String(localized: "DCA Failed"),
                 "\(crypto): \(errorMessage)"
             )
-        case .lowBalance(let exchangeName, let fiat, let remainingDays):
+        case .lowBalance(let exchangeName, let fiat, let balance, let remainingDays):
             let days = max(1, remainingDays)
             return (
                 String(localized: "Low Balance"),
-                String(localized: "\(exchangeName): ~\(days) days of \(fiat) remaining")
+                String(localized: "\(exchangeName): \(balance) \(fiat) remaining (~\(days) days)")
             )
         case .withdrawalThreshold(let amount, let crypto, let exchangeName):
             return (
@@ -52,7 +52,7 @@ enum NotificationTemplateArgs: Codable, Equatable {
         case type
         case cryptoAmount, crypto, fiatAmount, fiat
         case errorMessage
-        case exchangeName, remainingDays
+        case exchangeName, remainingDays, balance
         case amount
     }
 
@@ -69,10 +69,11 @@ enum NotificationTemplateArgs: Codable, Equatable {
             try container.encode("error", forKey: .type)
             try container.encode(crypto, forKey: .crypto)
             try container.encode(errorMessage, forKey: .errorMessage)
-        case .lowBalance(let exchangeName, let fiat, let remainingDays):
+        case .lowBalance(let exchangeName, let fiat, let balance, let remainingDays):
             try container.encode("lowBalance", forKey: .type)
             try container.encode(exchangeName, forKey: .exchangeName)
             try container.encode(fiat, forKey: .fiat)
+            try container.encode(balance, forKey: .balance)
             try container.encode(remainingDays, forKey: .remainingDays)
         case .withdrawalThreshold(let amount, let crypto, let exchangeName):
             try container.encode("withdrawalThreshold", forKey: .type)
@@ -105,6 +106,7 @@ enum NotificationTemplateArgs: Codable, Equatable {
             self = .lowBalance(
                 exchangeName: try container.decode(String.self, forKey: .exchangeName),
                 fiat: try container.decode(String.self, forKey: .fiat),
+                balance: try container.decodeIfPresent(String.self, forKey: .balance) ?? "",
                 remainingDays: try container.decode(Int.self, forKey: .remainingDays)
             )
         case "withdrawalThreshold":

@@ -43,14 +43,18 @@ final class DcaExecutionEngine {
     // MARK: - Execute Due Plans
 
     /// Execute all enabled plans that are due. Called from BGTask, foreground catch-up, etc.
-    func executeDuePlans() async {
+    /// - Parameter before: cutoff date for due plans (default: now).
+    ///   Pass a future date to include plans due within a tolerance window
+    ///   (used by Shortcuts automations that may fire slightly early).
+    func executeDuePlans(before: Date? = nil) async {
         logger.info("DCA execution started")
 
         // Resolve PENDING transactions from previous runs
         await resolvePendingTransactions()
 
         do {
-            let duePlans = try activeDb.planDao.getDuePlans()
+            let cutoff = before ?? Date()
+            let duePlans = try activeDb.planDao.getDuePlans(before: cutoff)
             if duePlans.isEmpty {
                 logger.info("No due DCA plans")
                 return
@@ -348,12 +352,13 @@ final class DcaExecutionEngine {
                     )
                 }
                 let lbArgs = NotificationTemplateArgs.lowBalance(
-                    exchangeName: plan.exchange.displayName, fiat: plan.fiat, remainingDays: displayDays
+                    exchangeName: plan.exchange.displayName, fiat: plan.fiat,
+                    balance: "\(balance as NSDecimalNumber)", remainingDays: displayDays
                 )
                 saveInAppNotification(
                     type: .lowBalance,
                     title: String(localized: "Low Balance"),
-                    message: String(localized: "\(plan.exchange.displayName): ~\(displayDays) days of \(plan.fiat) remaining"),
+                    message: String(localized: "\(plan.exchange.displayName): \(balance as NSDecimalNumber) \(plan.fiat) remaining (~\(displayDays) days)"),
                     plan: plan,
                     templateArgs: lbArgs
                 )
