@@ -3,12 +3,19 @@ import Security
 
 /// iOS Keychain wrapper for storing exchange API credentials.
 /// Maps from Android's EncryptedSharedPreferences (AES-256-GCM via Android Keystore).
-/// Uses kSecAttrAccessibleWhenUnlockedThisDeviceOnly - never backed up, never migrated.
+/// Uses kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly so background tasks
+/// (BGTask, Shortcuts automations) can read credentials while the device is locked.
+/// Items are never backed up or migrated to another device.
 final class CredentialsStore {
 
     private let service = "com.accbot.dca.credentials"
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private static let migrationKey = "credentials_migrated_afterFirstUnlock"
+
+    init() {
+        migrateAccessibilityIfNeeded()
+    }
 
     // MARK: - Public API
 
@@ -24,7 +31,7 @@ final class CredentialsStore {
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
 
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -83,6 +90,22 @@ final class CredentialsStore {
     private func storageKey(for exchange: Exchange, isSandbox: Bool) -> String {
         let env = isSandbox ? "sandbox" : "prod"
         return "credentials_\(env)_\(exchange.rawValue)"
+    }
+
+    /// Re-save existing credentials with AfterFirstUnlock accessibility.
+    /// Runs once — old items used WhenUnlocked which blocks background access.
+    private func migrateAccessibilityIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: Self.migrationKey) else { return }
+        defaults.set(true, forKey: Self.migrationKey)
+
+        for exchange in Exchange.allCases {
+            for isSandbox in [false, true] {
+                if let creds = get(for: exchange, isSandbox: isSandbox) {
+                    try? save(creds, isSandbox: isSandbox)
+                }
+            }
+        }
     }
 
     private func deleteItem(key: String) {
