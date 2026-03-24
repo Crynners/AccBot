@@ -168,14 +168,22 @@ final class DashboardViewModel: ObservableObject {
                 }
             }
 
-            // Build holdings from summaries + cached prices
+            // Don't let a cancelled task overwrite valid holdings with nil prices
+            guard !Task.isCancelled else { return }
+
+            // Build holdings from summaries + cached prices.
+            // Fall back to existing price when API returned nil (timeout/rate-limit)
+            // so KPI cards don't flash blank on transient network failures.
+            let existingPrices = Dictionary(uniqueKeysWithValues: holdings.compactMap { h in
+                h.currentPrice.map { (h.id, $0) }
+            })
             var holdingsResult: [HoldingInfo] = []
             for summary in summaries {
                 let key = "\(summary.crypto)/\(summary.fiat)"
                 let avgPrice = summary.totalCrypto > 0
                     ? summary.totalInvested / summary.totalCrypto
                     : Decimal.zero
-                let currentPrice = priceCache[key] ?? nil
+                let currentPrice = priceCache[key] ?? existingPrices[key]
                 let currentValue = currentPrice.map { summary.totalCrypto * $0 }
                 let roi: Decimal? = if let cv = currentValue, summary.totalInvested > 0 {
                     ((cv - summary.totalInvested) / summary.totalInvested) * 100
