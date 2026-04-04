@@ -6,6 +6,7 @@ enum NotificationType: String, Codable {
     case error = "ERROR"
     case lowBalance = "LOW_BALANCE"
     case withdrawalThreshold = "WITHDRAWAL_THRESHOLD"
+    case networkRetry = "NETWORK_RETRY"
 }
 
 /// In-app notification for display in the Notifications tab

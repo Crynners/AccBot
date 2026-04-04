@@ -14,6 +14,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var isRefreshingPrices = false
     @Published var errorMessage: String?
     @Published var runResultMessage: String?
+    @Published var pendingRetryNotifications: [AppNotification] = []
 
     // Market Pulse
     @Published var fearGreedValue: Int?
@@ -116,7 +117,8 @@ final class DashboardViewModel: ObservableObject {
     func loadDataAsync() async {
         async let plansResult: () = loadPlans()
         async let holdingsResult: () = loadHoldings()
-        _ = await (plansResult, holdingsResult)
+        async let retryResult: () = checkPendingRetries()
+        _ = await (plansResult, holdingsResult, retryResult)
         announceForVoiceOver(String(localized: "Dashboard loaded"))
         // Balances and market data can also run in parallel
         let shouldFetchMarket = showMarketPulse
@@ -424,6 +426,32 @@ final class DashboardViewModel: ObservableObject {
             isRunning = false
             showRunNowSheet = false
             selectedPlanIds.removeAll()
+            loadData()
+        }
+    }
+
+    func checkPendingRetries() async {
+        do {
+            pendingRetryNotifications = try deps.activeDatabase.notificationDao.getRecentNetworkRetries()
+        } catch {
+            pendingRetryNotifications = []
+        }
+    }
+
+    func dismissRetryBanner() {
+        try? deps.activeDatabase.notificationDao.markNetworkRetriesAsRead()
+        pendingRetryNotifications = []
+    }
+
+    func runRetryPlans() {
+        let planIds = Array(Set(pendingRetryNotifications.compactMap(\.planId)))
+        guard !planIds.isEmpty else { return }
+        isRunning = true
+        Task {
+            await deps.dcaExecutionEngine.executePlans(planIds)
+            try? deps.activeDatabase.notificationDao.markNetworkRetriesAsRead()
+            pendingRetryNotifications = []
+            isRunning = false
             loadData()
         }
     }

@@ -18,9 +18,6 @@ struct NotificationsView: View {
                 List {
                     ForEach(viewModel.notifications) { notification in
                         notificationRow(notification)
-                            .onTapGesture {
-                                viewModel.markAsRead(notification)
-                            }
                             .simultaneousGesture(
                                 DragGesture(minimumDistance: 5)
                                     .onChanged { _ in router.isNotificationSwipeActive = true }
@@ -57,11 +54,7 @@ struct NotificationsView: View {
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                if viewModel.unreadCount > 0 {
-                    Button(String(localized: "Mark All Read")) {
-                        viewModel.markAllAsRead()
-                    }
-                } else if !viewModel.notifications.isEmpty {
+                if !viewModel.notifications.isEmpty {
                     Button(String(localized: "Delete All")) {
                         viewModel.showDeleteAllConfirmation = true
                     }
@@ -72,7 +65,7 @@ struct NotificationsView: View {
             Button(String(localized: "Cancel"), role: .cancel) {}
             Button(String(localized: "Delete All"), role: .destructive) { viewModel.deleteAll() }
         } message: {
-            Text(String(localized: "This will permanently delete all read notifications."))
+            Text(String(localized: "This will permanently delete all notifications."))
         }
         .alert(String(localized: "Error"), isPresented: Binding(
             get: { viewModel.errorMessage != nil },
@@ -89,6 +82,10 @@ struct NotificationsView: View {
         }
         .onAppear {
             viewModel.setup(dependencies)
+            viewModel.scheduleAutoMarkAsRead()
+        }
+        .onDisappear {
+            viewModel.cancelAutoMark()
         }
     }
 
@@ -141,6 +138,7 @@ struct NotificationsView: View {
         case .error: ("exclamationmark.circle.fill", colors.error)
         case .lowBalance: ("exclamationmark.triangle.fill", colors.warning)
         case .withdrawalThreshold: ("arrow.up.forward.circle.fill", colors.warning)
+        case .networkRetry: ("wifi.slash", colors.error)
         }
 
         return ZStack {

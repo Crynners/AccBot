@@ -83,6 +83,10 @@ struct DashboardView: View {
                 SandboxBanner()
             }
 
+            if !viewModel.pendingRetryNotifications.isEmpty {
+                networkRetryBanner
+            }
+
             if viewModel.holdings.isEmpty {
                 holdingsEmptyState
             } else {
@@ -106,6 +110,11 @@ struct DashboardView: View {
         VStack(spacing: Spacing.sm) {
             if colors.isSandbox {
                 SandboxBanner()
+                    .padding(.horizontal, Spacing.lg)
+            }
+
+            if !viewModel.pendingRetryNotifications.isEmpty {
+                networkRetryBanner
                     .padding(.horizontal, Spacing.lg)
             }
 
@@ -671,6 +680,62 @@ struct DashboardView: View {
             viewModel.selectedPlanIds.subtract(enabledIds)
         } else {
             viewModel.selectedPlanIds.formUnion(enabledIds)
+        }
+    }
+
+    // MARK: - Network Retry Banner
+
+    private var networkRetryBanner: some View {
+        let retryCount = viewModel.pendingRetryNotifications.count
+        let cryptos = Array(Set(viewModel.pendingRetryNotifications.compactMap(\.crypto)))
+        let label = cryptos.isEmpty
+            ? String(localized: "DCA purchase failed — no internet connection.")
+            : String(localized: "\(cryptos.joined(separator: ", ")) — purchase failed, no internet.")
+
+        return HStack(spacing: Spacing.sm) {
+            Image(systemName: "wifi.slash")
+                .foregroundStyle(colors.error)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(label)
+                    .font(AccBotFonts.bodySmall)
+                    .foregroundStyle(colors.error)
+                Text(String(localized: "\(retryCount) failed attempts"))
+                    .font(AccBotFonts.caption)
+                    .foregroundStyle(colors.onSurfaceVariant)
+            }
+
+            Spacer()
+
+            Button(String(localized: "Run Now")) {
+                viewModel.runRetryPlans()
+            }
+            .font(AccBotFonts.label)
+            .foregroundStyle(colors.onPrimary)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.sm)
+            .background(colors.primary)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .padding(Spacing.md)
+        .background(colors.error.opacity(0.15))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+        .accessibilityElement(children: .combine)
+        .overlay(alignment: .topTrailing) {
+            Button {
+                viewModel.dismissRetryBanner()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(AccBotFonts.caption)
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .frame(minWidth: 30, minHeight: 30)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "Dismiss"))
         }
     }
 

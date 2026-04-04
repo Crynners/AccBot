@@ -69,7 +69,7 @@ final class DcaBackgroundService {
     func rescheduleAllLayers(using database: DcaDatabase, notificationService: NotificationService) {
         scheduleAppRefresh(using: database)
         scheduleProcessingTask()
-        notificationService.scheduleAllDcaReminders(using: database)
+        notificationService.cancelAllDcaReminders() // Clean up legacy reminders
         BackgroundSessionService.shared.scheduleNextPing(using: database)
     }
 

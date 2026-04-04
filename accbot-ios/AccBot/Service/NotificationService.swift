@@ -9,7 +9,7 @@ final class NotificationService {
     static let errorCategory = "accbot_error"
     static let lowBalanceCategory = "accbot_low_balance"
     static let withdrawalThresholdCategory = "accbot_withdrawal_threshold"
-    static let dcaReminderCategory = "accbot_dca_reminder"
+    static let networkRetryCategory = "accbot_network_retry"
 
     init() {
         registerCategories()
@@ -33,10 +33,18 @@ final class NotificationService {
 
     // MARK: - Post Notifications
 
-    func postPurchaseNotification(crypto: String, fiat: String, amount: Decimal, exchange: Exchange) {
+    func postPurchaseNotification(crypto: String, fiat: String, amount: Decimal, exchange: Exchange, scheduledAt: Date?, executedAt: Date) {
         let content = UNMutableNotificationContent()
         content.title = String(localized: "DCA Purchase Completed")
-        content.body = String(localized: "Bought \(crypto) for \(amount as NSDecimalNumber) \(fiat) on \(exchange.displayName)")
+
+        let base = String(localized: "Bought \(crypto) for \(amount as NSDecimalNumber) \(fiat) on \(exchange.displayName)")
+        if let scheduled = scheduledAt, executedAt.timeIntervalSince(scheduled) > 300 {
+            let fmt = Self.timeFormatter
+            content.body = String(localized: "\(base) · \(fmt.string(from: scheduled)) → \(fmt.string(from: executedAt))")
+        } else {
+            content.body = base
+        }
+
         content.sound = .default
         content.categoryIdentifier = Self.purchaseCategory
 
@@ -47,6 +55,13 @@ final class NotificationService {
         )
         UNUserNotificationCenter.current().add(request)
     }
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        return f
+    }()
 
     func postErrorNotification(exchange: Exchange, message: String) {
         let content = UNMutableNotificationContent()
@@ -93,69 +108,32 @@ final class NotificationService {
         UNUserNotificationCenter.current().add(request)
     }
 
-    // MARK: - DCA Reminder (Layer 3)
-
-    func scheduleDcaReminder(at date: Date, planDescription: String) {
+    func postNetworkRetryNotification(crypto: String, exchange: Exchange, retryAt: Date) {
         let content = UNMutableNotificationContent()
-        content.title = String(localized: "DCA Plan Due")
-        content.body = String(localized: "Tap to execute: \(planDescription)")
+        content.title = String(localized: "Network Error")
+        let timeStr = Self.timeFormatter.string(from: retryAt)
+        content.body = String(localized: "\(crypto) purchase on \(exchange.displayName) failed — no internet. Retry at \(timeStr).")
         content.sound = .default
-        content.categoryIdentifier = Self.dcaReminderCategory
-
-        let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: max(1, date.timeIntervalSinceNow),
-            repeats: false
-        )
+        content.categoryIdentifier = Self.networkRetryCategory
 
         let request = UNNotificationRequest(
-            identifier: "dca_reminder_\(planDescription)",
+            identifier: UUID().uuidString,
             content: content,
-            trigger: trigger
+            trigger: nil
         )
         UNUserNotificationCenter.current().add(request)
     }
 
-    /// Schedule reminder notifications for all enabled plans at their next execution times.
-    /// Called by rescheduleAllLayers() after each DCA execution.
-    func scheduleAllDcaReminders(using database: DcaDatabase) {
-        cancelAllDcaReminders()
-
-        guard let plans = try? database.planDao.getEnabledPlans() else { return }
-
-        for plan in plans {
-            guard let nextExec = plan.nextExecutionAt, nextExec > Date() else { continue }
-
-            let content = UNMutableNotificationContent()
-            content.title = String(localized: "DCA Plan Due")
-            content.body = String(localized: "Tap to execute: \(plan.crypto)/\(plan.fiat) on \(plan.exchange.displayName)")
-            content.sound = .default
-            content.categoryIdentifier = Self.dcaReminderCategory
-
-            let components = Calendar.current.dateComponents(
-                [.year, .month, .day, .hour, .minute, .second],
-                from: nextExec
-            )
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: components,
-                repeats: false
-            )
-
-            let request = UNNotificationRequest(
-                identifier: "dca_reminder_\(plan.id)",
-                content: content,
-                trigger: trigger
-            )
-            UNUserNotificationCenter.current().add(request)
-        }
-    }
-
+    /// Cancel any legacy DCA reminder notifications from previous versions.
     func cancelAllDcaReminders() {
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { requests in
             let reminderIds = requests
                 .filter { $0.identifier.hasPrefix("dca_reminder_") }
                 .map { $0.identifier }
-            center.removePendingNotificationRequests(withIdentifiers: reminderIds)
+            if !reminderIds.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: reminderIds)
+            }
         }
     }
 
@@ -173,7 +151,7 @@ final class NotificationService {
             UNNotificationCategory(identifier: Self.errorCategory, actions: [], intentIdentifiers: []),
             UNNotificationCategory(identifier: Self.lowBalanceCategory, actions: [], intentIdentifiers: []),
             UNNotificationCategory(identifier: Self.withdrawalThresholdCategory, actions: [], intentIdentifiers: []),
-            UNNotificationCategory(identifier: Self.dcaReminderCategory, actions: [], intentIdentifiers: []),
+            UNNotificationCategory(identifier: Self.networkRetryCategory, actions: [], intentIdentifiers: []),
         ]
         UNUserNotificationCenter.current().setNotificationCategories(categories)
     }

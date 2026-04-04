@@ -220,8 +220,7 @@
 "DCA alerts and updates will appear here" = "Oznámení o nákupech, chybách a upozorněních se zobrazí zde";
 "Delete All" = "Smazat vše";
 "Delete All?" = "Smazat vše?";
-"Mark All Read" = "Označit vše jako přečtené";
-"This will permanently delete all read notifications." = "Trvale se smažou všechna přečtená oznámení.";
+"This will permanently delete all notifications." = "Trvale se smažou všechna oznámení.";
 "Archive is empty" = "Archiv je prázdný";
 "Dismissed notifications will appear here" = "Zamítnutá oznámení se zobrazí zde";
 
@@ -431,17 +430,27 @@
 "DCA Error" = "DCA chyba";
 /* Note: "Low Balance Warning" already defined in Settings section */
 "Withdrawal Threshold Reached" = "Doporučen výběr";
-"DCA Plan Due" = "DCA plán k provedení";
+/* "DCA Plan Due" removed — reminders replaced by purchase/error notifications */
 /* Format strings for push notifications */
 "Bought %@ for %@ %@ on %@" = "Nakoupeno %1$@ za %2$@ %3$@ na %4$@";
 "%@: %@ %@ remaining (~%lld days)" = "%1$@: %2$@ %3$@ zbývá (~%4$lld dní)";
 "%@ %@ on %@ ready for withdrawal" = "%1$@ %2$@ na %3$@ připraveno k výběru";
-"Tap to execute: %@" = "Klepněte pro provedení: %@";
+/* "Tap to execute" removed — reminders replaced by purchase/error notifications */
+/* Push notification with scheduled/executed time */
+"%@ · %@ → %@" = "%1$@ · %2$@ → %3$@";
 /* In-app notification titles (DcaExecutionEngine) */
 "DCA Purchase" = "DCA nákup";
 "DCA Failed" = "DCA selhalo";
 "Withdrawal Threshold" = "Doporučen výběr";
 "Low Balance" = "Nízký zůstatek";
+/* Network retry notifications */
+"Network Error" = "Chyba sítě";
+"%@ purchase on %@ failed — no internet. Retry at %@." = "Nákup %1$@ na %2$@ selhal — bez internetu. Další pokus v %3$@.";
+/* Dashboard retry banner */
+"DCA purchase failed — no internet connection." = "DCA nákup selhal — bez připojení k internetu.";
+"%@ — purchase failed, no internet." = "%@ — nákup selhal, bez internetu.";
+"%lld failed attempts" = "%lld neúspěšných pokusů";
+"Dismiss" = "Zavřít";
 /* In-app notification messages */
 "Bought %@ %@ for %@ %@" = "Nakoupeno %1$@ %2$@ za %3$@ %4$@";
 "Amount below minimum for %@" = "Částka pod minimem pro %@";

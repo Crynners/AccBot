@@ -6,21 +6,29 @@ import Foundation
 ///
 /// Numbers are stored as raw strings (Decimal description) and formatted at render time.
 enum NotificationTemplateArgs: Codable, Equatable {
-    case purchase(cryptoAmount: String, crypto: String, fiatAmount: String, fiat: String)
+    case purchase(cryptoAmount: String, crypto: String, fiatAmount: String, fiat: String, scheduledAt: String? = nil, executedAt: String? = nil)
     case error(crypto: String, errorMessage: String)
     case lowBalance(exchangeName: String, fiat: String, balance: String, remainingDays: Int)
     case withdrawalThreshold(amount: String, crypto: String, exchangeName: String)
     case belowMinimum(crypto: String)
+    case networkRetry(crypto: String, exchangeName: String, retryAt: String)
 
     // MARK: - Render
 
     /// Render localized title + message for display using the current locale.
     func render() -> (title: String, message: String) {
         switch self {
-        case .purchase(let cryptoAmount, let crypto, let fiatAmount, let fiat):
+        case .purchase(let cryptoAmount, let crypto, let fiatAmount, let fiat, let scheduledAt, let executedAt):
+            let base = String(localized: "Bought \(cryptoAmount) \(crypto) for \(fiatAmount) \(fiat)")
+            if let scheduled = scheduledAt, let executed = executedAt {
+                return (
+                    String(localized: "DCA Purchase"),
+                    String(localized: "\(base) · \(scheduled) → \(executed)")
+                )
+            }
             return (
                 String(localized: "DCA Purchase"),
-                String(localized: "Bought \(cryptoAmount) \(crypto) for \(fiatAmount) \(fiat)")
+                base
             )
         case .error(let crypto, let errorMessage):
             return (
@@ -43,6 +51,11 @@ enum NotificationTemplateArgs: Codable, Equatable {
                 String(localized: "DCA Failed"),
                 String(localized: "Amount below minimum for \(crypto)")
             )
+        case .networkRetry(let crypto, let exchangeName, let retryAt):
+            return (
+                String(localized: "Network Error"),
+                String(localized: "\(crypto) purchase on \(exchangeName) failed — no internet. Retry at \(retryAt).")
+            )
         }
     }
 
@@ -54,17 +67,21 @@ enum NotificationTemplateArgs: Codable, Equatable {
         case errorMessage
         case exchangeName, remainingDays, balance
         case amount
+        case scheduledAt, executedAt
+        case retryAt
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
-        case .purchase(let cryptoAmount, let crypto, let fiatAmount, let fiat):
+        case .purchase(let cryptoAmount, let crypto, let fiatAmount, let fiat, let scheduledAt, let executedAt):
             try container.encode("purchase", forKey: .type)
             try container.encode(cryptoAmount, forKey: .cryptoAmount)
             try container.encode(crypto, forKey: .crypto)
             try container.encode(fiatAmount, forKey: .fiatAmount)
             try container.encode(fiat, forKey: .fiat)
+            try container.encodeIfPresent(scheduledAt, forKey: .scheduledAt)
+            try container.encodeIfPresent(executedAt, forKey: .executedAt)
         case .error(let crypto, let errorMessage):
             try container.encode("error", forKey: .type)
             try container.encode(crypto, forKey: .crypto)
@@ -83,6 +100,11 @@ enum NotificationTemplateArgs: Codable, Equatable {
         case .belowMinimum(let crypto):
             try container.encode("belowMinimum", forKey: .type)
             try container.encode(crypto, forKey: .crypto)
+        case .networkRetry(let crypto, let exchangeName, let retryAt):
+            try container.encode("networkRetry", forKey: .type)
+            try container.encode(crypto, forKey: .crypto)
+            try container.encode(exchangeName, forKey: .exchangeName)
+            try container.encode(retryAt, forKey: .retryAt)
         }
     }
 
@@ -95,7 +117,9 @@ enum NotificationTemplateArgs: Codable, Equatable {
                 cryptoAmount: try container.decode(String.self, forKey: .cryptoAmount),
                 crypto: try container.decode(String.self, forKey: .crypto),
                 fiatAmount: try container.decode(String.self, forKey: .fiatAmount),
-                fiat: try container.decode(String.self, forKey: .fiat)
+                fiat: try container.decode(String.self, forKey: .fiat),
+                scheduledAt: try container.decodeIfPresent(String.self, forKey: .scheduledAt),
+                executedAt: try container.decodeIfPresent(String.self, forKey: .executedAt)
             )
         case "error":
             self = .error(
@@ -118,6 +142,12 @@ enum NotificationTemplateArgs: Codable, Equatable {
         case "belowMinimum":
             self = .belowMinimum(
                 crypto: try container.decode(String.self, forKey: .crypto)
+            )
+        case "networkRetry":
+            self = .networkRetry(
+                crypto: try container.decode(String.self, forKey: .crypto),
+                exchangeName: try container.decode(String.self, forKey: .exchangeName),
+                retryAt: try container.decode(String.self, forKey: .retryAt)
             )
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown type: \(type)")

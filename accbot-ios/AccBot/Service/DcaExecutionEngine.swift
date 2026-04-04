@@ -17,6 +17,13 @@ final class DcaExecutionEngine {
     private let maxAttempts = 3
     private let retryDelayNs: UInt64 = 2_000_000_000 // 2s
 
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        return f
+    }()
+
     init(
         database: DcaDatabase,
         sandboxDatabase: DcaDatabase,
@@ -229,17 +236,24 @@ final class DcaExecutionEngine {
             saveTransactionAndAdvance(savedTx, plan: plan, now: now)
 
             // Post notification
+            let scheduledAt = plan.nextExecutionAt
             if userPreferences.notificationsEnabled && userPreferences.purchaseNotifications {
                 notificationService.postPurchaseNotification(
                     crypto: plan.crypto,
                     fiat: plan.fiat,
                     amount: tx.fiatAmount,
-                    exchange: plan.exchange
+                    exchange: plan.exchange,
+                    scheduledAt: scheduledAt,
+                    executedAt: now
                 )
             }
+            let showTimes = scheduledAt.map { now.timeIntervalSince($0) > 300 } ?? false
+            let timeFmt = Self.timeFormatter
             let purchaseArgs = NotificationTemplateArgs.purchase(
                 cryptoAmount: "\(tx.cryptoAmount)", crypto: plan.crypto,
-                fiatAmount: "\(tx.fiatAmount)", fiat: plan.fiat
+                fiatAmount: "\(tx.fiatAmount)", fiat: plan.fiat,
+                scheduledAt: showTimes ? scheduledAt.map { timeFmt.string(from: $0) } : nil,
+                executedAt: showTimes ? timeFmt.string(from: now) : nil
             )
             saveInAppNotification(
                 type: .purchase,
@@ -263,6 +277,27 @@ final class DcaExecutionEngine {
                 let retryTime = now.addingTimeInterval(300)
                 try? activeDb.planDao.updateExecution(id: plan.id, lastExecutedAt: now, nextExecutionAt: retryTime)
                 logger.warning("Network error for plan \(plan.id), retry at \(retryTime): \(msg)")
+
+                // Notify user about the network failure and upcoming retry
+                if userPreferences.notificationsEnabled && userPreferences.errorNotifications {
+                    notificationService.postNetworkRetryNotification(
+                        crypto: plan.crypto,
+                        exchange: plan.exchange,
+                        retryAt: retryTime
+                    )
+                }
+                let retryArgs = NotificationTemplateArgs.networkRetry(
+                    crypto: plan.crypto,
+                    exchangeName: plan.exchange.displayName,
+                    retryAt: Self.timeFormatter.string(from: retryTime)
+                )
+                saveInAppNotification(
+                    type: .networkRetry,
+                    title: String(localized: "Network Error"),
+                    message: String(localized: "\(plan.crypto) purchase on \(plan.exchange.displayName) failed — no internet. Retry at \(Self.timeFormatter.string(from: retryTime))."),
+                    plan: plan,
+                    templateArgs: retryArgs
+                )
             } else {
                 let failedTx = Transaction(
                     planId: plan.id,

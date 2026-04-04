@@ -9,6 +9,7 @@ final class NotificationsViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private var cancellables = Set<AnyCancellable>()
+    private var autoMarkTask: Task<Void, Never>?
     private(set) var dependencies: AppDependencies?
     private var isSetUp = false
 
@@ -62,6 +63,22 @@ final class NotificationsViewModel: ObservableObject {
         loadData()
     }
 
+    /// Start a 2-second timer to auto-mark all as read. Cancel via `cancelAutoMark()`.
+    func scheduleAutoMarkAsRead() {
+        autoMarkTask?.cancel()
+        guard unreadCount > 0 else { return }
+        autoMarkTask = Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            markAllAsRead()
+        }
+    }
+
+    func cancelAutoMark() {
+        autoMarkTask?.cancel()
+        autoMarkTask = nil
+    }
+
     func markAsRead(_ notification: AppNotification) {
         do {
             try deps.activeDatabase.notificationDao.markAsRead(id: notification.id)
@@ -88,7 +105,7 @@ final class NotificationsViewModel: ObservableObject {
 
     func deleteAll() {
         do {
-            try deps.activeDatabase.notificationDao.deleteAllRead()
+            try deps.activeDatabase.notificationDao.deleteAll()
         } catch {
             errorMessage = error.localizedDescription
         }
