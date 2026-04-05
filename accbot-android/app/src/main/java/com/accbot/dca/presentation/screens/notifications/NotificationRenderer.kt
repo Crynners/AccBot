@@ -6,6 +6,9 @@ import com.accbot.dca.data.local.NotificationEntity
 import com.accbot.dca.data.local.NotificationTemplateArgs
 import com.accbot.dca.presentation.utils.NumberFormatters
 import java.math.BigDecimal
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * Renders notification title/message from structured [NotificationTemplateArgs]
@@ -23,11 +26,13 @@ object NotificationRenderer {
         return render(context, args)
     }
 
+    private val timeFormatter = DateTimeFormatter.ofPattern("H:mm")
+
     fun render(context: Context, args: NotificationTemplateArgs): Pair<String, String> {
         return when (args) {
             is NotificationTemplateArgs.Purchase -> {
                 val title = context.getString(R.string.notification_purchase_title)
-                val message = context.getString(
+                var message = context.getString(
                     R.string.notification_purchase_text,
                     NumberFormatters.crypto(BigDecimal(args.cryptoAmount)),
                     args.crypto,
@@ -35,18 +40,20 @@ object NotificationRenderer {
                     args.fiat,
                     NumberFormatters.fiat(BigDecimal(args.price))
                 )
+                message += formatDelaySuffix(context, args.scheduledAtEpochMs, args.executedAtEpochMs)
                 title to message
             }
 
             is NotificationTemplateArgs.PurchasePending -> {
                 val title = context.getString(R.string.notification_purchase_title)
-                val message = context.getString(
+                var message = context.getString(
                     R.string.notification_purchase_pending_text,
                     NumberFormatters.fiat(BigDecimal(args.fiatAmount)),
                     args.fiat,
                     args.crypto,
                     NumberFormatters.fiat(BigDecimal(args.price))
                 )
+                message += formatDelaySuffix(context, args.scheduledAtEpochMs, args.executedAtEpochMs)
                 title to message
             }
 
@@ -106,6 +113,30 @@ object NotificationRenderer {
                 )
                 title to message
             }
+
+            is NotificationTemplateArgs.NetworkRetry -> {
+                val title = context.getString(R.string.notification_network_retry_title)
+                val retryTime = Instant.ofEpochMilli(args.nextRetryAtEpochMs)
+                    .atZone(ZoneId.systemDefault())
+                    .format(timeFormatter)
+                val message = context.getString(
+                    R.string.notification_network_retry_text,
+                    args.crypto,
+                    args.exchangeName,
+                    retryTime
+                )
+                title to message
+            }
         }
+    }
+
+    private fun formatDelaySuffix(context: Context, scheduledAtEpochMs: Long?, executedAtEpochMs: Long?): String {
+        if (scheduledAtEpochMs == null || executedAtEpochMs == null) return ""
+        val delayMinutes = (executedAtEpochMs - scheduledAtEpochMs) / 60_000
+        if (delayMinutes < 5) return ""
+        val zone = ZoneId.systemDefault()
+        val scheduledTime = Instant.ofEpochMilli(scheduledAtEpochMs).atZone(zone).format(timeFormatter)
+        val executedTime = Instant.ofEpochMilli(executedAtEpochMs).atZone(zone).format(timeFormatter)
+        return "\n" + context.getString(R.string.notification_purchase_delayed, scheduledTime, executedTime, delayMinutes)
     }
 }

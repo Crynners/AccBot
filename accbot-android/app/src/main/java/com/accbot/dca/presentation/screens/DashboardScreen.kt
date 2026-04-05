@@ -166,6 +166,14 @@ fun DashboardScreen(
                         SandboxBanner()
                     }
 
+                    if (uiState.networkRetryInfo.plans.isNotEmpty() && !uiState.networkRetryInfo.dismissed) {
+                        NetworkRetryBanner(
+                            retryPlans = uiState.networkRetryInfo.plans,
+                            onRunNow = { viewModel.runRetryPlans() },
+                            onDismiss = { viewModel.dismissRetryBanner() }
+                        )
+                    }
+
                     if (uiState.holdings.size >= 2) {
                         PortfolioSummaryCard(holdings = uiState.holdings)
                     }
@@ -255,6 +263,17 @@ fun DashboardScreen(
                 if (uiState.isSandboxMode) {
                     item {
                         SandboxBanner()
+                    }
+                }
+
+                // Network Retry Banner
+                if (uiState.networkRetryInfo.plans.isNotEmpty() && !uiState.networkRetryInfo.dismissed) {
+                    item {
+                        NetworkRetryBanner(
+                            retryPlans = uiState.networkRetryInfo.plans,
+                            onRunNow = { viewModel.runRetryPlans() },
+                            onDismiss = { viewModel.dismissRetryBanner() }
+                        )
                     }
                 }
 
@@ -438,6 +457,98 @@ internal fun SandboxBanner() {
                 color = Warning,
                 style = MaterialTheme.typography.bodyMedium
             )
+        }
+    }
+}
+
+@Composable
+internal fun NetworkRetryBanner(
+    retryPlans: List<NetworkRetryPlan>,
+    onRunNow: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    if (retryPlans.isEmpty()) return
+    val context = LocalContext.current
+    val bannerText = retryPlans.joinToString("\n") { plan ->
+        context.getString(R.string.notification_network_retry_banner, plan.crypto, plan.exchangeName)
+    }
+    val attemptCount = retryPlans.sumOf { it.retryCount }
+    val earliestRetry = retryPlans.mapNotNull { it.nextRetryAt }.minOrNull()
+    val nextRetryText = earliestRetry?.let {
+        val time = it.atZone(java.time.ZoneId.systemDefault())
+            .format(java.time.format.DateTimeFormatter.ofPattern("H:mm"))
+        context.getString(R.string.notification_network_retry_banner_next, time)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Error.copy(alpha = 0.15f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.WifiOff,
+                    contentDescription = null,
+                    tint = Error,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = bannerText,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Dismiss",
+                        tint = Error,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+            ) {
+                Column {
+                    Text(
+                        text = context.getString(R.string.notification_network_retry_banner_attempts, attemptCount),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (nextRetryText != null) {
+                        Text(
+                            text = nextRetryText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                FilledTonalButton(
+                    onClick = onRunNow,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = Error.copy(alpha = 0.2f),
+                        contentColor = Error
+                    )
+                ) {
+                    Text(stringResource(R.string.dashboard_run_now))
+                }
+            }
         }
     }
 }

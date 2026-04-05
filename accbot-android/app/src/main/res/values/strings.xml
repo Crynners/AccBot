@@ -748,6 +748,12 @@
     <string name="notification_withdrawal_threshold_text">You have accumulated %1$s %2$s on %3$s — consider withdrawing to cold wallet</string>
     <string name="notification_target_reached">Target reached: %1$s %2$s — plan auto-disabled</string>
     <string name="notification_below_minimum">Amount %1$s %2$s below exchange minimum %3$s %2$s</string>
+    <string name="notification_purchase_delayed">Scheduled %1$s → executed %2$s (delay %3$d min)</string>
+    <string name="notification_network_retry_title">Network Error</string>
+    <string name="notification_network_retry_text">%1$s purchase on %2$s failed — no internet. Next retry at %3$s.</string>
+    <string name="notification_network_retry_banner">%1$s purchase on %2$s failed due to no internet.</string>
+    <string name="notification_network_retry_banner_attempts">%1$d attempt(s)</string>
+    <string name="notification_network_retry_banner_next">Next retry at %1$s</string>
     <string name="dashboard_withdrawal_ready">%1$s %2$s on exchange — consider withdrawal</string>
 
     <!-- DCA Alerts section -->

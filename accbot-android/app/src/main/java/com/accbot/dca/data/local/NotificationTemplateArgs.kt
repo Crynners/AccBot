@@ -20,7 +20,9 @@ sealed class NotificationTemplateArgs {
         val crypto: String,
         val fiatAmount: String,
         val fiat: String,
-        val price: String
+        val price: String,
+        val scheduledAtEpochMs: Long? = null,
+        val executedAtEpochMs: Long? = null
     ) : NotificationTemplateArgs() {
         override fun toJson(): String = JSONObject().apply {
             put(KEY_TYPE, TYPE_PURCHASE)
@@ -29,6 +31,8 @@ sealed class NotificationTemplateArgs {
             put("fiatAmount", fiatAmount)
             put("fiat", fiat)
             put("price", price)
+            if (scheduledAtEpochMs != null) put("scheduledAtEpochMs", scheduledAtEpochMs)
+            if (executedAtEpochMs != null) put("executedAtEpochMs", executedAtEpochMs)
         }.toString()
     }
 
@@ -37,7 +41,9 @@ sealed class NotificationTemplateArgs {
         val fiatAmount: String,
         val fiat: String,
         val crypto: String,
-        val price: String
+        val price: String,
+        val scheduledAtEpochMs: Long? = null,
+        val executedAtEpochMs: Long? = null
     ) : NotificationTemplateArgs() {
         override fun toJson(): String = JSONObject().apply {
             put(KEY_TYPE, TYPE_PURCHASE_PENDING)
@@ -45,6 +51,8 @@ sealed class NotificationTemplateArgs {
             put("fiat", fiat)
             put("crypto", crypto)
             put("price", price)
+            if (scheduledAtEpochMs != null) put("scheduledAtEpochMs", scheduledAtEpochMs)
+            if (executedAtEpochMs != null) put("executedAtEpochMs", executedAtEpochMs)
         }.toString()
     }
 
@@ -116,6 +124,26 @@ sealed class NotificationTemplateArgs {
         }.toString()
     }
 
+    /** Network error — purchase will be retried. */
+    data class NetworkRetry(
+        val crypto: String,
+        val exchangeName: String,
+        val errorMessage: String,
+        val nextRetryAtEpochMs: Long,
+        val attemptCount: Int,
+        val planId: Long
+    ) : NotificationTemplateArgs() {
+        override fun toJson(): String = JSONObject().apply {
+            put(KEY_TYPE, TYPE_NETWORK_RETRY)
+            put("crypto", crypto)
+            put("exchangeName", exchangeName)
+            put("errorMessage", errorMessage)
+            put("nextRetryAtEpochMs", nextRetryAtEpochMs)
+            put("attemptCount", attemptCount)
+            put("planId", planId)
+        }.toString()
+    }
+
     companion object {
         private const val KEY_TYPE = "type"
         private const val TYPE_PURCHASE = "purchase"
@@ -125,6 +153,7 @@ sealed class NotificationTemplateArgs {
         private const val TYPE_WITHDRAWAL_THRESHOLD = "withdrawal_threshold"
         private const val TYPE_TARGET_REACHED = "target_reached"
         private const val TYPE_BELOW_MINIMUM = "below_minimum"
+        private const val TYPE_NETWORK_RETRY = "network_retry"
 
         fun fromJson(json: String): NotificationTemplateArgs? = try {
             val obj = JSONObject(json)
@@ -134,13 +163,17 @@ sealed class NotificationTemplateArgs {
                     crypto = obj.getString("crypto"),
                     fiatAmount = obj.getString("fiatAmount"),
                     fiat = obj.getString("fiat"),
-                    price = obj.getString("price")
+                    price = obj.getString("price"),
+                    scheduledAtEpochMs = obj.optLong("scheduledAtEpochMs", 0L).takeIf { it > 0 },
+                    executedAtEpochMs = obj.optLong("executedAtEpochMs", 0L).takeIf { it > 0 }
                 )
                 TYPE_PURCHASE_PENDING -> PurchasePending(
                     fiatAmount = obj.getString("fiatAmount"),
                     fiat = obj.getString("fiat"),
                     crypto = obj.getString("crypto"),
-                    price = obj.getString("price")
+                    price = obj.getString("price"),
+                    scheduledAtEpochMs = obj.optLong("scheduledAtEpochMs", 0L).takeIf { it > 0 },
+                    executedAtEpochMs = obj.optLong("executedAtEpochMs", 0L).takeIf { it > 0 }
                 )
                 TYPE_ERROR -> Error(
                     crypto = obj.getString("crypto"),
@@ -165,6 +198,14 @@ sealed class NotificationTemplateArgs {
                     purchaseAmount = obj.getString("purchaseAmount"),
                     fiat = obj.getString("fiat"),
                     minOrderSize = obj.getString("minOrderSize")
+                )
+                TYPE_NETWORK_RETRY -> NetworkRetry(
+                    crypto = obj.getString("crypto"),
+                    exchangeName = obj.getString("exchangeName"),
+                    errorMessage = obj.getString("errorMessage"),
+                    nextRetryAtEpochMs = obj.getLong("nextRetryAtEpochMs"),
+                    attemptCount = obj.optInt("attemptCount", 1),
+                    planId = obj.optLong("planId", 0)
                 )
                 else -> null
             }

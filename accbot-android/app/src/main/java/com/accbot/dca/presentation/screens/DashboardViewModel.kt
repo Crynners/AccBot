@@ -66,6 +66,21 @@ data class DcaPlanWithBalance(
 )
 
 @Immutable
+data class NetworkRetryPlan(
+    val planId: Long,
+    val crypto: String,
+    val exchangeName: String,
+    val retryCount: Int,
+    val nextRetryAt: Instant?
+)
+
+@Immutable
+data class NetworkRetryInfo(
+    val plans: List<NetworkRetryPlan> = emptyList(),
+    val dismissed: Boolean = false
+)
+
+@Immutable
 data class DashboardUiState(
     val holdings: List<CryptoHoldingWithPrice> = emptyList(),
     val activePlans: List<DcaPlanWithBalance> = emptyList(),
@@ -79,7 +94,8 @@ data class DashboardUiState(
     val athDataByCrypto: Map<String, CryptoData> = emptyMap(),
     val isMarketDataLoading: Boolean = false,
     val showMarketPulse: Boolean = true,
-    val isMarketPulseExpanded: Boolean = true
+    val isMarketPulseExpanded: Boolean = true,
+    val networkRetryInfo: NetworkRetryInfo = NetworkRetryInfo()
 )
 
 @HiltViewModel
@@ -170,11 +186,29 @@ class DashboardViewModel @Inject constructor(
                     } else h
                 }
 
+                // Check network retry state from plans
+                val retryPlans = planEntities
+                    .filter { it.networkRetryCount > 0 }
+                    .map {
+                        NetworkRetryPlan(
+                            planId = it.id,
+                            crypto = it.crypto,
+                            exchangeName = it.exchange.displayName,
+                            retryCount = it.networkRetryCount,
+                            nextRetryAt = it.nextNetworkRetryAt
+                        )
+                    }
+
                 _uiState.update { state ->
                     state.copy(
                         activePlans = plansWithBalance,
                         holdings = mergedHoldings,
-                        isLoading = false
+                        isLoading = false,
+                        networkRetryInfo = if (retryPlans.isNotEmpty()) {
+                            NetworkRetryInfo(plans = retryPlans, dismissed = false)
+                        } else {
+                            NetworkRetryInfo()
+                        }
                     )
                 }
 
@@ -526,5 +560,28 @@ class DashboardViewModel @Inject constructor(
 
     fun clearRunNowTriggered() {
         _uiState.update { it.copy(runNowTriggered = false) }
+    }
+
+    fun runRetryPlans() {
+        val plans = _uiState.value.networkRetryInfo.plans
+        if (plans.isEmpty()) return
+        _uiState.update {
+            it.copy(
+                networkRetryInfo = NetworkRetryInfo(dismissed = true),
+                runNowTriggered = true
+            )
+        }
+        viewModelScope.launch {
+            plans.forEach { dcaPlanDao.resetNetworkRetry(it.planId) }
+            plans.forEach { DcaWorker.runPlan(application, it.planId) }
+        }
+    }
+
+    fun dismissRetryBanner() {
+        val plans = _uiState.value.networkRetryInfo.plans
+        _uiState.update { it.copy(networkRetryInfo = NetworkRetryInfo(dismissed = true)) }
+        viewModelScope.launch {
+            plans.forEach { dcaPlanDao.resetNetworkRetry(it.planId) }
+        }
     }
 }

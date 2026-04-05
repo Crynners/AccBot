@@ -208,6 +208,11 @@ class DcaWorker @AssistedInject constructor(
 
                 when (finalResult) {
                     is DcaResult.Success -> {
+                        // Reset network retry state on success
+                        try {
+                            database.dcaPlanDao().resetNetworkRetry(plan.id)
+                        } catch (_: Exception) {}
+
                         // Save transaction atomically with plan update
                         try {
                             val transaction = TransactionEntity(
@@ -237,8 +242,11 @@ class DcaWorker @AssistedInject constructor(
                             Log.e(TAG, "Failed to save transaction for plan ${plan.id}", e)
                         }
 
-                        // Show notification (pending-aware)
+                        // Show notification (pending-aware, with delay info)
+                        // Use originalScheduledAt if plan went through retries, otherwise nextExecution
                         val isPending = finalResult.transaction.status == TransactionStatus.PENDING
+                        val executedNow = Instant.now()
+                        val scheduledTime = if (!forceRun) (plan.originalScheduledAt ?: nextExecution) else null
                         notificationService.showPurchaseNotification(
                             plan.crypto,
                             finalResult.transaction.cryptoAmount,
@@ -247,7 +255,9 @@ class DcaWorker @AssistedInject constructor(
                             finalResult.transaction.price,
                             plan.id,
                             pending = isPending,
-                            exchange = plan.exchange
+                            exchange = plan.exchange,
+                            scheduledAt = scheduledTime,
+                            executedAt = if (scheduledTime != null) executedNow else null
                         )
 
                         // Check withdrawal threshold
@@ -268,12 +278,25 @@ class DcaWorker @AssistedInject constructor(
 
                     is DcaResult.Error -> {
                         if (finalResult.retryable) {
-                            // Network error — silent retry in 5 min, no transaction saved.
+                            // Network error — retry in 5 min and notify user.
                             // Override the claimed nextExecutionAt with an earlier retry time.
                             try {
                                 val retryTime = now.plus(Duration.ofMinutes(5))
-                                database.dcaPlanDao().updateExecutionTime(plan.id, now, retryTime)
+                                database.runInTransaction {
+                                    database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, retryTime)
+                                    database.dcaPlanDao().incrementNetworkRetrySync(plan.id, retryTime, nextExecution ?: now)
+                                }
                                 Log.w(TAG, "Network error for plan ${plan.id}, will retry at $retryTime: ${finalResult.message}")
+
+                                notificationService.showNetworkRetryNotification(
+                                    crypto = plan.crypto,
+                                    exchangeName = plan.exchange.displayName,
+                                    errorMessage = finalResult.message,
+                                    nextRetryAt = retryTime,
+                                    attemptCount = plan.networkRetryCount + 1,
+                                    planId = plan.id,
+                                    exchange = plan.exchange
+                                )
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to update retry time for plan ${plan.id}", e)
                             }
@@ -481,12 +504,9 @@ class DcaWorker @AssistedInject constructor(
         private const val ALARM_WORK_NAME = "dca_alarm_execution"
 
         fun runFromAlarm(context: Context) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
+            // No network constraint — worker must run even when offline so it can
+            // show a network-retry notification instead of silently waiting.
             val oneTimeWorkRequest = OneTimeWorkRequestBuilder<DcaWorker>()
-                .setConstraints(constraints)
                 .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
                 .build()

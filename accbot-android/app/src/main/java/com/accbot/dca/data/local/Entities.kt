@@ -17,7 +17,7 @@ import java.time.Instant
 /**
  * Notification type for in-app notification history
  */
-enum class NotificationType { PURCHASE, ERROR, LOW_BALANCE, WITHDRAWAL_THRESHOLD }
+enum class NotificationType { PURCHASE, ERROR, LOW_BALANCE, WITHDRAWAL_THRESHOLD, NETWORK_RETRY }
 
 /**
  * Room type converters
@@ -130,7 +130,10 @@ data class DcaPlanEntity(
     val createdAt: Instant = Instant.now(),
     val lastExecutedAt: Instant? = null,
     val nextExecutionAt: Instant? = null,
-    val targetAmount: BigDecimal? = null
+    val targetAmount: BigDecimal? = null,
+    val networkRetryCount: Int = 0,
+    val nextNetworkRetryAt: Instant? = null,
+    val originalScheduledAt: Instant? = null
 )
 
 /**

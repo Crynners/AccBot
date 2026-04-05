@@ -45,6 +45,14 @@ fun NotificationsScreen(
 
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val unreadCount by viewModel.unreadCount.collectAsStateWithLifecycle()
+
+    // Auto-mark all as read after 2s on this screen
+    LaunchedEffect(unreadCount) {
+        if (unreadCount > 0) {
+            kotlinx.coroutines.delay(2_000L)
+            viewModel.markAllAsRead()
+        }
+    }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
 
     if (showDeleteAllDialog) {
@@ -271,6 +279,7 @@ private fun NotificationTypeIcon(type: NotificationType) {
         NotificationType.ERROR -> Icons.Default.Error to Error
         NotificationType.LOW_BALANCE -> Icons.Default.Warning to Warning
         NotificationType.WITHDRAWAL_THRESHOLD -> Icons.AutoMirrored.Filled.CallMade to Warning
+        NotificationType.NETWORK_RETRY -> Icons.Default.WifiOff to Error
     }
 
     Box(

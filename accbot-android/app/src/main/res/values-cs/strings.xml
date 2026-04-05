@@ -751,6 +751,12 @@
     <string name="notification_withdrawal_threshold_text">Nakumulovali jste %1$s %2$s na %3$s — zvažte výběr do cold wallet</string>
     <string name="notification_target_reached">Cíl dosažen: %1$s %2$s — plán automaticky deaktivován</string>
     <string name="notification_below_minimum">Částka %1$s %2$s pod minimem burzy %3$s %2$s</string>
+    <string name="notification_purchase_delayed">Plán %1$s → provedeno %2$s (zpoždění %3$d min)</string>
+    <string name="notification_network_retry_title">Chyba sítě</string>
+    <string name="notification_network_retry_text">Nákup %1$s na %2$s selhal — bez internetu. Další pokus v %3$s.</string>
+    <string name="notification_network_retry_banner">Nákup %1$s na %2$s selhal kvůli nedostupnému internetu.</string>
+    <string name="notification_network_retry_banner_attempts">Pokusů: %1$d</string>
+    <string name="notification_network_retry_banner_next">Další pokus v %1$s</string>
     <string name="dashboard_withdrawal_ready">%1$s %2$s na burze — zvažte výběr</string>
 
     <!-- DCA Alerts section -->
