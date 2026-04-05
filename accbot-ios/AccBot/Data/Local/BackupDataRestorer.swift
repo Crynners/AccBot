@@ -187,7 +187,11 @@ final class BackupDataRestorer {
             targetAmount: plan.targetAmount,
             createdAt: Double(plan.createdAt) / 1000.0,
             lastExecutedAt: plan.lastExecutedAt.map { Double($0) / 1000.0 },
-            nextExecutionAt: plan.nextExecutionAt.map { Double($0) / 1000.0 }
+            nextExecutionAt: plan.nextExecutionAt.map { Double($0) / 1000.0 },
+            networkRetryCount: 0,
+            nextNetworkRetryAt: nil,
+            originalScheduledAt: nil,
+            missedPurchaseCount: 0
         )
     }
 
