@@ -12,6 +12,7 @@ enum NotificationTemplateArgs: Codable, Equatable {
     case withdrawalThreshold(amount: String, crypto: String, exchangeName: String)
     case belowMinimum(crypto: String)
     case networkRetry(crypto: String, exchangeName: String, retryAt: String)
+    case missedPurchases(count: Int, crypto: String, exchangeName: String)
 
     // MARK: - Render
 
@@ -23,7 +24,8 @@ enum NotificationTemplateArgs: Codable, Equatable {
             if let scheduled = scheduledAt, let executed = executedAt {
                 return (
                     String(localized: "DCA Purchase"),
-                    String(localized: "\(base) · \(scheduled) → \(executed)")
+                    String(localized: "Plan \(scheduled) → executed \(executed)")
+                    + " · " + base
                 )
             }
             return (
@@ -56,6 +58,11 @@ enum NotificationTemplateArgs: Codable, Equatable {
                 String(localized: "Network Error"),
                 String(localized: "\(crypto) purchase on \(exchangeName) failed — no internet. Retry at \(retryAt).")
             )
+        case .missedPurchases(let count, let crypto, let exchangeName):
+            return (
+                String(localized: "Missed Purchases"),
+                String(localized: "\(count) missed \(crypto) purchases on \(exchangeName) while offline.")
+            )
         }
     }
 
@@ -69,6 +76,7 @@ enum NotificationTemplateArgs: Codable, Equatable {
         case amount
         case scheduledAt, executedAt
         case retryAt
+        case count
     }
 
     func encode(to encoder: Encoder) throws {
@@ -105,6 +113,11 @@ enum NotificationTemplateArgs: Codable, Equatable {
             try container.encode(crypto, forKey: .crypto)
             try container.encode(exchangeName, forKey: .exchangeName)
             try container.encode(retryAt, forKey: .retryAt)
+        case .missedPurchases(let count, let crypto, let exchangeName):
+            try container.encode("missedPurchases", forKey: .type)
+            try container.encode(count, forKey: .count)
+            try container.encode(crypto, forKey: .crypto)
+            try container.encode(exchangeName, forKey: .exchangeName)
         }
     }
 
@@ -148,6 +161,12 @@ enum NotificationTemplateArgs: Codable, Equatable {
                 crypto: try container.decode(String.self, forKey: .crypto),
                 exchangeName: try container.decode(String.self, forKey: .exchangeName),
                 retryAt: try container.decode(String.self, forKey: .retryAt)
+            )
+        case "missedPurchases":
+            self = .missedPurchases(
+                count: try container.decode(Int.self, forKey: .count),
+                crypto: try container.decode(String.self, forKey: .crypto),
+                exchangeName: try container.decode(String.self, forKey: .exchangeName)
             )
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown type: \(type)")

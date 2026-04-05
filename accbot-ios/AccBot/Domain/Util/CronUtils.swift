@@ -76,6 +76,17 @@ enum CronUtils {
         return nil
     }
 
+    /// Count how many cron executions fall between two dates (exclusive of `from`).
+    static func countExecutions(cron: String, from: Date, to: Date) -> Int {
+        var count = 0
+        var cursor = from
+        while let next = getNextExecution(cron: cron, from: cursor), next <= to {
+            count += 1
+            cursor = next
+        }
+        return count
+    }
+
     /// Estimate the average interval in minutes for a CRON expression
     static func getIntervalMinutesEstimate(cron: String) -> Int? {
         let from = Date()

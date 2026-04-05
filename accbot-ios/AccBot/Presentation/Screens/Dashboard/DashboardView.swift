@@ -83,8 +83,11 @@ struct DashboardView: View {
                 SandboxBanner()
             }
 
-            if !viewModel.pendingRetryNotifications.isEmpty {
-                networkRetryBanner
+            ForEach(viewModel.plansInRetry) { plan in
+                networkRetryBanner(plan: plan)
+            }
+            ForEach(viewModel.plansWithMissed) { plan in
+                missedPurchasesBanner(plan: plan)
             }
 
             if viewModel.holdings.isEmpty {
@@ -113,8 +116,12 @@ struct DashboardView: View {
                     .padding(.horizontal, Spacing.lg)
             }
 
-            if !viewModel.pendingRetryNotifications.isEmpty {
-                networkRetryBanner
+            ForEach(viewModel.plansInRetry) { plan in
+                networkRetryBanner(plan: plan)
+                    .padding(.horizontal, Spacing.lg)
+            }
+            ForEach(viewModel.plansWithMissed) { plan in
+                missedPurchasesBanner(plan: plan)
                     .padding(.horizontal, Spacing.lg)
             }
 
@@ -685,12 +692,10 @@ struct DashboardView: View {
 
     // MARK: - Network Retry Banner
 
-    private var networkRetryBanner: some View {
-        let retryCount = viewModel.pendingRetryNotifications.count
-        let cryptos = Array(Set(viewModel.pendingRetryNotifications.compactMap(\.crypto)))
-        let label = cryptos.isEmpty
-            ? String(localized: "DCA purchase failed — no internet connection.")
-            : String(localized: "\(cryptos.joined(separator: ", ")) — purchase failed, no internet.")
+    private func networkRetryBanner(plan: DcaPlan) -> some View {
+        let nextRetryText = plan.nextNetworkRetryAt.map {
+            String(localized: "Next retry at \(AccBotFormatters.timeOnly($0))")
+        } ?? ""
 
         return HStack(spacing: Spacing.sm) {
             Image(systemName: "wifi.slash")
@@ -698,10 +703,10 @@ struct DashboardView: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text(label)
+                Text(String(localized: "\(plan.crypto) — purchase failed, no internet."))
                     .font(AccBotFonts.bodySmall)
                     .foregroundStyle(colors.error)
-                Text(String(localized: "\(retryCount) failed attempts"))
+                Text("\(plan.exchange.displayName) · \(String(localized: "\(plan.networkRetryCount) retry attempts")) · \(nextRetryText)")
                     .font(AccBotFonts.caption)
                     .foregroundStyle(colors.onSurfaceVariant)
             }
@@ -709,7 +714,7 @@ struct DashboardView: View {
             Spacer()
 
             Button(String(localized: "Run Now")) {
-                viewModel.runRetryPlans()
+                viewModel.runRetryPlan(plan.id)
             }
             .font(AccBotFonts.label)
             .foregroundStyle(colors.onPrimary)
@@ -726,7 +731,7 @@ struct DashboardView: View {
         .accessibilityElement(children: .combine)
         .overlay(alignment: .topTrailing) {
             Button {
-                viewModel.dismissRetryBanner()
+                viewModel.dismissRetryBanner(planId: plan.id)
             } label: {
                 Image(systemName: "xmark")
                     .font(AccBotFonts.caption)
@@ -737,6 +742,51 @@ struct DashboardView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(String(localized: "Dismiss"))
         }
+    }
+
+    // MARK: - Missed Purchases Banner
+
+    private func missedPurchasesBanner(plan: DcaPlan) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .foregroundStyle(colors.warning)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(String(localized: "\(plan.missedPurchaseCount) missed \(plan.crypto) purchases on \(plan.exchange.displayName) while offline."))
+                    .font(AccBotFonts.bodySmall)
+                    .foregroundStyle(colors.warning)
+            }
+
+            Spacer()
+
+            VStack(spacing: Spacing.xs) {
+                Button(String(localized: "Buy Now")) {
+                    viewModel.buyMissedPurchases(planId: plan.id, count: plan.missedPurchaseCount)
+                }
+                .font(AccBotFonts.label)
+                .foregroundStyle(colors.onPrimary)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+                .background(colors.primary)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+                .disabled(viewModel.isBuyingMissed)
+
+                Button(String(localized: "Skip")) {
+                    viewModel.dismissMissedBanner(planId: plan.id)
+                }
+                .font(AccBotFonts.caption)
+                .foregroundStyle(colors.onSurfaceVariant)
+                .frame(minWidth: 44, minHeight: 30)
+                .contentShape(Rectangle())
+            }
+        }
+        .padding(Spacing.md)
+        .background(colors.warning.opacity(0.15))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Formatting

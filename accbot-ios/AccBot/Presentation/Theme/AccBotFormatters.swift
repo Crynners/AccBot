@@ -162,6 +162,17 @@ enum AccBotFormatters {
         relative.localizedString(for: date, relativeTo: Date())
     }
 
+    static func timeOnly(_ date: Date) -> String {
+        timeOnlyFormatter.string(from: date)
+    }
+
+    private static let timeOnlyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        return f
+    }()
+
     static func monthNameFromComponents(month: Int, year: Int = Calendar.current.component(.year, from: Date())) -> String {
         var comps = DateComponents()
         comps.month = month

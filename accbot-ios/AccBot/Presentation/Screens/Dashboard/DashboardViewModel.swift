@@ -14,7 +14,9 @@ final class DashboardViewModel: ObservableObject {
     @Published var isRefreshingPrices = false
     @Published var errorMessage: String?
     @Published var runResultMessage: String?
-    @Published var pendingRetryNotifications: [AppNotification] = []
+    @Published var plansInRetry: [DcaPlan] = []
+    @Published var plansWithMissed: [DcaPlan] = []
+    @Published var isBuyingMissed = false
 
     // Market Pulse
     @Published var fearGreedValue: Int?
@@ -117,8 +119,8 @@ final class DashboardViewModel: ObservableObject {
     func loadDataAsync() async {
         async let plansResult: () = loadPlans()
         async let holdingsResult: () = loadHoldings()
-        async let retryResult: () = checkPendingRetries()
-        _ = await (plansResult, holdingsResult, retryResult)
+        _ = await (plansResult, holdingsResult)
+        loadRetryAndMissedState()
         announceForVoiceOver(String(localized: "Dashboard loaded"))
         // Balances and market data can also run in parallel
         let shouldFetchMarket = showMarketPulse
@@ -234,6 +236,9 @@ final class DashboardViewModel: ObservableObject {
                 receiveValue: { [weak self] plans in
                     self?.plans = plans
                     self?.plansWithBalance = plans.map { PlanWithBalance(plan: $0) }
+                    // Reactively update retry/missed banners from plan fields
+                    self?.plansInRetry = plans.filter { $0.networkRetryCount > 0 }
+                    self?.plansWithMissed = plans.filter { $0.missedPurchaseCount > 0 }
                     // Filter ATH data to only include cryptos from current plans
                     let activeCryptos = Set(plans.map(\.crypto))
                     self?.athData.removeAll { !activeCryptos.contains($0.crypto) }
@@ -430,28 +435,50 @@ final class DashboardViewModel: ObservableObject {
         }
     }
 
-    func checkPendingRetries() async {
-        do {
-            pendingRetryNotifications = try deps.activeDatabase.notificationDao.getRecentNetworkRetries()
-        } catch {
-            pendingRetryNotifications = []
+    func loadRetryAndMissedState() {
+        plansInRetry = (try? deps.activeDatabase.planDao.getPlansInRetry()) ?? []
+        plansWithMissed = (try? deps.activeDatabase.planDao.getPlansWithMissedPurchases()) ?? []
+    }
+
+    func dismissRetryBanner(planId: Int64) {
+        // Optimistic UI: hide immediately
+        plansInRetry.removeAll { $0.id == planId }
+        Task {
+            try? deps.activeDatabase.planDao.clearNetworkRetry(id: planId)
         }
     }
 
-    func dismissRetryBanner() {
-        try? deps.activeDatabase.notificationDao.markNetworkRetriesAsRead()
-        pendingRetryNotifications = []
-    }
-
-    func runRetryPlans() {
-        let planIds = Array(Set(pendingRetryNotifications.compactMap(\.planId)))
-        guard !planIds.isEmpty else { return }
+    func runRetryPlan(_ planId: Int64) {
+        // Optimistic UI: hide immediately
+        plansInRetry.removeAll { $0.id == planId }
         isRunning = true
         Task {
-            await deps.dcaExecutionEngine.executePlans(planIds)
-            try? deps.activeDatabase.notificationDao.markNetworkRetriesAsRead()
-            pendingRetryNotifications = []
+            try? deps.activeDatabase.planDao.clearNetworkRetry(id: planId)
+            await deps.dcaExecutionEngine.executePlan(planId)
             isRunning = false
+            loadData()
+        }
+    }
+
+    func dismissMissedBanner(planId: Int64) {
+        plansWithMissed.removeAll { $0.id == planId }
+        Task {
+            try? deps.activeDatabase.planDao.setMissedPurchaseCount(id: planId, count: 0)
+        }
+    }
+
+    func buyMissedPurchases(planId: Int64, count: Int) {
+        plansWithMissed.removeAll { $0.id == planId }
+        isBuyingMissed = true
+        Task {
+            try? deps.activeDatabase.planDao.setMissedPurchaseCount(id: planId, count: 0)
+            for i in 1...count {
+                await deps.dcaExecutionEngine.executePlan(planId)
+                if i < count {
+                    try? await Task.sleep(nanoseconds: 3_000_000_000) // 3s pause
+                }
+            }
+            isBuyingMissed = false
             loadData()
         }
     }

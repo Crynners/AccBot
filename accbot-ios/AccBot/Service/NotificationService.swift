@@ -124,6 +124,21 @@ final class NotificationService {
         UNUserNotificationCenter.current().add(request)
     }
 
+    func postMissedPurchasesNotification(crypto: String, exchange: Exchange, count: Int) {
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "AccBot: Missed Purchases")
+        content.body = String(localized: "\(count) missed \(crypto) purchases on \(exchange.displayName) while offline")
+        content.sound = .default
+        content.categoryIdentifier = Self.errorCategory
+
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
     /// Cancel any legacy DCA reminder notifications from previous versions.
     func cancelAllDcaReminders() {
         let center = UNUserNotificationCenter.current()

@@ -82,10 +82,10 @@ struct NotificationsView: View {
         }
         .onAppear {
             viewModel.setup(dependencies)
-            viewModel.scheduleAutoMarkAsRead()
+            viewModel.onTabVisible()
         }
         .onDisappear {
-            viewModel.cancelAutoMark()
+            viewModel.onTabHidden()
         }
     }
 
@@ -139,6 +139,7 @@ struct NotificationsView: View {
         case .lowBalance: ("exclamationmark.triangle.fill", colors.warning)
         case .withdrawalThreshold: ("arrow.up.forward.circle.fill", colors.warning)
         case .networkRetry: ("wifi.slash", colors.error)
+        case .missedPurchases: ("clock.badge.exclamationmark", colors.warning)
         }
 
         return ZStack {

@@ -68,6 +68,8 @@ final class DcaExecutionEngine {
             }
 
             for plan in duePlans {
+                // Scenario B: detect missed purchases from phone being off
+                detectMissedFromBoot(plan: plan, now: cutoff)
                 await executePlan(plan, forceRun: false)
             }
         } catch {
@@ -235,20 +237,21 @@ final class DcaExecutionEngine {
             )
             saveTransactionAndAdvance(savedTx, plan: plan, now: now)
 
-            // Post notification
-            let scheduledAt = plan.nextExecutionAt
+            // Delay info: use originalScheduledAt (retry series) or plan.nextExecutionAt
+            let scheduledAt = forceRun ? nil : (plan.originalScheduledAt ?? plan.nextExecutionAt)
+            let showTimes = !forceRun && (scheduledAt.map { now.timeIntervalSince($0) > 300 } ?? false)
+            let timeFmt = Self.timeFormatter
+
             if userPreferences.notificationsEnabled && userPreferences.purchaseNotifications {
                 notificationService.postPurchaseNotification(
                     crypto: plan.crypto,
                     fiat: plan.fiat,
                     amount: tx.fiatAmount,
                     exchange: plan.exchange,
-                    scheduledAt: scheduledAt,
+                    scheduledAt: showTimes ? scheduledAt : nil,
                     executedAt: now
                 )
             }
-            let showTimes = scheduledAt.map { now.timeIntervalSince($0) > 300 } ?? false
-            let timeFmt = Self.timeFormatter
             let purchaseArgs = NotificationTemplateArgs.purchase(
                 cryptoAmount: "\(tx.cryptoAmount)", crypto: plan.crypto,
                 fiatAmount: "\(tx.fiatAmount)", fiat: plan.fiat,
@@ -263,6 +266,20 @@ final class DcaExecutionEngine {
                 templateArgs: purchaseArgs
             )
 
+            // Detect missed purchases after a retry series
+            if !forceRun, let originalScheduled = plan.originalScheduledAt {
+                let missed = calculateMissedPurchases(plan: plan, from: originalScheduled, to: now)
+                if missed > 0 {
+                    try? activeDb.planDao.setMissedPurchaseCount(id: plan.id, count: missed)
+                    notifyMissedPurchases(plan: plan, count: missed)
+                }
+            }
+
+            // Clear retry state
+            if plan.networkRetryCount > 0 {
+                try? activeDb.planDao.clearNetworkRetry(id: plan.id)
+            }
+
             // Check withdrawal threshold
             await checkWithdrawalThreshold(plan: plan, api: api)
 
@@ -273,31 +290,42 @@ final class DcaExecutionEngine {
 
         case .error(let msg, let retryable):
             if retryable {
-                // Network error - retry in 5 min
+                // Network error — retry in 5 min
                 let retryTime = now.addingTimeInterval(300)
-                try? activeDb.planDao.updateExecution(id: plan.id, lastExecutedAt: now, nextExecutionAt: retryTime)
-                logger.warning("Network error for plan \(plan.id), retry at \(retryTime): \(msg)")
+                let newRetryCount = plan.networkRetryCount + 1
+                let isFirstFailure = plan.networkRetryCount == 0
 
-                // Notify user about the network failure and upcoming retry
-                if userPreferences.notificationsEnabled && userPreferences.errorNotifications {
-                    notificationService.postNetworkRetryNotification(
+                // Save retry state on plan (originalScheduledAt set only on first failure)
+                try? activeDb.planDao.setNetworkRetry(
+                    id: plan.id,
+                    count: newRetryCount,
+                    nextRetryAt: retryTime,
+                    originalScheduledAt: plan.nextExecutionAt
+                )
+                logger.warning("Network error for plan \(plan.id) (retry #\(newRetryCount)), next at \(retryTime): \(msg)")
+
+                // Push + in-app notification only on FIRST failure
+                if isFirstFailure {
+                    if userPreferences.notificationsEnabled && userPreferences.errorNotifications {
+                        notificationService.postNetworkRetryNotification(
+                            crypto: plan.crypto,
+                            exchange: plan.exchange,
+                            retryAt: retryTime
+                        )
+                    }
+                    let retryArgs = NotificationTemplateArgs.networkRetry(
                         crypto: plan.crypto,
-                        exchange: plan.exchange,
-                        retryAt: retryTime
+                        exchangeName: plan.exchange.displayName,
+                        retryAt: Self.timeFormatter.string(from: retryTime)
+                    )
+                    saveInAppNotification(
+                        type: .networkRetry,
+                        title: String(localized: "Network Error"),
+                        message: String(localized: "\(plan.crypto) purchase on \(plan.exchange.displayName) failed — no internet. Retry at \(Self.timeFormatter.string(from: retryTime))."),
+                        plan: plan,
+                        templateArgs: retryArgs
                     )
                 }
-                let retryArgs = NotificationTemplateArgs.networkRetry(
-                    crypto: plan.crypto,
-                    exchangeName: plan.exchange.displayName,
-                    retryAt: Self.timeFormatter.string(from: retryTime)
-                )
-                saveInAppNotification(
-                    type: .networkRetry,
-                    title: String(localized: "Network Error"),
-                    message: String(localized: "\(plan.crypto) purchase on \(plan.exchange.displayName) failed — no internet. Retry at \(Self.timeFormatter.string(from: retryTime))."),
-                    plan: plan,
-                    templateArgs: retryArgs
-                )
             } else {
                 let failedTx = Transaction(
                     planId: plan.id,
@@ -315,6 +343,11 @@ final class DcaExecutionEngine {
                         : nil
                 )
                 saveTransactionAndAdvance(failedTx, plan: plan, now: now)
+
+                // Clear any retry state on non-retryable failure
+                if plan.networkRetryCount > 0 {
+                    try? activeDb.planDao.clearNetworkRetry(id: plan.id)
+                }
 
                 if userPreferences.notificationsEnabled && userPreferences.errorNotifications {
                     notificationService.postErrorNotification(exchange: plan.exchange, message: msg)
@@ -427,6 +460,69 @@ final class DcaExecutionEngine {
             templateArgs: templateArgs
         )
         try? activeDb.notificationDao.insert(notification)
+    }
+
+    // MARK: - Missed Purchase Detection
+
+    /// Calculate how many purchases were missed between originalScheduledAt and now.
+    private func calculateMissedPurchases(plan: DcaPlan, from: Date, to: Date) -> Int {
+        if let cron = plan.cronExpression {
+            // For cron plans: count actual cron executions between dates
+            return CronUtils.countExecutions(cron: cron, from: from, to: to)
+        } else {
+            // For interval plans: floor((elapsed) / interval)
+            let intervalSeconds = TimeInterval((plan.frequency.intervalMinutes > 0 ? plan.frequency.intervalMinutes : 1440) * 60)
+            let elapsed = to.timeIntervalSince(from)
+            return max(0, Int(floor(elapsed / intervalSeconds)))
+        }
+    }
+
+    /// Scenario B: Detect missed purchases when phone was off (no retry state).
+    /// Called at the start of executeDuePlans for plans that are significantly overdue.
+    private func detectMissedFromBoot(plan: DcaPlan, now: Date) {
+        guard plan.networkRetryCount == 0,
+              plan.originalScheduledAt == nil,
+              plan.missedPurchaseCount == 0,
+              let nextExec = plan.nextExecutionAt
+        else { return }
+
+        let intervalMinutes = plan.cronExpression != nil
+            ? (CronUtils.getIntervalMinutesEstimate(cron: plan.cronExpression!) ?? 1440)
+            : (plan.frequency.intervalMinutes > 0 ? plan.frequency.intervalMinutes : 1440)
+        let intervalSeconds = TimeInterval(intervalMinutes * 60)
+
+        // Only if overdue by more than 1 interval
+        let overdueSeconds = now.timeIntervalSince(nextExec)
+        guard overdueSeconds > intervalSeconds else { return }
+
+        let missed = calculateMissedPurchases(plan: plan, from: nextExec, to: now)
+        if missed > 0 {
+            try? activeDb.planDao.setMissedPurchaseCount(id: plan.id, count: missed)
+            notifyMissedPurchases(plan: plan, count: missed)
+            logger.info("Scenario B: plan \(plan.id) missed \(missed) purchases (phone was off)")
+        }
+    }
+
+    private func notifyMissedPurchases(plan: DcaPlan, count: Int) {
+        if userPreferences.notificationsEnabled && userPreferences.errorNotifications {
+            notificationService.postMissedPurchasesNotification(
+                crypto: plan.crypto,
+                exchange: plan.exchange,
+                count: count
+            )
+        }
+        let args = NotificationTemplateArgs.missedPurchases(
+            count: count,
+            crypto: plan.crypto,
+            exchangeName: plan.exchange.displayName
+        )
+        saveInAppNotification(
+            type: .missedPurchases,
+            title: String(localized: "Missed Purchases"),
+            message: String(localized: "\(count) missed \(plan.crypto) purchases on \(plan.exchange.displayName) while offline."),
+            plan: plan,
+            templateArgs: args
+        )
     }
 
     // MARK: - Pending Resolution

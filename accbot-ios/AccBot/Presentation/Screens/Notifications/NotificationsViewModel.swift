@@ -12,6 +12,7 @@ final class NotificationsViewModel: ObservableObject {
     private var autoMarkTask: Task<Void, Never>?
     private(set) var dependencies: AppDependencies?
     private var isSetUp = false
+    private var isVisible = false
 
     private var deps: AppDependencies {
         guard let d = dependencies else {
@@ -54,6 +55,9 @@ final class NotificationsViewModel: ObservableObject {
                 receiveValue: { [weak self] notifications, count in
                     self?.notifications = notifications
                     self?.unreadCount = count
+                    if count > 0, self?.isVisible == true {
+                        self?.scheduleAutoMarkAsRead()
+                    }
                 }
             )
             .store(in: &cancellables)
@@ -63,8 +67,20 @@ final class NotificationsViewModel: ObservableObject {
         loadData()
     }
 
-    /// Start a 2-second timer to auto-mark all as read. Cancel via `cancelAutoMark()`.
-    func scheduleAutoMarkAsRead() {
+    /// Called from onAppear — marks the tab as visible and schedules auto-mark.
+    func onTabVisible() {
+        isVisible = true
+        scheduleAutoMarkAsRead()
+    }
+
+    /// Called from onDisappear — cancels pending auto-mark timer.
+    func onTabHidden() {
+        isVisible = false
+        autoMarkTask?.cancel()
+        autoMarkTask = nil
+    }
+
+    private func scheduleAutoMarkAsRead() {
         autoMarkTask?.cancel()
         guard unreadCount > 0 else { return }
         autoMarkTask = Task {
@@ -72,11 +88,6 @@ final class NotificationsViewModel: ObservableObject {
             guard !Task.isCancelled else { return }
             markAllAsRead()
         }
-    }
-
-    func cancelAutoMark() {
-        autoMarkTask?.cancel()
-        autoMarkTask = nil
     }
 
     func markAsRead(_ notification: AppNotification) {

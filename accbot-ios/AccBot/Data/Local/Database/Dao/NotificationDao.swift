@@ -29,30 +29,6 @@ final class NotificationDao {
         }
     }
 
-    /// Returns unread network-retry notifications created within the last 30 minutes.
-    func getRecentNetworkRetries() throws -> [AppNotification] {
-        let cutoff = Date().addingTimeInterval(-1800).timeIntervalSince1970
-        return try dbPool.read { db in
-            try NotificationRecord
-                .filter(Column("type") == NotificationType.networkRetry.rawValue)
-                .filter(Column("isRead") == false)
-                .filter(Column("createdAt") > cutoff)
-                .order(Column("createdAt").desc)
-                .fetchAll(db)
-                .map { $0.toDomain() }
-        }
-    }
-
-    /// Mark all unread network-retry notifications as read.
-    func markNetworkRetriesAsRead() throws {
-        try dbPool.write { db in
-            try db.execute(
-                sql: "UPDATE notifications SET isRead = 1 WHERE type = ? AND isRead = 0",
-                arguments: [NotificationType.networkRetry.rawValue]
-            )
-        }
-    }
-
     // MARK: - Mutations
 
     @discardableResult

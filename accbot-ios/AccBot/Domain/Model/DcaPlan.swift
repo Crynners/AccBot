@@ -18,6 +18,13 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
     let lastExecutedAt: Date?
     let nextExecutionAt: Date?
 
+    // Network retry state
+    let networkRetryCount: Int
+    let nextNetworkRetryAt: Date?
+    let originalScheduledAt: Date?
+    // Missed purchase state
+    let missedPurchaseCount: Int
+
     init(
         id: Int64 = 0,
         exchange: Exchange,
@@ -33,7 +40,11 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
         targetAmount: Decimal? = nil,
         createdAt: Date = Date(),
         lastExecutedAt: Date? = nil,
-        nextExecutionAt: Date? = nil
+        nextExecutionAt: Date? = nil,
+        networkRetryCount: Int = 0,
+        nextNetworkRetryAt: Date? = nil,
+        originalScheduledAt: Date? = nil,
+        missedPurchaseCount: Int = 0
     ) {
         self.id = id
         self.exchange = exchange
@@ -50,6 +61,10 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
         self.createdAt = createdAt
         self.lastExecutedAt = lastExecutedAt
         self.nextExecutionAt = nextExecutionAt
+        self.networkRetryCount = networkRetryCount
+        self.nextNetworkRetryAt = nextNetworkRetryAt
+        self.originalScheduledAt = originalScheduledAt
+        self.missedPurchaseCount = missedPurchaseCount
     }
 
     /// Display string for the trading pair (e.g., "BTC/EUR")

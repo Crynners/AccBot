@@ -163,6 +163,77 @@ final class DcaPlanDao {
         }
     }
 
+    // MARK: - Retry / Missed
+
+    /// Set network retry state on a plan after a retryable failure.
+    func setNetworkRetry(id: Int64, count: Int, nextRetryAt: Date, originalScheduledAt: Date?) throws {
+        try dbPool.write { db in
+            try db.execute(
+                sql: """
+                    UPDATE dca_plans
+                    SET networkRetryCount = ?,
+                        nextNetworkRetryAt = ?,
+                        nextExecutionAt = ?,
+                        originalScheduledAt = COALESCE(originalScheduledAt, ?)
+                    WHERE id = ?
+                    """,
+                arguments: [
+                    count,
+                    nextRetryAt.timeIntervalSince1970,
+                    nextRetryAt.timeIntervalSince1970,
+                    originalScheduledAt?.timeIntervalSince1970,
+                    id,
+                ]
+            )
+        }
+    }
+
+    /// Clear retry state after a successful purchase.
+    func clearNetworkRetry(id: Int64) throws {
+        try dbPool.write { db in
+            try db.execute(
+                sql: """
+                    UPDATE dca_plans
+                    SET networkRetryCount = 0,
+                        nextNetworkRetryAt = NULL,
+                        originalScheduledAt = NULL
+                    WHERE id = ?
+                    """,
+                arguments: [id]
+            )
+        }
+    }
+
+    /// Set missed purchase count on a plan.
+    func setMissedPurchaseCount(id: Int64, count: Int) throws {
+        try dbPool.write { db in
+            try db.execute(
+                sql: "UPDATE dca_plans SET missedPurchaseCount = ? WHERE id = ?",
+                arguments: [count, id]
+            )
+        }
+    }
+
+    /// Get plans that are in network retry state.
+    func getPlansInRetry() throws -> [DcaPlan] {
+        try dbPool.read { db in
+            try DcaPlanRecord
+                .filter(Column("networkRetryCount") > 0)
+                .fetchAll(db)
+                .map { $0.toDomain() }
+        }
+    }
+
+    /// Get plans with missed purchases.
+    func getPlansWithMissedPurchases() throws -> [DcaPlan] {
+        try dbPool.read { db in
+            try DcaPlanRecord
+                .filter(Column("missedPurchaseCount") > 0)
+                .fetchAll(db)
+                .map { $0.toDomain() }
+        }
+    }
+
     // MARK: - Observation (reactive)
 
     func observeAll() -> DatabasePublishers.Value<[DcaPlan]> {

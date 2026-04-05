@@ -437,6 +437,7 @@
 "%@ %@ on %@ ready for withdrawal" = "%1$@ %2$@ na %3$@ připraveno k výběru";
 /* "Tap to execute" removed — reminders replaced by purchase/error notifications */
 /* Push notification with scheduled/executed time */
+"Plan %@ → executed %@" = "Plán %1$@ → provedeno %2$@";
 "%@ · %@ → %@" = "%1$@ · %2$@ → %3$@";
 /* In-app notification titles (DcaExecutionEngine) */
 "DCA Purchase" = "DCA nákup";
@@ -451,6 +452,16 @@
 "%@ — purchase failed, no internet." = "%@ — nákup selhal, bez internetu.";
 "%lld failed attempts" = "%lld neúspěšných pokusů";
 "Dismiss" = "Zavřít";
+/* Missed purchases */
+"Missed Purchases" = "Zmeškané nákupy";
+"%lld missed %@ purchases on %@ while offline." = "%1$lld zmeškaných nákupů %2$@ na %3$@ během offline.";
+"AccBot: Missed Purchases" = "AccBot: Zmeškané nákupy";
+"%lld missed %@ purchases on %@ while offline" = "%1$lld zmeškaných nákupů %2$@ na %3$@ během offline";
+/* Dashboard missed purchase banner */
+"Buy Now" = "Dokoupit";
+"Skip" = "Přeskočit";
+"Next retry at %@" = "Další pokus v %@";
+"%lld retry attempts" = "%lld pokusů o opakování";
 /* In-app notification messages */
 "Bought %@ %@ for %@ %@" = "Nakoupeno %1$@ %2$@ za %3$@ %4$@";
 "Amount below minimum for %@" = "Částka pod minimem pro %@";

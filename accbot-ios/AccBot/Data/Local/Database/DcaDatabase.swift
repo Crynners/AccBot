@@ -211,6 +211,16 @@ final class DcaDatabase {
             }
         }
 
+        // Add network retry and missed purchase tracking fields to dca_plans
+        migrator.registerMigration("v5_plan_retry_fields") { db in
+            try db.alter(table: "dca_plans") { t in
+                t.add(column: "networkRetryCount", .integer).notNull().defaults(to: 0)
+                t.add(column: "nextNetworkRetryAt", .double)
+                t.add(column: "originalScheduledAt", .double)
+                t.add(column: "missedPurchaseCount", .integer).notNull().defaults(to: 0)
+            }
+        }
+
         try migrator.migrate(dbPool)
     }
 }
