@@ -14,7 +14,7 @@ final class AppRouter: ObservableObject {
     @Published var portfolioSelectedFiat: String?
 
     /// Whether the portfolio chart is being scrubbed (blocks tab swiping).
-    /// Not @Published — only read by gesture handlers, no views depend on it.
+    /// Not @Published - only read by gesture handlers, no views depend on it.
     var isChartInteracting: Bool = false
 
     /// Whether a notification row swipe-to-delete gesture is active (blocks tab swiping).

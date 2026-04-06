@@ -10,7 +10,7 @@ class ExchangeManagementViewModel: ObservableObject {
 
     private var deps: AppDependencies {
         guard let d = dependencies else {
-            preconditionFailure("ViewModel used before setup() — call setup() in onAppear")
+            preconditionFailure("ViewModel used before setup() - call setup() in onAppear")
         }
         return d
     }

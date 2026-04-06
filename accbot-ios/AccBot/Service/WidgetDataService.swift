@@ -30,7 +30,7 @@ enum WidgetDataService {
             cryptoSymbol: primary?.crypto ?? "BTC",
             totalInvested: primary.map { formatDecimal($0.totalInvested) } ?? "---",
             fiatSymbol: primary?.fiat ?? "CZK",
-            portfolioValue: nil, // Would need current price — skip for now
+            portfolioValue: nil, // Would need current price - skip for now
             roiPercent: nil,
             planCount: plans.count,
             activePlanCount: activePlans.count,

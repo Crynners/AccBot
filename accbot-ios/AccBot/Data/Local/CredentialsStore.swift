@@ -93,7 +93,7 @@ final class CredentialsStore {
     }
 
     /// Re-save existing credentials with AfterFirstUnlock accessibility.
-    /// Runs once — old items used WhenUnlocked which blocks background access.
+    /// Runs once - old items used WhenUnlocked which blocks background access.
     private func migrateAccessibilityIfNeeded() {
         let defaults = UserDefaults.standard
         guard !defaults.bool(forKey: Self.migrationKey) else { return }

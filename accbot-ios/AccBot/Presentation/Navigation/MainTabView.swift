@@ -34,7 +34,7 @@ struct MainTabView: View {
     /// Halves view rebuilds during tab swipe on A12 devices.
     @State private var lastDragUpdateTime: Date = .distantPast
 
-    /// Unread notification count — kept as local @State to avoid invalidating
+    /// Unread notification count - kept as local @State to avoid invalidating
     /// the entire view tree via AppRouter (12+ views observe AppRouter).
     @State private var unreadNotificationCount: Int = 0
 

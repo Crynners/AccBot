@@ -17,7 +17,7 @@ enum AccBotFonts {
     static let mono = Font.system(.body, design: .monospaced)
     static let monoSmall = Font.system(.caption, design: .monospaced)
 
-    // Icon sizes for SF Symbols — use Dynamic Type-aware text styles
+    // Icon sizes for SF Symbols - use Dynamic Type-aware text styles
     // so they scale alongside user's Accessibility text size settings.
     static let iconXL = Font.system(.largeTitle).weight(.regular)
     static let iconLarge = Font.system(.largeTitle).weight(.regular)

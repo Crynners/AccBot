@@ -142,7 +142,7 @@ final class DcaPlanDao {
     /// Atomically claim a plan for execution by advancing nextExecutionAt,
     /// but only if it is still in the past (or null). Returns true if claimed,
     /// false if another task already claimed it.
-    /// Note: lastExecutedAt is NOT set here — it is only set after a transaction
+    /// Note: lastExecutedAt is NOT set here - it is only set after a transaction
     /// is actually saved, so the UI never shows a "last executed" time without
     /// a corresponding transaction.
     func claimPlanForExecution(id: Int64, now: Date, nextExecutionAt: Date) throws -> Bool {

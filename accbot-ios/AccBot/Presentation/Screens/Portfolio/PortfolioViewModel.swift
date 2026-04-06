@@ -91,7 +91,7 @@ final class PortfolioViewModel: ObservableObject {
 
     private var deps: AppDependencies {
         guard let d = dependencies else {
-            preconditionFailure("ViewModel used before setup() — call setup() in onAppear")
+            preconditionFailure("ViewModel used before setup() - call setup() in onAppear")
         }
         return d
     }
@@ -299,7 +299,7 @@ final class PortfolioViewModel: ObservableObject {
     // MARK: - Private
 
     /// Maximum chart points per series. Matches Android (90 points).
-    /// With 5 series × 90 = 450 LineMarks — smooth on A12+.
+    /// With 5 series × 90 = 450 LineMarks - smooth on A12+.
     private static let maxPointsPerSeries = 90
 
     private func adaptiveAggregate(_ points: [ChartPoint]) -> [ChartPoint] {
@@ -311,7 +311,7 @@ final class PortfolioViewModel: ObservableObject {
 
         let mode = CalculateChartDataUseCase.aggregationMode(zoomLevel: zoomLevel, spanDays: spanDays)
 
-        // Group by series, aggregate each independently — last point per bucket wins
+        // Group by series, aggregate each independently - last point per bucket wins
         let grouped = Dictionary(grouping: points) { $0.series }
         return grouped.values.flatMap { seriesPoints -> [ChartPoint] in
             let sorted = seriesPoints.sorted { $0.date < $1.date }
@@ -471,7 +471,7 @@ final class PortfolioViewModel: ObservableObject {
                 periodRoiLabel = nil
             }
 
-            // Build chart data — cumulative values, but only emit points for zoom window
+            // Build chart data - cumulative values, but only emit points for zoom window
             var allChartData = [ChartPoint]()
             var costBasisByIndex = [Decimal]()
             var accumulatedByIndex = [Decimal]()

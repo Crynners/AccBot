@@ -16,7 +16,7 @@ final class NotificationsViewModel: ObservableObject {
 
     private var deps: AppDependencies {
         guard let d = dependencies else {
-            preconditionFailure("ViewModel used before setup() — call setup() in onAppear")
+            preconditionFailure("ViewModel used before setup() - call setup() in onAppear")
         }
         return d
     }
@@ -67,13 +67,13 @@ final class NotificationsViewModel: ObservableObject {
         loadData()
     }
 
-    /// Called from onAppear — marks the tab as visible and schedules auto-mark.
+    /// Called from onAppear - marks the tab as visible and schedules auto-mark.
     func onTabVisible() {
         isVisible = true
         scheduleAutoMarkAsRead()
     }
 
-    /// Called from onDisappear — cancels pending auto-mark timer.
+    /// Called from onDisappear - cancels pending auto-mark timer.
     func onTabHidden() {
         isVisible = false
         autoMarkTask?.cancel()

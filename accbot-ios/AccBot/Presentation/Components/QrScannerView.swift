@@ -49,7 +49,7 @@ func cleanQrValue(_ raw: String) -> String {
 /// Custom UIView that keeps the AVCaptureVideoPreviewLayer frame in sync
 /// with its own bounds via `layoutSubviews()`. This is critical because
 /// `UIViewRepresentable.updateUIView` is only called on SwiftUI state changes,
-/// NOT on UIKit layout changes — so on initial sheet presentation (especially
+/// NOT on UIKit layout changes - so on initial sheet presentation (especially
 /// on iPad) the preview layer would stay at `.zero` frame = black screen.
 class CameraPreviewView: UIView {
     var previewLayer: AVCaptureVideoPreviewLayer? {

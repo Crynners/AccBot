@@ -249,19 +249,23 @@ struct DashboardView: View {
 
             // Row: Current Price | ROI
             HStack {
-                if let currentPrice = holding.currentPrice {
-                    VStack(alignment: .leading, spacing: Spacing.xxs) {
-                        Text(String(localized: "Current Price"))
-                            .font(AccBotFonts.caption)
-                            .foregroundStyle(colors.onSurfaceVariant)
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text(String(localized: "Current Price"))
+                        .font(AccBotFonts.caption)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                    if let currentPrice = holding.currentPrice {
                         Text(formatFiat(currentPrice, symbol: holding.fiat))
                             .font(AccBotFonts.body)
                             .foregroundStyle(colors.onSurface)
+                    } else {
+                        Text(String(localized: "unavailable"))
+                            .font(AccBotFonts.body)
+                            .foregroundStyle(colors.onSurfaceVariant)
                     }
                 }
                 Spacer()
-                if let roi = holding.roi {
-                    VStack(alignment: .trailing, spacing: Spacing.xxs) {
+                VStack(alignment: .trailing, spacing: Spacing.xxs) {
+                    if let roi = holding.roi {
                         HStack(spacing: Spacing.xs) {
                             Text(String(localized: "ROI"))
                                 .font(AccBotFonts.caption)
@@ -275,6 +279,15 @@ struct DashboardView: View {
                             Text("\(sign)\(formatFiatValue(abs(fiatGainLoss))) \(holding.fiat)")
                                 .font(AccBotFonts.headline)
                                 .foregroundStyle(roi >= 0 ? colors.success : colors.error)
+                        }
+                    } else {
+                        HStack(spacing: Spacing.xs) {
+                            Text(String(localized: "ROI"))
+                                .font(AccBotFonts.caption)
+                                .foregroundStyle(colors.onSurfaceVariant)
+                            Text("–")
+                                .font(AccBotFonts.caption)
+                                .foregroundStyle(colors.onSurfaceVariant)
                         }
                     }
                 }
@@ -294,7 +307,7 @@ struct DashboardView: View {
 
     private var marketPulseCard: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            // Header — info next to title, chevron on right
+            // Header - info next to title, chevron on right
             HStack {
                 Text(String(localized: "Market Pulse"))
                     .font(AccBotFonts.titleSmall)
@@ -345,7 +358,7 @@ struct DashboardView: View {
                                 .font(AccBotFonts.captionSmall)
                                 .foregroundStyle(colors.onSurfaceVariant)
                             Spacer()
-                            Text("\(fgValue) — \(viewModel.fearGreedLabel ?? "")")
+                            Text("\(fgValue) - \(viewModel.fearGreedLabel ?? "")")
                                 .font(AccBotFonts.headline)
                                 .foregroundStyle(FearGreedColors.color(for: fgValue))
                             Spacer()
@@ -357,7 +370,7 @@ struct DashboardView: View {
                     .padding(.bottom, Spacing.xs)
                 }
 
-                // ▼ F&G triangle (above bar, pointing down) — matches Android line 1297-1314
+                // ▼ F&G triangle (above bar, pointing down) - matches Android line 1297-1314
                 if let fgValue = viewModel.fearGreedValue {
                     GeometryReader { _ in
                         Canvas { context, size in
@@ -374,7 +387,7 @@ struct DashboardView: View {
                     .frame(height: 8)
                 }
 
-                // 5 colored segments (shared bar — always visible)
+                // 5 colored segments (shared bar - always visible)
                 HStack(spacing: 2) {
                     ForEach(FearGreedColors.gaugeColors.indices, id: \.self) { i in
                         RoundedRectangle(cornerRadius: 2)
@@ -383,7 +396,7 @@ struct DashboardView: View {
                     }
                 }
 
-                // ▲ ATH triangle(s) (below bar, pointing up) — matches Android line 1331-1350
+                // ▲ ATH triangle(s) (below bar, pointing up) - matches Android line 1331-1350
                 if !viewModel.athData.isEmpty {
                     GeometryReader { _ in
                         Canvas { context, size in
@@ -703,7 +716,7 @@ struct DashboardView: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text(String(localized: "\(plan.crypto) — purchase failed, no internet."))
+                Text(String(localized: "\(plan.crypto) - purchase failed, no internet."))
                     .font(AccBotFonts.bodySmall)
                     .foregroundStyle(colors.error)
                 Text("\(plan.exchange.displayName) · \(String(localized: "\(plan.networkRetryCount) retry attempts")) · \(nextRetryText)")

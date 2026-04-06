@@ -64,7 +64,7 @@ struct SecurityView: View {
                     }
                     .padding(.horizontal, Spacing.sm)
 
-                    // Biometric toggle — always shown, disabled when not available
+                    // Biometric toggle - always shown, disabled when not available
                     HStack {
                         Image(systemName: biometricType == .faceID ? "faceid" : biometricType == .touchID ? "touchid" : "lock")
                             .font(AccBotFonts.iconMedium)

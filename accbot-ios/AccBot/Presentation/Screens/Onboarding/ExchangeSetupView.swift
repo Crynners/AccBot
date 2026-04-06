@@ -186,7 +186,7 @@ private struct OnboardingCredentialsCard: View {
 
                 Spacer()
 
-                // Paste All from clipboard (hidden for Binance — uses QR scan instead)
+                // Paste All from clipboard (hidden for Binance - uses QR scan instead)
                 if exchange != .binance {
                     Button {
                         credentials.pasteAllCredentials()

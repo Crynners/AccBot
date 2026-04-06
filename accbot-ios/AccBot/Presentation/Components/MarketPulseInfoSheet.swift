@@ -52,11 +52,11 @@ struct MarketPulseInfoSheet: View {
 
                     // Color-coded scale
                     VStack(spacing: Spacing.xs) {
-                        fearGreedScaleRow(range: "0–19", label: String(localized: "Extreme Fear"), description: String(localized: "Buy more — market is very fearful"), color: FearGreedColors.gaugeColors[0])
+                        fearGreedScaleRow(range: "0–19", label: String(localized: "Extreme Fear"), description: String(localized: "Buy more - market is very fearful"), color: FearGreedColors.gaugeColors[0])
                         fearGreedScaleRow(range: "20–39", label: String(localized: "Fear"), description: String(localized: "Buy slightly more than usual"), color: FearGreedColors.gaugeColors[1])
                         fearGreedScaleRow(range: "40–59", label: String(localized: "Neutral"), description: String(localized: "Standard DCA amount"), color: FearGreedColors.gaugeColors[2])
                         fearGreedScaleRow(range: "60–79", label: String(localized: "Greed"), description: String(localized: "Buy slightly less than usual"), color: FearGreedColors.gaugeColors[3])
-                        fearGreedScaleRow(range: "80–100", label: String(localized: "Extreme Greed"), description: String(localized: "Buy less — market may be overextended"), color: FearGreedColors.gaugeColors[4])
+                        fearGreedScaleRow(range: "80–100", label: String(localized: "Extreme Greed"), description: String(localized: "Buy less - market may be overextended"), color: FearGreedColors.gaugeColors[4])
                     }
                     .padding(Spacing.md)
                     .background(colors.surface)

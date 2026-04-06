@@ -43,7 +43,7 @@ final class HistoryViewModel: ObservableObject {
 
     private var deps: AppDependencies {
         guard let d = dependencies else {
-            preconditionFailure("ViewModel used before setup() — call setup() in onAppear")
+            preconditionFailure("ViewModel used before setup() - call setup() in onAppear")
         }
         return d
     }
@@ -117,7 +117,7 @@ final class HistoryViewModel: ObservableObject {
 
             let allTxs: [Transaction]
             if sortOption == .dateNewest {
-                // DB already returns results sorted by executedAt desc — no re-sort needed
+                // DB already returns results sorted by executedAt desc - no re-sort needed
                 allTxs = transactions + newTxs
             } else {
                 // Non-default sort: merge and re-sort

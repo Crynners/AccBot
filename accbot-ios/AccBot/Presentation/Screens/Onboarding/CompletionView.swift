@@ -46,15 +46,15 @@ struct CompletionView: View {
 
                     NextStepRow(
                         icon: "play.circle.fill",
-                        text: "Start DCA — Run your first purchase"
+                        text: "Start DCA - Run your first purchase"
                     )
                     NextStepRow(
                         icon: "slider.horizontal.3",
-                        text: "Fine Tune Settings — Adjust your preferences"
+                        text: "Fine Tune Settings - Adjust your preferences"
                     )
                     NextStepRow(
                         icon: "bell.fill",
-                        text: "Stay Informed — Get alerts on DCA events"
+                        text: "Stay Informed - Get alerts on DCA events"
                     )
                 }
                 .padding(Spacing.lg)

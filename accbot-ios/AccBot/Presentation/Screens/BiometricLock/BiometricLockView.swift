@@ -150,7 +150,7 @@ struct BiometricLockView<Content: View>: View {
                 }
             }
         } else {
-            // Neither biometrics nor passcode available — show error with actionable guidance
+            // Neither biometrics nor passcode available - show error with actionable guidance
             DispatchQueue.main.async {
                 showError = true
                 errorMessage = String(localized: "Authentication is not available. Set up Face ID, Touch ID, or a device passcode in Settings to unlock AccBot.")

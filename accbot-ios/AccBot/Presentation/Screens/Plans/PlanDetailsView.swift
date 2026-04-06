@@ -87,8 +87,8 @@ struct PlanDetailsView: View {
         .sheet(isPresented: $showDeleteConfirmation) {
             DestructiveConfirmSheet(
                 title: String(localized: "Delete Plan"),
-                message: String(localized: "This will delete the plan and all associated transactions. Type \(viewModel.plan?.pair ?? "—") to confirm."),
-                confirmWord: viewModel.plan?.pair ?? "—",
+                message: String(localized: "This will delete the plan and all associated transactions. Type \(viewModel.plan?.pair ?? "-") to confirm."),
+                confirmWord: viewModel.plan?.pair ?? "-",
                 confirmButtonLabel: String(localized: "Delete Plan"),
                 onConfirm: {
                     if viewModel.deletePlan() {
@@ -101,7 +101,7 @@ struct PlanDetailsView: View {
             DestructiveConfirmSheet(
                 title: String(localized: "Delete All Transactions"),
                 message: String(localized: "Are you sure you want to delete all transactions for this plan? This action cannot be undone."),
-                confirmWord: viewModel.plan?.pair ?? "—",
+                confirmWord: viewModel.plan?.pair ?? "-",
                 confirmButtonLabel: String(localized: "Delete All"),
                 onConfirm: {
                     if viewModel.deleteAllTransactions() {

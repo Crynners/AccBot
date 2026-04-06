@@ -1,17 +1,17 @@
 import Foundation
 
 /// Structured arguments for notification templates.
-/// Stored as JSON in the `templateArgs` column — text is rendered at display time
+/// Stored as JSON in the `templateArgs` column - text is rendered at display time
 /// using the current locale, so language switches re-render old notifications.
 ///
 /// Numbers are stored as raw strings (Decimal description) and formatted at render time.
 enum NotificationTemplateArgs: Codable, Equatable {
-    case purchase(cryptoAmount: String, crypto: String, fiatAmount: String, fiat: String, scheduledAt: String? = nil, executedAt: String? = nil)
+    case purchase(cryptoAmount: String, crypto: String, fiatAmount: String, fiat: String, price: String? = nil, scheduledAt: String? = nil, executedAt: String? = nil)
     case error(crypto: String, errorMessage: String)
     case lowBalance(exchangeName: String, fiat: String, balance: String, remainingDays: Int)
     case withdrawalThreshold(amount: String, crypto: String, exchangeName: String)
-    case belowMinimum(crypto: String)
-    case networkRetry(crypto: String, exchangeName: String, retryAt: String)
+    case belowMinimum(crypto: String, purchaseAmount: String? = nil, fiat: String? = nil, minOrderSize: String? = nil)
+    case networkRetry(crypto: String, exchangeName: String)
     case missedPurchases(count: Int, crypto: String, exchangeName: String)
 
     // MARK: - Render
@@ -19,44 +19,53 @@ enum NotificationTemplateArgs: Codable, Equatable {
     /// Render localized title + message for display using the current locale.
     func render() -> (title: String, message: String) {
         switch self {
-        case .purchase(let cryptoAmount, let crypto, let fiatAmount, let fiat, let scheduledAt, let executedAt):
-            let base = String(localized: "Bought \(cryptoAmount) \(crypto) for \(fiatAmount) \(fiat)")
+        case .purchase(let cryptoAmount, let crypto, let fiatAmount, let fiat, let price, let scheduledAt, let executedAt):
+            var base = String(localized: "Bought \(cryptoAmount) \(crypto) for \(fiatAmount) \(fiat)")
+            if let price {
+                base += " @ \(price) \(fiat)"
+            }
             if let scheduled = scheduledAt, let executed = executedAt {
                 return (
-                    String(localized: "DCA Purchase"),
+                    String(localized: "DCA Purchase Completed"),
                     String(localized: "Plan \(scheduled) → executed \(executed)")
                     + " · " + base
                 )
             }
             return (
-                String(localized: "DCA Purchase"),
+                String(localized: "DCA Purchase Completed"),
                 base
             )
         case .error(let crypto, let errorMessage):
             return (
                 String(localized: "DCA Failed"),
-                "\(crypto): \(errorMessage)"
+                String(localized: "Failed to buy \(crypto): \(errorMessage)")
             )
-        case .lowBalance(let exchangeName, let fiat, let balance, let remainingDays):
+        case .lowBalance(let exchangeName, let fiat, let _, let remainingDays):
             let days = max(1, remainingDays)
             return (
-                String(localized: "Low Balance"),
-                String(localized: "\(exchangeName): \(balance) \(fiat) remaining (~\(days) days)")
+                String(localized: "Low balance on \(exchangeName)"),
+                String(localized: "~\(days) days of \(fiat) remaining for DCA")
             )
         case .withdrawalThreshold(let amount, let crypto, let exchangeName):
             return (
-                String(localized: "Withdrawal Threshold"),
-                String(localized: "\(amount) \(crypto) ready for withdrawal from \(exchangeName)")
+                String(localized: "Withdrawal Recommended"),
+                String(localized: "You have accumulated \(amount) \(crypto) on \(exchangeName) - consider withdrawing to cold wallet")
             )
-        case .belowMinimum(let crypto):
+        case .belowMinimum(let crypto, let purchaseAmount, let fiat, let minOrderSize):
+            if let purchaseAmount, let fiat, let minOrderSize {
+                return (
+                    String(localized: "DCA Failed"),
+                    String(localized: "Failed to buy \(crypto): Amount \(purchaseAmount) \(fiat) below exchange minimum \(minOrderSize) \(fiat)")
+                )
+            }
             return (
                 String(localized: "DCA Failed"),
                 String(localized: "Amount below minimum for \(crypto)")
             )
-        case .networkRetry(let crypto, let exchangeName, let retryAt):
+        case .networkRetry(let crypto, let exchangeName):
             return (
                 String(localized: "Network Error"),
-                String(localized: "\(crypto) purchase on \(exchangeName) failed — no internet. Retry at \(retryAt).")
+                String(localized: "\(crypto) purchase on \(exchangeName) failed - no internet.")
             )
         case .missedPurchases(let count, let crypto, let exchangeName):
             return (
@@ -73,7 +82,8 @@ enum NotificationTemplateArgs: Codable, Equatable {
         case cryptoAmount, crypto, fiatAmount, fiat
         case errorMessage
         case exchangeName, remainingDays, balance
-        case amount
+        case amount, price
+        case purchaseAmount, minOrderSize
         case scheduledAt, executedAt
         case retryAt
         case count
@@ -82,12 +92,13 @@ enum NotificationTemplateArgs: Codable, Equatable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
-        case .purchase(let cryptoAmount, let crypto, let fiatAmount, let fiat, let scheduledAt, let executedAt):
+        case .purchase(let cryptoAmount, let crypto, let fiatAmount, let fiat, let price, let scheduledAt, let executedAt):
             try container.encode("purchase", forKey: .type)
             try container.encode(cryptoAmount, forKey: .cryptoAmount)
             try container.encode(crypto, forKey: .crypto)
             try container.encode(fiatAmount, forKey: .fiatAmount)
             try container.encode(fiat, forKey: .fiat)
+            try container.encodeIfPresent(price, forKey: .price)
             try container.encodeIfPresent(scheduledAt, forKey: .scheduledAt)
             try container.encodeIfPresent(executedAt, forKey: .executedAt)
         case .error(let crypto, let errorMessage):
@@ -105,14 +116,16 @@ enum NotificationTemplateArgs: Codable, Equatable {
             try container.encode(amount, forKey: .amount)
             try container.encode(crypto, forKey: .crypto)
             try container.encode(exchangeName, forKey: .exchangeName)
-        case .belowMinimum(let crypto):
+        case .belowMinimum(let crypto, let purchaseAmount, let fiat, let minOrderSize):
             try container.encode("belowMinimum", forKey: .type)
             try container.encode(crypto, forKey: .crypto)
-        case .networkRetry(let crypto, let exchangeName, let retryAt):
+            try container.encodeIfPresent(purchaseAmount, forKey: .purchaseAmount)
+            try container.encodeIfPresent(fiat, forKey: .fiat)
+            try container.encodeIfPresent(minOrderSize, forKey: .minOrderSize)
+        case .networkRetry(let crypto, let exchangeName):
             try container.encode("networkRetry", forKey: .type)
             try container.encode(crypto, forKey: .crypto)
             try container.encode(exchangeName, forKey: .exchangeName)
-            try container.encode(retryAt, forKey: .retryAt)
         case .missedPurchases(let count, let crypto, let exchangeName):
             try container.encode("missedPurchases", forKey: .type)
             try container.encode(count, forKey: .count)
@@ -131,6 +144,7 @@ enum NotificationTemplateArgs: Codable, Equatable {
                 crypto: try container.decode(String.self, forKey: .crypto),
                 fiatAmount: try container.decode(String.self, forKey: .fiatAmount),
                 fiat: try container.decode(String.self, forKey: .fiat),
+                price: try container.decodeIfPresent(String.self, forKey: .price),
                 scheduledAt: try container.decodeIfPresent(String.self, forKey: .scheduledAt),
                 executedAt: try container.decodeIfPresent(String.self, forKey: .executedAt)
             )
@@ -154,13 +168,15 @@ enum NotificationTemplateArgs: Codable, Equatable {
             )
         case "belowMinimum":
             self = .belowMinimum(
-                crypto: try container.decode(String.self, forKey: .crypto)
+                crypto: try container.decode(String.self, forKey: .crypto),
+                purchaseAmount: try container.decodeIfPresent(String.self, forKey: .purchaseAmount),
+                fiat: try container.decodeIfPresent(String.self, forKey: .fiat),
+                minOrderSize: try container.decodeIfPresent(String.self, forKey: .minOrderSize)
             )
         case "networkRetry":
             self = .networkRetry(
                 crypto: try container.decode(String.self, forKey: .crypto),
-                exchangeName: try container.decode(String.self, forKey: .exchangeName),
-                retryAt: try container.decode(String.self, forKey: .retryAt)
+                exchangeName: try container.decode(String.self, forKey: .exchangeName)
             )
         case "missedPurchases":
             self = .missedPurchases(

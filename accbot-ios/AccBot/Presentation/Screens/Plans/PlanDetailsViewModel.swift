@@ -27,7 +27,7 @@ class PlanDetailsViewModel: ObservableObject {
 
     private var deps: AppDependencies {
         guard let d = dependencies else {
-            preconditionFailure("ViewModel used before setup() — call setup() in onAppear")
+            preconditionFailure("ViewModel used before setup() - call setup() in onAppear")
         }
         return d
     }
@@ -107,7 +107,7 @@ class PlanDetailsViewModel: ObservableObject {
                         let remainingExec = NSDecimalNumber(decimal: balance / plan.amount).doubleValue
                         remainingExecutions = max(0, Int(floor(remainingExec)))
 
-                        // Calculate remaining days — same formula as Dashboard
+                        // Calculate remaining days - same formula as Dashboard
                         let rawInterval: Int
                         if let cron = plan.cronExpression {
                             rawInterval = CronUtils.getIntervalMinutesEstimate(cron: cron) ?? 1440

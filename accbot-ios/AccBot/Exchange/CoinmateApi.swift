@@ -64,7 +64,7 @@ final class CoinmateApi: ExchangeApi {
                 fee = details.totalFee
                 fillingPrice = details.weightedAvgPrice
             } else {
-                // Trade details not found — return as pending so the exact
+                // Trade details not found - return as pending so the exact
                 // amounts can be resolved later instead of guessing.
                 guard let currentPrice = await getCurrentPrice(crypto: crypto, fiat: fiat),
                       currentPrice > 0 else {

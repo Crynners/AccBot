@@ -179,7 +179,10 @@ final class DcaExecutionEngine {
                 errorMessage: "Amount \(purchaseAmount) \(plan.fiat) below minimum \(minOrderSize) \(plan.fiat)"
             )
             saveTransactionAndAdvance(failedTx, plan: plan, now: now)
-            let args = NotificationTemplateArgs.belowMinimum(crypto: plan.crypto)
+            let args = NotificationTemplateArgs.belowMinimum(
+                crypto: plan.crypto, purchaseAmount: "\(purchaseAmount)",
+                fiat: plan.fiat, minOrderSize: "\(minOrderSize)"
+            )
             saveInAppNotification(type: .error, title: String(localized: "DCA Failed"), message: String(localized: "Amount below minimum for \(plan.crypto)"), plan: plan, templateArgs: args)
             return
         }
@@ -255,12 +258,13 @@ final class DcaExecutionEngine {
             let purchaseArgs = NotificationTemplateArgs.purchase(
                 cryptoAmount: "\(tx.cryptoAmount)", crypto: plan.crypto,
                 fiatAmount: "\(tx.fiatAmount)", fiat: plan.fiat,
+                price: "\(tx.price)",
                 scheduledAt: showTimes ? scheduledAt.map { timeFmt.string(from: $0) } : nil,
                 executedAt: showTimes ? timeFmt.string(from: now) : nil
             )
             saveInAppNotification(
                 type: .purchase,
-                title: String(localized: "DCA Purchase"),
+                title: String(localized: "DCA Purchase Completed"),
                 message: String(localized: "Bought \(tx.cryptoAmount as NSDecimalNumber) \(plan.crypto) for \(tx.fiatAmount as NSDecimalNumber) \(plan.fiat)"),
                 plan: plan,
                 templateArgs: purchaseArgs
@@ -290,7 +294,7 @@ final class DcaExecutionEngine {
 
         case .error(let msg, let retryable):
             if retryable {
-                // Network error — retry in 5 min
+                // Network error - retry in 5 min
                 let retryTime = now.addingTimeInterval(300)
                 let newRetryCount = plan.networkRetryCount + 1
                 let isFirstFailure = plan.networkRetryCount == 0
@@ -309,19 +313,17 @@ final class DcaExecutionEngine {
                     if userPreferences.notificationsEnabled && userPreferences.errorNotifications {
                         notificationService.postNetworkRetryNotification(
                             crypto: plan.crypto,
-                            exchange: plan.exchange,
-                            retryAt: retryTime
+                            exchange: plan.exchange
                         )
                     }
                     let retryArgs = NotificationTemplateArgs.networkRetry(
                         crypto: plan.crypto,
-                        exchangeName: plan.exchange.displayName,
-                        retryAt: Self.timeFormatter.string(from: retryTime)
+                        exchangeName: plan.exchange.displayName
                     )
                     saveInAppNotification(
                         type: .networkRetry,
                         title: String(localized: "Network Error"),
-                        message: String(localized: "\(plan.crypto) purchase on \(plan.exchange.displayName) failed — no internet. Retry at \(Self.timeFormatter.string(from: retryTime))."),
+                        message: String(localized: "\(plan.crypto) purchase on \(plan.exchange.displayName) failed - no internet."),
                         plan: plan,
                         templateArgs: retryArgs
                     )
@@ -400,8 +402,8 @@ final class DcaExecutionEngine {
                 )
                 saveInAppNotification(
                     type: .withdrawalThreshold,
-                    title: String(localized: "Withdrawal Threshold"),
-                    message: String(localized: "\(balance as NSDecimalNumber) \(plan.crypto) ready for withdrawal from \(plan.exchange.displayName)"),
+                    title: String(localized: "Withdrawal Recommended"),
+                    message: String(localized: "You have accumulated \(balance as NSDecimalNumber) \(plan.crypto) on \(plan.exchange.displayName) - consider withdrawing to cold wallet"),
                     plan: plan,
                     templateArgs: wtArgs
                 )
@@ -438,8 +440,8 @@ final class DcaExecutionEngine {
                 )
                 saveInAppNotification(
                     type: .lowBalance,
-                    title: String(localized: "Low Balance"),
-                    message: String(localized: "\(plan.exchange.displayName): \(balance as NSDecimalNumber) \(plan.fiat) remaining (~\(displayDays) days)"),
+                    title: String(localized: "Low balance on \(plan.exchange.displayName)"),
+                    message: String(localized: "~\(displayDays) days of \(plan.fiat) remaining for DCA"),
                     plan: plan,
                     templateArgs: lbArgs
                 )

@@ -315,7 +315,7 @@ final class CalculateChartDataUseCase {
     }
 
     /// Determine aggregation granularity based on zoom level and data span.
-    /// Shared logic — also used by PortfolioViewModel for chart point bucketing.
+    /// Shared logic - also used by PortfolioViewModel for chart point bucketing.
     static func aggregationMode(zoomLevel: ChartZoomLevel, spanDays: Int64) -> AggregationMode {
         switch zoomLevel {
         case .month:

@@ -5,7 +5,7 @@ import os
 /// 1. Forward sync (CoinGecko): fills gap between latest cached date and today
 /// 2. Historical backfill (CoinGecko market_chart/range): fetches older data backwards
 ///
-/// Historical prices are immutable — once fetched, they never need re-fetching.
+/// Historical prices are immutable - once fetched, they never need re-fetching.
 final class SyncDailyPricesUseCase {
     private let transactionDao: TransactionDao
     private let dailyPriceDao: DailyPriceDao
@@ -49,7 +49,7 @@ final class SyncDailyPricesUseCase {
                     let latestDay = try dailyPriceDao.getLatestDay(crypto: crypto, fiat: fiat)
 
                     if latestDay == nil {
-                        // Brand new pair — bootstrap with last 365 days
+                        // Brand new pair - bootstrap with last 365 days
                         logger.info("[\(crypto)/\(fiat)] Bootstrap: fetching last 365 days")
                         if let prices = await marketDataService.getDailyPrices(crypto: crypto, fiat: fiat, days: 365) {
                             try insertPrices(crypto: crypto, fiat: fiat, prices: prices)

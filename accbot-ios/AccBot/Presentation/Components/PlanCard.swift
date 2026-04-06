@@ -205,7 +205,7 @@ struct PlanCard: View {
                     .foregroundStyle(colors.warning)
                     .accessibilityHidden(true)
                 if let balanceText = withdrawalBalanceText {
-                    Text("\(balanceText) \(String(localized: "on exchange — consider withdrawal"))")
+                    Text("\(balanceText) \(String(localized: "on exchange - consider withdrawal"))")
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.warning)
                 } else {

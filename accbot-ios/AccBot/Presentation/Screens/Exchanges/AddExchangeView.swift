@@ -435,7 +435,7 @@ struct AddExchangeView: View {
                     }
                     .buttonStyle(.plain)
                 } else {
-                    // Scan All Credentials (hidden for Coinmate — uses Client ID + Public/Private key)
+                    // Scan All Credentials (hidden for Coinmate - uses Client ID + Public/Private key)
                     if exchange != .coinmate {
                         Button {
                             credentials.showMultiFieldScanner = true

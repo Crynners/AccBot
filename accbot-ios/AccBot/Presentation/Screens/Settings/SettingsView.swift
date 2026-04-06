@@ -718,7 +718,7 @@ struct NotificationInfoSheet: View {
                     infoRow(
                         icon: "bell.badge",
                         title: String(localized: "How Notifications Work"),
-                        text: String(localized: "AccBot sends local notifications when DCA purchases complete or fail. Notifications are processed on-device — no data is sent to external servers.")
+                        text: String(localized: "AccBot sends local notifications when DCA purchases complete or fail. Notifications are processed on-device - no data is sent to external servers.")
                     )
 
                     infoRow(

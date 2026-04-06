@@ -108,11 +108,10 @@ final class NotificationService {
         UNUserNotificationCenter.current().add(request)
     }
 
-    func postNetworkRetryNotification(crypto: String, exchange: Exchange, retryAt: Date) {
+    func postNetworkRetryNotification(crypto: String, exchange: Exchange) {
         let content = UNMutableNotificationContent()
         content.title = String(localized: "Network Error")
-        let timeStr = Self.timeFormatter.string(from: retryAt)
-        content.body = String(localized: "\(crypto) purchase on \(exchange.displayName) failed — no internet. Retry at \(timeStr).")
+        content.body = String(localized: "\(crypto) purchase on \(exchange.displayName) failed - no internet.")
         content.sound = .default
         content.categoryIdentifier = Self.networkRetryCategory
 

@@ -3,22 +3,22 @@ import SwiftUI
 // MARK: - AccBot Color Palette
 
 extension Color {
-    // Production colors — WCAG AA compliant (≥4.5:1 contrast with white text on colored backgrounds)
-    static let accentTeal = Color(hex: 0x208464)       // 4.67:1 with white — WCAG AA pass
-    static let accentTealVariant = Color(hex: 0x1B7357) // 5.77:1 with white — WCAG AA pass
+    // Production colors - WCAG AA compliant (≥4.5:1 contrast with white text on colored backgrounds)
+    static let accentTeal = Color(hex: 0x208464)       // 4.67:1 with white - WCAG AA pass
+    static let accentTealVariant = Color(hex: 0x1B7357) // 5.77:1 with white - WCAG AA pass
     /// Lighter teal for text on dark backgrounds (≥4.5:1 contrast on #1A1A2E)
     static let accentTealLight = Color(hex: 0x5CCFAB)
     static let backgroundDark = Color(hex: 0x16213E)
     static let surfaceDark = Color(hex: 0x1A1A2E)
     static let surfaceVariantDark = Color(hex: 0x0F3460)
-    /// Secondary text on dark surfaces — WCAG AA compliant (≥4.5:1 on #1A1A2E)
+    /// Secondary text on dark surfaces - WCAG AA compliant (≥4.5:1 on #1A1A2E)
     static let onSurfaceVariantColor = Color(hex: 0xD0D0D0)
-    /// Raw warning orange for dark-mode decorative use only — use `AccBotColors.warning` for themed usage
+    /// Raw warning orange for dark-mode decorative use only - use `AccBotColors.warning` for themed usage
     static let warningOrange = Color(hex: 0xFFA726)
 
-    // Sandbox colors — WCAG AA compliant (≥4.5:1 contrast with white text)
-    static let sandboxPrimary = Color(hex: 0x9C6900)       // 4.69:1 with white — WCAG AA pass
-    static let sandboxPrimaryVariant = Color(hex: 0x855A00) // 5.87:1 with white — WCAG AA pass
+    // Sandbox colors - WCAG AA compliant (≥4.5:1 contrast with white text)
+    static let sandboxPrimary = Color(hex: 0x9C6900)       // 4.69:1 with white - WCAG AA pass
+    static let sandboxPrimaryVariant = Color(hex: 0x855A00) // 5.87:1 with white - WCAG AA pass
 
     // Light mode backgrounds
     static let backgroundLight = Color(hex: 0xF5F5F5)
@@ -124,12 +124,12 @@ struct AccBotColors {
         isDark ? (isSandbox ? .sandboxPrimary : .accentTealLight) : primaryVariant
     }
 
-    /// Explicit disabled background for buttons — WCAG AA 3:1 against background.
+    /// Explicit disabled background for buttons - WCAG AA 3:1 against background.
     var disabledBackground: Color {
         surfaceVariant
     }
 
-    /// Explicit disabled foreground for text on disabled buttons — WCAG AA 3:1.
+    /// Explicit disabled foreground for text on disabled buttons - WCAG AA 3:1.
     var disabledForeground: Color {
         onSurfaceVariant
     }

@@ -76,12 +76,12 @@ struct ScheduleBuilderState {
             return ScheduleBuilderState(useAdvancedMode: true, rawCronExpression: cron)
         }
 
-        // Parse minute — must be a single number
+        // Parse minute - must be a single number
         guard let minute = Int(minutePart), (0...59).contains(minute) else {
             return ScheduleBuilderState(useAdvancedMode: true, rawCronExpression: cron)
         }
 
-        // Parse hours — must be a comma-separated list of numbers
+        // Parse hours - must be a comma-separated list of numbers
         guard let hours = parseNumberList(hourPart, range: 0...23) else {
             return ScheduleBuilderState(useAdvancedMode: true, rawCronExpression: cron)
         }
@@ -125,7 +125,7 @@ struct ScheduleBuilderState {
             )
 
         default:
-            // Both DOM and DOW specified — too complex
+            // Both DOM and DOW specified - too complex
             return ScheduleBuilderState(useAdvancedMode: true, rawCronExpression: cron)
         }
     }
@@ -144,7 +144,7 @@ struct ScheduleBuilderState {
 
 // MARK: - Schedule Builder View
 
-/// Visual schedule builder — drop-in replacement matching Android's full CRON builder.
+/// Visual schedule builder - drop-in replacement matching Android's full CRON builder.
 /// Supports: schedule type (daily/days-of-week/days-of-month), minute picker,
 /// multi-hour selection, day-of-week chips, day-of-month chips, CRON preview,
 /// and advanced raw CRON input mode.
