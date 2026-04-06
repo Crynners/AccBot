@@ -75,6 +75,7 @@
     <string name="dashboard_portfolio_total">Celkové portfolio</string>
     <string name="dashboard_portfolio_total_invested">Investováno</string>
     <string name="dashboard_roi">ROI %1$s</string>
+    <string name="dashboard_price_unavailable">nedostupné</string>
     <string name="ath_distance_format">-%1$d %%</string>
     <string name="ath_distance_crypto_format">%1$s -%2$d %%</string>
     <string name="dashboard_less_than_1_hour">&lt; 1 hodina</string>
@@ -598,7 +599,7 @@
     <string name="qr_done_count">Hotovo (%1$d/%2$d)</string>
     <string name="qr_now_assign">Nyní přiřaďte: %1$s</string>
     <string name="qr_tap_to_capture">Klepněte ● pro zachycení textu</string>
-    <string name="qr_frozen_hint">Text zachycen — vyberte níže</string>
+    <string name="qr_frozen_hint">Text zachycen – vyberte níže</string>
     <string name="qr_all_fields_assigned">Všechna pole přiřazena! Klepněte na Hotovo.</string>
 
     <!-- Biometric Lock -->
@@ -748,16 +749,21 @@
     <string name="settings_withdrawal_threshold_hint">Částka (např. 0,01)</string>
     <string name="settings_withdrawal_threshold_no_plans">Žádné aktivní DCA plány</string>
     <string name="notification_withdrawal_threshold_title">Doporučen výběr</string>
-    <string name="notification_withdrawal_threshold_text">Nakumulovali jste %1$s %2$s na %3$s — zvažte výběr do cold wallet</string>
-    <string name="notification_target_reached">Cíl dosažen: %1$s %2$s — plán automaticky deaktivován</string>
+    <string name="notification_withdrawal_threshold_text">Nakumulovali jste %1$s %2$s na %3$s – zvažte výběr do cold wallet</string>
+    <string name="notification_target_reached">Cíl dosažen: %1$s %2$s – plán automaticky deaktivován</string>
     <string name="notification_below_minimum">Částka %1$s %2$s pod minimem burzy %3$s %2$s</string>
     <string name="notification_purchase_delayed">Plán %1$s → provedeno %2$s (zpoždění %3$d min)</string>
-    <string name="notification_network_retry_title">Chyba sítě</string>
-    <string name="notification_network_retry_text">Nákup %1$s na %2$s selhal — bez internetu. Další pokus v %3$s.</string>
+    <string name="notification_network_retry_title">AccBot: Chyba sítě</string>
+    <string name="notification_network_retry_text">Nákup %1$s na %2$s selhal – bez internetu. Nákup bude automaticky zopakován.</string>
     <string name="notification_network_retry_banner">Nákup %1$s na %2$s selhal kvůli nedostupnému internetu.</string>
     <string name="notification_network_retry_banner_attempts">Pokusů: %1$d</string>
     <string name="notification_network_retry_banner_next">Další pokus v %1$s</string>
-    <string name="dashboard_withdrawal_ready">%1$s %2$s na burze — zvažte výběr</string>
+    <string name="notification_missed_purchases_title">AccBot: Zmeškané nákupy</string>
+    <string name="notification_missed_purchases_text">Zmeškaných %1$d nákupů %2$s na %3$s během offline.</string>
+    <string name="notification_missed_purchases_banner">Zmeškaných %1$d nákupů %2$s na %3$s během offline.</string>
+    <string name="missed_purchases_buy">Dokoupit</string>
+    <string name="missed_purchases_skip">Přeskočit</string>
+    <string name="dashboard_withdrawal_ready">%1$s %2$s na burze – zvažte výběr</string>
 
     <!-- DCA Alerts section -->
     <string name="settings_dca_alerts">DCA UPOZORNĚNÍ</string>
@@ -812,7 +818,7 @@
 
     <!-- Notification Info -->
     <string name="notification_info_title">Nastavení notifikací</string>
-    <string name="notification_info_body">AccBot používá 4 notifikační kanály. V nastavení Androidu si můžete každý kanál upravit individuálně:\n\n• DCA služba — stav služby na pozadí\n• Notifikace nákupů — úspěšné obchody\n• Chybové notifikace — neúspěšné obchody\n• Upozornění na nízký zůstatek — výstrahy zůstatku\n\nPro každý kanál si můžete nastavit vlastní zvuk, vibrace a výjimky z režimu Nerušit.</string>
+    <string name="notification_info_body">AccBot používá 4 notifikační kanály. V nastavení Androidu si můžete každý kanál upravit individuálně:\n\n• DCA služba – stav služby na pozadí\n• Notifikace nákupů – úspěšné obchody\n• Chybové notifikace – neúspěšné obchody\n• Upozornění na nízký zůstatek – výstrahy zůstatku\n\nPro každý kanál si můžete nastavit vlastní zvuk, vibrace a výjimky z režimu Nerušit.</string>
     <string name="notification_info_open_settings">Otevřít nastavení</string>
 
     <!-- Changelog -->
@@ -820,8 +826,8 @@
     <string name="changelog_got_it">Rozumím</string>
     <string name="settings_changelog_subtitle">Poznámky k verzím a nové funkce</string>
     <string name="changelog_title_2_2_1">Verze 2.2.1</string>
-    <string name="changelog_2_2_1_feature_1">Sledování cíle — nastavte cílové množství kryptoměny pro DCA plán</string>
-    <string name="changelog_2_2_1_feature_2">Výběr vzhledu — tmavý, světlý nebo podle systému</string>
+    <string name="changelog_2_2_1_feature_1">Sledování cíle – nastavte cílové množství kryptoměny pro DCA plán</string>
+    <string name="changelog_2_2_1_feature_2">Výběr vzhledu – tmavý, světlý nebo podle systému</string>
     <string name="changelog_2_2_1_feature_3">Celkový přehled portfolia na Dashboardu</string>
     <string name="changelog_2_2_1_feature_4">Vyhledávání v historii transakcí</string>
     <string name="changelog_2_2_1_feature_5">Informace o notifikačních kanálech v Nastavení</string>
@@ -854,18 +860,18 @@
     <string name="market_pulse_info_fg_title">Index strachu a chamtivosti</string>
     <string name="market_pulse_info_fg_description">Index strachu a chamtivosti měří celkovou náladu kryptotrhu na stupnici od 0 (extrémní strach) do 100 (extrémní chamtivost). Kombinuje signály jako volatilita, objem, sociální média a trendy.</string>
     <string name="market_pulse_info_fg_extreme_fear">Extrémní strach (0–19)</string>
-    <string name="market_pulse_info_fg_extreme_fear_desc">Investoři mají velký strach — často příležitost k nákupu</string>
+    <string name="market_pulse_info_fg_extreme_fear_desc">Investoři mají velký strach – často příležitost k nákupu</string>
     <string name="market_pulse_info_fg_fear">Strach (20–39)</string>
-    <string name="market_pulse_info_fg_fear_desc">Trh je opatrný — ceny mohou být podhodnocené</string>
+    <string name="market_pulse_info_fg_fear_desc">Trh je opatrný – ceny mohou být podhodnocené</string>
     <string name="market_pulse_info_fg_neutral">Neutrální (40–59)</string>
-    <string name="market_pulse_info_fg_neutral_desc">Vyvážená nálada — žádný silný signál</string>
+    <string name="market_pulse_info_fg_neutral_desc">Vyvážená nálada – žádný silný signál</string>
     <string name="market_pulse_info_fg_greed">Chamtivost (60–79)</string>
-    <string name="market_pulse_info_fg_greed_desc">Optimismus je vysoký — ceny mohou být nadsazené</string>
+    <string name="market_pulse_info_fg_greed_desc">Optimismus je vysoký – ceny mohou být nadsazené</string>
     <string name="market_pulse_info_fg_extreme_greed">Extrémní chamtivost (80–100)</string>
-    <string name="market_pulse_info_fg_extreme_greed_desc">Euforie — trh může být přehřátý</string>
+    <string name="market_pulse_info_fg_extreme_greed_desc">Euforie – trh může být přehřátý</string>
     <string name="market_pulse_info_ath_title">Vzdálenost od ATH</string>
     <string name="market_pulse_info_ath_description">Vzdálenost od ATH ukazuje, jak daleko je aktuální cena od svého historického maxima. Vzdálenost 0 % znamená, že cena je na ATH; 50 % znamená, že cena klesla na polovinu z maxima.</string>
-    <string name="market_pulse_info_dca_tip">Strategie DCA dle strachu a chamtivosti a dle ATH používají tyto indikátory k automatické úpravě nákupních částek — nakupují více, když je trh ve strachu nebo daleko od ATH, a méně, když je chamtivý nebo blízko vrcholu.</string>
+    <string name="market_pulse_info_dca_tip">Strategie DCA dle strachu a chamtivosti a dle ATH používají tyto indikátory k automatické úpravě nákupních částek – nakupují více, když je trh ve strachu nebo daleko od ATH, a méně, když je chamtivý nebo blízko vrcholu.</string>
 
     <!-- Settings: Market Pulse -->
     <string name="settings_market_pulse_title">Tržní nálada</string>

@@ -37,7 +37,7 @@ import com.accbot.dca.presentation.components.getFiatIconRes
  * Renders: crypto/fiat selection, amount, frequency, strategy, monthly estimate,
  * auto-withdrawal, target amount, and error message.
  *
- * Does NOT include exchange selection, credentials, or the submit button —
+ * Does NOT include exchange selection, credentials, or the submit button –
  * those are screen-specific.
  */
 @Composable

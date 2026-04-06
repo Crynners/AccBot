@@ -238,7 +238,7 @@ class MarketDataService @Inject constructor(
     /**
      * Get daily price history for a date range using CryptoCompare histoday endpoint.
      * Free tier supports full historical data (up to 2000 data points per call).
-     * Used for historical backfill — fetches data ending at [toDate] going back [limit] days.
+     * Used for historical backfill – fetches data ending at [toDate] going back [limit] days.
      * Returns list of (LocalDate, BigDecimal) pairs ordered by date ascending.
      */
     suspend fun getDailyPriceHistoryRange(

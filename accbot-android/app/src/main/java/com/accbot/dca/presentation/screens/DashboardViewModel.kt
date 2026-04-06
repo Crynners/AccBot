@@ -23,6 +23,7 @@ import com.accbot.dca.domain.usecase.CalculateStrategyMultiplierUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.service.DcaForegroundService
+
 import com.accbot.dca.worker.DcaWorker
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -66,6 +67,14 @@ data class DcaPlanWithBalance(
 )
 
 @Immutable
+data class MissedPurchaseInfo(
+    val planId: Long,
+    val crypto: String,
+    val exchangeName: String,
+    val missedCount: Int
+)
+
+@Immutable
 data class NetworkRetryPlan(
     val planId: Long,
     val crypto: String,
@@ -95,7 +104,8 @@ data class DashboardUiState(
     val isMarketDataLoading: Boolean = false,
     val showMarketPulse: Boolean = true,
     val isMarketPulseExpanded: Boolean = true,
-    val networkRetryInfo: NetworkRetryInfo = NetworkRetryInfo()
+    val networkRetryInfo: NetworkRetryInfo = NetworkRetryInfo(),
+    val missedPurchases: List<MissedPurchaseInfo> = emptyList()
 )
 
 @HiltViewModel
@@ -158,6 +168,9 @@ class DashboardViewModel @Inject constructor(
 
                 val hasEnabledPlans = plans.any { it.isEnabled }
                 ensureServiceState(hasEnabledPlans)
+                if (hasEnabledPlans) {
+                    launch { DcaAlarmScheduler.scheduleNextAlarm(application) }
+                }
 
                 val plansWithBalance = plans.map { plan ->
                     val accumulated = if (plan.targetAmount != null) {
@@ -186,6 +199,18 @@ class DashboardViewModel @Inject constructor(
                     } else h
                 }
 
+                // Check missed purchases from plans
+                val missedPurchases = planEntities
+                    .filter { it.missedPurchaseCount > 0 }
+                    .map {
+                        MissedPurchaseInfo(
+                            planId = it.id,
+                            crypto = it.crypto,
+                            exchangeName = it.exchange.displayName,
+                            missedCount = it.missedPurchaseCount
+                        )
+                    }
+
                 // Check network retry state from plans
                 val retryPlans = planEntities
                     .filter { it.networkRetryCount > 0 }
@@ -204,6 +229,7 @@ class DashboardViewModel @Inject constructor(
                         activePlans = plansWithBalance,
                         holdings = mergedHoldings,
                         isLoading = false,
+                        missedPurchases = missedPurchases,
                         networkRetryInfo = if (retryPlans.isNotEmpty()) {
                             NetworkRetryInfo(plans = retryPlans, dismissed = false)
                         } else {
@@ -528,6 +554,7 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             val plan = dcaPlanDao.getPlanById(planId) ?: return@launch
             dcaPlanDao.setEnabled(planId, !plan.isEnabled)
+            DcaAlarmScheduler.scheduleNextAlarm(application)
         }
     }
 
@@ -574,6 +601,28 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             plans.forEach { dcaPlanDao.resetNetworkRetry(it.planId) }
             plans.forEach { DcaWorker.runPlan(application, it.planId) }
+        }
+    }
+
+    fun executeMissedPurchases(planId: Long, count: Int) {
+        _uiState.update {
+            it.copy(
+                runNowTriggered = true,
+                missedPurchases = it.missedPurchases.filter { m -> m.planId != planId }
+            )
+        }
+        viewModelScope.launch {
+            dcaPlanDao.resetMissedPurchaseCount(planId)
+            DcaWorker.runMissedPurchases(application, planId, count)
+        }
+    }
+
+    fun dismissMissedPurchases(planId: Long) {
+        _uiState.update {
+            it.copy(missedPurchases = it.missedPurchases.filter { m -> m.planId != planId })
+        }
+        viewModelScope.launch {
+            dcaPlanDao.resetMissedPurchaseCount(planId)
         }
     }
 

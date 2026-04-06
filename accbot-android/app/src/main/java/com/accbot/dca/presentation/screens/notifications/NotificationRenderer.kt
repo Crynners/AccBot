@@ -114,16 +114,23 @@ object NotificationRenderer {
                 title to message
             }
 
+            is NotificationTemplateArgs.MissedPurchases -> {
+                val title = context.getString(R.string.notification_missed_purchases_title)
+                val message = context.getString(
+                    R.string.notification_missed_purchases_text,
+                    args.missedCount,
+                    args.crypto,
+                    args.exchangeName
+                )
+                title to message
+            }
+
             is NotificationTemplateArgs.NetworkRetry -> {
                 val title = context.getString(R.string.notification_network_retry_title)
-                val retryTime = Instant.ofEpochMilli(args.nextRetryAtEpochMs)
-                    .atZone(ZoneId.systemDefault())
-                    .format(timeFormatter)
                 val message = context.getString(
                     R.string.notification_network_retry_text,
                     args.crypto,
-                    args.exchangeName,
-                    retryTime
+                    args.exchangeName
                 )
                 title to message
             }

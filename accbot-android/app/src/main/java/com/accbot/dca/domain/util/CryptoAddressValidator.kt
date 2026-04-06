@@ -2,7 +2,7 @@ package com.accbot.dca.domain.util
 
 /**
  * Basic validation for cryptocurrency wallet addresses.
- * Simplified validation — actual address format depends on the crypto.
+ * Simplified validation – actual address format depends on the crypto.
  */
 object CryptoAddressValidator {
 

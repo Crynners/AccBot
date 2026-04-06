@@ -489,7 +489,7 @@ fun ExchangeSelectionTile(
 }
 
 /**
- * "Request Exchange" card — OutlinedCard with Add icon, used in all exchange grids.
+ * "Request Exchange" card – OutlinedCard with Add icon, used in all exchange grids.
  */
 @Composable
 fun RequestExchangeTile(

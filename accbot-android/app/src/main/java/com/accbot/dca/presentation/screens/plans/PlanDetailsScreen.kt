@@ -46,6 +46,7 @@ fun PlanDetailsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToEdit: () -> Unit,
     onNavigateToHistory: ((crypto: String, fiat: String) -> Unit)? = null,
+    onNavigateToTransactionDetails: ((Long) -> Unit)? = null,
     viewModel: PlanDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -235,7 +236,7 @@ fun PlanDetailsScreen(
                 ) {
                     item { Spacer(modifier = Modifier.height(8.dp)) }
 
-                    // 1. Header card (simplified — no strategy name)
+                    // 1. Header card (simplified – no strategy name)
                     item {
                         Card(
                             colors = CardDefaults.cardColors(
@@ -692,7 +693,10 @@ fun PlanDetailsScreen(
 
                     if (uiState.transactions.isNotEmpty()) {
                         items(uiState.transactions.take(10), key = { it.id }) { transaction ->
-                            TransactionCard(transaction = transaction)
+                            TransactionCard(
+                                transaction = transaction,
+                                onClick = onNavigateToTransactionDetails?.let { nav -> { nav(transaction.id) } }
+                            )
                         }
 
                         if (uiState.transactions.size > 10) {

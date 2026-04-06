@@ -76,6 +76,7 @@
     <string name="dashboard_portfolio_total">Total Portfolio</string>
     <string name="dashboard_portfolio_total_invested">Invested</string>
     <string name="dashboard_roi">ROI %1$s</string>
+    <string name="dashboard_price_unavailable">unavailable</string>
     <string name="ath_distance_format">-%1$d %%</string>
     <string name="ath_distance_crypto_format">%1$s -%2$d %%</string>
     <string name="dashboard_less_than_1_hour">&lt; 1 hour</string>
@@ -596,7 +597,7 @@
     <string name="qr_done_count">Done (%1$d/%2$d)</string>
     <string name="qr_now_assign">Now assign: %1$s</string>
     <string name="qr_tap_to_capture">Tap ● to capture text</string>
-    <string name="qr_frozen_hint">Text captured — select below</string>
+    <string name="qr_frozen_hint">Text captured – select below</string>
     <string name="qr_all_fields_assigned">All fields assigned! Tap Done to confirm.</string>
 
     <!-- Biometric Lock -->
@@ -745,16 +746,21 @@
     <string name="settings_withdrawal_threshold_hint">Amount (e.g. 0.01)</string>
     <string name="settings_withdrawal_threshold_no_plans">No active DCA plans found</string>
     <string name="notification_withdrawal_threshold_title">Withdrawal Recommended</string>
-    <string name="notification_withdrawal_threshold_text">You have accumulated %1$s %2$s on %3$s — consider withdrawing to cold wallet</string>
-    <string name="notification_target_reached">Target reached: %1$s %2$s — plan auto-disabled</string>
+    <string name="notification_withdrawal_threshold_text">You have accumulated %1$s %2$s on %3$s – consider withdrawing to cold wallet</string>
+    <string name="notification_target_reached">Target reached: %1$s %2$s – plan auto-disabled</string>
     <string name="notification_below_minimum">Amount %1$s %2$s below exchange minimum %3$s %2$s</string>
     <string name="notification_purchase_delayed">Scheduled %1$s → executed %2$s (delay %3$d min)</string>
-    <string name="notification_network_retry_title">Network Error</string>
-    <string name="notification_network_retry_text">%1$s purchase on %2$s failed — no internet. Next retry at %3$s.</string>
+    <string name="notification_network_retry_title">AccBot: Network Error</string>
+    <string name="notification_network_retry_text">%1$s purchase on %2$s failed – no internet. Will retry automatically.</string>
     <string name="notification_network_retry_banner">%1$s purchase on %2$s failed due to no internet.</string>
     <string name="notification_network_retry_banner_attempts">%1$d attempt(s)</string>
     <string name="notification_network_retry_banner_next">Next retry at %1$s</string>
-    <string name="dashboard_withdrawal_ready">%1$s %2$s on exchange — consider withdrawal</string>
+    <string name="notification_missed_purchases_title">AccBot: Missed Purchases</string>
+    <string name="notification_missed_purchases_text">%1$d %2$s purchase(s) on %3$s were missed while offline.</string>
+    <string name="notification_missed_purchases_banner">%1$d missed %2$s purchase(s) on %3$s while offline.</string>
+    <string name="missed_purchases_buy">Buy now</string>
+    <string name="missed_purchases_skip">Skip</string>
+    <string name="dashboard_withdrawal_ready">%1$s %2$s on exchange – consider withdrawal</string>
 
     <!-- DCA Alerts section -->
     <string name="settings_dca_alerts">DCA ALERTS</string>
@@ -806,7 +812,7 @@
 
     <!-- Notification Info -->
     <string name="notification_info_title">Notification Settings</string>
-    <string name="notification_info_body">AccBot uses 4 notification channels. In Android settings, you can customize each channel individually:\n\n• DCA Service — background service status\n• Purchase Notifications — successful trades\n• Error Notifications — failed trades\n• Low Balance Warnings — balance alerts\n\nFor each channel, you can set custom sound, vibration, and Do Not Disturb exceptions.</string>
+    <string name="notification_info_body">AccBot uses 4 notification channels. In Android settings, you can customize each channel individually:\n\n• DCA Service – background service status\n• Purchase Notifications – successful trades\n• Error Notifications – failed trades\n• Low Balance Warnings – balance alerts\n\nFor each channel, you can set custom sound, vibration, and Do Not Disturb exceptions.</string>
     <string name="notification_info_open_settings">Open Settings</string>
 
     <!-- Changelog -->
@@ -814,8 +820,8 @@
     <string name="changelog_got_it">Got it</string>
     <string name="settings_changelog_subtitle">See release notes and new features</string>
     <string name="changelog_title_2_2_1">Version 2.2.1</string>
-    <string name="changelog_2_2_1_feature_1">Goal tracking — set a target crypto amount for your DCA plan</string>
-    <string name="changelog_2_2_1_feature_2">Theme selection — choose Dark, Light, or System</string>
+    <string name="changelog_2_2_1_feature_1">Goal tracking – set a target crypto amount for your DCA plan</string>
+    <string name="changelog_2_2_1_feature_2">Theme selection – choose Dark, Light, or System</string>
     <string name="changelog_2_2_1_feature_3">Total portfolio summary on Dashboard</string>
     <string name="changelog_2_2_1_feature_4">Transaction history search</string>
     <string name="changelog_2_2_1_feature_5">Notification channel info in Settings</string>
@@ -848,18 +854,18 @@
     <string name="market_pulse_info_fg_title">Fear &amp; Greed Index</string>
     <string name="market_pulse_info_fg_description">The Fear &amp; Greed Index measures overall crypto market sentiment on a scale from 0 (extreme fear) to 100 (extreme greed). It combines signals like volatility, volume, social media, and trends.</string>
     <string name="market_pulse_info_fg_extreme_fear">Extreme Fear (0–19)</string>
-    <string name="market_pulse_info_fg_extreme_fear_desc">Investors are very worried — often a buying opportunity</string>
+    <string name="market_pulse_info_fg_extreme_fear_desc">Investors are very worried – often a buying opportunity</string>
     <string name="market_pulse_info_fg_fear">Fear (20–39)</string>
-    <string name="market_pulse_info_fg_fear_desc">Market is cautious — prices may be undervalued</string>
+    <string name="market_pulse_info_fg_fear_desc">Market is cautious – prices may be undervalued</string>
     <string name="market_pulse_info_fg_neutral">Neutral (40–59)</string>
-    <string name="market_pulse_info_fg_neutral_desc">Balanced sentiment — no strong signal</string>
+    <string name="market_pulse_info_fg_neutral_desc">Balanced sentiment – no strong signal</string>
     <string name="market_pulse_info_fg_greed">Greed (60–79)</string>
-    <string name="market_pulse_info_fg_greed_desc">Optimism is high — prices may be elevated</string>
+    <string name="market_pulse_info_fg_greed_desc">Optimism is high – prices may be elevated</string>
     <string name="market_pulse_info_fg_extreme_greed">Extreme Greed (80–100)</string>
-    <string name="market_pulse_info_fg_extreme_greed_desc">Euphoria — market may be overheated</string>
+    <string name="market_pulse_info_fg_extreme_greed_desc">Euphoria – market may be overheated</string>
     <string name="market_pulse_info_ath_title">ATH Distance</string>
     <string name="market_pulse_info_ath_description">ATH Distance shows how far the current price is from its All-Time High. A distance of 0% means the price is at ATH; 50% means the price has dropped halfway from the peak.</string>
-    <string name="market_pulse_info_dca_tip">The Fear &amp; Greed and ATH-based DCA strategies use these indicators to automatically adjust your purchase amounts — buying more when the market is fearful or far from ATH, and less when it\'s greedy or near the peak.</string>
+    <string name="market_pulse_info_dca_tip">The Fear &amp; Greed and ATH-based DCA strategies use these indicators to automatically adjust your purchase amounts – buying more when the market is fearful or far from ATH, and less when it\'s greedy or near the peak.</string>
 
     <!-- Settings: Market Pulse -->
     <string name="settings_market_pulse_title">Market Pulse</string>

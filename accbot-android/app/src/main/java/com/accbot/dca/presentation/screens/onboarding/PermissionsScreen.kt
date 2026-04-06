@@ -222,7 +222,7 @@ fun PermissionsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Continue button — always enabled
+            // Continue button – always enabled
             Button(
                 onClick = onContinue,
                 modifier = Modifier

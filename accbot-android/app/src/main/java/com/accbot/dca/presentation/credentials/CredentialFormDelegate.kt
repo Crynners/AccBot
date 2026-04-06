@@ -52,7 +52,7 @@ val CredentialFormState.resolvedCredentialsError: String?
 /**
  * Shared delegate for credential form state and logic.
  * Used by AddPlanViewModel, OnboardingViewModel, AddExchangeViewModel, and ExchangeDetailViewModel.
- * Not a ViewModel — the owning ViewModel passes its coroutineScope.
+ * Not a ViewModel – the owning ViewModel passes its coroutineScope.
  */
 class CredentialFormDelegate(
     private val credentialsStore: CredentialsStore,

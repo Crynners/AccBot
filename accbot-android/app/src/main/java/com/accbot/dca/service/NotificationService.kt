@@ -266,6 +266,42 @@ class NotificationService @Inject constructor(
     }
 
     /**
+     * Show notification for missed purchases after prolonged offline period.
+     */
+    fun showMissedPurchasesNotification(
+        crypto: String,
+        exchangeName: String,
+        missedCount: Int,
+        planId: Long,
+        exchange: Exchange? = null
+    ) {
+        val args = NotificationTemplateArgs.MissedPurchases(
+            crypto = crypto,
+            exchangeName = exchangeName,
+            missedCount = missedCount,
+            planId = planId
+        )
+        val (title, text) = NotificationRenderer.render(context, args)
+        val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_MISSED_PURCHASES, planId)
+        persistAndShow(
+            sysNotifId = sysNotifId,
+            channel = CHANNEL_ERROR,
+            title = title,
+            text = text,
+            entity = NotificationEntity(
+                type = NotificationType.MISSED_PURCHASES,
+                title = title,
+                message = text,
+                planId = planId.takeIf { it > 0 },
+                crypto = crypto,
+                exchange = exchange,
+                systemNotificationId = sysNotifId,
+                templateArgs = args.toJson()
+            )
+        )
+    }
+
+    /**
      * Show notification for network retry (offline purchase failure).
      */
     fun showNetworkRetryNotification(
@@ -354,7 +390,7 @@ class NotificationService @Inject constructor(
 
                 notificationManager.notify(sysNotifId, notification)
             } catch (_: Exception) {
-                // Best-effort — don't crash if DB write fails
+                // Best-effort – don't crash if DB write fails
             }
         }
     }
@@ -371,6 +407,7 @@ class NotificationService @Inject constructor(
         private const val NOTIFICATION_ID_LOW_BALANCE = 30_000
         private const val NOTIFICATION_ID_WITHDRAWAL_THRESHOLD = 40_000
         private const val NOTIFICATION_ID_NETWORK_RETRY = 50_000
+        private const val NOTIFICATION_ID_MISSED_PURCHASES = 60_000
 
         const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
 

@@ -41,7 +41,7 @@ class DcaForegroundService : Service() {
                 START_NOT_STICKY
             }
             else -> {
-                // Null intent (e.g. system restart after crash) — do not auto-restart
+                // Null intent (e.g. system restart after crash) – do not auto-restart
                 START_NOT_STICKY
             }
         }

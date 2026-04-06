@@ -69,7 +69,7 @@ data class LegendEntry(
 )
 
 /**
- * Interactive chart legend — tap a label to show/hide its series.
+ * Interactive chart legend – tap a label to show/hide its series.
  * Renders entries in rows of 2.
  */
 @Composable
@@ -152,7 +152,7 @@ fun PortfolioLineChart(
     LaunchedEffect(chartData, denominationMode, visibleSeries) {
         try {
             modelProducer.runTransaction {
-                // Layer 1: left axis (portfolio value, cost basis, crypto price — all fiat)
+                // Layer 1: left axis (portfolio value, cost basis, crypto price – all fiat)
                 lineSeries {
                     val (series0, series1) = when (denominationMode) {
                         DenominationMode.FIAT ->
@@ -170,7 +170,7 @@ fun PortfolioLineChart(
                         series(List(chartData.size) { 0f })
                     }
                 }
-                // Layer 2: right axis (accumulated crypto — BTC units)
+                // Layer 2: right axis (accumulated crypto – BTC units)
                 lineSeries {
                     if (3 in visibleSeries) series(chartData.map { it.cumulativeCrypto.toFloat() })
                     else series(List(chartData.size) { 0f })
@@ -237,7 +237,7 @@ fun PortfolioLineChart(
         if (isEmpty()) add(hiddenLine)
     }
 
-    // Tap-to-inspect marker — scrub fires onScrub to update KPI cards, no tooltip text
+    // Tap-to-inspect marker – scrub fires onScrub to update KPI cards, no tooltip text
     val indicatorComponent = rememberShapeComponent(
         fill = fill(chartAccentColor),
         shape = CorneredShape.Pill
@@ -258,18 +258,18 @@ fun PortfolioLineChart(
         guideline = rememberAxisGuidelineComponent()
     )
 
-    // Axis title styling — unit label shown once above axis instead of on every tick
+    // Axis title styling – unit label shown once above axis instead of on every tick
     val axisTitleComponent = rememberTextComponent(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textSize = 10.sp
     )
-    // Axis tick label styling — must be explicit for light theme support
+    // Axis tick label styling – must be explicit for light theme support
     val axisLabelComponent = rememberTextComponent(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textSize = 10.sp
     )
 
-    // End (right) axis — accumulated crypto in BTC units
+    // End (right) axis – accumulated crypto in BTC units
     val endAxisComponent = VerticalAxis.rememberEnd(
         label = axisLabelComponent,
         title = cryptoSymbol,

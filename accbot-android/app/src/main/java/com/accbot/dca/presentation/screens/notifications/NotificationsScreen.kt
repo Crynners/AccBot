@@ -280,6 +280,7 @@ private fun NotificationTypeIcon(type: NotificationType) {
         NotificationType.LOW_BALANCE -> Icons.Default.Warning to Warning
         NotificationType.WITHDRAWAL_THRESHOLD -> Icons.AutoMirrored.Filled.CallMade to Warning
         NotificationType.NETWORK_RETRY -> Icons.Default.WifiOff to Error
+        NotificationType.MISSED_PURCHASES -> Icons.Default.EventBusy to Warning
     }
 
     Box(

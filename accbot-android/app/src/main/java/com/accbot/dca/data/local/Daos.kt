@@ -76,6 +76,12 @@ interface DcaPlanDao {
     @Query("UPDATE dca_plans SET networkRetryCount = 0, nextNetworkRetryAt = NULL, originalScheduledAt = NULL WHERE id = :planId")
     suspend fun resetNetworkRetry(planId: Long)
 
+    @Query("UPDATE dca_plans SET missedPurchaseCount = :count WHERE id = :planId")
+    suspend fun setMissedPurchaseCount(planId: Long, count: Int)
+
+    @Query("UPDATE dca_plans SET missedPurchaseCount = 0 WHERE id = :planId")
+    suspend fun resetMissedPurchaseCount(planId: Long)
+
 }
 
 @Dao

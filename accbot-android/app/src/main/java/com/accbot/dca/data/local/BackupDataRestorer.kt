@@ -155,7 +155,7 @@ class BackupDataRestorer @Inject constructor(
         val restoredNext = nextExecutionAt?.let { Instant.ofEpochMilli(it) }
 
         val effectiveNext = if (restoredNext != null && restoredNext.isAfter(now)) {
-            restoredNext // still in the future — keep it
+            restoredNext // still in the future – keep it
         } else if (cronExpression != null) {
             CronUtils.getNextExecution(cronExpression, now)
                 ?: now.plus(Duration.ofMinutes(freq.intervalMinutes.takeIf { it > 0 } ?: 1440))

@@ -4,7 +4,7 @@ import org.json.JSONObject
 
 /**
  * Structured arguments for notification templates.
- * Stored as JSON in the `templateArgs` column — text is rendered at display time
+ * Stored as JSON in the `templateArgs` column – text is rendered at display time
  * using the current locale, so language switches re-render old notifications.
  *
  * Numbers are stored as raw strings (BigDecimal.toPlainString()) and formatted
@@ -96,7 +96,7 @@ sealed class NotificationTemplateArgs {
         }.toString()
     }
 
-    /** Target accumulation reached — plan auto-disabled. */
+    /** Target accumulation reached – plan auto-disabled. */
     data class TargetReached(
         val targetAmount: String,
         val crypto: String
@@ -124,7 +124,7 @@ sealed class NotificationTemplateArgs {
         }.toString()
     }
 
-    /** Network error — purchase will be retried. */
+    /** Network error – purchase will be retried. */
     data class NetworkRetry(
         val crypto: String,
         val exchangeName: String,
@@ -144,6 +144,22 @@ sealed class NotificationTemplateArgs {
         }.toString()
     }
 
+    /** Missed purchases due to prolonged offline period. */
+    data class MissedPurchases(
+        val crypto: String,
+        val exchangeName: String,
+        val missedCount: Int,
+        val planId: Long
+    ) : NotificationTemplateArgs() {
+        override fun toJson(): String = JSONObject().apply {
+            put(KEY_TYPE, TYPE_MISSED_PURCHASES)
+            put("crypto", crypto)
+            put("exchangeName", exchangeName)
+            put("missedCount", missedCount)
+            put("planId", planId)
+        }.toString()
+    }
+
     companion object {
         private const val KEY_TYPE = "type"
         private const val TYPE_PURCHASE = "purchase"
@@ -154,6 +170,7 @@ sealed class NotificationTemplateArgs {
         private const val TYPE_TARGET_REACHED = "target_reached"
         private const val TYPE_BELOW_MINIMUM = "below_minimum"
         private const val TYPE_NETWORK_RETRY = "network_retry"
+        private const val TYPE_MISSED_PURCHASES = "missed_purchases"
 
         fun fromJson(json: String): NotificationTemplateArgs? = try {
             val obj = JSONObject(json)
@@ -198,6 +215,12 @@ sealed class NotificationTemplateArgs {
                     purchaseAmount = obj.getString("purchaseAmount"),
                     fiat = obj.getString("fiat"),
                     minOrderSize = obj.getString("minOrderSize")
+                )
+                TYPE_MISSED_PURCHASES -> MissedPurchases(
+                    crypto = obj.getString("crypto"),
+                    exchangeName = obj.getString("exchangeName"),
+                    missedCount = obj.getInt("missedCount"),
+                    planId = obj.optLong("planId", 0)
                 )
                 TYPE_NETWORK_RETRY -> NetworkRetry(
                     crypto = obj.getString("crypto"),

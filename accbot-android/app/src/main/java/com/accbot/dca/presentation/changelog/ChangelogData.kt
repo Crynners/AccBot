@@ -1,7 +1,7 @@
 package com.accbot.dca.presentation.changelog
 
 // Generated from changelog.json by scripts/generate-changelog.sh
-// Do not edit manually — run the generator script after updating changelog.json
+// Do not edit manually – run the generator script after updating changelog.json
 
 object ChangelogData {
     val entries: List<ChangelogEntry> = listOf(
@@ -14,23 +14,23 @@ object ChangelogData {
             ),
             features = mapOf(
                 "cs" to listOf(
-                    "Sdílený CredentialFormDelegate — méně duplicitního kódu napříč 4 ViewModely",
+                    "Sdílený CredentialFormDelegate – méně duplicitního kódu napříč 4 ViewModely",
                     "Sdílený dialog výsledku API importu na 3 obrazovkách",
                     "Jednotný AccBotTopAppBar na 11 obrazovkách",
                     "Binance: přechod z USDT na USDC, minimální objednávka snížena na 5",
                     "Rychlé částky: 5, 10, 25, 50, 100 (dříve 25–500)",
                     "Výchozí částka DCA plánu nastavena na minimum burzy",
-                    "Oprava zobrazení minimální částky — bez zbytečných nul",
+                    "Oprava zobrazení minimální částky – bez zbytečných nul",
                     "Extrakce KuCoin signed-request helperu a ROI výpočtu",
                 ),
                 "en" to listOf(
-                    "Shared CredentialFormDelegate — less duplicate code across 4 ViewModels",
+                    "Shared CredentialFormDelegate – less duplicate code across 4 ViewModels",
                     "Shared API import result dialog across 3 screens",
                     "Unified AccBotTopAppBar across 11 screens",
                     "Binance: switch from USDT to USDC, min order lowered to 5",
                     "Quick amounts: 5, 10, 25, 50, 100 (was 25–500)",
                     "Default DCA plan amount set to exchange minimum",
-                    "Fix min order size display — strip trailing zeros",
+                    "Fix min order size display – strip trailing zeros",
                     "Extract KuCoin signed-request helper and ROI calculation",
                 ),
             )
@@ -44,24 +44,24 @@ object ChangelogData {
             ),
             features = mapOf(
                 "cs" to listOf(
-                    "Chytré obnovování — Dashboard a Portfolio načítají data jen když jsou zastaralá (5 min)",
-                    "SQL filtrování v historii transakcí — rychlejší s velkým množstvím dat",
-                    "Debounce vyhledávání (300ms) — plynulejší psaní v historii",
-                    "Cachování Fear & Greed indexu (1h TTL) — méně API volání",
-                    "Real-time cena v grafu portfolia — dnešní bod se aktualizuje okamžitě",
-                    "Optimalizované pořadí načítání tržních dat — warm-up cache před dotazy na ceny",
+                    "Chytré obnovování – Dashboard a Portfolio načítají data jen když jsou zastaralá (5 min)",
+                    "SQL filtrování v historii transakcí – rychlejší s velkým množstvím dat",
+                    "Debounce vyhledávání (300ms) – plynulejší psaní v historii",
+                    "Cachování Fear & Greed indexu (1h TTL) – méně API volání",
+                    "Real-time cena v grafu portfolia – dnešní bod se aktualizuje okamžitě",
+                    "Optimalizované pořadí načítání tržních dat – warm-up cache před dotazy na ceny",
                     "Nový DB index na transakcích pro rychlejší filtrované dotazy",
-                    "Úklid repositáře — archivace neaktivních .NET, Docker a legacy projektů",
+                    "Úklid repositáře – archivace neaktivních .NET, Docker a legacy projektů",
                 ),
                 "en" to listOf(
-                    "Smart refresh — Dashboard and Portfolio only reload when data is stale (5 min)",
-                    "SQL-level filtering in transaction history — faster with large datasets",
-                    "Search debounce (300ms) — smoother typing in history search",
-                    "Fear & Greed index caching (1h TTL) — fewer API calls",
-                    "Real-time price in portfolio chart — today's data point updates immediately",
-                    "Market data fetch order optimized — cache warm-up before price lookups",
+                    "Smart refresh – Dashboard and Portfolio only reload when data is stale (5 min)",
+                    "SQL-level filtering in transaction history – faster with large datasets",
+                    "Search debounce (300ms) – smoother typing in history search",
+                    "Fear & Greed index caching (1h TTL) – fewer API calls",
+                    "Real-time price in portfolio chart – today's data point updates immediately",
+                    "Market data fetch order optimized – cache warm-up before price lookups",
                     "New DB index on transactions for faster filtered queries",
-                    "Repository cleanup — archived inactive .NET, Docker and legacy projects",
+                    "Repository cleanup – archived inactive .NET, Docker and legacy projects",
                 ),
             )
         ),
@@ -89,8 +89,8 @@ object ChangelogData {
             versionCode = 25100,
             version = "2.5.1",
             titles = mapOf(
-                "cs" to "Own your DCA — Branding a opravy",
-                "en" to "Own your DCA — Branding & Bugfixes",
+                "cs" to "Own your DCA – Branding a opravy",
+                "en" to "Own your DCA – Branding & Bugfixes",
             ),
             features = mapOf(
                 "cs" to listOf(
@@ -99,7 +99,7 @@ object ChangelogData {
                     "Drobné opravy: reset časovače, minimum Coinmate EUR, auto-aktivace Market Pulse",
                 ),
                 "en" to listOf(
-                    "New tagline: Own your DCA — your keys, your data, your rules",
+                    "New tagline: Own your DCA – your keys, your data, your rules",
                     "Updated landing page and welcome screen messaging",
                     "Minor fixes: timer reset, Coinmate EUR minimum, Market Pulse auto-activation",
                 ),
@@ -114,9 +114,9 @@ object ChangelogData {
             ),
             features = mapOf(
                 "cs" to listOf(
-                    "Experimentální burzy — vyzkoušejte nové burzy a požádejte o chybějící",
-                    "Informační list Market Pulse — vysvětlení Fear & Greed a vzdálenosti od ATH",
-                    "Onboarding obrazovka oprávnění — přehledné nastavení notifikací a baterie",
+                    "Experimentální burzy – vyzkoušejte nové burzy a požádejte o chybějící",
+                    "Informační list Market Pulse – vysvětlení Fear & Greed a vzdálenosti od ATH",
+                    "Onboarding obrazovka oprávnění – přehledné nastavení notifikací a baterie",
                     "Sjednocené UI výběru burzy na všech obrazovkách",
                     "Coinmate paste-only zadávání credentials s API URL dle jazyka",
                     "Plná přesnost satoshi pro částky pod 1 jednotku kryptoměny",
@@ -124,9 +124,9 @@ object ChangelogData {
                     "Vylepšené instrukce při vytváření plánu a scrollovatelné kroky",
                 ),
                 "en" to listOf(
-                    "Experimental exchanges — try new exchanges and request missing ones",
-                    "Market Pulse info sheet — learn what Fear & Greed and ATH distance mean",
-                    "Onboarding Permissions screen — guided notification and battery setup",
+                    "Experimental exchanges – try new exchanges and request missing ones",
+                    "Market Pulse info sheet – learn what Fear & Greed and ATH distance mean",
+                    "Onboarding Permissions screen – guided notification and battery setup",
                     "Unified exchange selection UI across all screens",
                     "Coinmate paste-only credential flow with locale-aware API URL",
                     "Full satoshi precision for sub-1 crypto amounts",
@@ -165,13 +165,13 @@ object ChangelogData {
             features = mapOf(
                 "cs" to listOf(
                     "Oprava R8 obfuskace narušující parsování API odpovědí v release buildech",
-                    "Chytré cachování ATH dat — méně zbytečných síťových volání",
-                    "Oprava CI pipeline — odstranění závislosti na PAT pro release workflow",
+                    "Chytré cachování ATH dat – méně zbytečných síťových volání",
+                    "Oprava CI pipeline – odstranění závislosti na PAT pro release workflow",
                 ),
                 "en" to listOf(
                     "Fix R8 obfuscation breaking API JSON parsing in release builds",
-                    "Smart ATH caching — reduces redundant network calls",
-                    "CI pipeline fix — remove PAT dependency for release workflow",
+                    "Smart ATH caching – reduces redundant network calls",
+                    "CI pipeline fix – remove PAT dependency for release workflow",
                 ),
             )
         ),
@@ -184,11 +184,11 @@ object ChangelogData {
             ),
             features = mapOf(
                 "cs" to listOf(
-                    "Market Pulse karta na Dashboard — Fear & Greed ukazatel + vzdálenost od ATH",
+                    "Market Pulse karta na Dashboard – Fear & Greed ukazatel + vzdálenost od ATH",
                     "Sbalitelný Market Pulse s přepínačem v Nastavení",
-                    "Adaptivní granularita grafů — denní, týdenní nebo měsíční dle rozsahu dat",
+                    "Adaptivní granularita grafů – denní, týdenní nebo měsíční dle rozsahu dat",
                     "Průměrná nákupní cena v grafech portfolia",
-                    "Filtr data importu — výběr počátečního data pro API importy",
+                    "Filtr data importu – výběr počátečního data pro API importy",
                     "Přehlednější obrazovka detailu plánu",
                     "Přečtené/nepřečtené notifikace se smazáním swipem",
                     "Přeorganizované Nastavení (méně sekcí, WCAG přístupnost)",
@@ -197,11 +197,11 @@ object ChangelogData {
                     "Odstraněn CSV import (nahrazen API importem)",
                 ),
                 "en" to listOf(
-                    "Market Pulse dashboard card — Fear & Greed gauge + ATH distance",
+                    "Market Pulse dashboard card – Fear & Greed gauge + ATH distance",
                     "Collapsible Market Pulse with settings toggle",
-                    "Adaptive chart aggregation — daily, weekly, or monthly based on data span",
+                    "Adaptive chart aggregation – daily, weekly, or monthly based on data span",
                     "Avg buy price line in portfolio charts",
-                    "API import date filter — choose start date for imports",
+                    "API import date filter – choose start date for imports",
                     "Consolidated plan details screen (cleaner layout)",
                     "Read/unread notifications with swipe-to-delete",
                     "Reorganized Settings (fewer sections, WCAG accessibility)",
@@ -240,16 +240,16 @@ object ChangelogData {
             ),
             features = mapOf(
                 "cs" to listOf(
-                    "Sledování cílů — nastavení cílové částky kryptoměny pro DCA plán",
-                    "Výběr motivu — Tmavý, Světlý nebo Podle systému",
+                    "Sledování cílů – nastavení cílové částky kryptoměny pro DCA plán",
+                    "Výběr motivu – Tmavý, Světlý nebo Podle systému",
                     "Celkové shrnutí portfolia na Dashboard",
                     "Vyhledávání v historii transakcí",
                     "Informace o kanálu oznámení v Nastavení",
                     "Obrazovka Co je nového po aktualizacích",
                 ),
                 "en" to listOf(
-                    "Goal tracking — set a target crypto amount for your DCA plan",
-                    "Theme selection — choose Dark, Light, or System",
+                    "Goal tracking – set a target crypto amount for your DCA plan",
+                    "Theme selection – choose Dark, Light, or System",
                     "Total portfolio summary on Dashboard",
                     "Transaction history search",
                     "Notification channel info in Settings",

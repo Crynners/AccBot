@@ -25,7 +25,7 @@ data class TimeOfDay(val hour: Int, val minute: Int) : Comparable<TimeOfDay> {
  * Pure state model for the visual schedule builder.
  * Maps bidirectionally to/from 5-field UNIX CRON expressions.
  *
- * Design: single-minute model — minute selector is shared across all selected hours.
+ * Design: single-minute model – minute selector is shared across all selected hours.
  * Hours are multi-selectable. This maps cleanly to CRON fields.
  */
 data class ScheduleBuilderState(
@@ -101,13 +101,13 @@ data class ScheduleBuilderState(
                 return ScheduleBuilderState(useAdvancedMode = true, rawCronExpression = cron)
             }
 
-            // Parse minute — must be a single number (no lists, ranges, steps)
+            // Parse minute – must be a single number (no lists, ranges, steps)
             val minute = minutePart.toIntOrNull()
             if (minute == null || minute !in 0..59) {
                 return ScheduleBuilderState(useAdvancedMode = true, rawCronExpression = cron)
             }
 
-            // Parse hours — must be a comma-separated list of numbers
+            // Parse hours – must be a comma-separated list of numbers
             val hours = parseNumberList(hourPart, 0..23)
                 ?: return ScheduleBuilderState(useAdvancedMode = true, rawCronExpression = cron)
 
@@ -146,7 +146,7 @@ data class ScheduleBuilderState(
                         selectedDaysOfMonth = doms
                     )
                 }
-                // Both DOM and DOW specified — too complex
+                // Both DOM and DOW specified – too complex
                 else -> ScheduleBuilderState(useAdvancedMode = true, rawCronExpression = cron)
             }
         }

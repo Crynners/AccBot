@@ -174,6 +174,14 @@ fun DashboardScreen(
                         )
                     }
 
+                    if (uiState.missedPurchases.isNotEmpty()) {
+                        MissedPurchasesBanner(
+                            missed = uiState.missedPurchases,
+                            onExecute = { planId, count -> viewModel.executeMissedPurchases(planId, count) },
+                            onDismiss = { planId -> viewModel.dismissMissedPurchases(planId) }
+                        )
+                    }
+
                     if (uiState.holdings.size >= 2) {
                         PortfolioSummaryCard(holdings = uiState.holdings)
                     }
@@ -273,6 +281,17 @@ fun DashboardScreen(
                             retryPlans = uiState.networkRetryInfo.plans,
                             onRunNow = { viewModel.runRetryPlans() },
                             onDismiss = { viewModel.dismissRetryBanner() }
+                        )
+                    }
+                }
+
+                // Missed Purchases Banner
+                if (uiState.missedPurchases.isNotEmpty()) {
+                    item {
+                        MissedPurchasesBanner(
+                            missed = uiState.missedPurchases,
+                            onExecute = { planId, count -> viewModel.executeMissedPurchases(planId, count) },
+                            onDismiss = { planId -> viewModel.dismissMissedPurchases(planId) }
                         )
                     }
                 }
@@ -458,6 +477,75 @@ internal fun SandboxBanner() {
                 style = MaterialTheme.typography.bodyMedium
             )
         }
+    }
+}
+
+@Composable
+internal fun MissedPurchasesBanner(
+    missed: List<MissedPurchaseInfo>,
+    onExecute: (planId: Long, count: Int) -> Unit,
+    onDismiss: (planId: Long) -> Unit
+) {
+    if (missed.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    for (info in missed) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = Warning.copy(alpha = 0.15f)
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.EventBusy,
+                        contentDescription = null,
+                        tint = Warning,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.notification_missed_purchases_banner,
+                            info.missedCount,
+                            info.crypto,
+                            info.exchangeName
+                        ),
+                        fontWeight = FontWeight.SemiBold,
+                        color = Warning,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                ) {
+                    OutlinedButton(onClick = { onDismiss(info.planId) }) {
+                        Text(stringResource(R.string.missed_purchases_skip))
+                    }
+                    FilledTonalButton(
+                        onClick = { onExecute(info.planId, info.missedCount) },
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = Warning.copy(alpha = 0.2f),
+                            contentColor = Warning
+                        )
+                    ) {
+                        Text(stringResource(R.string.missed_purchases_buy))
+                    }
+                }
+            }
+        }
+    }
     }
 }
 
@@ -720,11 +808,16 @@ internal fun HoldingPage(
                         label = stringResource(R.string.dashboard_avg_price),
                         value = "${NumberFormatters.fiat(holding.averageBuyPrice)} ${holding.fiat}/${holding.crypto}"
                     )
+                    Spacer(Modifier.height(4.dp))
                     if (holding.currentPrice != null) {
-                        Spacer(Modifier.height(4.dp))
                         StatItemInline(
                             label = stringResource(R.string.dashboard_current_price),
                             value = "${NumberFormatters.fiat(holding.currentPrice)} ${holding.fiat}/${holding.crypto}"
+                        )
+                    } else {
+                        StatItemInline(
+                            label = stringResource(R.string.dashboard_current_price),
+                            value = stringResource(R.string.dashboard_price_unavailable)
                         )
                     }
                 }
@@ -745,6 +838,12 @@ internal fun HoldingPage(
                             color = roiColor
                         )
                     }
+                } else if (holding.currentPrice == null) {
+                    Text(
+                        text = "ROI –",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         } else {
@@ -763,34 +862,44 @@ internal fun HoldingPage(
                 )
             }
 
-            if (holding.currentPrice != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                if (holding.currentPrice != null) {
                     StatItem(
                         label = stringResource(R.string.dashboard_current_price),
                         value = "${NumberFormatters.fiat(holding.currentPrice)} ${holding.fiat}/${holding.crypto}"
                     )
-                    if (holding.roiAbsolute != null && holding.roiPercent != null) {
-                        val isPositive = NumberFormatters.isPositiveRoi(holding.roiAbsolute)
-                        val roiColor = if (isPositive) successCol else Error
-                        val sign = NumberFormatters.roiSign(holding.roiAbsolute)
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "$sign${NumberFormatters.fiat(holding.roiAbsolute)} ${holding.fiat}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = roiColor
-                            )
-                            Text(
-                                text = stringResource(R.string.dashboard_roi, "${sign}${NumberFormatters.percent(holding.roiPercent)}%"),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = roiColor
-                            )
-                        }
+                } else {
+                    StatItem(
+                        label = stringResource(R.string.dashboard_current_price),
+                        value = stringResource(R.string.dashboard_price_unavailable)
+                    )
+                }
+                if (holding.roiAbsolute != null && holding.roiPercent != null) {
+                    val isPositive = NumberFormatters.isPositiveRoi(holding.roiAbsolute)
+                    val roiColor = if (isPositive) successCol else Error
+                    val sign = NumberFormatters.roiSign(holding.roiAbsolute)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "$sign${NumberFormatters.fiat(holding.roiAbsolute)} ${holding.fiat}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = roiColor
+                        )
+                        Text(
+                            text = stringResource(R.string.dashboard_roi, "${sign}${NumberFormatters.percent(holding.roiPercent)}%"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = roiColor
+                        )
                     }
+                } else if (holding.currentPrice == null) {
+                    StatItem(
+                        label = "ROI",
+                        value = "–"
+                    )
                 }
             }
         }
@@ -1116,25 +1225,16 @@ internal fun QuickActionsRow(
 internal fun PortfolioSummaryCard(
     holdings: List<CryptoHoldingWithPrice>
 ) {
-    // Only show when all holdings have prices loaded
     val allPricesLoaded = holdings.all { it.currentValue != null }
-    if (!allPricesLoaded) return
 
-    val totalValue = holdings.fold(BigDecimal.ZERO) { acc, h -> acc + (h.currentValue ?: BigDecimal.ZERO) }
     val totalInvested = holdings.fold(BigDecimal.ZERO) { acc, h -> acc + h.totalInvested }
-    val roiResult = NumberFormatters.roiValues(totalInvested, totalValue)
-    val roiAbsolute = roiResult?.first ?: BigDecimal.ZERO
-    val roiPercent = roiResult?.second
 
-    val successCol = successColor()
-    val isPositive = roiAbsolute >= BigDecimal.ZERO
-    val roiColor = if (isPositive) successCol else Error
-    val sign = if (isPositive) "+" else ""
-
-    // Determine common fiat — only show summary when all plans use the same currency
+    // Determine common fiat – only show summary when all plans use the same currency
     val distinctFiats = holdings.map { it.fiat }.distinct()
     if (distinctFiats.size != 1) return
     val fiat = distinctFiats.first()
+
+    val unavailableText = stringResource(R.string.dashboard_price_unavailable)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1153,37 +1253,73 @@ internal fun PortfolioSummaryCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "${NumberFormatters.fiat(totalValue)} $fiat",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${stringResource(R.string.dashboard_portfolio_total_invested)}: ${NumberFormatters.fiat(totalInvested)} $fiat",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "$sign${NumberFormatters.fiat(roiAbsolute)} $fiat",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = roiColor
-                    )
-                    if (roiPercent != null) {
+            if (allPricesLoaded) {
+                val totalValue = holdings.fold(BigDecimal.ZERO) { acc, h -> acc + (h.currentValue ?: BigDecimal.ZERO) }
+                val roiResult = NumberFormatters.roiValues(totalInvested, totalValue)
+                val roiAbsolute = roiResult?.first ?: BigDecimal.ZERO
+                val roiPercent = roiResult?.second
+                val successCol = successColor()
+                val isPositive = roiAbsolute >= BigDecimal.ZERO
+                val roiColor = if (isPositive) successCol else Error
+                val sign = if (isPositive) "+" else ""
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
                         Text(
-                            text = stringResource(R.string.dashboard_roi, "$sign${NumberFormatters.percent(roiPercent)}%"),
+                            text = "${NumberFormatters.fiat(totalValue)} $fiat",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "${stringResource(R.string.dashboard_portfolio_total_invested)}: ${NumberFormatters.fiat(totalInvested)} $fiat",
                             style = MaterialTheme.typography.bodySmall,
-                            color = roiColor
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "$sign${NumberFormatters.fiat(roiAbsolute)} $fiat",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = roiColor
+                        )
+                        if (roiPercent != null) {
+                            Text(
+                                text = stringResource(R.string.dashboard_roi, "$sign${NumberFormatters.percent(roiPercent)}%"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = roiColor
+                            )
+                        }
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = unavailableText,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "${stringResource(R.string.dashboard_portfolio_total_invested)}: ${NumberFormatters.fiat(totalInvested)} $fiat",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = "ROI –",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -1402,7 +1538,7 @@ internal fun MarketPulseCard(
                                 textAlign = TextAlign.Center
                             )
 
-                            // Row: "Fear" (left) — "14 — Extreme Fear" (center) — "Greed" (right)
+                            // Row: "Fear" (left) – "14 – Extreme Fear" (center) – "Greed" (right)
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     text = stringResource(R.string.dashboard_fear_label),
@@ -1411,7 +1547,7 @@ internal fun MarketPulseCard(
                                     modifier = Modifier.align(Alignment.CenterStart)
                                 )
                                 Text(
-                                    text = "${fearGreedData.value} — $localizedClassification",
+                                    text = "${fearGreedData.value} – $localizedClassification",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.SemiBold,
                                     color = fearGreedColor(fearGreedData.value),
@@ -1491,7 +1627,7 @@ internal fun MarketPulseCard(
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         if (athDataByCrypto.isNotEmpty()) {
-                            // Row: "0" (left) — "BTC -35 %" (center) — "ATH" (right)
+                            // Row: "0" (left) – "BTC -35 %" (center) – "ATH" (right)
                             val singleFmt = stringResource(R.string.ath_distance_format)
                             val cryptoFmt = stringResource(R.string.ath_distance_crypto_format)
                             val athCenterText = if (athDataByCrypto.size == 1) {

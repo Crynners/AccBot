@@ -1,6 +1,7 @@
 package com.accbot.dca.presentation.screens.plans
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.DcaPlanEntity
@@ -12,6 +13,7 @@ import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.exchange.MinOrderSizeRepository
 import com.accbot.dca.presentation.plan.PlanFormDelegate
+import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.presentation.plan.PlanFormState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -45,11 +47,12 @@ data class EditPlanUiState(
 
 @HiltViewModel
 class EditPlanViewModel @Inject constructor(
+    private val application: Application,
     private val dcaPlanDao: DcaPlanDao,
     private val userPreferences: UserPreferences,
     calculateMonthlyCost: CalculateMonthlyCostUseCase,
     minOrderSizeRepository: MinOrderSizeRepository
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     val planForm = PlanFormDelegate(calculateMonthlyCost, minOrderSizeRepository, viewModelScope)
 
@@ -168,6 +171,7 @@ class EditPlanViewModel @Inject constructor(
                 )
 
                 dcaPlanDao.updatePlan(updatedPlan)
+                DcaAlarmScheduler.scheduleNextAlarm(application)
 
                 // Auto-enable Market Pulse when saving a plan with market-aware strategy
                 if (form.selectedStrategy is DcaStrategy.AthBased || form.selectedStrategy is DcaStrategy.FearAndGreed) {

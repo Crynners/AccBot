@@ -12,10 +12,10 @@ import javax.inject.Inject
 
 /**
  * Orchestrates two-phase daily price sync:
- * 1. Forward sync (every sync): CoinGecko — fills the small gap between latest cached date and today
- * 2. Historical backfill (one-time per pair): CryptoCompare — fetches older data in ≤2000-day chunks backwards
+ * 1. Forward sync (every sync): CoinGecko – fills the small gap between latest cached date and today
+ * 2. Historical backfill (one-time per pair): CryptoCompare – fetches older data in ≤2000-day chunks backwards
  *
- * Historical prices are immutable — once fetched, they never need re-fetching.
+ * Historical prices are immutable – once fetched, they never need re-fetching.
  * After the one-time backfill, subsequent syncs only run phase 1 (0-2 API calls total).
  */
 class SyncDailyPricesUseCase @Inject constructor(
@@ -62,7 +62,7 @@ class SyncDailyPricesUseCase @Inject constructor(
                 val latestDate = latestDay?.let { LocalDate.ofEpochDay(it) }
 
                 if (latestDate == null) {
-                    // Brand new pair — bootstrap with last 365 days via CoinGecko
+                    // Brand new pair – bootstrap with last 365 days via CoinGecko
                     Log.d(TAG, "[$crypto/$fiat] Bootstrap: fetching last 365 days")
                     val prices = marketDataService.getDailyPriceHistory(crypto, fiat, 365)
                     if (prices != null && prices.isNotEmpty()) {

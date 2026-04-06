@@ -19,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         NotificationEntity::class,
         WithdrawalThresholdEntity::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -208,6 +208,13 @@ abstract class DcaDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 17 to 18: Add missedPurchaseCount for offline recovery
+        private val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE dca_plans ADD COLUMN missedPurchaseCount INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         // Migration from version 9 to 10: Add notifications and withdrawal_thresholds tables
         private val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -310,7 +317,7 @@ abstract class DcaDatabase : RoomDatabase() {
                 DcaDatabase::class.java,
                 databaseName
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
                 // Only allow destructive migration on app downgrade, never on failed upgrade
                 // This protects user's transaction history from accidental deletion
                 .fallbackToDestructiveMigrationOnDowngrade()

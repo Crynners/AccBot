@@ -60,7 +60,7 @@ data class PlanFormState(
 /**
  * Shared delegate for plan form state and logic.
  * Used by AddPlanViewModel, OnboardingViewModel, and EditPlanViewModel.
- * Not a ViewModel — the owning ViewModel passes its coroutineScope.
+ * Not a ViewModel – the owning ViewModel passes its coroutineScope.
  */
 class PlanFormDelegate(
     private val calculateMonthlyCost: CalculateMonthlyCostUseCase,

@@ -125,7 +125,7 @@ fun CredentialsInputCard(
                     json.optString("apiKey").takeIf { it.isNotBlank() }?.let { onApiKeyChange(it) }
                     json.optString("secretKey").takeIf { it.isNotBlank() }?.let { onApiSecretChange(it) }
                 } catch (_: Exception) {
-                    // Not JSON — treat as plain API key
+                    // Not JSON – treat as plain API key
                     onApiKeyChange(result)
                 }
                 showBinanceQrScanner = false
@@ -237,7 +237,7 @@ fun CredentialsInputCard(
 
             if (needsClientId) {
                 // Coinmate field order: Private Key → Public Key → Client ID
-                // No QR/OCR scanner — paste only
+                // No QR/OCR scanner – paste only
                 OutlinedTextField(
                     value = apiSecret,
                     onValueChange = onApiSecretChange,
