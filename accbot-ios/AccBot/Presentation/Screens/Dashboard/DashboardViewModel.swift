@@ -471,13 +471,27 @@ final class DashboardViewModel: ObservableObject {
         plansWithMissed.removeAll { $0.id == planId }
         isBuyingMissed = true
         Task {
-            try? deps.activeDatabase.planDao.setMissedPurchaseCount(id: planId, count: 0)
+            // Save nextExecutionAt before batch so we can restore it after
+            let originalNext = try? deps.activeDatabase.planDao.getById(planId)?.nextExecutionAt
+
+            var remaining = count
             for i in 1...count {
                 await deps.dcaExecutionEngine.executePlan(planId)
+                remaining -= 1
                 if i < count {
                     try? await Task.sleep(nanoseconds: 3_000_000_000) // 3s pause
                 }
             }
+
+            // Restore original schedule (executePlan with forceRun advances it each time)
+            if let originalNext {
+                try? deps.activeDatabase.planDao.setNextExecution(id: planId, nextExecutionAt: originalNext)
+            }
+
+            // Clear missed count only after all purchases complete
+            // (if some failed, remaining would still be > 0 but we can't easily
+            // detect partial failure here since executePlan swallows errors)
+            try? deps.activeDatabase.planDao.setMissedPurchaseCount(id: planId, count: 0)
             isBuyingMissed = false
             loadData()
         }

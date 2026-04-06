@@ -77,10 +77,11 @@ enum CronUtils {
     }
 
     /// Count how many cron executions fall between two dates (exclusive of `from`).
+    /// Capped at 1000 to prevent excessive iteration for long offline periods.
     static func countExecutions(cron: String, from: Date, to: Date) -> Int {
         var count = 0
         var cursor = from
-        while let next = getNextExecution(cron: cron, from: cursor), next <= to {
+        while count < 1000, let next = getNextExecution(cron: cron, from: cursor), next <= to {
             count += 1
             cursor = next
         }
@@ -169,7 +170,7 @@ enum CronUtils {
 
         let minute = minutes.first!
         let timeStrings = hours.sorted().map { String(format: "%d:%02d", $0, minute) }
-        let timeList = timeStrings.joined(separator: isCzech ? " a " : " and ")
+        let timeList = naturalJoin(timeStrings, conjunction: isCzech ? "a" : "and")
 
         let isDomWild = domField == "*"
         let isDowWild = dowField == "*"
@@ -216,8 +217,19 @@ enum CronUtils {
             (4, "Thu", "Čt"), (5, "Fri", "Pá"), (6, "Sat", "So"), (0, "Sun", "Ne"),
         ]
         let selected = names.filter { dows.contains($0.0) }
-        let joined = selected.map { czech ? $0.2 : $0.1 }.joined(separator: ", ")
-        return joined
+        let items = selected.map { czech ? $0.2 : $0.1 }
+        return naturalJoin(items, conjunction: czech ? "a" : "and")
+    }
+
+    /// Join items with commas and a conjunction before the last item.
+    /// e.g. ["8:00", "12:00", "18:00"] → "8:00, 12:00 a 18:00"
+    private static func naturalJoin(_ items: [String], conjunction: String) -> String {
+        switch items.count {
+        case 0: return ""
+        case 1: return items[0]
+        case 2: return "\(items[0]) \(conjunction) \(items[1])"
+        default: return items.dropLast().joined(separator: ", ") + " \(conjunction) \(items.last!)"
+        }
     }
 
     private static func matches(value: Int, spec: String) -> Bool {

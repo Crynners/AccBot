@@ -187,26 +187,28 @@ final class DcaExecutionEngine {
             return
         }
 
-        // Execute with retry
+        // Execute with retry (only retry retryable errors)
         let api = exchangeApiFactory.create(credentials: credentials)
         var failedAttemptMessages: [String] = []
         var finalResult: DcaResult?
 
         for attempt in 1...maxAttempts {
-            let result = await withTimeout(seconds: 30) {
-                await api.marketBuy(crypto: plan.crypto, fiat: plan.fiat, fiatAmount: purchaseAmount)
-            }
-
-            let attemptResult = result ?? .error(message: "API call timed out after 30s", retryable: true)
+            let attemptResult = await api.marketBuy(crypto: plan.crypto, fiat: plan.fiat, fiatAmount: purchaseAmount)
 
             if case .success = attemptResult {
                 finalResult = attemptResult
                 break
             }
 
-            if case .error(let msg, _) = attemptResult {
+            if case .error(let msg, let retryable) = attemptResult {
                 failedAttemptMessages.append("Attempt \(attempt): \(msg)")
                 logger.warning("Plan \(plan.id) attempt \(attempt)/\(self.maxAttempts) failed: \(msg)")
+
+                // Don't retry non-retryable errors (auth, insufficient funds, etc.)
+                if !retryable {
+                    finalResult = attemptResult
+                    break
+                }
             }
 
             if attempt < maxAttempts {
@@ -294,8 +296,8 @@ final class DcaExecutionEngine {
             logger.info("DCA purchase successful: \(tx.cryptoAmount) \(plan.crypto)")
 
         case .error(let msg, let retryable):
-            if retryable {
-                // Network error - retry in 5 min
+            if retryable && !forceRun {
+                // Network error - retry in 5 min (only for scheduled executions)
                 let retryTime = now.addingTimeInterval(300)
                 let newRetryCount = plan.networkRetryCount + 1
                 let isFirstFailure = plan.networkRetryCount == 0
@@ -565,20 +567,7 @@ final class DcaExecutionEngine {
         }
     }
 
-    private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async -> T) async -> T? {
-        await withTaskGroup(of: T?.self) { group in
-            group.addTask {
-                await operation()
-            }
-            group.addTask {
-                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                return nil
-            }
-            let result = await group.next() ?? nil
-            group.cancelAll()
-            return result
-        }
-    }
+
 
     private func roundDecimal(_ value: Decimal, scale: Int) -> Decimal {
         let handler = NSDecimalNumberHandler(
