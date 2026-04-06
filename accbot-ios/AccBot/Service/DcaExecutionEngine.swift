@@ -270,12 +270,13 @@ final class DcaExecutionEngine {
                 templateArgs: purchaseArgs
             )
 
-            // Detect missed purchases after a retry series
+            // Detect missed purchases after a retry series.
+            // Subtract 1 because the purchase that just succeeded covers one slot.
             if !forceRun, let originalScheduled = plan.originalScheduledAt {
-                let missed = calculateMissedPurchases(plan: plan, from: originalScheduled, to: now)
-                if missed > 0 {
-                    try? activeDb.planDao.setMissedPurchaseCount(id: plan.id, count: missed)
-                    notifyMissedPurchases(plan: plan, count: missed)
+                let actualMissed = calculateMissedPurchases(plan: plan, from: originalScheduled, to: now) - 1
+                if actualMissed > 0 {
+                    try? activeDb.planDao.setMissedPurchaseCount(id: plan.id, count: actualMissed)
+                    notifyMissedPurchases(plan: plan, count: actualMissed)
                 }
             }
 
@@ -497,11 +498,12 @@ final class DcaExecutionEngine {
         let overdueSeconds = now.timeIntervalSince(nextExec)
         guard overdueSeconds > intervalSeconds else { return }
 
-        let missed = calculateMissedPurchases(plan: plan, from: nextExec, to: now)
-        if missed > 0 {
-            try? activeDb.planDao.setMissedPurchaseCount(id: plan.id, count: missed)
-            notifyMissedPurchases(plan: plan, count: missed)
-            logger.info("Scenario B: plan \(plan.id) missed \(missed) purchases (phone was off)")
+        // Subtract 1 because executePlan() will run right after and cover one slot.
+        let actualMissed = calculateMissedPurchases(plan: plan, from: nextExec, to: now) - 1
+        if actualMissed > 0 {
+            try? activeDb.planDao.setMissedPurchaseCount(id: plan.id, count: actualMissed)
+            notifyMissedPurchases(plan: plan, count: actualMissed)
+            logger.info("Scenario B: plan \(plan.id) missed \(actualMissed) purchases (phone was off)")
         }
     }
 
