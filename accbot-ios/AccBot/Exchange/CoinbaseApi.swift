@@ -159,6 +159,9 @@ final class CoinbaseApi: ExchangeApi {
             }
             return .error(message: error.localizedDescription, retryable: error.isRetryable)
         } catch {
+            if let connectivity = NetworkError.from(error) {
+                return .error(message: connectivity.localizedDescription, retryable: true)
+            }
             return .error(message: error.localizedDescription, retryable: false)
         }
     }

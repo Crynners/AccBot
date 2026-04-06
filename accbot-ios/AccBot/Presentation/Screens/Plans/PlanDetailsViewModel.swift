@@ -104,27 +104,18 @@ class PlanDetailsViewModel: ObservableObject {
                     )
 
                     if let balance = exchangeBalance, plan.amount > 0 {
-                        let rawExec = NSDecimalNumber(decimal: balance / plan.amount).intValue
-                        remainingExecutions = max(0, rawExec)
+                        let remainingExec = NSDecimalNumber(decimal: balance / plan.amount).doubleValue
+                        remainingExecutions = max(0, Int(floor(remainingExec)))
 
-                        // Calculate remaining days based on frequency
-                        let executionsPerDay: Decimal
-                        let intervalMinutes = plan.frequency.intervalMinutes
-                        if intervalMinutes > 0 {
-                            executionsPerDay = Decimal(1440) / Decimal(intervalMinutes)
-                        } else if let cron = plan.cronExpression,
-                                  let cronInterval = CronUtils.getIntervalMinutesEstimate(cron: cron),
-                                  cronInterval > 0 {
-                            executionsPerDay = Decimal(1440) / Decimal(cronInterval)
+                        // Calculate remaining days — same formula as Dashboard
+                        let rawInterval: Int
+                        if let cron = plan.cronExpression {
+                            rawInterval = CronUtils.getIntervalMinutesEstimate(cron: cron) ?? 1440
                         } else {
-                            // Custom frequency — assume daily
-                            executionsPerDay = 1
+                            rawInterval = plan.frequency.intervalMinutes
                         }
-                        if executionsPerDay > 0 {
-                            let amountPerDay = plan.amount * executionsPerDay
-                            let rawDays = NSDecimalNumber(decimal: balance / amountPerDay).intValue
-                            remainingDays = max(0, rawDays)
-                        }
+                        let effectiveInterval = rawInterval > 0 ? rawInterval : 1440
+                        remainingDays = max(0, Int(ceil(remainingExec * Double(effectiveInterval) / 1440.0)))
                     }
                 }
             } catch {

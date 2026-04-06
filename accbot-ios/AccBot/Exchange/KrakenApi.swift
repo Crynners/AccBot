@@ -150,6 +150,9 @@ final class KrakenApi: ExchangeApi {
         } catch let error as NetworkError where error.isRetryable {
             return .error(message: error.localizedDescription, retryable: true)
         } catch {
+            if let connectivity = NetworkError.from(error) {
+                return .error(message: connectivity.localizedDescription, retryable: true)
+            }
             return .error(message: error.localizedDescription, retryable: false)
         }
     }

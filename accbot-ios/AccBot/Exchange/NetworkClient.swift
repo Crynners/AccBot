@@ -185,6 +185,7 @@ enum NetworkError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, body: String)
     case decodingError(String)
+    case connectivity(String)
 
     var errorDescription: String? {
         switch self {
@@ -196,6 +197,8 @@ enum NetworkError: LocalizedError {
             return "HTTP \(code): \(body.prefix(200))"
         case .decodingError(let detail):
             return "Decoding error: \(detail)"
+        case .connectivity(let detail):
+            return detail
         }
     }
 
@@ -203,10 +206,25 @@ enum NetworkError: LocalizedError {
         switch self {
         case .httpError(let code, _):
             return code >= 500 || code == 429
-        case .invalidResponse:
+        case .invalidResponse, .connectivity:
             return true
         default:
             return false
         }
+    }
+
+    /// Wrap a URLError or other connectivity error into NetworkError.connectivity if applicable.
+    static func from(_ error: Error) -> NetworkError? {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .timedOut,
+                 .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed,
+                 .dataNotAllowed, .internationalRoamingOff:
+                return .connectivity(urlError.localizedDescription)
+            default:
+                return nil
+            }
+        }
+        return nil
     }
 }
