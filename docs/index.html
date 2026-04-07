@@ -68,6 +68,7 @@
           <li><a href="#features" data-i18n="nav_features">Features</a></li>
           <li><a href="#exchanges" data-i18n="nav_exchanges">Exchanges</a></li>
           <li><a href="#security" data-i18n="nav_security">Security</a></li>
+          <li><a href="#compare" data-i18n="nav_compare">Compare</a></li>
           <li><a href="#download" data-i18n="nav_download">Download</a></li>
           <li>
             <div class="lang-switcher">
@@ -799,6 +800,106 @@
       </div>
     </section>
 
+    <!-- ==================== Compare ==================== -->
+    <section id="compare">
+      <div class="container">
+        <div class="section-header reveal">
+          <h2 data-i18n="compare_title">AccBot vs Štosuj</h2>
+          <p data-i18n="compare_subtitle">Štosuj charges 1.5% per purchase on Coinmate. AccBot lets you trade directly — just the standard 0.6% taker fee, no middleman markup.</p>
+        </div>
+
+        <div class="compare-form reveal" id="compare-form">
+          <div class="compare-inputs">
+            <div class="compare-input-group">
+              <label for="compare-start" data-i18n="compare_start_label">DCA start date</label>
+              <input type="date" id="compare-start">
+            </div>
+            <div class="compare-input-group">
+              <label for="compare-amount" data-i18n="compare_amount_label">Amount per purchase (CZK)</label>
+              <input type="number" id="compare-amount" value="1000" min="1" step="100">
+            </div>
+            <div class="compare-input-group">
+              <label data-i18n="compare_interval_label">Purchase interval</label>
+              <div class="compare-interval-btns">
+                <button type="button" class="compare-interval-btn" data-interval="daily" data-i18n="compare_daily">Daily</button>
+                <button type="button" class="compare-interval-btn active" data-interval="weekly" data-i18n="compare_weekly">Weekly</button>
+                <button type="button" class="compare-interval-btn" data-interval="monthly" data-i18n="compare_monthly">Monthly</button>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary compare-calc-btn" id="compare-calc" data-i18n="compare_calculate">Calculate comparison</button>
+        </div>
+
+        <div id="compare-results" class="compare-results" style="display:none">
+          <div id="compare-loading" class="compare-loading"></div>
+          <div id="compare-error" class="compare-error" style="display:none" data-i18n="compare_error">Failed to load price data. Please try again later.</div>
+          <div id="compare-content" style="display:none">
+            <div class="compare-summary">
+              <span id="compare-summary-text"></span>
+            </div>
+
+            <div class="compare-cards">
+              <div class="compare-card stosuj">
+                <div class="compare-card-header">
+                  <span class="compare-card-name">Štosuj</span>
+                  <span class="compare-card-fee">1,5 % <span data-i18n="compare_fee_label">fee</span></span>
+                </div>
+                <div class="compare-stat">
+                  <span class="compare-stat-label" data-i18n="compare_fees_paid">Fees paid</span>
+                  <span class="compare-stat-value" id="stosuj-fees"></span>
+                </div>
+                <div class="compare-stat">
+                  <span class="compare-stat-label" data-i18n="compare_btc_accumulated">BTC accumulated</span>
+                  <span class="compare-stat-value" id="stosuj-btc"></span>
+                </div>
+                <div class="compare-stat-sub" id="stosuj-sats"></div>
+                <div class="compare-stat">
+                  <span class="compare-stat-label" data-i18n="compare_current_value">Current value</span>
+                  <span class="compare-stat-value" id="stosuj-value"></span>
+                </div>
+              </div>
+
+              <div class="compare-card accbot">
+                <div class="compare-card-header">
+                  <span class="compare-card-name">AccBot</span>
+                  <span class="compare-card-fee">0,6 % <span data-i18n="compare_fee_label">fee</span></span>
+                </div>
+                <div class="compare-stat">
+                  <span class="compare-stat-label" data-i18n="compare_fees_paid">Fees paid</span>
+                  <span class="compare-stat-value" id="accbot-fees"></span>
+                </div>
+                <div class="compare-stat">
+                  <span class="compare-stat-label" data-i18n="compare_btc_accumulated">BTC accumulated</span>
+                  <span class="compare-stat-value" id="accbot-btc"></span>
+                </div>
+                <div class="compare-stat-sub" id="accbot-sats"></div>
+                <div class="compare-stat">
+                  <span class="compare-stat-label" data-i18n="compare_current_value">Current value</span>
+                  <span class="compare-stat-value" id="accbot-value"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="compare-savings">
+              <span id="compare-savings-text"></span>
+            </div>
+
+            <div class="compare-chart-container">
+              <h3 data-i18n="compare_chart_title">Cumulative BTC accumulation</h3>
+              <div id="compare-chart"></div>
+              <div class="compare-legend">
+                <span class="compare-legend-item price" data-i18n="compare_legend_price">BTC/CZK price</span>
+                <span class="compare-legend-item stosuj">Štosuj (1,5 %)</span>
+                <span class="compare-legend-item accbot">AccBot (0,6 %)</span>
+              </div>
+            </div>
+
+            <p class="compare-disclaimer" data-i18n="compare_disclaimer">* Simulation based on historical BTC/CZK prices from CryptoCompare. Past performance does not indicate future results.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ==================== Download CTA ==================== -->
     <section id="download" class="download-section">
       <div class="container">
@@ -858,5 +959,6 @@
 
   <script src="js/i18n.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/compare.js"></script>
 </body>
 </html>

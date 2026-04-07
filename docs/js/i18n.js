@@ -15,7 +15,10 @@
     return DEFAULT_LANG;
   }
 
+  var _tr = {};
+
   function apply(translations) {
+    _tr = translations;
     var els = document.querySelectorAll('[data-i18n]');
     for (var i = 0; i < els.length; i++) {
       var key = els[i].getAttribute('data-i18n');
@@ -82,5 +85,9 @@
     init();
   }
 
-  window.AccBotI18n = { setLang: setLang, current: function () { return current; } };
+  window.AccBotI18n = {
+    setLang: setLang,
+    current: function () { return current; },
+    t: function (key) { return _tr[key] || key; }
+  };
 })();
