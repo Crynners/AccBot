@@ -12,6 +12,10 @@
     <string name="common_clear">Clear</string>
     <string name="common_apply">Apply</string>
     <string name="common_done">Done</string>
+    <string name="common_discard_changes_title">Discard Changes?</string>
+    <string name="common_discard_changes_message">You have unsaved changes. Are you sure you want to go back?</string>
+    <string name="common_discard">Discard</string>
+    <string name="common_keep_editing">Keep Editing</string>
     <string name="common_remove">Remove</string>
     <string name="common_loading">Loading…</string>
     <string name="common_error_title">Something went wrong</string>

@@ -158,7 +158,6 @@ class HistoryViewModel @Inject constructor(
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
-        _filterState.update { it.copy(searchQuery = query) }
     }
 
     fun setFilter(filter: HistoryFilter) {

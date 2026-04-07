@@ -35,6 +35,9 @@ data class EditPlanUiState(
     // Plan form (from delegate)
     val planForm: PlanFormState = PlanFormState(),
 
+    // Change tracking
+    val hasChanges: Boolean = false,
+
     // Action state
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
@@ -58,10 +61,24 @@ class EditPlanViewModel @Inject constructor(
 
     private val _localState = MutableStateFlow(EditPlanUiState())
 
+    private val _originalFormState = MutableStateFlow<PlanFormState?>(null)
+
     val uiState: StateFlow<EditPlanUiState> = combine(
         _localState,
-        planForm.state
-    ) { local, form -> local.copy(planForm = form) }
+        planForm.state,
+        _originalFormState
+    ) { local, form, original ->
+        val hasChanges = original != null && (
+            form.amount != original.amount
+                || form.selectedFrequency != original.selectedFrequency
+                || form.cronExpression != original.cronExpression
+                || form.selectedStrategy != original.selectedStrategy
+                || form.withdrawalEnabled != original.withdrawalEnabled
+                || form.withdrawalAddress != original.withdrawalAddress
+                || form.targetAmount != original.targetAmount
+        )
+        local.copy(planForm = form, hasChanges = hasChanges)
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EditPlanUiState())
 
     private var originalPlan: DcaPlanEntity? = null
@@ -102,6 +119,9 @@ class EditPlanViewModel @Inject constructor(
                     withdrawalAddress = plan.withdrawalAddress ?: "",
                     targetAmount = plan.targetAmount?.toPlainString() ?: ""
                 )
+
+                // Snapshot the original form state for change tracking
+                _originalFormState.value = planForm.state.value
             } catch (e: Exception) {
                 _localState.update {
                     it.copy(

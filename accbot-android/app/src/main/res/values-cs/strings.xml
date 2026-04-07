@@ -10,6 +10,10 @@
     <string name="common_clear">Vymazat</string>
     <string name="common_apply">Použít</string>
     <string name="common_done">Hotovo</string>
+    <string name="common_discard_changes_title">Zahodit změny?</string>
+    <string name="common_discard_changes_message">Máte neuložené změny. Opravdu se chcete vrátit zpět?</string>
+    <string name="common_discard">Zahodit</string>
+    <string name="common_keep_editing">Pokračovat v úpravách</string>
     <string name="common_remove">Odebrat</string>
     <string name="common_loading">Načítání…</string>
     <string name="common_error_title">Něco se pokazilo</string>
