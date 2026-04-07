@@ -296,6 +296,7 @@ class KrakenApi(
 
                 val result = json.getJSONObject("result")
                 // Kraken returns the pair key which may differ from input
+                if (!result.keys().hasNext()) return@withContext null
                 val pairKey = result.keys().next()
                 val ticker = result.getJSONObject(pairKey)
                 // c = last trade closed [price, lot-volume]
@@ -317,7 +318,7 @@ class KrakenApi(
         val params = buildString {
             append("pair=$pair")
             if (sinceTimestamp != null) {
-                append("&start=${sinceTimestamp.epochSecond + 1}")
+                append("&start=${sinceTimestamp.plusSeconds(1).epochSecond}")
             }
         }
 

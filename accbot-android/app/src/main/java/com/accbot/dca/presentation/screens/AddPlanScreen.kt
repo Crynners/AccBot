@@ -2,6 +2,7 @@ package com.accbot.dca.presentation.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -41,11 +42,45 @@ fun AddPlanScreen(
     viewModel: AddPlanViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showDiscardAlert by remember { mutableStateOf(false) }
+
+    val handleBack: () -> Unit = {
+        if (uiState.hasChanges) {
+            showDiscardAlert = true
+        } else {
+            onNavigateBack()
+        }
+    }
+
+    BackHandler(enabled = uiState.hasChanges) {
+        showDiscardAlert = true
+    }
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
             onPlanCreated()
         }
+    }
+
+    if (showDiscardAlert) {
+        AlertDialog(
+            onDismissRequest = { showDiscardAlert = false },
+            title = { Text(stringResource(R.string.common_discard_changes_title)) },
+            text = { Text(stringResource(R.string.common_discard_changes_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDiscardAlert = false
+                    onNavigateBack()
+                }) {
+                    Text(stringResource(R.string.common_discard))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardAlert = false }) {
+                    Text(stringResource(R.string.common_keep_editing))
+                }
+            }
+        )
     }
 
     // Import offer dialog after creating plan with new credentials
@@ -77,7 +112,7 @@ fun AddPlanScreen(
         topBar = {
             AccBotTopAppBar(
                 title = stringResource(R.string.add_plan_title),
-                onNavigateBack = onNavigateBack
+                onNavigateBack = handleBack
             )
         }
     ) { paddingValues ->
@@ -213,6 +248,7 @@ fun AddPlanScreen(
                     onWithdrawalEnabledChanged = viewModel.planForm::setWithdrawalEnabled,
                     onWithdrawalAddressChanged = viewModel.planForm::setWithdrawalAddress,
                     onTargetAmountChanged = viewModel.planForm::setTargetAmount,
+                    exchange = cred.selectedExchange,
                     errorMessage = uiState.errorMessage
                 )
 

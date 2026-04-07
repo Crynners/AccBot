@@ -72,7 +72,7 @@ fun BackupExportScreen(
             when (uiState.wizardStep) {
                 ExportWizardStep.SELECT_DATA -> SelectDataStep(uiState, viewModel)
                 ExportWizardStep.ENCRYPTION -> EncryptionStep(uiState, viewModel)
-                ExportWizardStep.RESULT -> ResultStep(uiState, qrBitmap, context)
+                ExportWizardStep.RESULT -> ResultStep(uiState, qrBitmap, context, onNavigateBack)
             }
 
             // Error display
@@ -375,7 +375,8 @@ private fun EncryptionStep(
 private fun ResultStep(
     uiState: BackupExportUiState,
     qrBitmap: Bitmap?,
-    context: android.content.Context
+    context: android.content.Context,
+    onDone: () -> Unit
 ) {
     Text(
         text = stringResource(R.string.backup_export_success),
@@ -446,6 +447,15 @@ private fun ResultStep(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    OutlinedButton(
+        onClick = onDone,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(stringResource(R.string.common_done))
     }
 }
 

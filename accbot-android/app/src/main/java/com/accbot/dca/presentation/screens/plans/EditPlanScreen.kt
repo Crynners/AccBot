@@ -1,5 +1,6 @@
 package com.accbot.dca.presentation.screens.plans
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
@@ -27,16 +28,50 @@ fun EditPlanScreen(
     viewModel: EditPlanViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showDiscardAlert by remember { mutableStateOf(false) }
+
+    val handleBack: () -> Unit = {
+        if (uiState.hasChanges) {
+            showDiscardAlert = true
+        } else {
+            onNavigateBack()
+        }
+    }
+
+    BackHandler(enabled = uiState.hasChanges) {
+        showDiscardAlert = true
+    }
 
     LaunchedEffect(planId) {
         viewModel.loadPlan(planId)
+    }
+
+    if (showDiscardAlert) {
+        AlertDialog(
+            onDismissRequest = { showDiscardAlert = false },
+            title = { Text(stringResource(R.string.common_discard_changes_title)) },
+            text = { Text(stringResource(R.string.common_discard_changes_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDiscardAlert = false
+                    onNavigateBack()
+                }) {
+                    Text(stringResource(R.string.common_discard))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardAlert = false }) {
+                    Text(stringResource(R.string.common_keep_editing))
+                }
+            }
+        )
     }
 
     Scaffold(
         topBar = {
             AccBotTopAppBar(
                 title = stringResource(R.string.edit_plan_title),
-                onNavigateBack = onNavigateBack
+                onNavigateBack = handleBack
             )
         }
     ) { paddingValues ->
@@ -127,6 +162,7 @@ fun EditPlanScreen(
                             onWithdrawalEnabledChanged = viewModel.planForm::setWithdrawalEnabled,
                             onWithdrawalAddressChanged = viewModel.planForm::setWithdrawalAddress,
                             onTargetAmountChanged = viewModel.planForm::setTargetAmount,
+                            exchange = uiState.exchange,
                             errorMessage = if (uiState.isSaving) uiState.error else null
                         )
                     }

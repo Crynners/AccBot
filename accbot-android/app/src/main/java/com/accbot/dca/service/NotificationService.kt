@@ -115,22 +115,21 @@ class NotificationService @Inject constructor(
         price: BigDecimal,
         planId: Long = 0,
         pending: Boolean = false,
-        exchange: Exchange? = null
+        exchange: Exchange? = null,
+        scheduledAt: java.time.Instant? = null,
+        executedAt: java.time.Instant? = null
     ) {
-        val title = context.getString(R.string.notification_purchase_title)
-        val priceFormatted = NumberFormatters.fiat(price)
-        val text = if (pending) {
-            context.getString(R.string.notification_purchase_pending_text, NumberFormatters.fiat(fiatAmount), fiat, crypto, priceFormatted)
-        } else {
-            context.getString(R.string.notification_purchase_text, NumberFormatters.crypto(cryptoAmount), crypto, NumberFormatters.fiat(fiatAmount), fiat, priceFormatted)
-        }
+        val scheduledMs = scheduledAt?.toEpochMilli()
+        val executedMs = executedAt?.toEpochMilli()
 
         val args = if (pending) {
             NotificationTemplateArgs.PurchasePending(
                 fiatAmount = fiatAmount.toPlainString(),
                 fiat = fiat,
                 crypto = crypto,
-                price = price.toPlainString()
+                price = price.toPlainString(),
+                scheduledAtEpochMs = scheduledMs,
+                executedAtEpochMs = executedMs
             )
         } else {
             NotificationTemplateArgs.Purchase(
@@ -138,9 +137,13 @@ class NotificationService @Inject constructor(
                 crypto = crypto,
                 fiatAmount = fiatAmount.toPlainString(),
                 fiat = fiat,
-                price = price.toPlainString()
+                price = price.toPlainString(),
+                scheduledAtEpochMs = scheduledMs,
+                executedAtEpochMs = executedMs
             )
         }
+
+        val (title, text) = NotificationRenderer.render(context, args)
 
         val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_PURCHASE, planId)
         persistAndShow(
@@ -263,6 +266,82 @@ class NotificationService @Inject constructor(
     }
 
     /**
+     * Show notification for missed purchases after prolonged offline period.
+     */
+    fun showMissedPurchasesNotification(
+        crypto: String,
+        exchangeName: String,
+        missedCount: Int,
+        planId: Long,
+        exchange: Exchange? = null
+    ) {
+        val args = NotificationTemplateArgs.MissedPurchases(
+            crypto = crypto,
+            exchangeName = exchangeName,
+            missedCount = missedCount,
+            planId = planId
+        )
+        val (title, text) = NotificationRenderer.render(context, args)
+        val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_MISSED_PURCHASES, planId)
+        persistAndShow(
+            sysNotifId = sysNotifId,
+            channel = CHANNEL_ERROR,
+            title = title,
+            text = text,
+            entity = NotificationEntity(
+                type = NotificationType.MISSED_PURCHASES,
+                title = title,
+                message = text,
+                planId = planId.takeIf { it > 0 },
+                crypto = crypto,
+                exchange = exchange,
+                systemNotificationId = sysNotifId,
+                templateArgs = args.toJson()
+            )
+        )
+    }
+
+    /**
+     * Show notification for network retry (offline purchase failure).
+     */
+    fun showNetworkRetryNotification(
+        crypto: String,
+        exchangeName: String,
+        errorMessage: String,
+        nextRetryAt: java.time.Instant,
+        attemptCount: Int,
+        planId: Long,
+        exchange: Exchange? = null
+    ) {
+        val args = NotificationTemplateArgs.NetworkRetry(
+            crypto = crypto,
+            exchangeName = exchangeName,
+            errorMessage = errorMessage,
+            nextRetryAtEpochMs = nextRetryAt.toEpochMilli(),
+            attemptCount = attemptCount,
+            planId = planId
+        )
+        val (title, text) = NotificationRenderer.render(context, args)
+        val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_NETWORK_RETRY, planId)
+        persistAndShow(
+            sysNotifId = sysNotifId,
+            channel = CHANNEL_ERROR,
+            title = title,
+            text = text,
+            entity = NotificationEntity(
+                type = NotificationType.NETWORK_RETRY,
+                title = title,
+                message = text,
+                planId = planId.takeIf { it > 0 },
+                crypto = crypto,
+                exchange = exchange,
+                systemNotificationId = sysNotifId,
+                templateArgs = args.toJson()
+            )
+        )
+    }
+
+    /**
      * Cancel a specific system notification by its ID.
      */
     fun cancelNotification(systemNotificationId: Int) {
@@ -311,7 +390,7 @@ class NotificationService @Inject constructor(
 
                 notificationManager.notify(sysNotifId, notification)
             } catch (_: Exception) {
-                // Best-effort — don't crash if DB write fails
+                // Best-effort – don't crash if DB write fails
             }
         }
     }
@@ -327,6 +406,8 @@ class NotificationService @Inject constructor(
         private const val NOTIFICATION_ID_ERROR = 20_000
         private const val NOTIFICATION_ID_LOW_BALANCE = 30_000
         private const val NOTIFICATION_ID_WITHDRAWAL_THRESHOLD = 40_000
+        private const val NOTIFICATION_ID_NETWORK_RETRY = 50_000
+        private const val NOTIFICATION_ID_MISSED_PURCHASES = 60_000
 
         const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
 

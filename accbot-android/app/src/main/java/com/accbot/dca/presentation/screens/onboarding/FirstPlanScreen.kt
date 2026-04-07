@@ -102,6 +102,7 @@ fun FirstPlanScreen(
                     onWithdrawalEnabledChanged = viewModel.planForm::setWithdrawalEnabled,
                     onWithdrawalAddressChanged = viewModel.planForm::setWithdrawalAddress,
                     onTargetAmountChanged = viewModel.planForm::setTargetAmount,
+                    exchange = uiState.credentialForm.selectedExchange,
                     errorMessage = uiState.error
                 )
 

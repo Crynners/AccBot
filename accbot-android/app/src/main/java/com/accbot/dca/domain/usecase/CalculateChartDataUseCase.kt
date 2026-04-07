@@ -209,7 +209,7 @@ class CalculateChartDataUseCase @Inject constructor(
                         YearMonth.from(currentDate).let { it.year * 100 + it.monthValue }
                     }
                     if (pendingBucketKey != null && bucketKey != pendingBucketKey) {
-                        // Bucket boundary crossed — emit the pending snapshot
+                        // Bucket boundary crossed – emit the pending snapshot
                         pendingPrice?.let { pp ->
                             result.add(buildChartDataPoint(
                                 pendingEpochDay, pendingCrypto, pendingInvested, pp
@@ -223,7 +223,7 @@ class CalculateChartDataUseCase @Inject constructor(
                     pendingPrice = price
                     pendingBucketKey = bucketKey
                 } else {
-                    // Daily emission — build point directly
+                    // Daily emission – build point directly
                     result.add(buildChartDataPoint(
                         epochDay, cumulativeCrypto, cumulativeInvested, price
                     ))
@@ -356,7 +356,7 @@ class CalculateChartDataUseCase @Inject constructor(
                         YearMonth.from(currentDate).let { it.year * 100 + it.monthValue }
                     }
                     if (pendingBucketKey != null && bucketKey != pendingBucketKey && hasPendingData) {
-                        // Bucket boundary crossed — emit previous snapshot
+                        // Bucket boundary crossed – emit previous snapshot
                         result.add(buildAggregatePoint(pendingEpochDay, pendingValue, pendingInvested))
                     }
                     pendingEpochDay = epochDay

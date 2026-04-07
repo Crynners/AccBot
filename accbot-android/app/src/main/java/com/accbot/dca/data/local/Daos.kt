@@ -66,6 +66,22 @@ interface DcaPlanDao {
 
     @Query("SELECT * FROM dca_plans ORDER BY createdAt DESC")
     suspend fun getAllPlansOnce(): List<DcaPlanEntity>
+
+    @Query("UPDATE dca_plans SET networkRetryCount = networkRetryCount + 1, nextNetworkRetryAt = :nextRetryAt, originalScheduledAt = CASE WHEN originalScheduledAt IS NULL THEN :originalScheduledAt ELSE originalScheduledAt END WHERE id = :planId")
+    suspend fun incrementNetworkRetry(planId: Long, nextRetryAt: Instant, originalScheduledAt: Instant)
+
+    @Query("UPDATE dca_plans SET networkRetryCount = networkRetryCount + 1, nextNetworkRetryAt = :nextRetryAt, originalScheduledAt = CASE WHEN originalScheduledAt IS NULL THEN :originalScheduledAt ELSE originalScheduledAt END WHERE id = :planId")
+    fun incrementNetworkRetrySync(planId: Long, nextRetryAt: Instant, originalScheduledAt: Instant)
+
+    @Query("UPDATE dca_plans SET networkRetryCount = 0, nextNetworkRetryAt = NULL, originalScheduledAt = NULL WHERE id = :planId")
+    suspend fun resetNetworkRetry(planId: Long)
+
+    @Query("UPDATE dca_plans SET missedPurchaseCount = :count WHERE id = :planId")
+    suspend fun setMissedPurchaseCount(planId: Long, count: Int)
+
+    @Query("UPDATE dca_plans SET missedPurchaseCount = 0 WHERE id = :planId")
+    suspend fun resetMissedPurchaseCount(planId: Long)
+
 }
 
 @Dao
@@ -418,6 +434,7 @@ interface NotificationDao {
 
     @Query("SELECT * FROM notifications ORDER BY createdAt DESC")
     suspend fun getAllNotificationsOnce(): List<NotificationEntity>
+
 }
 
 @Dao

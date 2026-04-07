@@ -25,7 +25,7 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 /**
- * Visual schedule builder — drop-in replacement for CronExpressionInput.
+ * Visual schedule builder – drop-in replacement for CronExpressionInput.
  * Same signature: takes a CRON string in, emits a CRON string out.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)

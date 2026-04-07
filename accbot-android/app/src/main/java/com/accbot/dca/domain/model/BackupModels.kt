@@ -3,7 +3,7 @@ package com.accbot.dca.domain.model
 import java.time.Instant
 
 /**
- * Backup envelope — the top-level structure of a backup file (always plaintext JSON).
+ * Backup envelope – the top-level structure of a backup file (always plaintext JSON).
  */
 data class BackupEnvelope(
     val format: String = FORMAT_IDENTIFIER,
@@ -24,7 +24,7 @@ data class BackupEnvelope(
 }
 
 /**
- * Backup payload — the actual data after decryption/decompression.
+ * Backup payload – the actual data after decryption/decompression.
  */
 data class BackupPayload(
     val plans: List<BackupPlan> = emptyList(),

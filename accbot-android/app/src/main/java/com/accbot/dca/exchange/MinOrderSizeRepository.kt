@@ -78,7 +78,7 @@ class MinOrderSizeRepository @Inject constructor(
             val minAmount = okHttpClient.newCall(pairsRequest).execute().use { pairsResponse ->
                 if (!pairsResponse.isSuccessful) return@withContext null
 
-                val pairsBody = pairsResponse.body.string()
+                val pairsBody = pairsResponse.body?.string() ?: return@withContext null
                 val pairsJson = JSONObject(pairsBody)
                 val pairsData = pairsJson.optJSONArray("data") ?: return@withContext null
 
@@ -103,7 +103,7 @@ class MinOrderSizeRepository @Inject constructor(
             val lastPrice = okHttpClient.newCall(tickerRequest).execute().use { tickerResponse ->
                 if (!tickerResponse.isSuccessful) return@withContext null
 
-                val tickerBody = tickerResponse.body.string()
+                val tickerBody = tickerResponse.body?.string() ?: return@withContext null
                 val tickerJson = JSONObject(tickerBody)
                 val tickerData = tickerJson.optJSONObject("data") ?: return@withContext null
                 BigDecimal(tickerData.getString("last"))
@@ -134,7 +134,7 @@ class MinOrderSizeRepository @Inject constructor(
             okHttpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext null
 
-                val body = response.body.string()
+                val body = response.body?.string() ?: return@withContext null
                 val json = JSONObject(body)
                 val symbols = json.optJSONArray("symbols")
                 if (symbols == null || symbols.length() == 0) return@withContext null

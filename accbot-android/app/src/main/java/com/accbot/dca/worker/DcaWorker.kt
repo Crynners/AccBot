@@ -52,7 +52,8 @@ class DcaWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val forceRun = inputData.getBoolean(KEY_FORCE_RUN, false)
         val forcePlanId = inputData.getLong(KEY_PLAN_ID, -1L)
-        Log.d(TAG, "DcaWorker started (forceRun=$forceRun, forcePlanId=$forcePlanId)")
+        val repeatCount = inputData.getInt(KEY_REPEAT_COUNT, 1)
+        Log.d(TAG, "DcaWorker started (forceRun=$forceRun, forcePlanId=$forcePlanId, repeatCount=$repeatCount)")
 
         // Resolve any PENDING transactions from previous runs before processing new purchases
         try {
@@ -62,6 +63,12 @@ class DcaWorker @AssistedInject constructor(
         }
 
         try {
+            for (iteration in 1..repeatCount) {
+            if (iteration > 1) {
+                Log.d(TAG, "Repeat iteration $iteration/$repeatCount")
+                kotlinx.coroutines.delay(3_000L) // brief pause between missed purchases
+            }
+
             val enabledPlans = if (forcePlanId > 0) {
                 listOfNotNull(database.dcaPlanDao().getPlanById(forcePlanId))
             } else {
@@ -70,7 +77,7 @@ class DcaWorker @AssistedInject constructor(
 
             if (enabledPlans.isEmpty()) {
                 Log.d(TAG, "No enabled DCA plans")
-                return Result.success()
+                if (iteration == 1) return Result.success() else break
             }
 
             for (plan in enabledPlans) {
@@ -208,6 +215,27 @@ class DcaWorker @AssistedInject constructor(
 
                 when (finalResult) {
                     is DcaResult.Success -> {
+                        // Reset network retry state on success and calculate missed purchases
+                        try {
+                            // Detect missed purchases: from retry recovery OR device boot/long-off
+                            val missedOrigin = plan.originalScheduledAt ?: nextExecution
+                            val missed = if (missedOrigin != null) {
+                                // Subtract 1: this purchase just executed, covering one of the missed slots
+                                (calculateMissedPurchaseCount(plan, missedOrigin, Instant.now()) - 1).coerceAtLeast(0)
+                            } else 0
+                            database.dcaPlanDao().resetNetworkRetry(plan.id)
+                            if (missed > 0) {
+                                database.dcaPlanDao().setMissedPurchaseCount(plan.id, missed)
+                                notificationService.showMissedPurchasesNotification(
+                                    crypto = plan.crypto,
+                                    exchangeName = plan.exchange.displayName,
+                                    missedCount = missed,
+                                    planId = plan.id,
+                                    exchange = plan.exchange
+                                )
+                            }
+                        } catch (_: Exception) {}
+
                         // Save transaction atomically with plan update
                         try {
                             val transaction = TransactionEntity(
@@ -237,8 +265,11 @@ class DcaWorker @AssistedInject constructor(
                             Log.e(TAG, "Failed to save transaction for plan ${plan.id}", e)
                         }
 
-                        // Show notification (pending-aware)
+                        // Show notification (pending-aware, with delay info)
+                        // Use originalScheduledAt if plan went through retries, otherwise nextExecution
                         val isPending = finalResult.transaction.status == TransactionStatus.PENDING
+                        val executedNow = Instant.now()
+                        val scheduledTime = if (!forceRun) (plan.originalScheduledAt ?: nextExecution) else null
                         notificationService.showPurchaseNotification(
                             plan.crypto,
                             finalResult.transaction.cryptoAmount,
@@ -247,7 +278,9 @@ class DcaWorker @AssistedInject constructor(
                             finalResult.transaction.price,
                             plan.id,
                             pending = isPending,
-                            exchange = plan.exchange
+                            exchange = plan.exchange,
+                            scheduledAt = scheduledTime,
+                            executedAt = if (scheduledTime != null) executedNow else null
                         )
 
                         // Check withdrawal threshold
@@ -268,17 +301,33 @@ class DcaWorker @AssistedInject constructor(
 
                     is DcaResult.Error -> {
                         if (finalResult.retryable) {
-                            // Network error — silent retry in 5 min, no transaction saved.
+                            // Network error – retry in 5 min and notify user.
                             // Override the claimed nextExecutionAt with an earlier retry time.
                             try {
                                 val retryTime = now.plus(Duration.ofMinutes(5))
-                                database.dcaPlanDao().updateExecutionTime(plan.id, now, retryTime)
+                                database.runInTransaction {
+                                    database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, retryTime)
+                                    database.dcaPlanDao().incrementNetworkRetrySync(plan.id, retryTime, nextExecution ?: now)
+                                }
                                 Log.w(TAG, "Network error for plan ${plan.id}, will retry at $retryTime: ${finalResult.message}")
+
+                                // Only notify on first failure, not on subsequent retries
+                                if (plan.networkRetryCount == 0) {
+                                    notificationService.showNetworkRetryNotification(
+                                        crypto = plan.crypto,
+                                        exchangeName = plan.exchange.displayName,
+                                        errorMessage = finalResult.message,
+                                        nextRetryAt = retryTime,
+                                        attemptCount = 1,
+                                        planId = plan.id,
+                                        exchange = plan.exchange
+                                    )
+                                }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to update retry time for plan ${plan.id}", e)
                             }
                         } else {
-                            // Business error — save failed transaction, notify, advance to next interval
+                            // Business error – save failed transaction, notify, advance to next interval
                             val failedWarning = if (failedAttemptMessages.size > 1) {
                                 failedAttemptMessages.dropLast(1).joinToString("; ")
                             } else null
@@ -325,6 +374,7 @@ class DcaWorker @AssistedInject constructor(
                     }
                 }
             }
+            } // repeat loop
 
             // Re-arm alarm for next execution (self-perpetuating chain)
             DcaAlarmScheduler.scheduleNextAlarm(context)
@@ -336,6 +386,24 @@ class DcaWorker @AssistedInject constructor(
             // Still try to re-arm alarm even on error
             try { DcaAlarmScheduler.scheduleNextAlarm(context) } catch (_: Exception) {}
             return Result.retry()
+        }
+    }
+
+    private fun calculateMissedPurchaseCount(plan: DcaPlanEntity, originalScheduledAt: Instant, now: Instant): Int {
+        if (plan.cronExpression != null) {
+            var count = 0
+            var next = CronUtils.getNextExecution(plan.cronExpression, originalScheduledAt)
+            while (next != null && !next.isAfter(now)) {
+                count++
+                next = CronUtils.getNextExecution(plan.cronExpression, next)
+                if (count > 1000) break // safety limit
+            }
+            return count
+        } else {
+            val intervalMinutes = plan.frequency.intervalMinutes
+            if (intervalMinutes <= 0) return 0
+            val elapsedMinutes = Duration.between(originalScheduledAt, now).toMinutes()
+            return (elapsedMinutes / intervalMinutes).coerceAtLeast(0).toInt()
         }
     }
 
@@ -392,6 +460,7 @@ class DcaWorker @AssistedInject constructor(
         private const val TAG = "DcaWorker"
         private const val KEY_FORCE_RUN = "forceRun"
         private const val KEY_PLAN_ID = "planId"
+        private const val KEY_REPEAT_COUNT = "repeatCount"
         const val WORK_NAME = "dca_periodic_work"
 
         /**
@@ -474,6 +543,31 @@ class DcaWorker @AssistedInject constructor(
         }
 
         /**
+         * Run missed purchases for a plan (user chose to catch up).
+         */
+        fun runMissedPurchases(context: Context, planId: Long, count: Int) {
+            val inputData = Data.Builder()
+                .putBoolean(KEY_FORCE_RUN, true)
+                .putLong(KEY_PLAN_ID, planId)
+                .putInt(KEY_REPEAT_COUNT, count)
+                .build()
+
+            val oneTimeWorkRequest = OneTimeWorkRequestBuilder<DcaWorker>()
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+                )
+                .setInputData(inputData)
+                .build()
+
+            WorkManager.getInstance(context)
+                .enqueue(oneTimeWorkRequest)
+
+            Log.d(TAG, "Missed purchases enqueued for plan $planId (count=$count)")
+        }
+
+        /**
          * Run DCA from an alarm trigger.
          * Creates an expedited OneTimeWorkRequest that respects nextExecutionAt checks
          * (does NOT set KEY_FORCE_RUN).
@@ -481,18 +575,15 @@ class DcaWorker @AssistedInject constructor(
         private const val ALARM_WORK_NAME = "dca_alarm_execution"
 
         fun runFromAlarm(context: Context) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
+            // No network constraint – worker must run even when offline so it can
+            // show a network-retry notification instead of silently waiting.
             val oneTimeWorkRequest = OneTimeWorkRequestBuilder<DcaWorker>()
-                .setConstraints(constraints)
                 .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
                 .build()
 
             WorkManager.getInstance(context)
-                .enqueueUniqueWork(ALARM_WORK_NAME, ExistingWorkPolicy.KEEP, oneTimeWorkRequest)
+                .enqueueUniqueWork(ALARM_WORK_NAME, ExistingWorkPolicy.REPLACE, oneTimeWorkRequest)
 
             Log.d(TAG, "DCA alarm-triggered work enqueued (expedited, unique=$ALARM_WORK_NAME)")
         }

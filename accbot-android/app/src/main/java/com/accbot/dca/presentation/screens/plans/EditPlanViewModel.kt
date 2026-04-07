@@ -1,16 +1,19 @@
 package com.accbot.dca.presentation.screens.plans
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.DcaPlanEntity
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
+import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.usecase.CalculateMonthlyCostUseCase
 import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.exchange.MinOrderSizeRepository
 import com.accbot.dca.presentation.plan.PlanFormDelegate
+import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.presentation.plan.PlanFormState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -26,10 +29,14 @@ data class EditPlanUiState(
     val planId: Long = 0,
     val crypto: String = "",
     val fiat: String = "",
+    val exchange: Exchange? = null,
     val exchangeName: String = "",
 
     // Plan form (from delegate)
     val planForm: PlanFormState = PlanFormState(),
+
+    // Change tracking
+    val hasChanges: Boolean = false,
 
     // Action state
     val isLoading: Boolean = true,
@@ -43,20 +50,35 @@ data class EditPlanUiState(
 
 @HiltViewModel
 class EditPlanViewModel @Inject constructor(
+    private val application: Application,
     private val dcaPlanDao: DcaPlanDao,
     private val userPreferences: UserPreferences,
     calculateMonthlyCost: CalculateMonthlyCostUseCase,
     minOrderSizeRepository: MinOrderSizeRepository
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     val planForm = PlanFormDelegate(calculateMonthlyCost, minOrderSizeRepository, viewModelScope)
 
     private val _localState = MutableStateFlow(EditPlanUiState())
 
+    private val _originalFormState = MutableStateFlow<PlanFormState?>(null)
+
     val uiState: StateFlow<EditPlanUiState> = combine(
         _localState,
-        planForm.state
-    ) { local, form -> local.copy(planForm = form) }
+        planForm.state,
+        _originalFormState
+    ) { local, form, original ->
+        val hasChanges = original != null && (
+            form.amount != original.amount
+                || form.selectedFrequency != original.selectedFrequency
+                || form.cronExpression != original.cronExpression
+                || form.selectedStrategy != original.selectedStrategy
+                || form.withdrawalEnabled != original.withdrawalEnabled
+                || form.withdrawalAddress != original.withdrawalAddress
+                || form.targetAmount != original.targetAmount
+        )
+        local.copy(planForm = form, hasChanges = hasChanges)
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EditPlanUiState())
 
     private var originalPlan: DcaPlanEntity? = null
@@ -79,6 +101,7 @@ class EditPlanViewModel @Inject constructor(
                         planId = plan.id,
                         crypto = plan.crypto,
                         fiat = plan.fiat,
+                        exchange = plan.exchange,
                         exchangeName = plan.exchange.displayName,
                         isLoading = false
                     )
@@ -96,6 +119,9 @@ class EditPlanViewModel @Inject constructor(
                     withdrawalAddress = plan.withdrawalAddress ?: "",
                     targetAmount = plan.targetAmount?.toPlainString() ?: ""
                 )
+
+                // Snapshot the original form state for change tracking
+                _originalFormState.value = planForm.state.value
             } catch (e: Exception) {
                 _localState.update {
                     it.copy(
@@ -165,6 +191,7 @@ class EditPlanViewModel @Inject constructor(
                 )
 
                 dcaPlanDao.updatePlan(updatedPlan)
+                DcaAlarmScheduler.scheduleNextAlarm(application)
 
                 // Auto-enable Market Pulse when saving a plan with market-aware strategy
                 if (form.selectedStrategy is DcaStrategy.AthBased || form.selectedStrategy is DcaStrategy.FearAndGreed) {

@@ -81,7 +81,7 @@ fun PortfolioScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Landscape: two-pane layout — chart left, controls right
+    // Landscape: two-pane layout – chart left, controls right
     if (isLandscape) {
         val chartData = uiState.chartData
         val hasAnyData = chartData.isNotEmpty()
@@ -462,7 +462,7 @@ internal fun PortfolioContent(
                 }
             }
         } else if (pageCount == 1) {
-            // Single page (no pager needed) — still show label + KPI
+            // Single page (no pager needed) – still show label + KPI
             item {
                 Card(
                     modifier = Modifier.animateContentSize(),
@@ -640,7 +640,7 @@ internal fun ChartZoomHeader(
 ) {
     when (zoomLevel) {
         is ChartZoomLevel.Overview -> {
-            // No header needed — drill-down chips show "Explore history" label
+            // No header needed – drill-down chips show "Explore history" label
         }
         is ChartZoomLevel.Year -> {
             Row(

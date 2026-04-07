@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.DcaStrategy
+import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.presentation.components.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -45,6 +46,7 @@ fun PlanDetailsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToEdit: () -> Unit,
     onNavigateToHistory: ((crypto: String, fiat: String) -> Unit)? = null,
+    onNavigateToTransactionDetails: ((Long) -> Unit)? = null,
     viewModel: PlanDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -53,6 +55,7 @@ fun PlanDetailsScreen(
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var deletePlanConfirmText by rememberSaveable { mutableStateOf("") }
     var showStrategyInfo by rememberSaveable { mutableStateOf(false) }
+    var showLotSizeInfo by rememberSaveable { mutableStateOf(false) }
     var showDeleteTransactionsDialog by rememberSaveable { mutableStateOf(false) }
     var deleteTransactionsConfirmText by rememberSaveable { mutableStateOf("") }
     var dangerZoneExpanded by rememberSaveable { mutableStateOf(false) }
@@ -233,7 +236,7 @@ fun PlanDetailsScreen(
                 ) {
                     item { Spacer(modifier = Modifier.height(8.dp)) }
 
-                    // 1. Header card (simplified — no strategy name)
+                    // 1. Header card (simplified – no strategy name)
                     item {
                         Card(
                             colors = CardDefaults.cardColors(
@@ -433,11 +436,47 @@ fun PlanDetailsScreen(
                                     modifier = Modifier.semantics { heading() }
                                 )
 
-                                PlanConfigRow(
-                                    icon = Icons.Default.AttachMoney,
-                                    label = stringResource(R.string.plan_details_amount),
-                                    value = "${plan.amount} ${plan.fiat}"
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.AttachMoney,
+                                            contentDescription = null,
+                                            tint = accentColor(),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = stringResource(R.string.plan_details_amount),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = "${plan.amount} ${plan.fiat}",
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+                                    if (plan.exchange == Exchange.BINANCE) {
+                                        IconButton(
+                                            onClick = { showLotSizeInfo = true }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Info,
+                                                contentDescription = null,
+                                                tint = accentColor(),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
 
                                 val frequencyDisplayText = if (plan.frequency == com.accbot.dca.domain.model.DcaFrequency.CUSTOM && plan.cronExpression != null) {
                                     com.accbot.dca.domain.util.CronUtils.describeCron(plan.cronExpression) ?: stringResource(plan.frequency.displayNameRes)
@@ -519,6 +558,29 @@ fun PlanDetailsScreen(
                             StrategyInfoBottomSheet(
                                 strategy = plan.strategy,
                                 onDismiss = { showStrategyInfo = false }
+                            )
+                        }
+
+                        // Binance lot size info dialog
+                        if (showLotSizeInfo) {
+                            AlertDialog(
+                                onDismissRequest = { showLotSizeInfo = false },
+                                confirmButton = {
+                                    TextButton(onClick = { showLotSizeInfo = false }) {
+                                        Text(stringResource(R.string.common_done))
+                                    }
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = accentColor()
+                                    )
+                                },
+                                text = {
+                                    val stepSize = Exchange.binanceLotStepSize[plan.crypto] ?: "0.00001"
+                                    Text(stringResource(R.string.binance_lot_size_note, plan.crypto, stepSize))
+                                }
                             )
                         }
                     }
@@ -631,7 +693,10 @@ fun PlanDetailsScreen(
 
                     if (uiState.transactions.isNotEmpty()) {
                         items(uiState.transactions.take(10), key = { it.id }) { transaction ->
-                            TransactionCard(transaction = transaction)
+                            TransactionCard(
+                                transaction = transaction,
+                                onClick = onNavigateToTransactionDetails?.let { nav -> { nav(transaction.id) } }
+                            )
                         }
 
                         if (uiState.transactions.size > 10) {

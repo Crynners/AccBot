@@ -34,7 +34,7 @@ class UserPreferences @Inject constructor(
 
     private val _appThemeFlow = MutableStateFlow(readAppTheme())
 
-    /** Observable theme state — emits immediately when theme changes. */
+    /** Observable theme state – emits immediately when theme changes. */
     val appThemeFlow: StateFlow<AppTheme> = _appThemeFlow.asStateFlow()
 
     private fun readAppTheme(): AppTheme {

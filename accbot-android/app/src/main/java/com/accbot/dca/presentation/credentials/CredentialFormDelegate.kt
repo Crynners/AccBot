@@ -1,6 +1,10 @@
 package com.accbot.dca.presentation.credentials
 
+import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.res.stringResource
+import com.accbot.dca.R
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.Exchange
@@ -29,15 +33,26 @@ data class CredentialFormState(
     val isValidatingCredentials: Boolean = false,
     val credentialsValid: Boolean = false,
     val credentialsError: String? = null,
+    @StringRes val credentialsErrorRes: Int = 0,
     val isSandboxMode: Boolean = false,
     val availableExchanges: List<Exchange> = emptyList(),
     val showExperimental: Boolean = false
-)
+) {
+    val hasCredentialsError: Boolean
+        get() = credentialsError != null || credentialsErrorRes != 0
+}
+
+/** Resolve the credentials error to a localized string. */
+val CredentialFormState.resolvedCredentialsError: String?
+    @Composable get() = when {
+        credentialsErrorRes != 0 -> stringResource(credentialsErrorRes)
+        else -> credentialsError
+    }
 
 /**
  * Shared delegate for credential form state and logic.
  * Used by AddPlanViewModel, OnboardingViewModel, AddExchangeViewModel, and ExchangeDetailViewModel.
- * Not a ViewModel — the owning ViewModel passes its coroutineScope.
+ * Not a ViewModel – the owning ViewModel passes its coroutineScope.
  */
 class CredentialFormDelegate(
     private val credentialsStore: CredentialsStore,
@@ -76,7 +91,7 @@ class CredentialFormDelegate(
                 apiSecret = credentials?.apiSecret ?: "",
                 passphrase = credentials?.passphrase ?: "",
                 clientId = credentials?.clientId ?: "",
-                credentialsError = null
+                credentialsError = null, credentialsErrorRes = 0
             )
         }
     }
@@ -95,25 +110,25 @@ class CredentialFormDelegate(
                 apiKey = "",
                 apiSecret = "",
                 passphrase = "",
-                credentialsError = null
+                credentialsError = null, credentialsErrorRes = 0
             )
         }
     }
 
     fun setClientId(value: String) {
-        _state.update { it.copy(clientId = value, credentialsError = null) }
+        _state.update { it.copy(clientId = value, credentialsError = null, credentialsErrorRes = 0) }
     }
 
     fun setApiKey(value: String) {
-        _state.update { it.copy(apiKey = value, credentialsError = null) }
+        _state.update { it.copy(apiKey = value, credentialsError = null, credentialsErrorRes = 0) }
     }
 
     fun setApiSecret(value: String) {
-        _state.update { it.copy(apiSecret = value, credentialsError = null) }
+        _state.update { it.copy(apiSecret = value, credentialsError = null, credentialsErrorRes = 0) }
     }
 
     fun setPassphrase(value: String) {
-        _state.update { it.copy(passphrase = value, credentialsError = null) }
+        _state.update { it.copy(passphrase = value, credentialsError = null, credentialsErrorRes = 0) }
     }
 
     fun validateAndSaveCredentials(onSuccess: () -> Unit) {
@@ -123,7 +138,7 @@ class CredentialFormDelegate(
         val exchange = state.selectedExchange ?: return
 
         coroutineScope.launch {
-            _state.update { it.copy(isValidatingCredentials = true, credentialsError = null) }
+            _state.update { it.copy(isValidatingCredentials = true, credentialsError = null, credentialsErrorRes = 0) }
 
             val result = validateAndSaveCredentialsUseCase.execute(
                 exchange = exchange,
@@ -152,7 +167,24 @@ class CredentialFormDelegate(
                         )
                     }
                 }
+                is CredentialValidationResult.NetworkError -> {
+                    _state.update {
+                        it.copy(
+                            isValidatingCredentials = false,
+                            credentialsErrorRes = R.string.error_no_internet
+                        )
+                    }
+                }
             }
+        }
+    }
+
+    fun notifyNetworkError() {
+        _state.update {
+            it.copy(
+                isValidatingCredentials = false,
+                credentialsErrorRes = R.string.error_no_internet
+            )
         }
     }
 

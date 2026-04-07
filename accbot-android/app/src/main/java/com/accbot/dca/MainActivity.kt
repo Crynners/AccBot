@@ -337,7 +337,7 @@ fun AccBotApp(
             )
         }
 
-        // Main screens — HorizontalPager with bottom nav / nav rail
+        // Main screens – HorizontalPager with bottom nav / nav rail
         composable("main") {
             var isChartTouching by remember { mutableStateOf(false) }
 
@@ -429,6 +429,9 @@ fun AccBotApp(
                 },
                 onNavigateToHistory = { crypto, fiat ->
                     navController.navigate(Screen.History.createRoute(crypto, fiat))
+                },
+                onNavigateToTransactionDetails = { transactionId ->
+                    navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
                 }
             )
         }

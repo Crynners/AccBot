@@ -5,20 +5,20 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
 
-    <!-- Acc₿ icon — "Acc" rotated 90° CCW (reads bottom-to-top) + Bitcoin ₿ -->
+    <!-- Acc₿ icon – "Acc" rotated 90° CCW (reads bottom-to-top) + Bitcoin ₿ -->
     <!-- White monochrome per Android status bar icon guidelines -->
 
-    <!-- "A" rotated — left-pointing chevron with crossbar notch (y:16-22) -->
+    <!-- "A" rotated – left-pointing chevron with crossbar notch (y:16-22) -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M1,19 L7,16 L7,17.8 L4.2,19 L7,20.2 L7,22 Z"/>
 
-    <!-- First "c" rotated — ∪ arch, curve at bottom, opening upward (y:9.5-14.5) -->
+    <!-- First "c" rotated – ∪ arch, curve at bottom, opening upward (y:9.5-14.5) -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M1.5,9.5 C1.5,14.5 6.5,14.5 6.5,9.5 L5,9.5 C5,13 3,13 3,9.5 Z"/>
 
-    <!-- Second "c" rotated — ∪ arch, curve at bottom, opening upward (y:3-8) -->
+    <!-- Second "c" rotated – ∪ arch, curve at bottom, opening upward (y:3-8) -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M1.5,3 C1.5,8 6.5,8 6.5,3 L5,3 C5,6.5 3,6.5 3,3 Z"/>

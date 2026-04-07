@@ -9,6 +9,7 @@ import com.accbot.dca.data.local.*
 import com.accbot.dca.data.remote.MarketDataService
 import com.accbot.dca.domain.model.DcaPlan
 import com.accbot.dca.domain.model.Transaction
+import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.usecase.ApiImportProgress
 import com.accbot.dca.domain.usecase.ApiImportResultState
@@ -237,6 +238,7 @@ class PlanDetailsViewModel @Inject constructor(
                     transactionDao.deleteTransactionsByPlanId(planId)
                     dcaPlanDao.deletePlanById(planId)
                 }
+                DcaAlarmScheduler.scheduleNextAlarm(context)
                 onDeleted()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to delete plan") }

@@ -36,7 +36,7 @@ class ImportTradeHistoryUseCase @Inject constructor(
         sinceDate: Instant? = null
     ): Flow<ApiImportProgress> = flow {
         try {
-            // Fetch all pages — from sinceDate if provided, otherwise from the beginning.
+            // Fetch all pages – from sinceDate if provided, otherwise from the beginning.
             // Deduplication by exchangeOrderId prevents duplicates, so there's no need
             // for a timestamp cursor which can skip historical trades when the only
             // existing transactions are from auto-buy (not from a prior API import).

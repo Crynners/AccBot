@@ -30,6 +30,9 @@ data class AddPlanUiState(
     // Plan form (from delegate)
     val planForm: PlanFormState = PlanFormState(),
 
+    // Change tracking
+    val hasChanges: Boolean = false,
+
     // Action state
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
@@ -67,7 +70,10 @@ class AddPlanViewModel @Inject constructor(
         _localState,
         planForm.state,
         credentialForm.state
-    ) { local, form, cred -> local.copy(planForm = form, credentialForm = cred) }
+    ) { local, form, cred ->
+        val hasChanges = cred.selectedExchange != null
+        local.copy(planForm = form, credentialForm = cred, hasChanges = hasChanges)
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AddPlanUiState())
 
     init {
@@ -109,6 +115,11 @@ class AddPlanViewModel @Inject constructor(
                                     errorMessage = result.message
                                 )
                             }
+                            return@launch
+                        }
+                        is CredentialValidationResult.NetworkError -> {
+                            credentialForm.notifyNetworkError()
+                            _localState.update { it.copy(isLoading = false) }
                             return@launch
                         }
                         is CredentialValidationResult.Success -> {
