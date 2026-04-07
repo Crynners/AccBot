@@ -6,6 +6,34 @@ package com.accbot.dca.presentation.changelog
 object ChangelogData {
     val entries: List<ChangelogEntry> = listOf(
         ChangelogEntry(
+            versionCode = 27000,
+            version = "2.7.0",
+            titles = mapOf(
+                "cs" to "Spolehlivější nákupy a lepší UX",
+                "en" to "Reliable Purchases & Better UX",
+            ),
+            features = mapOf(
+                "cs" to listOf(
+                    "Aplikace nyní upozorní, pokud opustíte nastavení plánu bez uložení",
+                    "Zmeškané nákupy po výpadku připojení nebo restartu telefonu se automaticky detekují a nabídne se jejich doběhnutí",
+                    "Při selhání nákupu kvůli chybějícímu internetu dostanete notifikaci – s tlačítkem pro okamžité spuštění přímo na úvodní obrazovce",
+                    "Notifikace o nákupu ukazují zpoždění, pokud proběhl později než bylo naplánováno",
+                    "Binance: vylepšené zobrazení částek a informace o velikosti lotu pro každé krypto",
+                    "Obrazovka exportu zálohy má nyní tlačítko Hotovo pro zavření",
+                    "Různé opravy chyb a vylepšení stability",
+                ),
+                "en" to listOf(
+                    "App now warns you before leaving unsaved changes in plan settings",
+                    "Missed purchases are detected and can be recovered after going offline or rebooting",
+                    "You'll get notified when a purchase fails due to no internet – with a retry button right on the dashboard",
+                    "Purchase notifications show the delay when a buy happened later than scheduled",
+                    "Binance: improved amount display and lot size info for each crypto",
+                    "Backup export screen now has a Done button to close it",
+                    "Various bug fixes and stability improvements",
+                ),
+            )
+        ),
+        ChangelogEntry(
             versionCode = 26100,
             version = "2.6.1",
             titles = mapOf(
