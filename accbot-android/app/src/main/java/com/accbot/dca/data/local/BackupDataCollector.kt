@@ -14,6 +14,7 @@ class BackupDataCollector @Inject constructor(
     private val notificationDao: NotificationDao,
     private val withdrawalDao: WithdrawalDao,
     private val withdrawalThresholdDao: WithdrawalThresholdDao,
+    private val exchangeConnectionDao: ExchangeConnectionDao,
     private val credentialsStore: CredentialsStore,
     private val userPreferences: UserPreferences
 ) {
@@ -31,12 +32,35 @@ class BackupDataCollector @Inject constructor(
             lowBalanceThresholdDays = userPreferences.getLowBalanceThresholdDays()
         )
 
-        val thresholds = withdrawalThresholdDao.getAllThresholdsOnce().map { it.toBackup() }
+        // v2: snapshot all connections so the restorer can recreate the envelope structure.
+        val connections = exchangeConnectionDao.getAll().map { it.toBackup() }
 
+        // Thresholds carry both exchange enum (v1 compat) and connectionId (v2).
+        val thresholds = withdrawalThresholdDao.getAllThresholdsOnce().mapNotNull { entity ->
+            val connection = exchangeConnectionDao.getById(entity.connectionId) ?: return@mapNotNull null
+            BackupWithdrawalThreshold(
+                crypto = entity.crypto,
+                exchange = connection.exchange.name,
+                connectionId = entity.connectionId,
+                thresholdAmount = entity.thresholdAmount.toPlainString()
+            )
+        }
+
+        // Credentials: iterate all connections (not just exchanges) so multiple envelopes
+        // on the same exchange roundtrip cleanly. Each backup credential row carries the
+        // source connectionId.
         val credentials = if (options.includeCredentials) {
             val isSandbox = userPreferences.isSandboxMode()
-            credentialsStore.getConfiguredExchanges(isSandbox).mapNotNull { exchange ->
-                credentialsStore.getCredentials(exchange, isSandbox)?.toBackup()
+            connections.mapNotNull { conn ->
+                val source = credentialsStore.getCredentials(conn.id, isSandbox) ?: return@mapNotNull null
+                BackupCredentials(
+                    exchange = source.exchange.name,
+                    apiKey = source.apiKey,
+                    apiSecret = source.apiSecret,
+                    passphrase = source.passphrase,
+                    clientId = source.clientId,
+                    connectionId = conn.id
+                )
             }
         } else {
             emptyList()
@@ -67,7 +91,8 @@ class BackupDataCollector @Inject constructor(
             credentials = credentials,
             transactions = transactions,
             notifications = notifications,
-            withdrawals = withdrawals
+            withdrawals = withdrawals,
+            connections = connections
         )
     }
 
@@ -75,10 +100,12 @@ class BackupDataCollector @Inject constructor(
 
     suspend fun getDataCounts(): BackupDataCounts {
         val isSandbox = userPreferences.isSandboxMode()
+        @Suppress("DEPRECATION")
+        val credentialCount = credentialsStore.getConfiguredExchanges(isSandbox).size
         return BackupDataCounts(
             planCount = dcaPlanDao.getPlanCount(),
             thresholdCount = withdrawalThresholdDao.getAllThresholdsOnce().size,
-            credentialCount = credentialsStore.getConfiguredExchanges(isSandbox).size,
+            credentialCount = credentialCount,
             transactionCount = transactionDao.getTransactionCount(),
             notificationCount = notificationDao.getNotificationCount(),
             withdrawalCount = withdrawalDao.getWithdrawalCount()
@@ -102,7 +129,8 @@ class BackupDataCollector @Inject constructor(
         createdAt = createdAt.toEpochMilli(),
         lastExecutedAt = lastExecutedAt?.toEpochMilli(),
         nextExecutionAt = nextExecutionAt?.toEpochMilli(),
-        targetAmount = targetAmount?.toPlainString()
+        targetAmount = targetAmount?.toPlainString(),
+        connectionId = connectionId
     )
 
     private fun TransactionEntity.toBackup() = BackupTransaction(
@@ -120,7 +148,8 @@ class BackupDataCollector @Inject constructor(
         exchangeOrderId = exchangeOrderId,
         errorMessage = errorMessage,
         warningMessage = warningMessage,
-        executedAt = executedAt.toEpochMilli()
+        executedAt = executedAt.toEpochMilli(),
+        connectionId = connectionId
     )
 
     private fun NotificationEntity.toBackup() = BackupNotification(
@@ -134,7 +163,8 @@ class BackupDataCollector @Inject constructor(
         isRead = isRead,
         isArchived = isArchived,
         templateArgs = templateArgs,
-        createdAt = createdAt.toEpochMilli()
+        createdAt = createdAt.toEpochMilli(),
+        connectionId = connectionId
     )
 
     private fun WithdrawalEntity.toBackup() = BackupWithdrawal(
@@ -148,20 +178,18 @@ class BackupDataCollector @Inject constructor(
         fee = fee.toPlainString(),
         status = status.name,
         errorMessage = errorMessage,
-        createdAt = createdAt.toEpochMilli()
+        createdAt = createdAt.toEpochMilli(),
+        connectionId = connectionId
     )
 
-    private fun WithdrawalThresholdEntity.toBackup() = BackupWithdrawalThreshold(
-        crypto = crypto,
+    private fun ExchangeConnectionEntity.toBackup() = BackupExchangeConnection(
+        id = id,
         exchange = exchange.name,
-        thresholdAmount = thresholdAmount.toPlainString()
+        name = name,
+        createdAt = createdAt.toEpochMilli(),
+        displayOrder = displayOrder
     )
 
-    private fun ExchangeCredentials.toBackup() = BackupCredentials(
-        exchange = exchange.name,
-        apiKey = apiKey,
-        apiSecret = apiSecret,
-        passphrase = passphrase,
-        clientId = clientId
-    )
+    // Note: WithdrawalThresholdEntity → BackupWithdrawalThreshold conversion is inlined in
+    // collect() above because it requires looking up the parent connection's exchange.
 }

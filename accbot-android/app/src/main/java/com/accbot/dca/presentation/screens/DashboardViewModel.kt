@@ -8,6 +8,7 @@ import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.ExchangeBalanceDao
 import com.accbot.dca.data.local.ExchangeBalanceEntity
+import com.accbot.dca.data.local.ExchangeConnectionDao
 import com.accbot.dca.data.local.CryptoFiatHolding
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.UserPreferences
@@ -63,7 +64,9 @@ data class DcaPlanWithBalance(
     val isOverWithdrawalThreshold: Boolean = false,
     val exchangeCryptoBalance: BigDecimal? = null,
     val accumulatedCrypto: BigDecimal? = null,
-    val strategyMultiplier: StrategyMultiplierResult? = null
+    val strategyMultiplier: StrategyMultiplierResult? = null,
+    /** Connection name for display (empty if the connection has no custom name). */
+    val connectionName: String = ""
 )
 
 @Immutable
@@ -119,6 +122,7 @@ class DashboardViewModel @Inject constructor(
     private val credentialsStore: CredentialsStore,
     private val exchangeBalanceDao: ExchangeBalanceDao,
     private val withdrawalThresholdDao: WithdrawalThresholdDao,
+    private val exchangeConnectionDao: ExchangeConnectionDao,
     private val calculateStrategyMultiplier: CalculateStrategyMultiplierUseCase
 ) : AndroidViewModel(application) {
 
@@ -172,13 +176,27 @@ class DashboardViewModel @Inject constructor(
                     launch { DcaAlarmScheduler.scheduleNextAlarm(application) }
                 }
 
+                // Pre-load connection names for all unique connectionIds in one batch.
+                // Avoids one DB call per plan during the map below.
+                val connectionNames: Map<Long, String> = plans
+                    .map { it.connectionId }
+                    .distinct()
+                    .mapNotNull { id ->
+                        exchangeConnectionDao.getById(id)?.let { id to it.name }
+                    }
+                    .toMap()
+
                 val plansWithBalance = plans.map { plan ->
                     val accumulated = if (plan.targetAmount != null) {
                         try {
                             BigDecimal(transactionDao.getAccumulatedCryptoByPlan(plan.id))
                         } catch (_: Exception) { null }
                     } else null
-                    DcaPlanWithBalance(plan = plan, accumulatedCrypto = accumulated)
+                    DcaPlanWithBalance(
+                        plan = plan,
+                        accumulatedCrypto = accumulated,
+                        connectionName = connectionNames[plan.connectionId] ?: ""
+                    )
                 }
 
                 // Merge existing prices into fresh holdings to avoid KPI flash
@@ -324,28 +342,29 @@ class DashboardViewModel @Inject constructor(
         val thresholdDays = userPreferences.getLowBalanceThresholdDays()
         val existingAccumulated = _uiState.value.activePlans.associate { it.plan.id to it.accumulatedCrypto }
 
-        // Group by exchange+fiat to avoid duplicate API calls
+        // Group by connection+fiat to avoid duplicate API calls. Each connection (envelope)
+        // has independent balances even if two connections target the same exchange.
         val balanceCache = mutableMapOf<String, BigDecimal?>()
 
         val plansWithBalance = plans.map { plan ->
             if (!plan.isEnabled) return@map DcaPlanWithBalance(plan = plan, accumulatedCrypto = existingAccumulated[plan.id])
 
-            val balanceKey = "${plan.exchange}_${plan.fiat}"
+            val balanceKey = "${plan.connectionId}_${plan.fiat}"
             val balance = balanceCache.getOrPut(balanceKey) {
                 try {
-                    val credentials = credentialsStore.getCredentials(plan.exchange, isSandbox)
+                    val credentials = credentialsStore.getCredentials(plan.connectionId, isSandbox)
                         ?: return@getOrPut null
                     val api = exchangeApiFactory.create(credentials)
                     val fetchedBalance = withTimeoutOrNull(10_000) {
                         api.getBalance(plan.fiat)
                     }
-                    // Cache in DB
+                    // Cache in DB per (connectionId, currency)
                     if (fetchedBalance != null) {
                         exchangeBalanceDao.insertBalance(
                             ExchangeBalanceEntity(
-                                id = balanceKey,
-                                exchange = plan.exchange,
+                                connectionId = plan.connectionId,
                                 currency = plan.fiat,
+                                exchange = plan.exchange,
                                 balance = fetchedBalance,
                                 lastUpdated = Instant.now()
                             )
@@ -353,22 +372,22 @@ class DashboardViewModel @Inject constructor(
                     }
                     fetchedBalance
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error fetching balance for ${plan.exchange}/${plan.fiat}", e)
+                    Log.e(TAG, "Error fetching balance for connection=${plan.connectionId}/${plan.fiat}", e)
                     // Try cached balance from DB
                     try {
-                        exchangeBalanceDao.getBalance(balanceKey)?.balance
+                        exchangeBalanceDao.getBalance(plan.connectionId, plan.fiat)?.balance
                     } catch (_: Exception) { null }
                 }
             }
 
             // Check withdrawal threshold using live crypto balance from exchange
             val withdrawalThreshold = try {
-                withdrawalThresholdDao.getThresholdAmount(plan.exchange, plan.crypto)
+                withdrawalThresholdDao.getThresholdAmount(plan.connectionId, plan.crypto)
             } catch (_: Exception) { null }
-            val cryptoBalanceKey = "${plan.exchange}_${plan.crypto}"
+            val cryptoBalanceKey = "${plan.connectionId}_${plan.crypto}"
             val exchangeCryptoBalance = balanceCache.getOrPut(cryptoBalanceKey) {
                 try {
-                    val creds = credentialsStore.getCredentials(plan.exchange, isSandbox)
+                    val creds = credentialsStore.getCredentials(plan.connectionId, isSandbox)
                         ?: return@getOrPut null
                     val api = exchangeApiFactory.create(creds)
                     withTimeoutOrNull(10_000) { api.getBalance(plan.crypto) }

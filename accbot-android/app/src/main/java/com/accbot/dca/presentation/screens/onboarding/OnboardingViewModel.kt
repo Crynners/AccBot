@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.UserPreferences
+import com.accbot.dca.data.repository.ExchangeConnectionRepository
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.usecase.CalculateMonthlyCostUseCase
 import com.accbot.dca.domain.usecase.CreateDcaPlanUseCase
@@ -42,12 +43,19 @@ class OnboardingViewModel @Inject constructor(
     private val validateAndSaveCredentialsUseCase: ValidateAndSaveCredentialsUseCase,
     private val createDcaPlanUseCase: CreateDcaPlanUseCase,
     private val userPreferences: UserPreferences,
+    private val connectionRepository: ExchangeConnectionRepository,
     calculateMonthlyCost: CalculateMonthlyCostUseCase,
     minOrderSizeRepository: MinOrderSizeRepository
 ) : ViewModel() {
 
     val planForm = PlanFormDelegate(calculateMonthlyCost, minOrderSizeRepository, viewModelScope)
-    val credentialForm = CredentialFormDelegate(credentialsStore, validateAndSaveCredentialsUseCase, userPreferences, viewModelScope)
+    val credentialForm = CredentialFormDelegate(
+        credentialsStore = credentialsStore,
+        validateAndSaveCredentialsUseCase = validateAndSaveCredentialsUseCase,
+        userPreferences = userPreferences,
+        coroutineScope = viewModelScope,
+        connectionRepository = connectionRepository
+    )
 
     private val _localState = MutableStateFlow(OnboardingUiState())
 
@@ -60,17 +68,21 @@ class OnboardingViewModel @Inject constructor(
 
     init {
         credentialForm.initialize()
-        // Detect already-configured exchange (e.g. credentials saved on ExchangeSetupScreen).
-        val isSandbox = userPreferences.isSandboxMode()
-        val configured = credentialsStore.getConfiguredExchanges(isSandbox).firstOrNull()
         _localState.update {
             it.copy(
                 planCreated = onboardingPreferences.isPlanCreatedDuringOnboarding()
             )
         }
-        if (configured != null) {
-            credentialForm.initWithExchange(configured)
-            planForm.initFromExchange(configured)
+        // Detect already-configured exchange (e.g. credentials saved on ExchangeSetupScreen).
+        // Lookup is async because the legacy Exchange-keyed shim queries the connection DAO.
+        viewModelScope.launch {
+            val isSandbox = userPreferences.isSandboxMode()
+            @Suppress("DEPRECATION")
+            val configured = credentialsStore.getConfiguredExchanges(isSandbox).firstOrNull()
+            if (configured != null) {
+                credentialForm.initWithExchange(configured)
+                planForm.initFromExchange(configured)
+            }
         }
     }
 
@@ -137,7 +149,8 @@ class OnboardingViewModel @Inject constructor(
         onboardingPreferences.setPlanCreatedDuringOnboarding(false) // cleanup temp flag
     }
 
-    fun hasConfiguredExchange(): Boolean {
+    suspend fun hasConfiguredExchange(): Boolean {
+        @Suppress("DEPRECATION")
         return credentialsStore.getConfiguredExchanges().isNotEmpty()
     }
 }

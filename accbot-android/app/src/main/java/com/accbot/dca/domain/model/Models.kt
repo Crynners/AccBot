@@ -152,6 +152,8 @@ enum class DcaFrequency(
 data class DcaPlan(
     val id: Long = 0,
     val exchange: Exchange,
+    /** FK to ExchangeConnectionEntity.id — every plan belongs to one connection. */
+    val connectionId: Long,
     val crypto: String,
     val fiat: String,
     val amount: BigDecimal,           // Base amount (strategy may modify)
@@ -185,6 +187,8 @@ data class Transaction(
     val id: Long = 0,
     val planId: Long,
     val exchange: Exchange,
+    /** Optional connection reference; null for legacy or post-deletion. */
+    val connectionId: Long? = null,
     val crypto: String,
     val fiat: String,
     val fiatAmount: BigDecimal,
@@ -266,17 +270,24 @@ data class AppNotification(
     val planId: Long? = null,
     val crypto: String? = null,
     val exchange: Exchange? = null,
+    val connectionId: Long? = null,
     val isRead: Boolean,
     val isArchived: Boolean = false,
     val createdAt: Instant
 )
 
 /**
- * Withdrawal threshold configuration
+ * Withdrawal threshold configuration — per (crypto, connection) pair.
+ *
+ * `exchange` is denormalized from the parent connection so UI can group/display by exchange
+ * without joining; it is filled in at the ViewModel layer when loading thresholds.
+ * `connectionName` may be empty if the connection has no custom name.
  */
 data class WithdrawalThreshold(
     val crypto: String,
+    val connectionId: Long,
     val exchange: Exchange,
+    val connectionName: String,
     val thresholdAmount: BigDecimal
 )
 

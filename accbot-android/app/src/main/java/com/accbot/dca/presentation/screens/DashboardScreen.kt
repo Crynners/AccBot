@@ -83,7 +83,7 @@ fun DashboardScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToPlanDetails: ((Long) -> Unit)? = null,
     onNavigateToPortfolio: ((String, String) -> Unit)? = null,
-    onNavigateToExchangeDetail: ((String) -> Unit)? = null,
+    onNavigateToExchangeManagement: (() -> Unit)? = null,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -189,12 +189,9 @@ fun DashboardScreen(
                     HoldingsPager(
                         holdings = uiState.holdings,
                         onHoldingClick = onNavigateToPortfolio,
-                        onImportViaApi = onNavigateToExchangeDetail?.let { nav ->
-                            {
-                                val exchanges = uiState.activePlans.map { it.plan.exchange.name }.distinct()
-                                if (exchanges.size == 1) nav(exchanges.first()) else nav("")
-                            }
-                        },
+                        // Phase 7+: route to Exchange Management list rather than deep-linking
+                        // into a specific connection. User picks the connection there.
+                        onImportViaApi = onNavigateToExchangeManagement?.let { nav -> { nav() } },
                         compact = true
                     )
 
@@ -308,12 +305,8 @@ fun DashboardScreen(
                     HoldingsPager(
                         holdings = uiState.holdings,
                         onHoldingClick = onNavigateToPortfolio,
-                        onImportViaApi = onNavigateToExchangeDetail?.let { nav ->
-                            {
-                                val exchanges = uiState.activePlans.map { it.plan.exchange.name }.distinct()
-                                if (exchanges.size == 1) nav(exchanges.first()) else nav("")
-                            }
-                        }
+                        // Phase 7+: route to Exchange Management list rather than deep-linking.
+                        onImportViaApi = onNavigateToExchangeManagement?.let { nav -> { nav() } }
                     )
                 }
 
@@ -1017,7 +1010,11 @@ internal fun DcaPlanCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = plan.exchange.displayName,
+                        // Render connection name as suffix when present (Phase 8 multi-connection)
+                        text = if (planWithBalance.connectionName.isNotBlank())
+                            "${plan.exchange.displayName} — ${planWithBalance.connectionName}"
+                        else
+                            plan.exchange.displayName,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

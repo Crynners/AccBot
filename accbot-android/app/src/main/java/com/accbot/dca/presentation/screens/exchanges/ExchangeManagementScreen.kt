@@ -37,7 +37,7 @@ import com.accbot.dca.presentation.components.SectionHeader
 fun ExchangeManagementScreen(
     onNavigateBack: () -> Unit,
     onNavigateToAddExchange: (String?) -> Unit,
-    onNavigateToExchangeDetail: (String) -> Unit = {},
+    onNavigateToExchangeDetail: (Long) -> Unit = {},
     viewModel: ExchangeManagementViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -58,7 +58,7 @@ fun ExchangeManagementScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.loadConnectedExchanges()
+                viewModel.refreshFlags()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -73,11 +73,14 @@ fun ExchangeManagementScreen(
             )
         }
     ) { paddingValues ->
+        // Group connections by exchange so the user can see envelopes per exchange.
+        val groupedConnections = remember(uiState.connections) {
+            uiState.connections.groupBy { it.exchange }
+        }
         val availableExchanges = Exchange.entries
-            .filter { it !in uiState.connectedExchanges }
             .filter { uiState.showExperimental || it.isStable }
 
-        if (uiState.connectedExchanges.isEmpty() && availableExchanges.isEmpty()) {
+        if (uiState.connections.isEmpty() && availableExchanges.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -101,18 +104,25 @@ fun ExchangeManagementScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                // Connected exchanges section
-                if (uiState.connectedExchanges.isNotEmpty()) {
+                // Connected: render one tile per connection (envelope), grouped by exchange.
+                // The tile subtitle shows the connection name when set, so users with multiple
+                // envelopes ("Hlavní", "Spoření") can tell them apart.
+                if (uiState.connections.isNotEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(title = stringResource(R.string.exchanges_connected))
                     }
 
-                    items(uiState.connectedExchanges, key = { it.name }) { exchange ->
+                    items(uiState.connections, key = { it.id }) { connection ->
+                        val subtitle = if (connection.name.isNotBlank()) {
+                            connection.name
+                        } else {
+                            stringResource(R.string.common_connected)
+                        }
                         ExchangeSelectionTile(
-                            exchange = exchange,
+                            exchange = connection.exchange,
                             isConnected = true,
-                            subtitle = stringResource(R.string.common_connected),
-                            onClick = { onNavigateToExchangeDetail(exchange.name) }
+                            subtitle = subtitle,
+                            onClick = { onNavigateToExchangeDetail(connection.id) }
                         )
                     }
 
@@ -121,15 +131,22 @@ fun ExchangeManagementScreen(
                     }
                 }
 
-                // Available exchanges section
+                // Available exchanges section — show ALL exchanges (no longer filtered by
+                // "has credentials"), so the user can add a second connection on Coinmate.
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     SectionHeader(title = stringResource(R.string.exchanges_available))
                 }
 
                 if (availableExchanges.isNotEmpty()) {
                     items(availableExchanges, key = { it.name }) { exchange ->
+                        // Subtitle hint when there's already at least one connection on this exchange
+                        val existingCount = groupedConnections[exchange]?.size ?: 0
+                        val subtitle = if (existingCount > 0) {
+                            stringResource(R.string.exchanges_add_another, existingCount)
+                        } else null
                         ExchangeSelectionTile(
                             exchange = exchange,
+                            subtitle = subtitle,
                             onClick = { onNavigateToAddExchange(exchange.name) }
                         )
                     }

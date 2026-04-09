@@ -176,7 +176,7 @@ class PlanDetailsViewModel @Inject constructor(
             _uiState.update { it.copy(isBalanceLoading = true) }
             try {
                 val isSandbox = userPreferences.isSandboxMode()
-                val credentials = credentialsStore.getCredentials(plan.exchange, isSandbox)
+                val credentials = credentialsStore.getCredentials(plan.connectionId, isSandbox)
                 if (credentials != null) {
                     val api = exchangeApiFactory.create(credentials)
                     val balance = withTimeoutOrNull(10_000) { api.getBalance(plan.fiat) }
@@ -273,7 +273,7 @@ class PlanDetailsViewModel @Inject constructor(
 
             try {
                 val isSandbox = userPreferences.isSandboxMode()
-                val credentials = credentialsStore.getCredentials(plan.exchange, isSandbox)
+                val credentials = credentialsStore.getCredentials(plan.connectionId, isSandbox)
                 if (credentials == null) {
                     _uiState.update { it.copy(
                         isApiImporting = false,

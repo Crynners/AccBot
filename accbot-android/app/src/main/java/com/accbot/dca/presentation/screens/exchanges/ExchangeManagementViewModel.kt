@@ -2,21 +2,24 @@ package com.accbot.dca.presentation.screens.exchanges
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.accbot.dca.data.local.CredentialsStore
+import com.accbot.dca.data.local.ExchangeConnectionEntity
 import com.accbot.dca.data.local.UserPreferences
+import com.accbot.dca.data.repository.ExchangeConnectionRepository
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.isStable
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import androidx.compose.runtime.Immutable
 import javax.inject.Inject
 
+/**
+ * UI state for the exchange management screen. Lists individual connections (envelopes)
+ * rather than exchanges, since v2.8 a single exchange can have multiple credential sets.
+ */
 @Immutable
 data class ExchangeManagementUiState(
-    val connectedExchanges: List<Exchange> = emptyList(),
+    val connections: List<ExchangeConnectionEntity> = emptyList(),
     val isLoading: Boolean = false,
     val isSandboxMode: Boolean = false,
     val showExperimental: Boolean = false
@@ -24,7 +27,7 @@ data class ExchangeManagementUiState(
 
 @HiltViewModel
 class ExchangeManagementViewModel @Inject constructor(
-    private val credentialsStore: CredentialsStore,
+    private val connectionRepository: ExchangeConnectionRepository,
     private val userPreferences: UserPreferences
 ) : ViewModel() {
 
@@ -32,15 +35,25 @@ class ExchangeManagementViewModel @Inject constructor(
     val uiState: StateFlow<ExchangeManagementUiState> = _uiState.asStateFlow()
 
     init {
-        loadConnectedExchanges()
+        // Reactive flow on connections so additions/deletions in detail screens reflect
+        // here without an explicit reload.
+        viewModelScope.launch {
+            connectionRepository.observeAll().collect { connections ->
+                _uiState.update { it.copy(connections = connections) }
+            }
+        }
+        refreshFlags()
     }
 
-    fun loadConnectedExchanges() {
+    /**
+     * Re-read non-reactive prefs (sandbox mode, experimental flag) on screen resume.
+     * The connections list itself is reactive via [ExchangeConnectionRepository.observeAll].
+     */
+    fun refreshFlags() {
         viewModelScope.launch {
-            val isSandbox = withContext(Dispatchers.IO) { userPreferences.isSandboxMode() }
-            val connected = withContext(Dispatchers.IO) { credentialsStore.getConfiguredExchanges(isSandbox) }
-            val showExperimental = withContext(Dispatchers.IO) { userPreferences.areExperimentalExchangesEnabled() }
-            _uiState.update { it.copy(connectedExchanges = connected, isSandboxMode = isSandbox, showExperimental = showExperimental) }
+            val isSandbox = userPreferences.isSandboxMode()
+            val showExperimental = userPreferences.areExperimentalExchangesEnabled()
+            _uiState.update { it.copy(isSandboxMode = isSandbox, showExperimental = showExperimental) }
         }
     }
 
@@ -49,11 +62,10 @@ class ExchangeManagementViewModel @Inject constructor(
         _uiState.update { it.copy(showExperimental = enabled) }
     }
 
-    fun removeExchange(exchange: Exchange) {
-        viewModelScope.launch {
-            val isSandbox = withContext(Dispatchers.IO) { userPreferences.isSandboxMode() }
-            withContext(Dispatchers.IO) { credentialsStore.deleteCredentials(exchange, isSandbox) }
-            loadConnectedExchanges()
-        }
-    }
+    /**
+     * Display label for a connection — exchange display name plus optional custom name.
+     * E.g. "Coinmate" or "Coinmate — Spoření".
+     */
+    fun displayLabel(connection: ExchangeConnectionEntity): String =
+        connectionRepository.displayLabel(connection)
 }

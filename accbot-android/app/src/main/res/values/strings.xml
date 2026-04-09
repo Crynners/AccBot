@@ -97,7 +97,7 @@
     <string name="settings_title">Settings</string>
     <string name="settings_exchange_accounts">EXCHANGE ACCOUNTS</string>
     <string name="settings_manage_exchanges">Manage Exchanges</string>
-    <string name="settings_exchanges_connected">%1$d exchange(s) connected</string>
+    <string name="settings_exchanges_connected">%1$d connection(s)</string>
     <string name="settings_system">SYSTEM SETTINGS</string>
     <string name="settings_battery_optimization">Battery Optimization</string>
     <string name="settings_battery_disabled">Disabled - tap to enable unrestricted background</string>
@@ -344,6 +344,14 @@
     <string name="exchanges_add">Add Exchange</string>
     <string name="exchanges_connected">Connected Exchanges</string>
     <string name="exchanges_available">Available Exchanges</string>
+    <string name="exchanges_add_another">%1$d connection(s) — add another</string>
+    <string name="exchanges_connection_name_label">Connection name (optional)</string>
+    <string name="exchanges_connection_name_required">Name is required when you have multiple connections</string>
+    <string name="exchanges_connection_name_taken">This name is already used for another connection on this exchange</string>
+    <string name="exchanges_connection_name_hint">e.g. Hlavní, Spoření, Long-term…</string>
+    <string name="exchanges_default_connection_label">Default</string>
+    <string name="add_plan_pick_connection">Pick connection</string>
+    <string name="add_plan_create_new_connection">Create new connection…</string>
     <string name="exchanges_remove_title">Remove Exchange</string>
     <string name="exchanges_remove_text">Are you sure you want to remove %1$s? This will delete all transaction history and API credentials for this exchange.</string>
     <string name="exchanges_remove_text_with_plans">Are you sure you want to remove %1$s? This exchange has %2$d active DCA plan(s). Removing the exchange will delete all associated DCA plans, transaction history and API credentials.</string>

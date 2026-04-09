@@ -11,6 +11,7 @@ import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.DcaPlanEntity
 import com.accbot.dca.data.local.UserPreferences
+import com.accbot.dca.data.repository.ExchangeConnectionRepository
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.ExchangeInstructions
 import com.accbot.dca.domain.model.ExchangeInstructionsProvider
@@ -51,6 +52,7 @@ data class AddExchangeUiState(
     val isSuccess: Boolean = false,
     val isSandboxMode: Boolean = false,
     val plansForExchange: List<DcaPlanEntity> = emptyList(),
+    val availableExchanges: List<Exchange> = emptyList(),
     val showImportOffer: Boolean = false,
     val isApiImporting: Boolean = false,
     val apiImportProgress: String = "",
@@ -68,10 +70,17 @@ class AddExchangeViewModel @Inject constructor(
     private val dcaPlanDao: DcaPlanDao,
     private val importTradeHistoryUseCase: ImportTradeHistoryUseCase,
     private val exchangeApiFactory: ExchangeApiFactory,
+    private val connectionRepository: ExchangeConnectionRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    val credentialForm = CredentialFormDelegate(credentialsStore, validateAndSaveCredentialsUseCase, userPreferences, viewModelScope)
+    val credentialForm = CredentialFormDelegate(
+        credentialsStore = credentialsStore,
+        validateAndSaveCredentialsUseCase = validateAndSaveCredentialsUseCase,
+        userPreferences = userPreferences,
+        coroutineScope = viewModelScope,
+        connectionRepository = connectionRepository
+    )
 
     private val _localState = MutableStateFlow(AddExchangeUiState())
     val uiState: StateFlow<AddExchangeUiState> = combine(
@@ -86,6 +95,12 @@ class AddExchangeViewModel @Inject constructor(
         _localState.update { it.copy(isSandboxMode = userPreferences.isSandboxMode()) }
         credentialForm.initialize()
 
+        // Compute supported exchanges (filter on sandbox + experimental flags)
+        viewModelScope.launch {
+            val exchanges = computeSupportedExchanges()
+            _localState.update { it.copy(availableExchanges = exchanges) }
+        }
+
         // If exchange was passed via navigation, auto-select it
         val exchangeName = savedStateHandle.get<String>("exchange")
         if (exchangeName != null) {
@@ -95,6 +110,19 @@ class AddExchangeViewModel @Inject constructor(
                 _localState.update { it.copy(preSelectedExchange = true) }
             }
         }
+    }
+
+    /**
+     * List of exchanges shown in the SELECTION step. After Phase 7+ users can add
+     * multiple connections per exchange, so we no longer filter out exchanges that
+     * already have credentials — every supported exchange is always selectable.
+     */
+    private suspend fun computeSupportedExchanges(): List<Exchange> {
+        val isSandbox = userPreferences.isSandboxMode()
+        val showExperimental = userPreferences.areExperimentalExchangesEnabled()
+        return Exchange.entries
+            .filter { !isSandbox || it.supportsSandbox() }
+            .filter { showExperimental || it.isStable }
     }
 
     fun selectExchange(exchange: Exchange) {
@@ -143,6 +171,7 @@ class AddExchangeViewModel @Inject constructor(
 
             try {
                 val isSandbox = userPreferences.isSandboxMode()
+                @Suppress("DEPRECATION")
                 val credentials = credentialsStore.getCredentials(exchange, isSandbox)
                 if (credentials == null) {
                     _localState.update { it.copy(
@@ -242,14 +271,12 @@ class AddExchangeViewModel @Inject constructor(
         return false
     }
 
-    fun getAvailableExchanges(): List<Exchange> {
-        val isSandbox = userPreferences.isSandboxMode()
-        val showExperimental = userPreferences.areExperimentalExchangesEnabled()
-        return Exchange.entries
-            .filter { !credentialsStore.hasCredentials(it, isSandbox) }
-            .filter { !isSandbox || it.supportsSandbox() }
-            .filter { showExperimental || it.isStable }
-    }
+    /**
+     * Synchronous accessor for the available exchanges currently in UI state.
+     * Initial population happens in [init] via [computeAvailableExchanges]; UI should
+     * read [uiState] for reactive updates instead of calling this.
+     */
+    fun getAvailableExchanges(): List<Exchange> = _localState.value.availableExchanges
 
     fun getInstructionsForExchange(exchange: Exchange): ExchangeInstructions {
         val isSandbox = userPreferences.isSandboxMode()

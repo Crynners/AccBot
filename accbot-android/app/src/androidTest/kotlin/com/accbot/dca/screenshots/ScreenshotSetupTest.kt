@@ -8,6 +8,7 @@ import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.data.local.DailyPriceEntity
 import com.accbot.dca.data.local.DcaPlanEntity
 import com.accbot.dca.data.local.ExchangeBalanceEntity
+import com.accbot.dca.data.local.ExchangeConnectionEntity
 import com.accbot.dca.data.local.NotificationEntity
 import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.domain.model.DcaFrequency
@@ -57,32 +58,44 @@ class ScreenshotSetupTest {
         prefs.setMarketPulseEnabled(true)
         prefs.setMarketPulseExpanded(true)
 
-        // 2. Credentials (dummy — app won't call APIs during screenshots)
-        val creds = CredentialsStore(context)
-        creds.saveCredentials(
-            ExchangeCredentials(Exchange.COINMATE, "demo_key", "demo_secret", clientId = "12345"),
-            isSandbox = false
-        )
-        creds.saveCredentials(
-            ExchangeCredentials(Exchange.BINANCE, "demo_key", "demo_secret"),
-            isSandbox = false
-        )
-
-        // 3. Room DB — prod database
+        // 2. Room DB — prod database (constructed first because CredentialsStore needs the DAO)
         val db = DcaDatabase.getInstance(context, isSandbox = false)
+        val creds = CredentialsStore(context, db.exchangeConnectionDao())
 
         runBlocking {
-            // Clean slate
+            // Clean slate (also clears any prior connections so unique index doesn't trip)
             db.dcaPlanDao().deleteAllPlans()
             db.transactionDao().deleteAllTransactions()
             db.dailyPriceDao().deleteAllPrices()
             db.exchangeBalanceDao().deleteAllBalances()
             db.notificationDao().deleteAllNotifications()
 
+            // Insert default connections first (one per exchange used by the screenshots)
+            val coinmateConnectionId = db.exchangeConnectionDao().insert(
+                ExchangeConnectionEntity(exchange = Exchange.COINMATE, name = "")
+            )
+            val binanceConnectionId = db.exchangeConnectionDao().insert(
+                ExchangeConnectionEntity(exchange = Exchange.BINANCE, name = "")
+            )
+
+            // Credentials (dummy — app won't call APIs during screenshots).
+            // Use the connection-keyed API directly to avoid the legacy shim's auto-create.
+            creds.saveCredentials(
+                connectionId = coinmateConnectionId,
+                credentials = ExchangeCredentials(Exchange.COINMATE, "demo_key", "demo_secret", clientId = "12345"),
+                isSandbox = false
+            )
+            creds.saveCredentials(
+                connectionId = binanceConnectionId,
+                credentials = ExchangeCredentials(Exchange.BINANCE, "demo_key", "demo_secret"),
+                isSandbox = false
+            )
+
             // Insert plans
             val btcPlanId = db.dcaPlanDao().insertPlan(
                 DcaPlanEntity(
-                    exchange = Exchange.COINMATE, crypto = "BTC", fiat = "EUR",
+                    exchange = Exchange.COINMATE, connectionId = coinmateConnectionId,
+                    crypto = "BTC", fiat = "EUR",
                     amount = BigDecimal("50"), frequency = DcaFrequency.DAILY,
                     strategy = DcaStrategy.Classic, isEnabled = true,
                     withdrawalEnabled = true,
@@ -94,7 +107,8 @@ class ScreenshotSetupTest {
             )
             val ethPlanId = db.dcaPlanDao().insertPlan(
                 DcaPlanEntity(
-                    exchange = Exchange.BINANCE, crypto = "ETH", fiat = "EUR",
+                    exchange = Exchange.BINANCE, connectionId = binanceConnectionId,
+                    crypto = "ETH", fiat = "EUR",
                     amount = BigDecimal("30"), frequency = DcaFrequency.WEEKLY,
                     strategy = DcaStrategy.FearAndGreed(), isEnabled = true,
                     createdAt = now.minus(Duration.ofDays(120)),
@@ -172,10 +186,10 @@ class ScreenshotSetupTest {
 
             db.exchangeBalanceDao().insertBalances(
                 listOf(
-                    ExchangeBalanceEntity("COINMATE_BTC", Exchange.COINMATE, "BTC", totalBtcAccumulated, now),
-                    ExchangeBalanceEntity("COINMATE_EUR", Exchange.COINMATE, "EUR", BigDecimal("142.50"), now),
-                    ExchangeBalanceEntity("BINANCE_ETH", Exchange.BINANCE, "ETH", totalEthAccumulated, now),
-                    ExchangeBalanceEntity("BINANCE_EUR", Exchange.BINANCE, "EUR", BigDecimal("85.00"), now),
+                    ExchangeBalanceEntity(coinmateConnectionId, "BTC", Exchange.COINMATE, totalBtcAccumulated, now),
+                    ExchangeBalanceEntity(coinmateConnectionId, "EUR", Exchange.COINMATE, BigDecimal("142.50"), now),
+                    ExchangeBalanceEntity(binanceConnectionId, "ETH", Exchange.BINANCE, totalEthAccumulated, now),
+                    ExchangeBalanceEntity(binanceConnectionId, "EUR", Exchange.BINANCE, BigDecimal("85.00"), now),
                 )
             )
 
@@ -220,12 +234,12 @@ class ScreenshotSetupTest {
                     isRead = true, createdAt = now.minus(Duration.ofDays(5))
                 )
             )
-        }
 
-        // Verify
-        assert(OnboardingPreferences(context).isOnboardingCompleted()) { "Onboarding not completed" }
-        assert(!UserPreferences(context).isSandboxMode()) { "Sandbox mode should be off" }
-        assert(CredentialsStore(context).hasCredentials(Exchange.COINMATE, isSandbox = false)) { "Coinmate credentials missing" }
-        assert(CredentialsStore(context).hasCredentials(Exchange.BINANCE, isSandbox = false)) { "Binance credentials missing" }
+            // Verify (inside runBlocking so we can use connectionIds + suspend hasCredentials)
+            assert(OnboardingPreferences(context).isOnboardingCompleted()) { "Onboarding not completed" }
+            assert(!UserPreferences(context).isSandboxMode()) { "Sandbox mode should be off" }
+            assert(creds.hasCredentials(coinmateConnectionId, isSandbox = false)) { "Coinmate credentials missing" }
+            assert(creds.hasCredentials(binanceConnectionId, isSandbox = false)) { "Binance credentials missing" }
+        }
     }
 }

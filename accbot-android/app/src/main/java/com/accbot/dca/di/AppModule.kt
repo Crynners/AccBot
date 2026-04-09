@@ -5,6 +5,7 @@ import androidx.work.WorkManager
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.CredentialsStore
+import com.accbot.dca.data.local.ExchangeConnectionDao
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.data.local.DailyPriceDao
@@ -90,9 +91,12 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideCredentialsStore(@ApplicationContext context: Context): CredentialsStore {
-        return CredentialsStore(context)
+    fun provideExchangeConnectionDao(database: DcaDatabase): ExchangeConnectionDao {
+        return database.exchangeConnectionDao()
     }
+
+    // CredentialsStore now uses @Inject constructor (needs ExchangeConnectionDao for legacy
+    // Exchange-keyed shims). Hilt provides it automatically — no manual @Provides needed.
 
     @Provides
     @Singleton

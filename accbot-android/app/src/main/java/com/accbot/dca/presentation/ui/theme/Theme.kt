@@ -11,7 +11,6 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
@@ -141,9 +140,11 @@ fun AccBotTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
+            // Note: window.statusBarColor / navigationBarColor are deprecated in API 35
+            // and ignored when targeting Android 15+. Edge-to-edge is enabled in
+            // MainActivity via enableEdgeToEdge(); we only adjust the icon appearance
+            // (light/dark) here to match the active theme.
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            window.navigationBarColor = colorScheme.background.toArgb()
             val insetsController = WindowCompat.getInsetsController(window, view)
             insetsController.isAppearanceLightStatusBars = !darkTheme
             insetsController.isAppearanceLightNavigationBars = !darkTheme

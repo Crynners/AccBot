@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.accbot.dca.MainActivity
 import com.accbot.dca.R
+import com.accbot.dca.data.local.ExchangeConnectionDao
 import com.accbot.dca.data.local.NotificationDao
 import com.accbot.dca.data.local.NotificationEntity
 import com.accbot.dca.data.local.NotificationTemplateArgs
@@ -21,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,10 +30,33 @@ import javax.inject.Singleton
 @Singleton
 class NotificationService @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val notificationDao: NotificationDao
+    private val notificationDao: NotificationDao,
+    private val exchangeConnectionDao: ExchangeConnectionDao
 ) {
     private val persistScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    /**
+     * Render a label like "Coinmate" or "Coinmate — Spoření" for use in notification
+     * titles. If [connectionId] is set and the connection has a non-empty name, the
+     * label includes it; otherwise the bare exchange display name is returned.
+     *
+     * Suspend so callers can `await` the DAO lookup without blocking. All callers of
+     * `show*` methods are already in suspend contexts (DcaWorker.doWork, viewModelScope
+     * coroutines), so this is non-invasive.
+     */
+    private suspend fun connectionLabel(connectionId: Long?, exchange: Exchange?): String? {
+        val exchangeLabel = exchange?.displayName ?: return null
+        if (connectionId == null) return exchangeLabel
+        val connection = withContext(Dispatchers.IO) {
+            exchangeConnectionDao.getById(connectionId)
+        }
+        return if (connection != null && connection.name.isNotBlank()) {
+            "$exchangeLabel — ${connection.name}"
+        } else {
+            exchangeLabel
+        }
+    }
 
     init {
         createNotificationChannels()
@@ -107,7 +132,7 @@ class NotificationService @Inject constructor(
      * Uses a unique notification ID per plan so multiple plan notifications are all visible.
      * @param pending If true, shows a "confirming" message instead of crypto amount (for PENDING orders)
      */
-    fun showPurchaseNotification(
+    suspend fun showPurchaseNotification(
         crypto: String,
         cryptoAmount: BigDecimal,
         fiatAmount: BigDecimal,
@@ -116,6 +141,7 @@ class NotificationService @Inject constructor(
         planId: Long = 0,
         pending: Boolean = false,
         exchange: Exchange? = null,
+        connectionId: Long? = null,
         scheduledAt: java.time.Instant? = null,
         executedAt: java.time.Instant? = null
     ) {
@@ -145,19 +171,27 @@ class NotificationService @Inject constructor(
 
         val (title, text) = NotificationRenderer.render(context, args)
 
+        // Prefix the title with the connection label so users with multiple
+        // envelopes (e.g. "Coinmate Spoření") can tell which connection executed.
+        val label = connectionLabel(connectionId, exchange)
+        val displayedTitle = if (!label.isNullOrBlank() && label != exchange?.displayName) {
+            "$label · $title"
+        } else title
+
         val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_PURCHASE, planId)
         persistAndShow(
             sysNotifId = sysNotifId,
             channel = CHANNEL_PURCHASE,
-            title = title,
+            title = displayedTitle,
             text = text,
             entity = NotificationEntity(
                 type = NotificationType.PURCHASE,
-                title = title,
+                title = displayedTitle,
                 message = text,
                 planId = planId.takeIf { it > 0 },
                 crypto = crypto,
                 exchange = exchange,
+                connectionId = connectionId,
                 systemNotificationId = sysNotifId,
                 templateArgs = args.toJson()
             )
@@ -168,11 +202,12 @@ class NotificationService @Inject constructor(
      * Show error notification.
      * Uses a unique notification ID per plan so multiple error notifications are all visible.
      */
-    fun showErrorNotification(
+    suspend fun showErrorNotification(
         title: String? = null,
         message: String? = null,
         planId: Long = 0,
         exchange: Exchange? = null,
+        connectionId: Long? = null,
         crypto: String? = null,
         templateArgs: NotificationTemplateArgs? = null
     ) {
@@ -181,19 +216,24 @@ class NotificationService @Inject constructor(
         } else {
             (title ?: "") to (message ?: "")
         }
+        val label = connectionLabel(connectionId, exchange)
+        val displayedTitle = if (!label.isNullOrBlank() && label != exchange?.displayName) {
+            "$label · $t"
+        } else t
         val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_ERROR, planId)
         persistAndShow(
             sysNotifId = sysNotifId,
             channel = CHANNEL_ERROR,
-            title = t,
+            title = displayedTitle,
             text = m,
             entity = NotificationEntity(
                 type = NotificationType.ERROR,
-                title = t,
+                title = displayedTitle,
                 message = m,
                 planId = planId.takeIf { it > 0 },
                 crypto = crypto,
                 exchange = exchange,
+                connectionId = connectionId,
                 systemNotificationId = sysNotifId,
                 templateArgs = templateArgs?.toJson()
             )
@@ -204,12 +244,20 @@ class NotificationService @Inject constructor(
      * Show low balance warning notification.
      * Uses a unique notification ID per plan so multiple warnings are all visible.
      */
-    fun showLowBalanceNotification(exchange: String, fiat: String, remainingDays: Double, planId: Long = 0) {
-        val title = context.getString(R.string.notification_low_balance_title, exchange)
+    suspend fun showLowBalanceNotification(
+        exchange: String,
+        fiat: String,
+        remainingDays: Double,
+        planId: Long = 0,
+        connectionId: Long? = null
+    ) {
+        // Resolve connection name (if any) and display "Coinmate Spoření" instead of just "Coinmate"
+        val displayLabel = connectionLabel(connectionId, null)?.takeIf { it.isNotBlank() } ?: exchange
+        val title = context.getString(R.string.notification_low_balance_title, displayLabel)
         val daysText = if (remainingDays < 1) context.getString(R.string.notification_low_balance_less_1_day) else context.getString(R.string.notification_low_balance_days, remainingDays.toInt())
         val text = context.getString(R.string.notification_low_balance_text, daysText, fiat)
         val args = NotificationTemplateArgs.LowBalance(
-            exchangeName = exchange,
+            exchangeName = displayLabel,
             fiat = fiat,
             remainingDays = remainingDays
         )
@@ -224,6 +272,7 @@ class NotificationService @Inject constructor(
                 title = title,
                 message = text,
                 planId = planId.takeIf { it > 0 },
+                connectionId = connectionId,
                 systemNotificationId = sysNotifId,
                 templateArgs = args.toJson()
             )
@@ -233,19 +282,21 @@ class NotificationService @Inject constructor(
     /**
      * Show withdrawal threshold notification.
      */
-    fun showWithdrawalThresholdNotification(
+    suspend fun showWithdrawalThresholdNotification(
         crypto: String,
         exchange: String,
         amount: BigDecimal,
         threshold: BigDecimal,
-        planId: Long
+        planId: Long,
+        connectionId: Long? = null
     ) {
+        val displayLabel = connectionLabel(connectionId, null)?.takeIf { it.isNotBlank() } ?: exchange
         val title = context.getString(R.string.notification_withdrawal_threshold_title)
-        val text = context.getString(R.string.notification_withdrawal_threshold_text, amount.toPlainString(), crypto, exchange)
+        val text = context.getString(R.string.notification_withdrawal_threshold_text, amount.toPlainString(), crypto, displayLabel)
         val args = NotificationTemplateArgs.WithdrawalThreshold(
             amount = amount.toPlainString(),
             crypto = crypto,
-            exchangeName = exchange
+            exchangeName = displayLabel
         )
         val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_WITHDRAWAL_THRESHOLD, planId)
         persistAndShow(
@@ -259,6 +310,7 @@ class NotificationService @Inject constructor(
                 message = text,
                 planId = planId.takeIf { it > 0 },
                 crypto = crypto,
+                connectionId = connectionId,
                 systemNotificationId = sysNotifId,
                 templateArgs = args.toJson()
             )
@@ -268,16 +320,18 @@ class NotificationService @Inject constructor(
     /**
      * Show notification for missed purchases after prolonged offline period.
      */
-    fun showMissedPurchasesNotification(
+    suspend fun showMissedPurchasesNotification(
         crypto: String,
         exchangeName: String,
         missedCount: Int,
         planId: Long,
-        exchange: Exchange? = null
+        exchange: Exchange? = null,
+        connectionId: Long? = null
     ) {
+        val displayLabel = connectionLabel(connectionId, exchange)?.takeIf { it.isNotBlank() } ?: exchangeName
         val args = NotificationTemplateArgs.MissedPurchases(
             crypto = crypto,
-            exchangeName = exchangeName,
+            exchangeName = displayLabel,
             missedCount = missedCount,
             planId = planId
         )
@@ -295,6 +349,7 @@ class NotificationService @Inject constructor(
                 planId = planId.takeIf { it > 0 },
                 crypto = crypto,
                 exchange = exchange,
+                connectionId = connectionId,
                 systemNotificationId = sysNotifId,
                 templateArgs = args.toJson()
             )
@@ -304,18 +359,20 @@ class NotificationService @Inject constructor(
     /**
      * Show notification for network retry (offline purchase failure).
      */
-    fun showNetworkRetryNotification(
+    suspend fun showNetworkRetryNotification(
         crypto: String,
         exchangeName: String,
         errorMessage: String,
         nextRetryAt: java.time.Instant,
         attemptCount: Int,
         planId: Long,
-        exchange: Exchange? = null
+        exchange: Exchange? = null,
+        connectionId: Long? = null
     ) {
+        val displayLabel = connectionLabel(connectionId, exchange)?.takeIf { it.isNotBlank() } ?: exchangeName
         val args = NotificationTemplateArgs.NetworkRetry(
             crypto = crypto,
-            exchangeName = exchangeName,
+            exchangeName = displayLabel,
             errorMessage = errorMessage,
             nextRetryAtEpochMs = nextRetryAt.toEpochMilli(),
             attemptCount = attemptCount,
@@ -335,6 +392,7 @@ class NotificationService @Inject constructor(
                 planId = planId.takeIf { it > 0 },
                 crypto = crypto,
                 exchange = exchange,
+                connectionId = connectionId,
                 systemNotificationId = sysNotifId,
                 templateArgs = args.toJson()
             )

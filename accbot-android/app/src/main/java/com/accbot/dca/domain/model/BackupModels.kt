@@ -4,6 +4,14 @@ import java.time.Instant
 
 /**
  * Backup envelope – the top-level structure of a backup file (always plaintext JSON).
+ *
+ * Versions:
+ * - v1: legacy single-connection-per-exchange model. Plans/transactions/thresholds/
+ *   credentials are keyed by [Exchange] enum string.
+ * - v2: connection-aware model. Adds [BackupPayload.connections] and `connectionId`
+ *   fields on plans/transactions/withdrawals/notifications/credentials/thresholds so
+ *   multiple connections per exchange can roundtrip cleanly. v1 backups are still
+ *   restored by auto-creating one default connection per exchange.
  */
 data class BackupEnvelope(
     val format: String = FORMAT_IDENTIFIER,
@@ -19,12 +27,16 @@ data class BackupEnvelope(
 ) {
     companion object {
         const val FORMAT_IDENTIFIER = "accbot-backup"
-        const val CURRENT_VERSION = 1
+        const val CURRENT_VERSION = 2
     }
 }
 
 /**
  * Backup payload – the actual data after decryption/decompression.
+ *
+ * In v2, [connections] carries the multi-connection metadata. Other entries reference
+ * a connection by its backup-local id (the source DB's autoincrement value at export
+ * time); during restore, BackupDataRestorer remaps these to fresh local IDs.
  */
 data class BackupPayload(
     val plans: List<BackupPlan> = emptyList(),
@@ -33,7 +45,21 @@ data class BackupPayload(
     val credentials: List<BackupCredentials> = emptyList(),
     val transactions: List<BackupTransaction> = emptyList(),
     val notifications: List<BackupNotification> = emptyList(),
-    val withdrawals: List<BackupWithdrawal> = emptyList()
+    val withdrawals: List<BackupWithdrawal> = emptyList(),
+    /** v2+: list of [ExchangeConnectionEntity]-equivalent rows. Empty for legacy v1 backups. */
+    val connections: List<BackupExchangeConnection> = emptyList()
+)
+
+/**
+ * v2+: serializable exchange connection (envelope) for backup.
+ */
+data class BackupExchangeConnection(
+    /** Source DB's autoincrement id at export time. Used as the join key for plans/etc. */
+    val id: Long,
+    val exchange: String,
+    val name: String = "",
+    val createdAt: Long = 0,
+    val displayOrder: Int = 0
 )
 
 /**
@@ -54,7 +80,9 @@ data class BackupPlan(
     val createdAt: Long = 0,      // Instant epoch millis
     val lastExecutedAt: Long? = null,
     val nextExecutionAt: Long? = null,
-    val targetAmount: String? = null  // BigDecimal.toPlainString()
+    val targetAmount: String? = null,  // BigDecimal.toPlainString()
+    /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
+    val connectionId: Long? = null
 )
 
 /**
@@ -73,13 +101,19 @@ data class BackupSettings(
 
 /**
  * Serializable exchange credentials for backup.
+ *
+ * In v2, [connectionId] identifies which envelope these credentials belong to (matches
+ * a row in [BackupPayload.connections]). v1 backups omit it and the restorer falls back
+ * to the default connection per exchange.
  */
 data class BackupCredentials(
     val exchange: String,
     val apiKey: String,
     val apiSecret: String,
     val passphrase: String? = null,
-    val clientId: String? = null
+    val clientId: String? = null,
+    /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
+    val connectionId: Long? = null
 )
 
 /**
@@ -100,7 +134,9 @@ data class BackupTransaction(
     val exchangeOrderId: String? = null,
     val errorMessage: String? = null,
     val warningMessage: String? = null,
-    val executedAt: Long = 0
+    val executedAt: Long = 0,
+    /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
+    val connectionId: Long? = null
 )
 
 /**
@@ -117,7 +153,9 @@ data class BackupNotification(
     val isRead: Boolean = false,
     val isArchived: Boolean = false,
     val templateArgs: String? = null,
-    val createdAt: Long = 0
+    val createdAt: Long = 0,
+    /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
+    val connectionId: Long? = null
 )
 
 /**
@@ -134,16 +172,24 @@ data class BackupWithdrawal(
     val fee: String,
     val status: String,
     val errorMessage: String? = null,
-    val createdAt: Long = 0
+    val createdAt: Long = 0,
+    /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
+    val connectionId: Long? = null
 )
 
 /**
  * Serializable withdrawal threshold for backup.
+ *
+ * v1 carries [exchange] (Exchange enum string); v2 carries [connectionId] referencing
+ * a row in [BackupPayload.connections]. Both fields are kept so a v2 backup can still
+ * be parsed by older code that only reads [exchange].
  */
 data class BackupWithdrawalThreshold(
     val crypto: String,
     val exchange: String,
-    val thresholdAmount: String
+    val thresholdAmount: String,
+    /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
+    val connectionId: Long? = null
 )
 
 /**

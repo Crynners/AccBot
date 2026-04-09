@@ -98,7 +98,7 @@
     <string name="settings_title">Nastavení</string>
     <string name="settings_exchange_accounts">ÚČTY NA BURZÁCH</string>
     <string name="settings_manage_exchanges">Správa burz</string>
-    <string name="settings_exchanges_connected">%1$d burz(a) připojeno</string>
+    <string name="settings_exchanges_connected">%1$d připojení</string>
     <string name="settings_system">NASTAVENÍ SYSTÉMU</string>
     <string name="settings_battery_optimization">Optimalizace baterie</string>
     <string name="settings_battery_disabled">Vypnuto – klepněte pro povolení neomezené aktivity na pozadí</string>
@@ -345,6 +345,14 @@
     <string name="exchanges_add">Přidat burzu</string>
     <string name="exchanges_connected">Připojené burzy</string>
     <string name="exchanges_available">Dostupné burzy</string>
+    <string name="exchanges_add_another">%1$d připojení — přidat další</string>
+    <string name="exchanges_connection_name_label">Název připojení (volitelné)</string>
+    <string name="exchanges_connection_name_required">Při více připojeních je název povinný</string>
+    <string name="exchanges_connection_name_taken">Tento název už pro tuto burzu existuje</string>
+    <string name="exchanges_connection_name_hint">např. Hlavní, Spoření, Dlouhodobé…</string>
+    <string name="exchanges_default_connection_label">Výchozí</string>
+    <string name="add_plan_pick_connection">Vyber připojení</string>
+    <string name="add_plan_create_new_connection">Vytvořit nové připojení…</string>
     <string name="exchanges_remove_title">Odebrat burzu</string>
     <string name="exchanges_remove_text">Opravdu chcete odebrat %1$s? Tím se smaže veškerá historie transakcí a API přihlašovací údaje pro tuto burzu.</string>
     <string name="exchanges_remove_text_with_plans">Opravdu chcete odebrat %1$s? Tato burza má %2$d aktivní(ch) DCA plán(ů). Odebrání burzy smaže všechny přidružené DCA plány, historii transakcí a API přihlašovací údaje.</string>
