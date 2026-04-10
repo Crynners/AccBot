@@ -32,7 +32,7 @@ class AddPlanViewModel: ObservableObject {
         }
         return d
     }
-    private var configuredExchanges: [Exchange] = []
+    @Published private var configuredExchanges: [Exchange] = []
 
     // MARK: - Init
 

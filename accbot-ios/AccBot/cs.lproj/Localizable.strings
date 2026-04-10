@@ -301,6 +301,10 @@
 "No Exchanges Connected" = "Žádné burzy připojeny";
 "Connect an exchange to start your DCA journey." = "Připojte burzu pro zahájení DCA.";
 "Available" = "Dostupné";
+"Add Connection" = "Přidat připojení";
+"Default connection" = "Výchozí připojení";
+"Connection" = "Připojení";
+"Default" = "Výchozí";
 
 /* ===== Exchange Card ===== */
 "Not configured" = "Nenastaveno";
