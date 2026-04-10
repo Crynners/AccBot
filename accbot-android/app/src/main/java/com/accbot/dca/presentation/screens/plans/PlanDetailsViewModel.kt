@@ -212,6 +212,14 @@ class PlanDetailsViewModel @Inject constructor(
         }
     }
 
+    fun renamePlan(newName: String) {
+        viewModelScope.launch {
+            dcaPlanDao.renamePlan(planId, newName)
+            val updatedPlan = dcaPlanDao.getPlanById(planId)?.toDomain()
+            _uiState.update { it.copy(plan = updatedPlan) }
+        }
+    }
+
     fun togglePlanEnabled() {
         viewModelScope.launch {
             val plan = _uiState.value.plan ?: return@launch

@@ -8,6 +8,10 @@
     <string name="common_delete">Delete</string>
     <string name="common_save">Save</string>
     <string name="common_rename">Rename</string>
+    <string name="common_move_up">Move up</string>
+    <string name="common_move_down">Move down</string>
+    <string name="plan_details_name_hint">e.g. Long-term savings, Monthly BTC…</string>
+    <string name="plan_details_add_name">Add plan name</string>
     <string name="common_retry">Retry</string>
     <string name="common_skip">Skip</string>
     <string name="common_clear">Clear</string>
@@ -350,7 +354,7 @@
     <string name="exchanges_connection_name_required">Name is required when you have multiple connections</string>
     <string name="exchanges_connection_name_taken">This name is already used for another connection on this exchange</string>
     <string name="exchanges_connection_name_hint">e.g. Hlavní, Spoření, Long-term…</string>
-    <string name="exchanges_default_connection_label">Default</string>
+    <string name="exchanges_default_connection_label">Default connection</string>
     <string name="add_plan_pick_connection">Pick connection</string>
     <string name="add_plan_create_new_connection">Create new connection…</string>
     <string name="exchanges_remove_title">Remove Exchange</string>

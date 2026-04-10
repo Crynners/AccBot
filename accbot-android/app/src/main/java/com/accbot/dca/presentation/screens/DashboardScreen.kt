@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -241,11 +242,13 @@ fun DashboardScreen(
                             EmptyPlansCard(onAddPlan = onNavigateToPlans)
                         }
                     } else {
-                        items(uiState.activePlans, key = { it.plan.id }) { planWithBalance ->
+                        itemsIndexed(uiState.activePlans, key = { _, p -> p.plan.id }) { index, planWithBalance ->
                             DcaPlanCard(
                                 planWithBalance = planWithBalance,
                                 onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
                                 onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
+                                onMoveUp = if (index > 0) {{ viewModel.reorderPlan(index, index - 1) }} else null,
+                                onMoveDown = if (index < uiState.activePlans.lastIndex) {{ viewModel.reorderPlan(index, index + 1) }} else null,
                                 currentTime = currentTime
                             )
                         }
@@ -936,6 +939,8 @@ internal fun DcaPlanCard(
     planWithBalance: DcaPlanWithBalance,
     onToggle: () -> Unit,
     onClick: (() -> Unit)? = null,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
     currentTime: Long = System.currentTimeMillis()
 ) {
     val plan = planWithBalance.plan
@@ -964,6 +969,15 @@ internal fun DcaPlanCard(
                 CryptoIcon(crypto = plan.crypto)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
+                    // Custom plan label (if set)
+                    if (plan.name.isNotBlank()) {
+                        Text(
+                            text = plan.name,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = accentCol
+                        )
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1133,14 +1147,49 @@ internal fun DcaPlanCard(
                     }
                 }
             }
-            Switch(
-                checked = plan.isEnabled,
-                onCheckedChange = { onToggle() },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = successCol,
-                    checkedTrackColor = successCol.copy(alpha = 0.5f)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Reorder arrows (only when both callbacks are provided = reorder mode)
+                if (onMoveUp != null || onMoveDown != null) {
+                    Row {
+                        if (onMoveUp != null) {
+                            IconButton(
+                                onClick = onMoveUp,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.KeyboardArrowUp,
+                                    contentDescription = stringResource(R.string.common_move_up),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (onMoveDown != null) {
+                            IconButton(
+                                onClick = onMoveDown,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.KeyboardArrowDown,
+                                    contentDescription = stringResource(R.string.common_move_down),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+                Switch(
+                    checked = plan.isEnabled,
+                    onCheckedChange = { onToggle() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = successCol,
+                        checkedTrackColor = successCol.copy(alpha = 0.5f)
+                    )
                 )
-            )
+            }
         }
     }
 }

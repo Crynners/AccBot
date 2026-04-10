@@ -38,7 +38,7 @@ interface ExchangeConnectionDao {
 
 @Dao
 interface DcaPlanDao {
-    @Query("SELECT * FROM dca_plans ORDER BY createdAt DESC")
+    @Query("SELECT * FROM dca_plans ORDER BY displayOrder ASC, createdAt DESC")
     fun getAllPlans(): Flow<List<DcaPlanEntity>>
 
     @Query("SELECT * FROM dca_plans WHERE isEnabled = 1")
@@ -120,6 +120,15 @@ interface DcaPlanDao {
 
     @Query("UPDATE dca_plans SET missedPurchaseCount = 0 WHERE id = :planId")
     suspend fun resetMissedPurchaseCount(planId: Long)
+
+    @Query("UPDATE dca_plans SET name = :name WHERE id = :planId")
+    suspend fun renamePlan(planId: Long, name: String)
+
+    @Query("UPDATE dca_plans SET displayOrder = :displayOrder WHERE id = :planId")
+    suspend fun updateDisplayOrder(planId: Long, displayOrder: Int)
+
+    @Query("SELECT * FROM dca_plans ORDER BY displayOrder ASC, createdAt DESC")
+    suspend fun getAllPlansOnceOrdered(): List<DcaPlanEntity>
 
 }
 

@@ -9,6 +9,7 @@ fun DcaPlanEntity.toDomain() = DcaPlan(
     id = id,
     exchange = exchange,
     connectionId = connectionId,
+    name = name,
     crypto = crypto,
     fiat = fiat,
     amount = amount,
@@ -21,7 +22,8 @@ fun DcaPlanEntity.toDomain() = DcaPlan(
     createdAt = createdAt,
     lastExecutedAt = lastExecutedAt,
     nextExecutionAt = nextExecutionAt,
-    targetAmount = targetAmount
+    targetAmount = targetAmount,
+    displayOrder = displayOrder
 )
 
 fun TransactionEntity.toDomain() = Transaction(

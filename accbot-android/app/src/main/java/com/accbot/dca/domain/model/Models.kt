@@ -152,8 +152,10 @@ enum class DcaFrequency(
 data class DcaPlan(
     val id: Long = 0,
     val exchange: Exchange,
-    /** FK to ExchangeConnectionEntity.id — every plan belongs to one connection. */
+    /** FK to ExchangeConnectionEntity.id - every plan belongs to one connection. */
     val connectionId: Long,
+    /** Optional custom label. Empty = UI shows "BTC/EUR" as default title. */
+    val name: String = "",
     val crypto: String,
     val fiat: String,
     val amount: BigDecimal,           // Base amount (strategy may modify)
@@ -166,7 +168,9 @@ data class DcaPlan(
     val createdAt: Instant = Instant.now(),
     val lastExecutedAt: Instant? = null,
     val nextExecutionAt: Instant? = null,
-    val targetAmount: BigDecimal? = null
+    val targetAmount: BigDecimal? = null,
+    /** Order for Dashboard display. Lower values shown first. */
+    val displayOrder: Int = 0
 )
 
 /**

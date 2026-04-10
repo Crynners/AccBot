@@ -6,6 +6,10 @@
     <string name="common_delete">Smazat</string>
     <string name="common_save">Uložit</string>
     <string name="common_rename">Přejmenovat</string>
+    <string name="common_move_up">Posunout nahoru</string>
+    <string name="common_move_down">Posunout dolů</string>
+    <string name="plan_details_name_hint">např. Dlouhodobé spoření, Měsíční BTC…</string>
+    <string name="plan_details_add_name">Přidat název plánu</string>
     <string name="common_retry">Zkusit znovu</string>
     <string name="common_skip">Přeskočit</string>
     <string name="common_clear">Vymazat</string>
@@ -351,7 +355,7 @@
     <string name="exchanges_connection_name_required">Při více připojeních je název povinný</string>
     <string name="exchanges_connection_name_taken">Tento název už pro tuto burzu existuje</string>
     <string name="exchanges_connection_name_hint">např. Hlavní, Spoření, Dlouhodobé…</string>
-    <string name="exchanges_default_connection_label">Výchozí</string>
+    <string name="exchanges_default_connection_label">Výchozí připojení</string>
     <string name="add_plan_pick_connection">Vyber připojení</string>
     <string name="add_plan_create_new_connection">Vytvořit nové připojení…</string>
     <string name="exchanges_remove_title">Odebrat burzu</string>

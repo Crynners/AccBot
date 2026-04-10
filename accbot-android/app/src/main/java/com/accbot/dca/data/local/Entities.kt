@@ -161,6 +161,8 @@ data class DcaPlanEntity(
      * for new plans. Resolved via [ExchangeConnectionDao] at plan creation time.
      */
     val connectionId: Long = 0,
+    /** Optional custom label. Empty string = no label (UI shows "BTC/EUR" as default). */
+    val name: String = "",
     val crypto: String,
     val fiat: String,
     val amount: BigDecimal,
@@ -177,7 +179,9 @@ data class DcaPlanEntity(
     val networkRetryCount: Int = 0,
     val nextNetworkRetryAt: Instant? = null,
     val originalScheduledAt: Instant? = null,
-    val missedPurchaseCount: Int = 0
+    val missedPurchaseCount: Int = 0,
+    /** Order for Dashboard display. Lower values shown first. */
+    val displayOrder: Int = 0
 )
 
 /**
