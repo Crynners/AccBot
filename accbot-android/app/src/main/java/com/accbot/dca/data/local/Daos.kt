@@ -130,6 +130,16 @@ interface DcaPlanDao {
     @Query("SELECT * FROM dca_plans ORDER BY displayOrder ASC, createdAt DESC")
     suspend fun getAllPlansOnceOrdered(): List<DcaPlanEntity>
 
+    @Query("SELECT COALESCE(MAX(displayOrder), -1) FROM dca_plans")
+    suspend fun getMaxDisplayOrder(): Int
+
+    @Transaction
+    suspend fun updateAllDisplayOrders(planOrders: List<Pair<Long, Int>>) {
+        for ((planId, order) in planOrders) {
+            updateDisplayOrder(planId, order)
+        }
+    }
+
 }
 
 @Dao
