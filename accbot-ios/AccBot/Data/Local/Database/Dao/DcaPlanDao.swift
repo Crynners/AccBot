@@ -53,6 +53,31 @@ final class DcaPlanDao {
         }
     }
 
+    func getPlansByConnection(_ connectionId: Int64) throws -> [DcaPlan] {
+        try dbPool.read { db in
+            try DcaPlanRecord
+                .filter(Column("connectionId") == connectionId)
+                .fetchAll(db)
+                .map { $0.toDomain() }
+        }
+    }
+
+    func countPlansByConnection(_ connectionId: Int64) throws -> Int {
+        try dbPool.read { db in
+            try DcaPlanRecord
+                .filter(Column("connectionId") == connectionId)
+                .fetchCount(db)
+        }
+    }
+
+    func deletePlansByConnection(_ connectionId: Int64) throws {
+        try dbPool.write { db in
+            _ = try DcaPlanRecord
+                .filter(Column("connectionId") == connectionId)
+                .deleteAll(db)
+        }
+    }
+
     func getNextExecutionDate() throws -> Date? {
         try dbPool.read { db in
             let row = try Row.fetchOne(db, sql: """

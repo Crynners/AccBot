@@ -12,12 +12,13 @@ struct NotificationRecord: FetchableRecord, PersistableRecord, Identifiable {
     var planId: Int64?
     var crypto: String?
     var exchange: String?
+    var connectionId: Int64?
     var isRead: Bool
     var isArchived: Bool
     var templateArgs: String?
     var createdAt: Double
 
-    // Custom row init to safely handle templateArgs column (may be missing in pre-v4 databases)
+    // Custom row init to safely handle optional columns (templateArgs, connectionId)
     init(row: Row) {
         id = row["id"]
         type = row["type"]
@@ -26,6 +27,7 @@ struct NotificationRecord: FetchableRecord, PersistableRecord, Identifiable {
         planId = row["planId"]
         crypto = row["crypto"]
         exchange = row["exchange"]
+        connectionId = row["connectionId"]
         isRead = row["isRead"]
         isArchived = row["isArchived"]
         templateArgs = row["templateArgs"]
@@ -41,6 +43,7 @@ struct NotificationRecord: FetchableRecord, PersistableRecord, Identifiable {
         container["planId"] = planId
         container["crypto"] = crypto
         container["exchange"] = exchange
+        container["connectionId"] = connectionId
         container["isRead"] = isRead
         container["isArchived"] = isArchived
         container["templateArgs"] = templateArgs
@@ -48,7 +51,7 @@ struct NotificationRecord: FetchableRecord, PersistableRecord, Identifiable {
     }
 
     init(id: Int64?, type: String, title: String, message: String,
-         planId: Int64?, crypto: String?, exchange: String?,
+         planId: Int64?, crypto: String?, exchange: String?, connectionId: Int64?,
          isRead: Bool, isArchived: Bool, templateArgs: String?, createdAt: Double) {
         self.id = id
         self.type = type
@@ -57,6 +60,7 @@ struct NotificationRecord: FetchableRecord, PersistableRecord, Identifiable {
         self.planId = planId
         self.crypto = crypto
         self.exchange = exchange
+        self.connectionId = connectionId
         self.isRead = isRead
         self.isArchived = isArchived
         self.templateArgs = templateArgs
@@ -72,6 +76,7 @@ struct NotificationRecord: FetchableRecord, PersistableRecord, Identifiable {
             planId: planId,
             crypto: crypto,
             exchange: exchange.flatMap { Exchange(rawValue: $0) },
+            connectionId: connectionId,
             isRead: isRead,
             isArchived: isArchived,
             templateArgs: templateArgs.flatMap { NotificationTemplateArgs.fromJSON($0) },
@@ -88,6 +93,7 @@ struct NotificationRecord: FetchableRecord, PersistableRecord, Identifiable {
             planId: n.planId,
             crypto: n.crypto,
             exchange: n.exchange?.rawValue,
+            connectionId: n.connectionId,
             isRead: n.isRead,
             isArchived: n.isArchived,
             templateArgs: n.templateArgs?.toJSON(),

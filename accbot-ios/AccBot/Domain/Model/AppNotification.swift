@@ -19,6 +19,7 @@ struct AppNotification: Identifiable, Equatable {
     let planId: Int64?
     let crypto: String?
     let exchange: Exchange?
+    let connectionId: Int64?
     let isRead: Bool
     let isArchived: Bool
     let templateArgs: NotificationTemplateArgs?
@@ -32,6 +33,7 @@ struct AppNotification: Identifiable, Equatable {
         planId: Int64? = nil,
         crypto: String? = nil,
         exchange: Exchange? = nil,
+        connectionId: Int64? = nil,
         isRead: Bool = false,
         isArchived: Bool = false,
         templateArgs: NotificationTemplateArgs? = nil,
@@ -44,6 +46,7 @@ struct AppNotification: Identifiable, Equatable {
         self.planId = planId
         self.crypto = crypto
         self.exchange = exchange
+        self.connectionId = connectionId
         self.isRead = isRead
         self.isArchived = isArchived
         self.templateArgs = templateArgs

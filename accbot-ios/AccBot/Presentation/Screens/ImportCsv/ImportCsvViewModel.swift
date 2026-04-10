@@ -170,7 +170,7 @@ final class ImportCsvViewModel: ObservableObject {
     func importFromApi() {
         guard let plan = plan else { return }
         let isSandbox = deps.userPreferences.isSandboxMode()
-        guard let credentials = deps.credentialsStore.get(for: plan.exchange, isSandbox: isSandbox) else {
+        guard let credentials = deps.credentialsStore.get(for: plan.exchange, isSandbox: isSandbox, using: deps.activeDatabase.exchangeConnectionDao) else {
             errorMessage = String(localized: "No credentials found for \(plan.exchange.displayName)")
             return
         }

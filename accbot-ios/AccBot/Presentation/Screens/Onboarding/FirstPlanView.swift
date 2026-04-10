@@ -300,7 +300,7 @@ private class FirstPlanViewModel: ObservableObject {
 
     func configure(with dependencies: AppDependencies) {
         let isSandbox = dependencies.userPreferences.sandboxMode
-        let configuredExchanges = dependencies.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
+        let configuredExchanges = dependencies.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox, using: dependencies.activeDatabase.exchangeConnectionDao)
 
         if let exchange = configuredExchanges.first {
             configuredExchange = exchange
@@ -323,7 +323,7 @@ private class FirstPlanViewModel: ObservableObject {
         guard let amountValue = Decimal(string: amount), amountValue > 0 else { return false }
 
         let isSandbox = dependencies.userPreferences.sandboxMode
-        let configuredExchanges = dependencies.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
+        let configuredExchanges = dependencies.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox, using: dependencies.activeDatabase.exchangeConnectionDao)
         guard let exchange = configuredExchanges.first else {
             errorMessage = String(localized: "No exchange configured.")
             return false

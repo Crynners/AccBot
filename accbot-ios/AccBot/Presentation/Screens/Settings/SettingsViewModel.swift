@@ -118,7 +118,7 @@ final class SettingsViewModel: ObservableObject {
 
     func loadConnectedExchanges() {
         let isSandbox = deps.userPreferences.isSandboxMode()
-        connectedExchanges = deps.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
+        connectedExchanges = deps.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox, using: deps.activeDatabase.exchangeConnectionDao)
     }
 
     func loadCounts() {
@@ -188,7 +188,7 @@ final class SettingsViewModel: ObservableObject {
                 try db.dailyPriceDao.deleteAll()
                 try db.monthlySummaryDao.deleteAll()
                 try db.planDao.deleteAll()
-                deps.credentialsStore.clearAllBothEnvironments()
+                deps.credentialsStore.clearAllBothEnvironments(using: deps.activeDatabase.exchangeConnectionDao)
                 deps.onboardingPreferences.onboardingCompleted = false
                 deleteTarget = nil
                 loadData()
@@ -231,12 +231,16 @@ final class SettingsViewModel: ObservableObject {
     }
 
     func setWithdrawalThreshold(crypto: String, exchange: Exchange, amount: Decimal) {
-        let threshold = WithdrawalThreshold(
-            crypto: crypto,
-            exchange: exchange,
-            thresholdAmount: amount
-        )
         do {
+            guard let connection = try deps.activeDatabase.exchangeConnectionDao.getDefaultByExchange(exchange) else {
+                showError("No connection found for \(exchange.displayName)")
+                return
+            }
+            let threshold = WithdrawalThreshold(
+                crypto: crypto,
+                connectionId: connection.id,
+                thresholdAmount: amount
+            )
             try deps.activeDatabase.withdrawalThresholdDao.upsert(threshold)
             loadWithdrawalThresholds()
         } catch {
@@ -246,9 +250,10 @@ final class SettingsViewModel: ObservableObject {
 
     func removeWithdrawalThreshold(crypto: String, exchange: Exchange) {
         do {
+            guard let connection = try deps.activeDatabase.exchangeConnectionDao.getDefaultByExchange(exchange) else { return }
             try deps.activeDatabase.withdrawalThresholdDao.delete(
                 crypto: crypto,
-                exchange: exchange
+                connectionId: connection.id
             )
             loadWithdrawalThresholds()
         } catch {

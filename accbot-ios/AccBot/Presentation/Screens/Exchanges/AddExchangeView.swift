@@ -180,7 +180,7 @@ struct AddExchangeView: View {
                 isSandboxMode: isSandbox,
                 showExperimental: dependencies.userPreferences.showExperimentalExchanges
             )
-            let alreadyConfigured = dependencies.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
+            let alreadyConfigured = dependencies.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox, using: dependencies.activeDatabase.exchangeConnectionDao)
             let unconfigured = available.filter { !alreadyConfigured.contains($0) }
 
             if unconfigured.isEmpty {
@@ -548,7 +548,8 @@ struct AddExchangeView: View {
                     let success = await credentials.validateAndSave(
                         credentialsStore: dependencies.credentialsStore,
                         exchangeApiFactory: dependencies.exchangeApiFactory,
-                        isSandbox: dependencies.userPreferences.sandboxMode
+                        isSandbox: dependencies.userPreferences.sandboxMode,
+                        exchangeConnectionDao: dependencies.activeDatabase.exchangeConnectionDao
                     )
                     if success { goToStep(.success) }
                 }
@@ -842,7 +843,8 @@ struct AddExchangeView: View {
 
         guard let credentials = dependencies.credentialsStore.get(
             for: exchange,
-            isSandbox: isSandbox
+            isSandbox: isSandbox,
+            using: dependencies.activeDatabase.exchangeConnectionDao
         ) else {
             importResultMessage = String(localized: "Credentials not found")
             showImportResult = true

@@ -108,7 +108,7 @@ class AddPlanViewModel: ObservableObject {
 
     func loadConfiguredExchanges() {
         let isSandbox = deps.userPreferences.sandboxMode
-        configuredExchanges = deps.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
+        configuredExchanges = deps.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox, using: deps.activeDatabase.exchangeConnectionDao)
 
         // Auto-select first exchange if only one configured
         if configuredExchanges.count == 1 {

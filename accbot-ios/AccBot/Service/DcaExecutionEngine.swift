@@ -104,8 +104,16 @@ final class DcaExecutionEngine {
 
     // MARK: - Core Execution
 
+    /// Resolve connection name for notifications. Returns nil if no custom name set.
+    private func resolveConnectionName(connectionId: Int64) -> String? {
+        guard let connection = try? activeDb.exchangeConnectionDao.getById(connectionId),
+              !connection.name.isEmpty else { return nil }
+        return connection.name
+    }
+
     private func executePlan(_ plan: DcaPlan, forceRun: Bool) async {
         let now = Date()
+        let connectionName = resolveConnectionName(connectionId: plan.connectionId)
 
         // Check if it's time to execute
         if !forceRun, let nextExecution = plan.nextExecutionAt, nextExecution > now {
@@ -128,13 +136,14 @@ final class DcaExecutionEngine {
             logger.info("Plan \(plan.id) claimed, nextExecution advanced to \(nextExecution)")
         }
 
-        // Get credentials
+        // Get credentials via connectionId
         let isSandbox = userPreferences.isSandboxMode()
-        guard let credentials = credentialsStore.get(for: plan.exchange, isSandbox: isSandbox) else {
-            logger.error("No credentials for \(plan.exchange.displayName) (sandbox=\(isSandbox))")
+        guard let credentials = credentialsStore.get(connectionId: plan.connectionId, isSandbox: isSandbox) else {
+            logger.error("No credentials for connectionId=\(plan.connectionId) (sandbox=\(isSandbox))")
             let failedTx = Transaction(
                 planId: plan.id,
                 exchange: plan.exchange,
+                connectionId: plan.connectionId,
                 crypto: plan.crypto,
                 fiat: plan.fiat,
                 fiatAmount: plan.amount,
@@ -169,6 +178,7 @@ final class DcaExecutionEngine {
             let failedTx = Transaction(
                 planId: plan.id,
                 exchange: plan.exchange,
+                connectionId: plan.connectionId,
                 crypto: plan.crypto,
                 fiat: plan.fiat,
                 fiatAmount: purchaseAmount,
@@ -229,6 +239,7 @@ final class DcaExecutionEngine {
             let savedTx = Transaction(
                 planId: plan.id,
                 exchange: plan.exchange,
+                connectionId: plan.connectionId,
                 crypto: plan.crypto,
                 fiat: plan.fiat,
                 fiatAmount: tx.fiatAmount,
@@ -321,7 +332,8 @@ final class DcaExecutionEngine {
                     }
                     let retryArgs = NotificationTemplateArgs.networkRetry(
                         crypto: plan.crypto,
-                        exchangeName: plan.exchange.displayName
+                        exchangeName: plan.exchange.displayName,
+                        connectionName: connectionName
                     )
                     saveInAppNotification(
                         type: .networkRetry,
@@ -335,6 +347,7 @@ final class DcaExecutionEngine {
                 let failedTx = Transaction(
                     planId: plan.id,
                     exchange: plan.exchange,
+                    connectionId: plan.connectionId,
                     crypto: plan.crypto,
                     fiat: plan.fiat,
                     fiatAmount: plan.amount,
@@ -392,7 +405,7 @@ final class DcaExecutionEngine {
 
     private func checkWithdrawalThreshold(plan: DcaPlan, api: ExchangeApi) async {
         do {
-            guard let threshold = try activeDb.withdrawalThresholdDao.get(crypto: plan.crypto, exchange: plan.exchange) else { return }
+            guard let threshold = try activeDb.withdrawalThresholdDao.get(crypto: plan.crypto, connectionId: plan.connectionId) else { return }
             guard let balance = await api.getBalance(currency: plan.crypto) else { return }
             if balance >= threshold.thresholdAmount {
                 notificationService.postWithdrawalThresholdNotification(
@@ -400,8 +413,10 @@ final class DcaExecutionEngine {
                     exchange: plan.exchange,
                     amount: balance
                 )
+                let connName = resolveConnectionName(connectionId: plan.connectionId)
                 let wtArgs = NotificationTemplateArgs.withdrawalThreshold(
-                    amount: "\(balance)", crypto: plan.crypto, exchangeName: plan.exchange.displayName
+                    amount: "\(balance)", crypto: plan.crypto, exchangeName: plan.exchange.displayName,
+                    connectionName: connName
                 )
                 saveInAppNotification(
                     type: .withdrawalThreshold,
@@ -437,9 +452,11 @@ final class DcaExecutionEngine {
                         daysLeft: displayDays
                     )
                 }
+                let connName = resolveConnectionName(connectionId: plan.connectionId)
                 let lbArgs = NotificationTemplateArgs.lowBalance(
                     exchangeName: plan.exchange.displayName, fiat: plan.fiat,
-                    balance: "\(balance as NSDecimalNumber)", remainingDays: displayDays
+                    balance: "\(balance as NSDecimalNumber)", remainingDays: displayDays,
+                    connectionName: connName
                 )
                 saveInAppNotification(
                     type: .lowBalance,
@@ -462,6 +479,7 @@ final class DcaExecutionEngine {
             planId: plan.id,
             crypto: plan.crypto,
             exchange: plan.exchange,
+            connectionId: plan.connectionId,
             templateArgs: templateArgs
         )
         try? activeDb.notificationDao.insert(notification)
@@ -517,10 +535,12 @@ final class DcaExecutionEngine {
                 count: count
             )
         }
+        let connName = resolveConnectionName(connectionId: plan.connectionId)
         let args = NotificationTemplateArgs.missedPurchases(
             count: count,
             crypto: plan.crypto,
-            exchangeName: plan.exchange.displayName
+            exchangeName: plan.exchange.displayName,
+            connectionName: connName
         )
         saveInAppNotification(
             type: .missedPurchases,
@@ -540,7 +560,14 @@ final class DcaExecutionEngine {
 
             for tx in pendingTxs {
                 guard let orderId = tx.exchangeOrderId else { continue }
-                guard let credentials = credentialsStore.get(for: tx.exchange, isSandbox: isSandbox) else { continue }
+                // Resolve credentials via connectionId, fallback to default connection for legacy txs
+                let credentials: ExchangeCredentials?
+                if let connId = tx.connectionId {
+                    credentials = credentialsStore.get(connectionId: connId, isSandbox: isSandbox)
+                } else {
+                    credentials = credentialsStore.get(for: tx.exchange, isSandbox: isSandbox, using: activeDb.exchangeConnectionDao)
+                }
+                guard let credentials else { continue }
 
                 let api = exchangeApiFactory.create(credentials: credentials)
                 if let resolved = await api.getOrderStatus(orderId: orderId) {
@@ -548,6 +575,7 @@ final class DcaExecutionEngine {
                         id: tx.id,
                         planId: tx.planId,
                         exchange: tx.exchange,
+                        connectionId: tx.connectionId,
                         crypto: tx.crypto,
                         fiat: tx.fiat,
                         fiatAmount: resolved.fiatAmount,

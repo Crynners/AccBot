@@ -20,11 +20,18 @@ final class AppDependencies: ObservableObject {
     let marketDataService: MarketDataService
     let notificationService: NotificationService
     let dcaExecutionEngine: DcaExecutionEngine
+    let connectionRepository: ExchangeConnectionRepository
+    let sandboxConnectionRepository: ExchangeConnectionRepository
     private var cancellables = Set<AnyCancellable>()
 
     /// Get the active database based on sandbox mode
     var activeDatabase: DcaDatabase {
         userPreferences.sandboxMode ? sandboxDatabase : database
+    }
+
+    /// Get the active connection repository based on sandbox mode
+    var activeConnectionRepository: ExchangeConnectionRepository {
+        userPreferences.sandboxMode ? sandboxConnectionRepository : connectionRepository
     }
 
     init() {
@@ -48,6 +55,10 @@ final class AppDependencies: ObservableObject {
             fatalError("Failed to initialize database: \(error)")
         }
 
+        // Migrate credentials from v2 (exchange-keyed) to v3 (connectionId-keyed).
+        // MUST run synchronously before any credential access.
+        credentialsStore.migrateToV3(prodDb: database, sandboxDb: sandboxDatabase)
+
         // Initialize services
         let marketDataService = MarketDataService(client: networkClient)
         let notificationService = NotificationService()
@@ -61,6 +72,24 @@ final class AppDependencies: ObservableObject {
             marketDataService: marketDataService
         )
 
+        // Initialize repositories
+        let connectionRepository = ExchangeConnectionRepository(
+            connectionDao: database.exchangeConnectionDao,
+            planDao: database.planDao,
+            exchangeBalanceDao: database.exchangeBalanceDao,
+            withdrawalThresholdDao: database.withdrawalThresholdDao,
+            credentialsStore: credentialsStore,
+            userPreferences: userPreferences
+        )
+        let sandboxConnectionRepository = ExchangeConnectionRepository(
+            connectionDao: sandboxDatabase.exchangeConnectionDao,
+            planDao: sandboxDatabase.planDao,
+            exchangeBalanceDao: sandboxDatabase.exchangeBalanceDao,
+            withdrawalThresholdDao: sandboxDatabase.withdrawalThresholdDao,
+            credentialsStore: credentialsStore,
+            userPreferences: userPreferences
+        )
+
         // Assign properties
         self.database = database
         self.sandboxDatabase = sandboxDatabase
@@ -72,6 +101,8 @@ final class AppDependencies: ObservableObject {
         self.marketDataService = marketDataService
         self.notificationService = notificationService
         self.dcaExecutionEngine = dcaExecutionEngine
+        self.connectionRepository = connectionRepository
+        self.sandboxConnectionRepository = sandboxConnectionRepository
 
         // Forward onboardingPreferences changes so RootView re-renders
         // when onboarding completes (rare event, no perf concern).

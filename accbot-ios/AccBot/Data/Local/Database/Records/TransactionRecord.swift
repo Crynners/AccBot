@@ -11,6 +11,7 @@ struct TransactionRecord: Codable, FetchableRecord, PersistableRecord, Identifia
     var id: Int64?
     var planId: Int64
     var exchange: String
+    var connectionId: Int64?
     var crypto: String
     var fiat: String
     var fiatAmount: String
@@ -44,6 +45,7 @@ struct TransactionRecord: Codable, FetchableRecord, PersistableRecord, Identifia
             id: id ?? 0,
             planId: planId,
             exchange: Exchange(rawValue: exchange) ?? .coinmate,
+            connectionId: connectionId,
             crypto: crypto,
             fiat: fiat,
             fiatAmount: Decimal(string: fiatAmount) ?? 0,
@@ -64,6 +66,7 @@ struct TransactionRecord: Codable, FetchableRecord, PersistableRecord, Identifia
             id: tx.id == 0 ? nil : tx.id,
             planId: tx.planId,
             exchange: tx.exchange.rawValue,
+            connectionId: tx.connectionId,
             crypto: tx.crypto,
             fiat: tx.fiat,
             fiatAmount: decimalToPlainString(tx.fiatAmount),

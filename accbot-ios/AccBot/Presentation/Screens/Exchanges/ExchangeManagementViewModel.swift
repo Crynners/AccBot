@@ -27,7 +27,7 @@ class ExchangeManagementViewModel: ObservableObject {
 
     func loadExchanges() {
         let isSandbox = deps.userPreferences.sandboxMode
-        let configured = deps.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox)
+        let configured = deps.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox, using: deps.activeDatabase.exchangeConnectionDao)
         let allAvailable = ExchangeFilter.getAvailableExchanges(
             isSandboxMode: isSandbox,
             showExperimental: showExperimental

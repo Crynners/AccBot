@@ -22,6 +22,7 @@ struct Transaction: Identifiable, Equatable, Sendable {
     let id: Int64
     let planId: Int64
     let exchange: Exchange
+    let connectionId: Int64?
     let crypto: String
     let fiat: String
     let fiatAmount: Decimal
@@ -39,6 +40,7 @@ struct Transaction: Identifiable, Equatable, Sendable {
         id: Int64 = 0,
         planId: Int64,
         exchange: Exchange,
+        connectionId: Int64? = nil,
         crypto: String,
         fiat: String,
         fiatAmount: Decimal,
@@ -55,6 +57,7 @@ struct Transaction: Identifiable, Equatable, Sendable {
         self.id = id
         self.planId = planId
         self.exchange = exchange
+        self.connectionId = connectionId
         self.crypto = crypto
         self.fiat = fiat
         self.fiatAmount = fiatAmount

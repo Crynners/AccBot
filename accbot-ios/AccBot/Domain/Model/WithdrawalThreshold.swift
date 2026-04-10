@@ -1,8 +1,8 @@
 import Foundation
 
-/// Withdrawal threshold configuration
+/// Withdrawal threshold configuration - per crypto per connection
 struct WithdrawalThreshold: Equatable {
     let crypto: String
-    let exchange: Exchange
+    let connectionId: Int64
     let thresholdAmount: Decimal
 }

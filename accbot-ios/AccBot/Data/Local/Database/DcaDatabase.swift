@@ -16,6 +16,7 @@ final class DcaDatabase {
     let notificationDao: NotificationDao
     let withdrawalThresholdDao: WithdrawalThresholdDao
     let monthlySummaryDao: MonthlySummaryDao
+    let exchangeConnectionDao: ExchangeConnectionDao
 
     // MARK: - Initialization
 
@@ -35,6 +36,7 @@ final class DcaDatabase {
         notificationDao = NotificationDao(dbPool: dbPool)
         withdrawalThresholdDao = WithdrawalThresholdDao(dbPool: dbPool)
         monthlySummaryDao = MonthlySummaryDao(dbPool: dbPool)
+        exchangeConnectionDao = ExchangeConnectionDao(dbPool: dbPool)
     }
 
     /// Standard production database
@@ -219,6 +221,126 @@ final class DcaDatabase {
                 t.add(column: "originalScheduledAt", .double)
                 t.add(column: "missedPurchaseCount", .integer).notNull().defaults(to: 0)
             }
+        }
+
+        // Add exchange_connections table, connectionId to all entities,
+        // recreate withdrawal_thresholds and exchange_balances with new PKs
+        migrator.registerMigration("v6_multi_connections") { db in
+            // 1) Create exchange_connections table
+            try db.execute(sql: """
+                CREATE TABLE IF NOT EXISTS exchange_connections (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    exchange TEXT NOT NULL,
+                    name TEXT NOT NULL DEFAULT '',
+                    createdAt REAL NOT NULL,
+                    displayOrder INTEGER NOT NULL DEFAULT 0
+                )
+                """)
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_ec_exchange ON exchange_connections(exchange)")
+            // Non-partial unique index: empty "" is a valid unique value per exchange
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_ec_exchange_name
+                ON exchange_connections(exchange, name)
+                """)
+
+            // 2) Seed one default connection per exchange from all existing data.
+            // INSERT OR IGNORE converges on a single row per exchange thanks to the unique index.
+            let nowEpoch = Date().timeIntervalSince1970
+            let seedSources = [
+                "SELECT DISTINCT exchange FROM dca_plans",
+                "SELECT DISTINCT exchange FROM transactions",
+                "SELECT DISTINCT exchange FROM withdrawals",
+                "SELECT DISTINCT exchange FROM withdrawal_thresholds",
+                "SELECT DISTINCT exchange FROM exchange_balances",
+                "SELECT DISTINCT exchange FROM notifications WHERE exchange IS NOT NULL",
+            ]
+            for src in seedSources {
+                try db.execute(sql: """
+                    INSERT OR IGNORE INTO exchange_connections (exchange, name, createdAt, displayOrder)
+                    SELECT exchange, '', \(nowEpoch), 0 FROM (\(src))
+                    """)
+            }
+
+            // 3) dca_plans: add connectionId (NOT NULL DEFAULT 0), backfill, assert
+            try db.execute(sql: "ALTER TABLE dca_plans ADD COLUMN connectionId INTEGER NOT NULL DEFAULT 0")
+            try db.execute(sql: """
+                UPDATE dca_plans SET connectionId = (
+                    SELECT id FROM exchange_connections WHERE exchange = dca_plans.exchange LIMIT 1
+                )
+                """)
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_plans_connectionId ON dca_plans(connectionId)")
+
+            // Sanity check: no plan should have connectionId = 0 after backfill
+            let orphanCount = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM dca_plans WHERE connectionId = 0") ?? 0
+            if orphanCount > 0 {
+                throw DatabaseError(message: "Migration v6 left \(orphanCount) dca_plans rows with connectionId=0")
+            }
+
+            // 4) transactions: nullable connectionId, backfill
+            try db.execute(sql: "ALTER TABLE transactions ADD COLUMN connectionId INTEGER DEFAULT NULL")
+            try db.execute(sql: """
+                UPDATE transactions SET connectionId = (
+                    SELECT id FROM exchange_connections WHERE exchange = transactions.exchange LIMIT 1
+                )
+                """)
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_tx_connectionId ON transactions(connectionId)")
+
+            // 5) withdrawals: nullable connectionId, backfill
+            try db.execute(sql: "ALTER TABLE withdrawals ADD COLUMN connectionId INTEGER DEFAULT NULL")
+            try db.execute(sql: """
+                UPDATE withdrawals SET connectionId = (
+                    SELECT id FROM exchange_connections WHERE exchange = withdrawals.exchange LIMIT 1
+                )
+                """)
+
+            // 6) notifications: nullable connectionId, backfill
+            try db.execute(sql: "ALTER TABLE notifications ADD COLUMN connectionId INTEGER DEFAULT NULL")
+            try db.execute(sql: """
+                UPDATE notifications SET connectionId = (
+                    SELECT id FROM exchange_connections WHERE exchange = notifications.exchange LIMIT 1
+                ) WHERE exchange IS NOT NULL
+                """)
+
+            // 7) withdrawal_thresholds: recreate with PK (crypto, connectionId)
+            try db.execute(sql: """
+                CREATE TABLE withdrawal_thresholds_new (
+                    crypto TEXT NOT NULL,
+                    connectionId INTEGER NOT NULL,
+                    thresholdAmount TEXT NOT NULL,
+                    PRIMARY KEY (crypto, connectionId)
+                )
+                """)
+            try db.execute(sql: """
+                INSERT INTO withdrawal_thresholds_new (crypto, connectionId, thresholdAmount)
+                SELECT wt.crypto, ec.id, wt.thresholdAmount
+                FROM withdrawal_thresholds wt
+                JOIN exchange_connections ec ON ec.exchange = wt.exchange
+                """)
+            try db.execute(sql: "DROP TABLE withdrawal_thresholds")
+            try db.execute(sql: "ALTER TABLE withdrawal_thresholds_new RENAME TO withdrawal_thresholds")
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_wt_connectionId ON withdrawal_thresholds(connectionId)")
+
+            // 8) exchange_balances: recreate with PK (connectionId, currency)
+            try db.execute(sql: """
+                CREATE TABLE exchange_balances_new (
+                    connectionId INTEGER NOT NULL,
+                    currency TEXT NOT NULL,
+                    exchange TEXT NOT NULL,
+                    balance TEXT NOT NULL,
+                    lastUpdated REAL NOT NULL,
+                    PRIMARY KEY (connectionId, currency)
+                )
+                """)
+            try db.execute(sql: """
+                INSERT INTO exchange_balances_new (connectionId, currency, exchange, balance, lastUpdated)
+                SELECT ec.id, eb.currency, eb.exchange, eb.balance, eb.lastUpdated
+                FROM exchange_balances eb
+                JOIN exchange_connections ec ON ec.exchange = eb.exchange
+                """)
+            try db.execute(sql: "DROP TABLE exchange_balances")
+            try db.execute(sql: "ALTER TABLE exchange_balances_new RENAME TO exchange_balances")
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_bal_connectionId ON exchange_balances(connectionId)")
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_bal_exchange ON exchange_balances(exchange)")
         }
 
         try migrator.migrate(dbPool)

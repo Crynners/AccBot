@@ -13,6 +13,7 @@ final class BackupDataCollector {
     }
 
     func collect(options: BackupExportOptions) throws -> BackupPayload {
+        let connections = try database.exchangeConnectionDao.getAll().map { $0.toBackup() }
         let plans = try database.planDao.getAll().map { $0.toBackup() }
 
         let settings = BackupSettings(
@@ -26,13 +27,25 @@ final class BackupDataCollector {
             lowBalanceThresholdDays: userPreferences.lowBalanceThresholdDays
         )
 
-        let thresholds = try database.withdrawalThresholdDao.getAll().map { $0.toBackupThreshold() }
+        // Resolve exchange from connection for each threshold (for v1 backward compat)
+        let allConnections = try database.exchangeConnectionDao.getAll()
+        let connectionMap = Dictionary(uniqueKeysWithValues: allConnections.map { ($0.id, $0) })
+        let thresholds = try database.withdrawalThresholdDao.getAll().map { wt -> BackupWithdrawalThreshold in
+            let exchange = connectionMap[wt.connectionId]?.exchange.rawValue ?? ""
+            return BackupWithdrawalThreshold(
+                crypto: wt.crypto, exchange: exchange,
+                thresholdAmount: "\(wt.thresholdAmount)", connectionId: wt.connectionId
+            )
+        }
 
         let credentials: [BackupCredentials]
         if options.includeCredentials {
             let isSandbox = userPreferences.sandboxMode
-            credentials = credentialsStore.getConfiguredExchanges(isSandbox: isSandbox).compactMap { exchange in
-                credentialsStore.get(for: exchange, isSandbox: isSandbox)?.toBackup()
+            let configuredConns = credentialsStore.getConfiguredConnections(
+                isSandbox: isSandbox, using: database.exchangeConnectionDao
+            )
+            credentials = configuredConns.compactMap { conn in
+                credentialsStore.get(connectionId: conn.id, isSandbox: isSandbox)?.toBackup(connectionId: conn.id)
             }
         } else {
             credentials = []
@@ -66,7 +79,8 @@ final class BackupDataCollector {
             credentials: credentials,
             transactions: transactions,
             notifications: notifications,
-            withdrawals: withdrawals
+            withdrawals: withdrawals,
+            connections: connections
         )
     }
 
@@ -77,7 +91,7 @@ final class BackupDataCollector {
         return BackupDataCounts(
             planCount: try database.planDao.getAll().count,
             thresholdCount: try database.withdrawalThresholdDao.getAll().count,
-            credentialCount: credentialsStore.getConfiguredExchanges(isSandbox: isSandbox).count,
+            credentialCount: credentialsStore.getConfiguredConnections(isSandbox: isSandbox, using: database.exchangeConnectionDao).count,
             transactionCount: try database.transactionDao.getTotalCount(),
             notificationCount: try getAllNotifications().count,
             withdrawalCount: try getAllWithdrawals().count
@@ -114,7 +128,8 @@ private extension DcaPlan {
             targetAmount: targetAmount.map { "\($0)" },
             createdAt: Int64(createdAt.timeIntervalSince1970 * 1000),
             lastExecutedAt: lastExecutedAt.map { Int64($0.timeIntervalSince1970 * 1000) },
-            nextExecutionAt: nextExecutionAt.map { Int64($0.timeIntervalSince1970 * 1000) }
+            nextExecutionAt: nextExecutionAt.map { Int64($0.timeIntervalSince1970 * 1000) },
+            connectionId: connectionId
         )
     }
 }
@@ -136,7 +151,8 @@ private extension Transaction {
             exchangeOrderId: exchangeOrderId,
             errorMessage: errorMessage,
             warningMessage: warningMessage,
-            executedAt: Int64(executedAt.timeIntervalSince1970 * 1000)
+            executedAt: Int64(executedAt.timeIntervalSince1970 * 1000),
+            connectionId: connectionId
         )
     }
 }
@@ -153,7 +169,8 @@ private extension AppNotification {
             exchange: exchange?.rawValue,
             isRead: isRead,
             isArchived: isArchived,
-            createdAt: Int64(createdAt.timeIntervalSince1970 * 1000)
+            createdAt: Int64(createdAt.timeIntervalSince1970 * 1000),
+            connectionId: connectionId
         )
     }
 }
@@ -171,29 +188,33 @@ private extension Withdrawal {
             fee: "\(fee)",
             status: status.rawValue,
             errorMessage: errorMessage,
-            createdAt: Int64(createdAt.timeIntervalSince1970 * 1000)
-        )
-    }
-}
-
-private extension WithdrawalThreshold {
-    func toBackupThreshold() -> BackupWithdrawalThreshold {
-        BackupWithdrawalThreshold(
-            crypto: crypto,
-            exchange: exchange.rawValue,
-            thresholdAmount: "\(thresholdAmount)"
+            createdAt: Int64(createdAt.timeIntervalSince1970 * 1000),
+            connectionId: connectionId
         )
     }
 }
 
 private extension ExchangeCredentials {
-    func toBackup() -> BackupCredentials {
+    func toBackup(connectionId: Int64) -> BackupCredentials {
         BackupCredentials(
             exchange: exchange.rawValue,
             apiKey: apiKey,
             apiSecret: apiSecret,
             passphrase: passphrase,
-            clientId: clientId
+            clientId: clientId,
+            connectionId: connectionId
+        )
+    }
+}
+
+private extension ExchangeConnection {
+    func toBackup() -> BackupExchangeConnection {
+        BackupExchangeConnection(
+            id: id,
+            exchange: exchange.rawValue,
+            name: name,
+            createdAt: Int64(createdAt.timeIntervalSince1970 * 1000),
+            displayOrder: displayOrder
         )
     }
 }

@@ -15,7 +15,7 @@ struct BackupEnvelope: Codable {
     let data: String // base64(salt || IV || ciphertext || GCM-tag) or plain JSON
 
     static let formatIdentifier = "accbot-backup"
-    static let currentVersion = 1
+    static let currentVersion = 2
 
     init(
         appVersion: String = "",
@@ -48,6 +48,8 @@ struct BackupPayload: Codable {
     let transactions: [BackupTransaction]
     let notifications: [BackupNotification]
     let withdrawals: [BackupWithdrawal]
+    /// v2+: list of exchange connections. Empty for legacy v1 backups.
+    let connections: [BackupExchangeConnection]
 
     init(
         plans: [BackupPlan] = [],
@@ -56,7 +58,8 @@ struct BackupPayload: Codable {
         credentials: [BackupCredentials] = [],
         transactions: [BackupTransaction] = [],
         notifications: [BackupNotification] = [],
-        withdrawals: [BackupWithdrawal] = []
+        withdrawals: [BackupWithdrawal] = [],
+        connections: [BackupExchangeConnection] = []
     ) {
         self.plans = plans
         self.settings = settings
@@ -65,6 +68,24 @@ struct BackupPayload: Codable {
         self.transactions = transactions
         self.notifications = notifications
         self.withdrawals = withdrawals
+        self.connections = connections
+    }
+}
+
+/// v2+: serializable exchange connection for backup.
+struct BackupExchangeConnection: Codable {
+    let id: Int64
+    let exchange: String
+    let name: String
+    let createdAt: Int64
+    let displayOrder: Int
+
+    init(id: Int64, exchange: String, name: String = "", createdAt: Int64 = 0, displayOrder: Int = 0) {
+        self.id = id
+        self.exchange = exchange
+        self.name = name
+        self.createdAt = createdAt
+        self.displayOrder = displayOrder
     }
 }
 
@@ -86,6 +107,8 @@ struct BackupPlan: Codable {
     let createdAt: Int64
     let lastExecutedAt: Int64?
     let nextExecutionAt: Int64?
+    /// v2+: source connection id (backup-local). Nil for legacy v1 backups.
+    let connectionId: Int64?
 }
 
 struct BackupSettings: Codable {
@@ -105,6 +128,8 @@ struct BackupCredentials: Codable {
     let apiSecret: String
     let passphrase: String?
     let clientId: String?
+    /// v2+: source connection id. Nil for legacy v1 backups.
+    let connectionId: Int64?
 }
 
 struct BackupTransaction: Codable {
@@ -123,6 +148,8 @@ struct BackupTransaction: Codable {
     let errorMessage: String?
     let warningMessage: String?
     let executedAt: Int64
+    /// v2+: source connection id. Nil for legacy v1 backups.
+    let connectionId: Int64?
 }
 
 struct BackupNotification: Codable {
@@ -136,6 +163,8 @@ struct BackupNotification: Codable {
     let isRead: Bool
     let isArchived: Bool
     let createdAt: Int64
+    /// v2+: source connection id. Nil for legacy v1 backups.
+    let connectionId: Int64?
 }
 
 struct BackupWithdrawal: Codable {
@@ -150,12 +179,16 @@ struct BackupWithdrawal: Codable {
     let status: String
     let errorMessage: String?
     let createdAt: Int64
+    /// v2+: source connection id. Nil for legacy v1 backups.
+    let connectionId: Int64?
 }
 
 struct BackupWithdrawalThreshold: Codable {
     let crypto: String
     let exchange: String
     let thresholdAmount: String
+    /// v2+: source connection id. Nil for legacy v1 backups.
+    let connectionId: Int64?
 }
 
 // MARK: - Export options

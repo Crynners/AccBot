@@ -322,7 +322,7 @@ final class DashboardViewModel: ObservableObject {
 
             // Check withdrawal threshold
             let withdrawalThreshold = try? deps.activeDatabase.withdrawalThresholdDao
-                .get(crypto: plan.crypto, exchange: plan.exchange)
+                .get(crypto: plan.crypto, connectionId: plan.connectionId)
             let isOverThreshold: Bool
             if let threshold = withdrawalThreshold, let balance = cryptoBalance {
                 isOverThreshold = balance >= threshold.thresholdAmount
@@ -374,7 +374,7 @@ final class DashboardViewModel: ObservableObject {
 
     private func fetchBalance(exchange: Exchange, currency: String, isSandbox: Bool) async -> Decimal? {
         // Try live balance from exchange API
-        if let credentials = deps.credentialsStore.get(for: exchange, isSandbox: isSandbox) {
+        if let credentials = deps.credentialsStore.get(for: exchange, isSandbox: isSandbox, using: deps.activeDatabase.exchangeConnectionDao) {
             let api = deps.exchangeApiFactory.create(credentials: credentials, isSandbox: isSandbox)
             let balance = await withTimeoutOrNil(seconds: 10) {
                 await api.getBalance(currency: currency)
@@ -382,7 +382,7 @@ final class DashboardViewModel: ObservableObject {
             if let balance {
                 // Cache in DB
                 try? deps.activeDatabase.exchangeBalanceDao.upsert(
-                    exchange: exchange, currency: currency, balance: balance
+                    exchange: exchange, currency: currency, balance: balance, using: deps.activeDatabase.exchangeConnectionDao
                 )
                 return balance
             }

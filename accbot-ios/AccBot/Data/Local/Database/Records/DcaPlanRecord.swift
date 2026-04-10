@@ -10,6 +10,7 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
 
     var id: Int64?
     var exchange: String
+    var connectionId: Int64 = 0
     var crypto: String
     var fiat: String
     var amount: String      // Decimal stored as TEXT
@@ -40,6 +41,7 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
         return DcaPlan(
             id: id ?? 0,
             exchange: Exchange(rawValue: exchange) ?? .coinmate,
+            connectionId: connectionId,
             crypto: crypto,
             fiat: fiat,
             amount: Decimal(string: amount) ?? 0,
@@ -64,6 +66,7 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
         DcaPlanRecord(
             id: plan.id == 0 ? nil : plan.id,
             exchange: plan.exchange.rawValue,
+            connectionId: plan.connectionId,
             crypto: plan.crypto,
             fiat: plan.fiat,
             amount: "\(plan.amount)",

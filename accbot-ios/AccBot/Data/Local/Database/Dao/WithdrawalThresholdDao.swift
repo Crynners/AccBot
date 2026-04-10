@@ -15,11 +15,11 @@ final class WithdrawalThresholdDao {
         }
     }
 
-    func get(crypto: String, exchange: Exchange) throws -> WithdrawalThreshold? {
+    func get(crypto: String, connectionId: Int64) throws -> WithdrawalThreshold? {
         try dbPool.read { db in
             try WithdrawalThresholdRecord
                 .filter(Column("crypto") == crypto)
-                .filter(Column("exchange") == exchange.rawValue)
+                .filter(Column("connectionId") == connectionId)
                 .fetchOne(db)?
                 .toDomain()
         }
@@ -32,11 +32,19 @@ final class WithdrawalThresholdDao {
         }
     }
 
-    func delete(crypto: String, exchange: Exchange) throws {
+    func delete(crypto: String, connectionId: Int64) throws {
         try dbPool.write { db in
             _ = try WithdrawalThresholdRecord
                 .filter(Column("crypto") == crypto)
-                .filter(Column("exchange") == exchange.rawValue)
+                .filter(Column("connectionId") == connectionId)
+                .deleteAll(db)
+        }
+    }
+
+    func deleteByConnection(_ connectionId: Int64) throws {
+        try dbPool.write { db in
+            _ = try WithdrawalThresholdRecord
+                .filter(Column("connectionId") == connectionId)
                 .deleteAll(db)
         }
     }

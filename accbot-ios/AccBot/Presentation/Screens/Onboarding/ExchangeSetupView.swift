@@ -68,7 +68,8 @@ struct ExchangeSetupView: View {
                                     await credentials.validateAndSave(
                                         credentialsStore: dependencies.credentialsStore,
                                         exchangeApiFactory: dependencies.exchangeApiFactory,
-                                        isSandbox: dependencies.userPreferences.sandboxMode
+                                        isSandbox: dependencies.userPreferences.sandboxMode,
+                                        exchangeConnectionDao: dependencies.activeDatabase.exchangeConnectionDao
                                     )
                                 }
                             }

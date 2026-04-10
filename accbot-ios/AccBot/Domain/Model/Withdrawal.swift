@@ -13,6 +13,7 @@ struct Withdrawal: Identifiable, Equatable {
     let id: Int64
     let planId: Int64
     let exchange: Exchange
+    let connectionId: Int64?
     let crypto: String
     let amount: Decimal
     let address: String
@@ -26,6 +27,7 @@ struct Withdrawal: Identifiable, Equatable {
         id: Int64 = 0,
         planId: Int64,
         exchange: Exchange,
+        connectionId: Int64? = nil,
         crypto: String,
         amount: Decimal,
         address: String,
@@ -38,6 +40,7 @@ struct Withdrawal: Identifiable, Equatable {
         self.id = id
         self.planId = planId
         self.exchange = exchange
+        self.connectionId = connectionId
         self.crypto = crypto
         self.amount = amount
         self.address = address

@@ -4,6 +4,7 @@ import Foundation
 struct DcaPlan: Identifiable, Equatable, Sendable {
     let id: Int64
     let exchange: Exchange
+    let connectionId: Int64
     let crypto: String
     let fiat: String
     let amount: Decimal
@@ -28,6 +29,7 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
     init(
         id: Int64 = 0,
         exchange: Exchange,
+        connectionId: Int64 = 0,
         crypto: String,
         fiat: String,
         amount: Decimal,
@@ -48,6 +50,7 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
     ) {
         self.id = id
         self.exchange = exchange
+        self.connectionId = connectionId
         self.crypto = crypto
         self.fiat = fiat
         self.amount = amount

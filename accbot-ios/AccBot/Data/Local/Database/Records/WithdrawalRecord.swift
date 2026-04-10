@@ -11,6 +11,7 @@ struct WithdrawalRecord: Codable, FetchableRecord, PersistableRecord, Identifiab
     var id: Int64?
     var planId: Int64
     var exchange: String
+    var connectionId: Int64?
     var crypto: String
     var amount: String
     var address: String
@@ -34,6 +35,7 @@ struct WithdrawalRecord: Codable, FetchableRecord, PersistableRecord, Identifiab
             id: id ?? 0,
             planId: planId,
             exchange: Exchange(rawValue: exchange) ?? .coinmate,
+            connectionId: connectionId,
             crypto: crypto,
             amount: Decimal(string: amount) ?? 0,
             address: address,
@@ -50,6 +52,7 @@ struct WithdrawalRecord: Codable, FetchableRecord, PersistableRecord, Identifiab
             id: w.id == 0 ? nil : w.id,
             planId: w.planId,
             exchange: w.exchange.rawValue,
+            connectionId: w.connectionId,
             crypto: w.crypto,
             amount: "\(w.amount)",
             address: w.address,

@@ -67,7 +67,8 @@ class CredentialFormDelegate: ObservableObject {
     func validateAndSave(
         credentialsStore: CredentialsStore,
         exchangeApiFactory: ExchangeApiFactory,
-        isSandbox: Bool
+        isSandbox: Bool,
+        exchangeConnectionDao: ExchangeConnectionDao
     ) async -> Bool {
         guard let exchange = selectedExchange else { return false }
 
@@ -92,7 +93,7 @@ class CredentialFormDelegate: ObservableObject {
             let valid = try await api.validateCredentials()
 
             if valid {
-                try credentialsStore.save(credentials, isSandbox: isSandbox)
+                try credentialsStore.save(credentials, isSandbox: isSandbox, using: exchangeConnectionDao)
                 isValid = true
                 isValidating = false
                 return true

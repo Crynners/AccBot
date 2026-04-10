@@ -12,11 +12,13 @@ final class ValidateAndSaveCredentialsUseCase {
     private let exchangeApiFactory: ExchangeApiFactory
     private let credentialsStore: CredentialsStore
     private let userPreferences: UserPreferences
+    private let exchangeConnectionDao: ExchangeConnectionDao
 
-    init(exchangeApiFactory: ExchangeApiFactory, credentialsStore: CredentialsStore, userPreferences: UserPreferences) {
+    init(exchangeApiFactory: ExchangeApiFactory, credentialsStore: CredentialsStore, userPreferences: UserPreferences, exchangeConnectionDao: ExchangeConnectionDao) {
         self.exchangeApiFactory = exchangeApiFactory
         self.credentialsStore = credentialsStore
         self.userPreferences = userPreferences
+        self.exchangeConnectionDao = exchangeConnectionDao
     }
 
     func execute(
@@ -51,7 +53,7 @@ final class ValidateAndSaveCredentialsUseCase {
             let isValid = try await api.validateCredentials()
 
             if isValid {
-                try credentialsStore.save(credentials, isSandbox: isSandbox)
+                try credentialsStore.save(credentials, isSandbox: isSandbox, using: exchangeConnectionDao)
                 return .success
             } else {
                 let hint = isSandbox

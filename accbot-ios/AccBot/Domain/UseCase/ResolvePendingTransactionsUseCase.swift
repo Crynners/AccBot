@@ -11,18 +11,21 @@ final class ResolvePendingTransactionsUseCase {
     private let credentialsStore: CredentialsStore
     private let exchangeApiFactory: ExchangeApiFactory
     private let userPreferences: UserPreferences
+    private let exchangeConnectionDao: ExchangeConnectionDao
     private let logger = Logger(subsystem: "com.accbot.dca", category: "ResolvePendingTx")
 
     init(
         database: DcaDatabase,
         credentialsStore: CredentialsStore,
         exchangeApiFactory: ExchangeApiFactory,
-        userPreferences: UserPreferences
+        userPreferences: UserPreferences,
+        exchangeConnectionDao: ExchangeConnectionDao
     ) {
         self.database = database
         self.credentialsStore = credentialsStore
         self.exchangeApiFactory = exchangeApiFactory
         self.userPreferences = userPreferences
+        self.exchangeConnectionDao = exchangeConnectionDao
     }
 
     /// Resolve all pending transactions. Returns the number of resolved transactions.
@@ -39,7 +42,7 @@ final class ResolvePendingTransactionsUseCase {
 
             for tx in pendingTxs {
                 guard let orderId = tx.exchangeOrderId else { continue }
-                guard let credentials = credentialsStore.get(for: tx.exchange, isSandbox: isSandbox) else { continue }
+                guard let credentials = credentialsStore.get(for: tx.exchange, isSandbox: isSandbox, using: exchangeConnectionDao) else { continue }
 
                 do {
                     let api = exchangeApiFactory.create(credentials: credentials)

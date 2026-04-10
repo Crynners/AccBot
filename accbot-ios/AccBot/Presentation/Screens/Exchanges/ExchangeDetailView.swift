@@ -32,7 +32,7 @@ struct ExchangeDetailView: View {
 
     private var isConnected: Bool {
         let isSandbox = dependencies.userPreferences.sandboxMode
-        return dependencies.credentialsStore.has(exchange: exchange, isSandbox: isSandbox)
+        return dependencies.credentialsStore.has(exchange: exchange, isSandbox: isSandbox, using: dependencies.activeDatabase.exchangeConnectionDao)
     }
 
     @State private var plans: [DcaPlan] = []
@@ -349,7 +349,8 @@ struct ExchangeDetailView: View {
                             let success = await credentials.validateAndSave(
                                 credentialsStore: dependencies.credentialsStore,
                                 exchangeApiFactory: dependencies.exchangeApiFactory,
-                                isSandbox: dependencies.userPreferences.sandboxMode
+                                isSandbox: dependencies.userPreferences.sandboxMode,
+                                exchangeConnectionDao: dependencies.activeDatabase.exchangeConnectionDao
                             )
                             if success {
                                 credentialsSaved = true
@@ -818,7 +819,8 @@ struct ExchangeDetailView: View {
 
         guard let credentials = dependencies.credentialsStore.get(
             for: exchange,
-            isSandbox: isSandbox
+            isSandbox: isSandbox,
+            using: dependencies.activeDatabase.exchangeConnectionDao
         ) else {
             importResultMessage = String(localized: "Credentials not found")
             showImportResult = true
@@ -883,7 +885,8 @@ struct ExchangeDetailView: View {
 
         guard let credentials = dependencies.credentialsStore.get(
             for: exchange,
-            isSandbox: isSandbox
+            isSandbox: isSandbox,
+            using: dependencies.activeDatabase.exchangeConnectionDao
         ) else {
             refreshError = String(localized: "Credentials not found")
             return
@@ -910,7 +913,8 @@ struct ExchangeDetailView: View {
                     try dependencies.activeDatabase.exchangeBalanceDao.upsert(
                         exchange: exchange,
                         currency: currency,
-                        balance: balance
+                        balance: balance,
+                        using: dependencies.activeDatabase.exchangeConnectionDao
                     )
                 } catch {
                     // Non-critical
@@ -924,7 +928,7 @@ struct ExchangeDetailView: View {
 
     private func deleteConnection() {
         let isSandbox = dependencies.userPreferences.sandboxMode
-        dependencies.credentialsStore.delete(exchange: exchange, isSandbox: isSandbox)
+        dependencies.credentialsStore.delete(exchange: exchange, isSandbox: isSandbox, using: dependencies.activeDatabase.exchangeConnectionDao)
         // Clean up cached balances
         try? dependencies.activeDatabase.exchangeBalanceDao.deleteByExchange(exchange)
         router.pop()
