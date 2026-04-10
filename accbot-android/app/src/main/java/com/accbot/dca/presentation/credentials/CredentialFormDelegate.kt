@@ -42,7 +42,7 @@ data class CredentialFormState(
     val existingConnectionsForExchange: List<String> = emptyList(),
     /**
      * Full list of existing connection entities for the selected exchange. Used by the
-     * AddPlan flow to show a picker when the user has 1+ connections — they can pick an
+     * AddPlan flow to show a picker when the user has 1+ connections - they can pick an
      * existing envelope instead of being forced to enter new credentials.
      */
     val existingConnections: List<ExchangeConnectionEntity> = emptyList(),
@@ -152,7 +152,7 @@ class CredentialFormDelegate(
         val isSandbox = _state.value.isSandboxMode
         val instructions = ExchangeInstructionsProvider.getInstructions(exchange, isSandbox)
         // Set isLoadingExchangeContext = true synchronously so the Validate button is
-        // immediately disabled — prevents race where user clicks Validate before the
+        // immediately disabled - prevents race where user clicks Validate before the
         // existing-connections lookup completes.
         _state.update { state ->
             state.copy(
@@ -173,7 +173,7 @@ class CredentialFormDelegate(
         }
         coroutineScope.launch {
             val existing = connectionRepository?.getByExchange(exchange) ?: emptyList()
-            // Auto-select when exactly ONE connection exists — user doesn't need a picker
+            // Auto-select when exactly ONE connection exists - user doesn't need a picker
             // for the trivial case. With 0 connections, fall through to credentials form.
             // With 2+ connections, leave selectedConnectionId null and let the UI render a
             // picker so the user can choose between envelopes (Hlavní vs Spoření).

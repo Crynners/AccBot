@@ -120,7 +120,7 @@ class CredentialsStore @Inject constructor(
             encryptedPrefs.edit().putBoolean(KEY_MIGRATION_V3_DONE, true).commit()
             Log.d(TAG, "CredentialsStore v2→v3 migration complete")
         } catch (e: Exception) {
-            // Don't set the flag — next launch will retry. Log so we notice.
+            // Don't set the flag - next launch will retry. Log so we notice.
             Log.e(TAG, "CredentialsStore v2→v3 migration failed; will retry next launch", e)
         }
     }
@@ -259,7 +259,7 @@ class CredentialsStore @Inject constructor(
         return getCredentials(connectionId, isSandbox)
     }
 
-    @Deprecated("Use saveCredentials(connectionId, credentials, isSandbox) — explicitly create a connection first")
+    @Deprecated("Use saveCredentials(connectionId, credentials, isSandbox) - explicitly create a connection first")
     suspend fun saveCredentials(credentials: ExchangeCredentials, isSandbox: Boolean = false): Boolean {
         // Resolve or create a default connection for this exchange so legacy
         // "save credentials by exchange" callers (Phase 7 candidates) keep working.
@@ -272,7 +272,7 @@ class CredentialsStore @Inject constructor(
                 )
             )
         } catch (_: android.database.sqlite.SQLiteConstraintException) {
-            // Race lost — another caller just created the default. Re-fetch.
+            // Race lost - another caller just created the default. Re-fetch.
             currentEnvConnectionDao.getDefaultByExchange(credentials.exchange)?.id
                 ?: return false
         }

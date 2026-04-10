@@ -470,7 +470,7 @@ private fun CredentialsStep(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        // Connection name input — required when there's already at least one connection
+        // Connection name input - required when there's already at least one connection
         // on this exchange (i.e. user is adding a 2nd "envelope")
         if (requireConnectionName || existingConnectionNames.isNotEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
@@ -512,7 +512,7 @@ private fun CredentialsStep(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Validate button — disabled while existing-connections lookup is in flight
+        // Validate button - disabled while existing-connections lookup is in flight
         // (otherwise user could race past the duplicate-name check).
         val nameOk = !requireConnectionName || connectionName.isNotBlank()
         Button(

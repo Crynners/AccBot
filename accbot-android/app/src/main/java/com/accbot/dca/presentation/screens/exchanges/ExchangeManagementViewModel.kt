@@ -63,8 +63,8 @@ class ExchangeManagementViewModel @Inject constructor(
     }
 
     /**
-     * Display label for a connection — exchange display name plus optional custom name.
-     * E.g. "Coinmate" or "Coinmate — Spoření".
+     * Display label for a connection - exchange display name plus optional custom name.
+     * E.g. "Coinmate" or "Coinmate - Spoření".
      */
     fun displayLabel(connection: ExchangeConnectionEntity): String =
         connectionRepository.displayLabel(connection)

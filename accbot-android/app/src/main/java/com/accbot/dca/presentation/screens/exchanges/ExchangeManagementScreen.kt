@@ -127,7 +127,7 @@ fun ExchangeManagementScreen(
                     }
                 }
 
-                // Available exchanges section — show ALL exchanges (no longer filtered by
+                // Available exchanges section - show ALL exchanges (no longer filtered by
                 // "has credentials"), so the user can add a second connection on Coinmate.
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     SectionHeader(title = stringResource(R.string.exchanges_available))

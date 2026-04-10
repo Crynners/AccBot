@@ -119,7 +119,7 @@ class ValidateAndSaveCredentialsUseCase @Inject constructor(
     }
 
     /**
-     * @return Pair(connectionId, createdHere) — true if this call created a new connection
+     * @return Pair(connectionId, createdHere) - true if this call created a new connection
      *  row that should be rolled back on validation failure.
      */
     private suspend fun resolveConnection(

@@ -37,7 +37,7 @@ class NotificationService @Inject constructor(
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     /**
-     * Render a label like "Coinmate" or "Coinmate — Spoření" for use in notification
+     * Render a label like "Coinmate" or "Coinmate - Spoření" for use in notification
      * titles. If [connectionId] is set and the connection has a non-empty name, the
      * label includes it; otherwise the bare exchange display name is returned.
      *
@@ -52,7 +52,7 @@ class NotificationService @Inject constructor(
             exchangeConnectionDao.getById(connectionId)
         }
         return if (connection != null && connection.name.isNotBlank()) {
-            "$exchangeLabel — ${connection.name}"
+            "$exchangeLabel - ${connection.name}"
         } else {
             exchangeLabel
         }

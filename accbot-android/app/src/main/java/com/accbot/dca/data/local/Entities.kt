@@ -102,7 +102,7 @@ class Converters {
 }
 
 /**
- * Exchange connection entity — represents one set of API credentials for one exchange.
+ * Exchange connection entity - represents one set of API credentials for one exchange.
  * Multiple connections can target the same exchange enum (e.g. two Coinmate sub-accounts
  * as "Hlavní" and "Spoření" envelopes). The actual API key/secret is stored separately
  * in [CredentialsStore], keyed by this entity's [id].
@@ -132,7 +132,7 @@ data class ExchangeConnectionEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val exchange: Exchange,
-    /** Empty string means "no custom name" — UI displays the exchange display name only. */
+    /** Empty string means "no custom name" - UI displays the exchange display name only. */
     val name: String = "",
     val createdAt: Instant = Instant.now(),
     val displayOrder: Int = 0

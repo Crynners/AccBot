@@ -21,7 +21,7 @@ class CreateDcaPlanUseCase @Inject constructor(
     /**
      * @param connectionId optional explicit connection. If null, the use case picks the
      *  default (first) connection of [exchange]. If no connection exists for that
-     *  exchange, throws [IllegalStateException] — callers must ensure credentials are set
+     *  exchange, throws [IllegalStateException] - callers must ensure credentials are set
      *  up first (the AddPlan/AddExchange flow does this via [ValidateAndSaveCredentialsUseCase]
      *  which creates the connection alongside the credentials).
      *
@@ -56,7 +56,7 @@ class CreateDcaPlanUseCase @Inject constructor(
         val resolvedConnectionId = connectionId
             ?: exchangeConnectionDao.getDefaultByExchange(exchange)?.id
             ?: throw IllegalStateException(
-                "No connection exists for $exchange — set up credentials first via AddExchange flow"
+                "No connection exists for $exchange - set up credentials first via AddExchange flow"
             )
 
         val plan = DcaPlanEntity(

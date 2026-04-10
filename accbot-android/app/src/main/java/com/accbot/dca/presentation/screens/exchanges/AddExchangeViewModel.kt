@@ -115,7 +115,7 @@ class AddExchangeViewModel @Inject constructor(
     /**
      * List of exchanges shown in the SELECTION step. After Phase 7+ users can add
      * multiple connections per exchange, so we no longer filter out exchanges that
-     * already have credentials — every supported exchange is always selectable.
+     * already have credentials - every supported exchange is always selectable.
      */
     private suspend fun computeSupportedExchanges(): List<Exchange> {
         val isSandbox = userPreferences.isSandboxMode()

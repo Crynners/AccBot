@@ -267,7 +267,7 @@ abstract class DcaDatabase : RoomDatabase() {
                     )
                 }
 
-                // 3) dca_plans — add connectionId column and backfill from default connection
+                // 3) dca_plans - add connectionId column and backfill from default connection
                 database.execSQL("ALTER TABLE dca_plans ADD COLUMN connectionId INTEGER NOT NULL DEFAULT 0")
                 database.execSQL(
                     "UPDATE dca_plans SET connectionId = " +
@@ -276,7 +276,7 @@ abstract class DcaDatabase : RoomDatabase() {
                 database.execSQL("CREATE INDEX IF NOT EXISTS index_dca_plans_connectionId ON dca_plans(connectionId)")
 
                 // Sanity assertion: any plan with connectionId = 0 means an exchange enum
-                // existed in dca_plans but no row was created in exchange_connections — bug.
+                // existed in dca_plans but no row was created in exchange_connections - bug.
                 database.query("SELECT COUNT(*) FROM dca_plans WHERE connectionId = 0").use { c ->
                     if (c.moveToFirst() && c.getInt(0) > 0) {
                         throw IllegalStateException(
@@ -286,7 +286,7 @@ abstract class DcaDatabase : RoomDatabase() {
                     }
                 }
 
-                // 4) transactions — nullable connectionId, no FK
+                // 4) transactions - nullable connectionId, no FK
                 database.execSQL("ALTER TABLE transactions ADD COLUMN connectionId INTEGER DEFAULT NULL")
                 database.execSQL(
                     "UPDATE transactions SET connectionId = " +
@@ -294,14 +294,14 @@ abstract class DcaDatabase : RoomDatabase() {
                 )
                 database.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_connectionId ON transactions(connectionId)")
 
-                // 5) withdrawals — nullable connectionId, no FK
+                // 5) withdrawals - nullable connectionId, no FK
                 database.execSQL("ALTER TABLE withdrawals ADD COLUMN connectionId INTEGER DEFAULT NULL")
                 database.execSQL(
                     "UPDATE withdrawals SET connectionId = " +
                         "(SELECT id FROM exchange_connections WHERE exchange = withdrawals.exchange LIMIT 1)"
                 )
 
-                // 6) withdrawal_thresholds — recreate with new PK (crypto, connectionId).
+                // 6) withdrawal_thresholds - recreate with new PK (crypto, connectionId).
                 // No FOREIGN KEY constraint here: the entity declaration in Entities.kt
                 // doesn't declare one (Room schema validation requires the migrated table
                 // to match the entity exactly), and FK enforcement (`PRAGMA foreign_keys`)
@@ -329,7 +329,7 @@ abstract class DcaDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE withdrawal_thresholds_new RENAME TO withdrawal_thresholds")
                 database.execSQL("CREATE INDEX IF NOT EXISTS index_withdrawal_thresholds_connectionId ON withdrawal_thresholds(connectionId)")
 
-                // 7) exchange_balances — recreate with new composite PK (connectionId, currency)
+                // 7) exchange_balances - recreate with new composite PK (connectionId, currency)
                 database.execSQL(
                     """
                     CREATE TABLE exchange_balances_new (
@@ -355,7 +355,7 @@ abstract class DcaDatabase : RoomDatabase() {
                 database.execSQL("CREATE INDEX IF NOT EXISTS index_exchange_balances_connectionId ON exchange_balances(connectionId)")
                 database.execSQL("CREATE INDEX IF NOT EXISTS index_exchange_balances_exchange ON exchange_balances(exchange)")
 
-                // 8) notifications — nullable connectionId, no FK
+                // 8) notifications - nullable connectionId, no FK
                 database.execSQL("ALTER TABLE notifications ADD COLUMN connectionId INTEGER DEFAULT NULL")
                 database.execSQL(
                     "UPDATE notifications SET connectionId = " +

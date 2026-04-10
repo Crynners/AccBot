@@ -38,7 +38,7 @@ import javax.inject.Inject
 data class SettingsUiState(
     val configuredExchanges: List<Exchange> = emptyList(),
     /**
-     * Total number of exchange *connections* (envelopes) — can exceed
+     * Total number of exchange *connections* (envelopes) - can exceed
      * `configuredExchanges.size` when the user has multiple connections on the same
      * exchange (e.g. two Coinmate sub-accounts).
      */
@@ -95,7 +95,7 @@ class SettingsViewModel @Inject constructor(
     /**
      * Reactive flow on the connection list so the Settings card subtitle ("X connections
      * connected") and the legacy `configuredExchanges` field stay in sync as the user
-     * adds or removes envelopes — no manual reload needed.
+     * adds or removes envelopes - no manual reload needed.
      */
     private fun observeConnections() {
         viewModelScope.launch {
@@ -123,7 +123,7 @@ class SettingsViewModel @Inject constructor(
 
         // Sync UI state immediately for non-suspend prefs values.
         // Note: `configuredExchanges` and `connectionCount` are populated reactively by
-        // [observeConnections] from the connection DAO flow — no manual lookup here.
+        // [observeConnections] from the connection DAO flow - no manual lookup here.
         _uiState.update {
             it.copy(
                 isBatteryOptimized = isBatteryOptimized,

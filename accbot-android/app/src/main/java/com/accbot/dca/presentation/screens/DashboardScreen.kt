@@ -1026,7 +1026,7 @@ internal fun DcaPlanCard(
                     Text(
                         // Render connection name as suffix when present (Phase 8 multi-connection)
                         text = if (planWithBalance.connectionName.isNotBlank())
-                            "${plan.exchange.displayName} — ${planWithBalance.connectionName}"
+                            "${plan.exchange.displayName} - ${planWithBalance.connectionName}"
                         else
                             plan.exchange.displayName,
                         style = MaterialTheme.typography.bodySmall,

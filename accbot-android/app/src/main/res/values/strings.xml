@@ -351,7 +351,7 @@
     <string name="exchanges_add">Add Exchange</string>
     <string name="exchanges_connected">Connected Exchanges</string>
     <string name="exchanges_available">Available Exchanges</string>
-    <string name="exchanges_add_another">%1$d connection(s) — add another</string>
+    <string name="exchanges_add_another">%1$d connection(s) - add another</string>
     <string name="exchanges_connection_name_label">Connection name (optional)</string>
     <string name="exchanges_connection_name_required">Name is required when you have multiple connections</string>
     <string name="exchanges_connection_name_taken">This name is already used for another connection on this exchange</string>

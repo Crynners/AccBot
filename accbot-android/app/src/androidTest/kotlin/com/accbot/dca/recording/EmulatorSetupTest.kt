@@ -65,7 +65,7 @@ class EmulatorSetupTest {
             val saved = credentialsStore.saveCredentials(binanceConnectionId, credentials, isSandbox = true)
             assert(saved) { "Failed to save Binance sandbox credentials" }
 
-            // DCA plan is NOT created here — it will be created via UI in ForegroundServiceDemoTest
+            // DCA plan is NOT created here - it will be created via UI in ForegroundServiceDemoTest
 
             // Verify setup
             val hasCredentials = credentialsStore.hasCredentials(binanceConnectionId, isSandbox = true)

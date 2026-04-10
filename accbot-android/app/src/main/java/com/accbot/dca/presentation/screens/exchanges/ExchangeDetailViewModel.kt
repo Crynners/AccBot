@@ -84,7 +84,7 @@ class ExchangeDetailViewModel @Inject constructor(
                 _localState.update { it.copy(connection = connection, exchange = connection.exchange) }
                 credentialForm.initWithExchange(connection.exchange)
 
-                // Load plans for this connection (was: per exchange — now per connection envelope)
+                // Load plans for this connection (was: per exchange - now per connection envelope)
                 var autoImportTriggered = false
                 dcaPlanDao.getPlansByConnection(connectionId).collect { plans ->
                     _localState.update { it.copy(plans = plans) }

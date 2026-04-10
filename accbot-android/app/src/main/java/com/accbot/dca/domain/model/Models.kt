@@ -281,7 +281,7 @@ data class AppNotification(
 )
 
 /**
- * Withdrawal threshold configuration — per (crypto, connection) pair.
+ * Withdrawal threshold configuration - per (crypto, connection) pair.
  *
  * `exchange` is denormalized from the parent connection so UI can group/display by exchange
  * without joining; it is filled in at the ViewModel layer when loading thresholds.

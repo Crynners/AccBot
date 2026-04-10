@@ -41,7 +41,7 @@ class BackupDataRestorer @Inject constructor(
                 ExchangeConnectionEntity(exchange = exchange, name = "")
             )
         } catch (e: android.database.sqlite.SQLiteConstraintException) {
-            // Concurrent insert won the race — re-fetch and use the existing row.
+            // Concurrent insert won the race - re-fetch and use the existing row.
             exchangeConnectionDao.getDefaultByExchange(exchange)?.id
                 ?: throw IllegalStateException("Failed to resolve default connection for $exchange", e)
         }
@@ -81,7 +81,7 @@ class BackupDataRestorer @Inject constructor(
             database.withTransaction {
                 // Replace mode: wipe all existing DB data first.
                 // NOTE: deleting plans last (after transactions) preserves any existing FK
-                // assumptions. Connections are NOT wiped — we preserve them and let merge
+                // assumptions. Connections are NOT wiped - we preserve them and let merge
                 // dedupe by (exchange, name).
                 if (restoreMode == RestoreMode.Replace) {
                     transactionDao.deleteAllTransactions()
@@ -93,7 +93,7 @@ class BackupDataRestorer @Inject constructor(
 
                 // 0. Connections (v2): create or dedupe by (exchange, name).
                 // The unique index on (exchange, name) means duplicate inserts raise
-                // SQLiteConstraintException — we catch and re-fetch.
+                // SQLiteConstraintException - we catch and re-fetch.
                 for (conn in payload.connections) {
                     val exchange = try { Exchange.valueOf(conn.exchange) } catch (_: Exception) { continue }
                     val existing = exchangeConnectionDao.getByExchange(exchange)
@@ -226,7 +226,7 @@ class BackupDataRestorer @Inject constructor(
             // Outside transaction: restore credentials.
             // Pre-validation above guarantees all entries parse cleanly. Remap each
             // backup-local connectionId to the freshly inserted local one and save.
-            // Failures here are logged but don't roll back the DB — at this point the
+            // Failures here are logged but don't roll back the DB - at this point the
             // restore is "best effort committed" and partial credentials is recoverable
             // (user can re-enter API keys via AddExchange).
             val isSandbox = userPreferences.isSandboxMode()

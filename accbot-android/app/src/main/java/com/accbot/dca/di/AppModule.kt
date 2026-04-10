@@ -96,7 +96,7 @@ object AppModule {
     }
 
     // CredentialsStore now uses @Inject constructor (needs ExchangeConnectionDao for legacy
-    // Exchange-keyed shims). Hilt provides it automatically — no manual @Provides needed.
+    // Exchange-keyed shims). Hilt provides it automatically - no manual @Provides needed.
 
     @Provides
     @Singleton

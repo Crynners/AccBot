@@ -591,7 +591,7 @@ class DcaWorker @AssistedInject constructor(
          * work runs as a foreground service, and when this chain is reachable from a
          * BOOT_COMPLETED broadcast (BootReceiver re-arms the alarm after boot, the alarm
          * fires shortly after, and triggers this work), Google Play flags it as starting
-         * a restricted "dataSync" foreground service from BOOT_COMPLETED — which is not
+         * a restricted "dataSync" foreground service from BOOT_COMPLETED - which is not
          * allowed for apps targeting Android 15+. The alarm wakes the device anyway, so
          * regular OneTimeWorkRequest runs immediately.
          */

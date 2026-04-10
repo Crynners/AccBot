@@ -22,7 +22,7 @@ import javax.inject.Singleton
  * "Hlavní" and "Spoření"). Each connection has its own credentials (in [CredentialsStore]),
  * its own balance cache, and its own withdrawal thresholds.
  *
- * Production and sandbox connections live in separate Room databases — this repository
+ * Production and sandbox connections live in separate Room databases - this repository
  * operates against whichever DB is currently active for the running app.
  */
 @Singleton
@@ -74,13 +74,13 @@ class ExchangeConnectionRepository @Inject constructor(
     /**
      * Delete a connection and manually cascade to all dependent rows. Cleanup order:
      *  1. (optional) DCA plans referencing this connection
-     *  2. Withdrawal thresholds (manual — `PRAGMA foreign_keys` is disabled in Room
+     *  2. Withdrawal thresholds (manual - `PRAGMA foreign_keys` is disabled in Room
      *     so the schema-level `ON DELETE CASCADE` is a no-op)
      *  3. Balance cache rows
      *  4. Encrypted credentials in [CredentialsStore]
      *  5. The connection row itself
      *
-     * Transaction history is *not* deleted — its `connectionId` becomes orphaned
+     * Transaction history is *not* deleted - its `connectionId` becomes orphaned
      * (nullable, no FK), and the UI falls back to the [Exchange] enum for the label.
      *
      * @param deletePlans if true, also deletes any DCA plans tied to this connection.
@@ -100,7 +100,7 @@ class ExchangeConnectionRepository @Inject constructor(
         if (deletePlans && planCount > 0) {
             dcaPlanDao.deletePlansByConnection(connectionId)
         }
-        // Manual cascade — FK enforcement is currently disabled.
+        // Manual cascade - FK enforcement is currently disabled.
         withdrawalThresholdDao.deleteByConnection(connectionId)
         exchangeBalanceDao.deleteBalancesByConnection(connectionId)
         credentialsStore.deleteCredentials(connectionId, isSandbox)
@@ -108,12 +108,12 @@ class ExchangeConnectionRepository @Inject constructor(
     }
 
     /**
-     * Compute a "display label" for a connection — exchange name plus optional custom name.
-     * E.g. "Coinmate" (no name) or "Coinmate — Spoření".
+     * Compute a "display label" for a connection - exchange name plus optional custom name.
+     * E.g. "Coinmate" (no name) or "Coinmate - Spoření".
      */
     fun displayLabel(connection: ExchangeConnectionEntity): String {
         return if (connection.name.isNotBlank()) {
-            "${connection.exchange.displayName} — ${connection.name}"
+            "${connection.exchange.displayName} - ${connection.name}"
         } else {
             connection.exchange.displayName
         }

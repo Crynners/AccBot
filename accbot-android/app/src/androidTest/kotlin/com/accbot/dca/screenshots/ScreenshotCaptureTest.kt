@@ -56,8 +56,8 @@ import java.time.LocalDate
  * includes it in screenshot filenames.
  *
  * Produces 8 screenshots per run:
- *   00_welcome_{locale}  — Welcome/onboarding screen (clean install)
- *   01–07_*_{locale}     — Main app screens (with populated data)
+ *   00_welcome_{locale}  - Welcome/onboarding screen (clean install)
+ *   01–07_*_{locale}     - Main app screens (with populated data)
  *
  * Run:
  * ```
@@ -162,10 +162,10 @@ class ScreenshotCaptureTest {
         composeRule.waitForIdle()
         Thread.sleep(3000)
 
-        // 1. Dashboard — holdings pager, active plans, Market Pulse
+        // 1. Dashboard - holdings pager, active plans, Market Pulse
         capture("01_dashboard_$locale")
 
-        // 2. Portfolio — navigate to BTC/EUR page, Price line only
+        // 2. Portfolio - navigate to BTC/EUR page, Price line only
         clickNav(R.string.nav_portfolio)
         composeRule.waitForIdle()
         Thread.sleep(2000)
@@ -211,7 +211,7 @@ class ScreenshotCaptureTest {
         Thread.sleep(500)
         capture("05_settings_$locale")
 
-        // 6. Plan Details — navigate to Dashboard, tap BTC plan card
+        // 6. Plan Details - navigate to Dashboard, tap BTC plan card
         clickNav(R.string.nav_dashboard)
         composeRule.waitForIdle()
         Thread.sleep(500)
@@ -233,7 +233,7 @@ class ScreenshotCaptureTest {
         Thread.sleep(3000)
         capture("06_plan_details_$locale")
 
-        // 7. History — back via TopAppBar arrow (device.pressBack exits app on API 36)
+        // 7. History - back via TopAppBar arrow (device.pressBack exits app on API 36)
         val backLabel = composeRule.activity.getString(R.string.common_back)
         composeRule.onNode(hasContentDescription(backLabel) and hasClickAction()).performClick()
         composeRule.waitForIdle()
@@ -313,7 +313,7 @@ class ScreenshotCaptureTest {
             ExchangeConnectionEntity(exchange = Exchange.BINANCE, name = "")
         )
 
-        // Credentials (dummy — app won't call APIs during screenshots).
+        // Credentials (dummy - app won't call APIs during screenshots).
         creds.saveCredentials(
             connectionId = coinmateConnectionId,
             credentials = ExchangeCredentials(Exchange.COINMATE, "demo_key", "demo_secret", clientId = "12345"),

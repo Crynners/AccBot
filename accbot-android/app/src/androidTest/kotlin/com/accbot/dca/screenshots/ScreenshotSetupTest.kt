@@ -58,7 +58,7 @@ class ScreenshotSetupTest {
         prefs.setMarketPulseEnabled(true)
         prefs.setMarketPulseExpanded(true)
 
-        // 2. Room DB — prod database (constructed first because CredentialsStore needs the DAO)
+        // 2. Room DB - prod database (constructed first because CredentialsStore needs the DAO)
         val db = DcaDatabase.getInstance(context, isSandbox = false)
         val creds = CredentialsStore(context, db.exchangeConnectionDao())
 
@@ -78,7 +78,7 @@ class ScreenshotSetupTest {
                 ExchangeConnectionEntity(exchange = Exchange.BINANCE, name = "")
             )
 
-            // Credentials (dummy — app won't call APIs during screenshots).
+            // Credentials (dummy - app won't call APIs during screenshots).
             // Use the connection-keyed API directly to avoid the legacy shim's auto-create.
             creds.saveCredentials(
                 connectionId = coinmateConnectionId,
@@ -117,7 +117,7 @@ class ScreenshotSetupTest {
                 )
             )
 
-            // Daily prices — real historical data from CryptoCompare
+            // Daily prices - real historical data from CryptoCompare
             val totalDays = HistoricalPrices.BTC_EUR.size // 201
 
             val btcPrices = HistoricalPrices.BTC_EUR.mapIndexed { i, price ->
@@ -140,7 +140,7 @@ class ScreenshotSetupTest {
             }
             db.dailyPriceDao().insertPrices(ethPrices)
 
-            // BTC transactions — daily over 180 days
+            // BTC transactions - daily over 180 days
             val btcTxCount = 180
             val btcTransactions = (0 until btcTxCount).map { i ->
                 val daysAgo = btcTxCount.toLong() - i
@@ -160,7 +160,7 @@ class ScreenshotSetupTest {
             }
             db.transactionDao().insertTransactions(btcTransactions)
 
-            // ETH transactions — weekly over 180 days = ~26 transactions
+            // ETH transactions - weekly over 180 days = ~26 transactions
             val ethTxCount = 26
             val ethTransactions = (0 until ethTxCount).map { i ->
                 val daysAgo = btcTxCount.toLong() - (i * 7).toLong()
@@ -180,7 +180,7 @@ class ScreenshotSetupTest {
             }
             db.transactionDao().insertTransactions(ethTransactions)
 
-            // Exchange balances — calculated from accumulated crypto
+            // Exchange balances - calculated from accumulated crypto
             val totalBtcAccumulated = btcTransactions.sumOf { it.cryptoAmount }
             val totalEthAccumulated = ethTransactions.sumOf { it.cryptoAmount }
 

@@ -10,8 +10,8 @@
     <string name="common_move_down">Posunout dolů</string>
     <string name="plan_details_name_hint">např. Dlouhodobé spoření, Měsíční BTC…</string>
     <string name="plan_details_add_name">Přidat název plánu</string>
-    <string name="import_api_multi_plan_warning">Toto pripojeni ma %1$d dalsi(ch) plan(u). Import stahne VSECHNY obchody z uctu burzy, ne jen obchody tohoto planu. Duplicitni transakce se filtruji automaticky.</string>
-    <string name="add_plan_multi_plan_warning">Toto pripojeni uz ma %1$d plan(u). Vsechny plany na jednom pripojeni sdili jeden ucet burzy, takze transakce importovane pres API budou viditelne ve vsech planech.</string>
+    <string name="import_api_multi_plan_warning">Toto připojení má %1$d další(ch) plán(ů). Import stáhne VŠECHNY obchody z účtu burzy, ne jen obchody tohoto plánu. Duplicitní transakce se filtrují automaticky.</string>
+    <string name="add_plan_multi_plan_warning">Toto připojení už má %1$d plán(ů). Všechny plány na jednom připojení sdílí jeden účet burzy, takže transakce importované přes API budou viditelné ve všech plánech.</string>
     <string name="common_retry">Zkusit znovu</string>
     <string name="common_skip">Přeskočit</string>
     <string name="common_clear">Vymazat</string>
@@ -352,7 +352,7 @@
     <string name="exchanges_add">Přidat burzu</string>
     <string name="exchanges_connected">Připojené burzy</string>
     <string name="exchanges_available">Dostupné burzy</string>
-    <string name="exchanges_add_another">%1$d připojení — přidat další</string>
+    <string name="exchanges_add_another">%1$d připojení - přidat další</string>
     <string name="exchanges_connection_name_label">Název připojení (volitelné)</string>
     <string name="exchanges_connection_name_required">Při více připojeních je název povinný</string>
     <string name="exchanges_connection_name_taken">Tento název už pro tuto burzu existuje</string>

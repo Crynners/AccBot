@@ -50,11 +50,11 @@ class AccBotApplication : Application(), Configuration.Provider {
         // CredentialsStore v2→v3 migration: re-key credentials from
         // `credentials_${env}_${EXCHANGE}` to `credentials_v3_${env}_${connectionId}`.
         // Needs Room DB access (to look up the connection per exchange) so it can't run
-        // inside the encryptedPrefs lazy init. Idempotent — safe to call every launch.
+        // inside the encryptedPrefs lazy init. Idempotent - safe to call every launch.
         //
         // BLOCKING: must complete before any background worker (DcaWorker) tries to load
         // credentials by connectionId. The migration is fast (single-digit milliseconds for
-        // ~14 keys) and runs once per upgrade — acceptable startup cost. The previous
+        // ~14 keys) and runs once per upgrade - acceptable startup cost. The previous
         // background-launch version had a race window where the alarm-triggered DcaWorker
         // could fire between Room migration and CredentialsStore migration completion,
         // failing to find credentials under the new key.
