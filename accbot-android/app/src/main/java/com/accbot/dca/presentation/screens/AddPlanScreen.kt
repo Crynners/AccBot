@@ -329,8 +329,8 @@ fun AddPlanScreen(
 
 /**
  * Single row in the connection picker (radio-like): a row with a leading RadioButton,
- * a label and a clickable surface. Used to pick which existing connection a new plan
- * should target, or to switch to "create new connection" mode.
+ * a label and a clickable surface. Uses the app's accent color (green / sandbox orange)
+ * so it fits the AccBot palette instead of the Material3 default purple.
  */
 @Composable
 private fun ConnectionPickerRow(
@@ -338,12 +338,13 @@ private fun ConnectionPickerRow(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val accent = com.accbot.dca.presentation.ui.theme.accentColor()
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(role = androidx.compose.ui.semantics.Role.RadioButton, onClick = onClick),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        color = if (selected) MaterialTheme.colorScheme.primaryContainer
+        color = if (selected) accent.copy(alpha = 0.15f)
                 else MaterialTheme.colorScheme.surface,
         tonalElevation = if (selected) 2.dp else 0.dp
     ) {
@@ -354,12 +355,18 @@ private fun ConnectionPickerRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            RadioButton(selected = selected, onClick = null)
+            RadioButton(
+                selected = selected,
+                onClick = null,
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = accent,
+                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurface
+                color = if (selected) accent else MaterialTheme.colorScheme.onSurface
             )
         }
     }

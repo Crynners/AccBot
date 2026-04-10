@@ -5,6 +5,7 @@
     <string name="common_cancel">Zrušit</string>
     <string name="common_delete">Smazat</string>
     <string name="common_save">Uložit</string>
+    <string name="common_rename">Přejmenovat</string>
     <string name="common_retry">Zkusit znovu</string>
     <string name="common_skip">Přeskočit</string>
     <string name="common_clear">Vymazat</string>

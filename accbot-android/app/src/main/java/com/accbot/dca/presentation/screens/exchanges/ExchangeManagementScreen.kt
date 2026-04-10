@@ -113,15 +113,11 @@ fun ExchangeManagementScreen(
                     }
 
                     items(uiState.connections, key = { it.id }) { connection ->
-                        val subtitle = if (connection.name.isNotBlank()) {
-                            connection.name
-                        } else {
-                            stringResource(R.string.common_connected)
-                        }
                         ExchangeSelectionTile(
                             exchange = connection.exchange,
                             isConnected = true,
-                            subtitle = subtitle,
+                            subtitle = if (connection.name.isNotBlank()) connection.name
+                                       else stringResource(R.string.exchanges_default_connection_label),
                             onClick = { onNavigateToExchangeDetail(connection.id) }
                         )
                     }

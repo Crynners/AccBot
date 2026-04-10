@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -118,11 +119,24 @@ fun ExchangeDetailScreen(
         )
     }
 
+    val connection = uiState.connection
+    val connectionDisplayName = connection?.name?.takeIf { it.isNotBlank() }
+        ?: stringResource(R.string.exchanges_default_connection_label)
+    val topBarTitle = if (connection?.name?.isNotBlank() == true) {
+        "${exchange.displayName} - ${connection.name}"
+    } else {
+        exchange.displayName
+    }
+
+    // Inline rename state
+    var isRenaming by remember { mutableStateOf(false) }
+    var renameText by remember(connection?.name) { mutableStateOf(connection?.name ?: "") }
+
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             AccBotTopAppBar(
-                title = exchange.displayName,
+                title = topBarTitle,
                 onNavigateBack = onNavigateBack
             )
         }
@@ -150,12 +164,47 @@ fun ExchangeDetailScreen(
                 isConnected = true
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.common_connected),
-                style = MaterialTheme.typography.bodyMedium,
-                color = successColor(),
-                fontWeight = FontWeight.SemiBold
-            )
+
+            // Connection name (editable inline)
+            if (isRenaming) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = renameText,
+                        onValueChange = { renameText = it },
+                        singleLine = true,
+                        placeholder = { Text(stringResource(R.string.exchanges_connection_name_hint)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = {
+                        viewModel.renameConnection(renameText.trim())
+                        isRenaming = false
+                    }) {
+                        Text(stringResource(R.string.common_save))
+                    }
+                }
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { isRenaming = true }
+                ) {
+                    Text(
+                        text = connectionDisplayName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = successColor(),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = stringResource(R.string.common_rename),
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 

@@ -97,6 +97,19 @@ class ExchangeDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Rename this connection's display label. Empty string resets to "Default".
+     */
+    fun renameConnection(newName: String) {
+        val connection = _localState.value.connection ?: return
+        viewModelScope.launch {
+            connectionRepository.rename(connection.id, newName)
+            // Reload the connection so UI reflects the change
+            val updated = connectionRepository.getById(connection.id)
+            _localState.update { it.copy(connection = updated) }
+        }
+    }
+
     fun toggleCredentials() {
         _localState.update { it.copy(credentialsExpanded = !it.credentialsExpanded) }
     }

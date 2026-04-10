@@ -7,6 +7,7 @@
     <string name="common_cancel">Cancel</string>
     <string name="common_delete">Delete</string>
     <string name="common_save">Save</string>
+    <string name="common_rename">Rename</string>
     <string name="common_retry">Retry</string>
     <string name="common_skip">Skip</string>
     <string name="common_clear">Clear</string>
