@@ -59,6 +59,8 @@ class CreateDcaPlanUseCase @Inject constructor(
                 "No connection exists for $exchange - set up credentials first via AddExchange flow"
             )
 
+        val nextDisplayOrder = dcaPlanDao.getMaxDisplayOrder() + 1
+
         val plan = DcaPlanEntity(
             exchange = exchange,
             connectionId = resolvedConnectionId,
@@ -73,7 +75,8 @@ class CreateDcaPlanUseCase @Inject constructor(
             withdrawalAddress = withdrawalAddress,
             createdAt = now,
             nextExecutionAt = nextExecution,
-            targetAmount = targetAmount
+            targetAmount = targetAmount,
+            displayOrder = nextDisplayOrder
         )
 
         dcaPlanDao.insertPlan(plan)
