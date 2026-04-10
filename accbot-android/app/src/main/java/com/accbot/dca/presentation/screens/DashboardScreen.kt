@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,8 +38,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Constraints
 import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalConfiguration
@@ -51,6 +54,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -75,6 +79,57 @@ import com.accbot.dca.presentation.utils.NumberFormatters
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlinx.coroutines.delay
+
+/**
+ * Remembers drag-to-reorder state for a LazyColumn of plan cards.
+ */
+@Composable
+private fun rememberPlanDragState(
+    onReorder: (from: Int, to: Int) -> Unit
+): PlanDragState {
+    return remember { PlanDragState(onReorder) }
+}
+
+private class PlanDragState(
+    private val onReorder: (Int, Int) -> Unit
+) {
+    var draggedIndex by mutableIntStateOf(-1)
+        private set
+    var dragOffset by mutableFloatStateOf(0f)
+        private set
+    private var itemHeights = mutableMapOf<Int, Int>()
+
+    fun registerItemHeight(index: Int, height: Int) {
+        itemHeights[index] = height
+    }
+
+    fun startDrag(index: Int) {
+        draggedIndex = index
+        dragOffset = 0f
+    }
+
+    fun drag(delta: Float) {
+        if (draggedIndex < 0) return
+        dragOffset += delta
+
+        val draggedHeight = itemHeights[draggedIndex] ?: return
+        // Check if we've dragged past the midpoint of the next/previous item
+        if (dragOffset > draggedHeight * 0.5f && draggedIndex < itemHeights.size - 1) {
+            onReorder(draggedIndex, draggedIndex + 1)
+            draggedIndex = draggedIndex + 1
+            dragOffset -= draggedHeight
+        } else if (dragOffset < -draggedHeight * 0.5f && draggedIndex > 0) {
+            onReorder(draggedIndex, draggedIndex - 1)
+            draggedIndex = draggedIndex - 1
+            dragOffset += draggedHeight
+        }
+    }
+
+    fun endDrag() {
+        draggedIndex = -1
+        dragOffset = 0f
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -214,6 +269,9 @@ fun DashboardScreen(
                 }
 
                 // Right column: DCA Plans
+                val landscapeDragState = rememberPlanDragState { from, to ->
+                    viewModel.reorderPlans(from, to)
+                }
                 LazyColumn(
                     modifier = Modifier.weight(0.5f),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -247,9 +305,13 @@ fun DashboardScreen(
                                 planWithBalance = planWithBalance,
                                 onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
                                 onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
-                                onMoveUp = if (index > 0) {{ viewModel.reorderPlan(index, index - 1) }} else null,
-                                onMoveDown = if (index < uiState.activePlans.lastIndex) {{ viewModel.reorderPlan(index, index + 1) }} else null,
-                                currentTime = currentTime
+                                currentTime = currentTime,
+                                isDragging = index == landscapeDragState.draggedIndex,
+                                dragOffset = if (index == landscapeDragState.draggedIndex) landscapeDragState.dragOffset else 0f,
+                                onRegisterHeight = { height -> landscapeDragState.registerItemHeight(index, height) },
+                                onDragStart = { landscapeDragState.startDrag(index) },
+                                onDrag = { delta -> landscapeDragState.drag(delta) },
+                                onDragEnd = { landscapeDragState.endDrag() }
                             )
                         }
                     }
@@ -261,6 +323,9 @@ fun DashboardScreen(
             }
         } else {
             // Portrait: single column
+            val portraitDragState = rememberPlanDragState { from, to ->
+                viewModel.reorderPlans(from, to)
+            }
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -350,12 +415,18 @@ fun DashboardScreen(
                         EmptyPlansCard(onAddPlan = onNavigateToPlans)
                     }
                 } else {
-                    items(uiState.activePlans, key = { it.plan.id }) { planWithBalance ->
+                    itemsIndexed(uiState.activePlans, key = { _, p -> p.plan.id }) { index, planWithBalance ->
                         DcaPlanCard(
                             planWithBalance = planWithBalance,
                             onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
                             onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
-                            currentTime = currentTime
+                            currentTime = currentTime,
+                            isDragging = index == portraitDragState.draggedIndex,
+                            dragOffset = if (index == portraitDragState.draggedIndex) portraitDragState.dragOffset else 0f,
+                            onRegisterHeight = { height -> portraitDragState.registerItemHeight(index, height) },
+                            onDragStart = { portraitDragState.startDrag(index) },
+                            onDrag = { delta -> portraitDragState.drag(delta) },
+                            onDragEnd = { portraitDragState.endDrag() }
                         )
                     }
                 }
@@ -939,9 +1010,13 @@ internal fun DcaPlanCard(
     planWithBalance: DcaPlanWithBalance,
     onToggle: () -> Unit,
     onClick: (() -> Unit)? = null,
-    onMoveUp: (() -> Unit)? = null,
-    onMoveDown: (() -> Unit)? = null,
-    currentTime: Long = System.currentTimeMillis()
+    currentTime: Long = System.currentTimeMillis(),
+    isDragging: Boolean = false,
+    dragOffset: Float = 0f,
+    onRegisterHeight: ((Int) -> Unit)? = null,
+    onDragStart: (() -> Unit)? = null,
+    onDrag: ((Float) -> Unit)? = null,
+    onDragEnd: (() -> Unit)? = null
 ) {
     val plan = planWithBalance.plan
     val successCol = successColor()
@@ -950,7 +1025,19 @@ internal fun DcaPlanCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier),
+            .zIndex(if (isDragging) 1f else 0f)
+            .graphicsLayer {
+                translationY = dragOffset
+                if (isDragging) {
+                    shadowElevation = 8f
+                    scaleX = 1.02f
+                    scaleY = 1.02f
+                }
+            }
+            .onGloballyPositioned { coordinates ->
+                onRegisterHeight?.invoke(coordinates.size.height)
+            }
+            .then(if (onClick != null && !isDragging) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -958,7 +1045,7 @@ internal fun DcaPlanCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(start = 4.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -966,6 +1053,28 @@ internal fun DcaPlanCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
+                // Drag handle
+                if (onDragStart != null) {
+                    Icon(
+                        imageVector = Icons.Default.DragHandle,
+                        contentDescription = "Reorder",
+                        modifier = Modifier
+                            .pointerInput(Unit) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = { onDragStart() },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        onDrag?.invoke(dragAmount.y)
+                                    },
+                                    onDragEnd = { onDragEnd?.invoke() },
+                                    onDragCancel = { onDragEnd?.invoke() }
+                                )
+                            }
+                            .padding(end = 8.dp)
+                            .size(24.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
                 CryptoIcon(crypto = plan.crypto)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
@@ -1150,37 +1259,6 @@ internal fun DcaPlanCard(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Reorder arrows (only when both callbacks are provided = reorder mode)
-                if (onMoveUp != null || onMoveDown != null) {
-                    Row {
-                        if (onMoveUp != null) {
-                            IconButton(
-                                onClick = onMoveUp,
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.KeyboardArrowUp,
-                                    contentDescription = stringResource(R.string.common_move_up),
-                                    modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        if (onMoveDown != null) {
-                            IconButton(
-                                onClick = onMoveDown,
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.KeyboardArrowDown,
-                                    contentDescription = stringResource(R.string.common_move_down),
-                                    modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
                 Switch(
                     checked = plan.isEnabled,
                     onCheckedChange = { onToggle() },
