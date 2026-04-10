@@ -15,6 +15,8 @@ final class SettingsViewModel: ObservableObject {
     @Published var withdrawalThresholds: [WithdrawalThreshold] = []
     @Published var availableCryptoExchangePairs: [(crypto: String, exchange: Exchange)] = []
     @Published var showWithdrawalThresholdDialog = false
+    /// Maps connectionId → Exchange for resolving threshold display info.
+    private(set) var connectionExchangeMap: [Int64: Exchange] = [:]
 
     /// Stable identifiers for ForEach over crypto/exchange pairs.
     var withdrawalPairIds: [String] {
@@ -213,6 +215,10 @@ final class SettingsViewModel: ObservableObject {
         let db = deps.activeDatabase
         do {
             withdrawalThresholds = try db.withdrawalThresholdDao.getAll()
+
+            // Build connectionId → Exchange map for resolving threshold display
+            let connections = try db.exchangeConnectionDao.getAll()
+            connectionExchangeMap = Dictionary(uniqueKeysWithValues: connections.map { ($0.id, $0.exchange) })
 
             let plans = try db.planDao.getAll()
             var seen = Set<String>()

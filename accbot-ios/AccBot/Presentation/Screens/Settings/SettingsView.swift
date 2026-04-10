@@ -678,7 +678,8 @@ struct WithdrawalThresholdsSheet: View {
 
     private func loadCurrentValues() {
         for threshold in viewModel.withdrawalThresholds {
-            let key = "\(threshold.crypto)_\(threshold.exchange.rawValue)"
+            guard let exchange = viewModel.connectionExchangeMap[threshold.connectionId] else { continue }
+            let key = "\(threshold.crypto)_\(exchange.rawValue)"
             thresholdValues[key] = NSDecimalNumber(decimal: threshold.thresholdAmount).stringValue
         }
     }
