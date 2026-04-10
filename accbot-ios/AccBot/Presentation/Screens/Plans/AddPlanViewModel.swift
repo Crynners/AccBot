@@ -7,6 +7,8 @@ class AddPlanViewModel: ObservableObject {
     // MARK: - Published Properties
 
     @Published var selectedExchange: Exchange?
+    @Published var selectedConnection: ExchangeConnection?
+    @Published var availableConnections: [ExchangeConnection] = []
     @Published var selectedCrypto: String = "BTC"
     @Published var selectedFiat: String = "EUR"
     @Published var amount: String = ""
@@ -86,7 +88,8 @@ class AddPlanViewModel: ObservableObject {
     }
 
     var isValid: Bool {
-        guard selectedExchange != nil, !selectedCrypto.isEmpty, !selectedFiat.isEmpty else { return false }
+        guard selectedExchange != nil, selectedConnection != nil,
+              !selectedCrypto.isEmpty, !selectedFiat.isEmpty else { return false }
         return validationHint == nil
     }
 
@@ -119,6 +122,19 @@ class AddPlanViewModel: ObservableObject {
     func selectExchange(_ exchange: Exchange) {
         selectedExchange = exchange
 
+        // Load connections for this exchange
+        let isSandbox = deps.userPreferences.sandboxMode
+        let allConnections = deps.credentialsStore.getConfiguredConnections(
+            isSandbox: isSandbox,
+            using: deps.activeDatabase.exchangeConnectionDao
+        )
+        availableConnections = allConnections.filter { $0.exchange == exchange }
+        if availableConnections.count == 1 {
+            selectedConnection = availableConnections[0]
+        } else {
+            selectedConnection = nil
+        }
+
         // Reset crypto/fiat if not supported by this exchange
         if !exchange.supportedCryptos.contains(selectedCrypto) {
             selectedCrypto = exchange.supportedCryptos.first ?? "BTC"
@@ -145,7 +161,8 @@ class AddPlanViewModel: ObservableObject {
     }
 
     func createPlan() async -> Bool {
-        guard isValid, let exchange = selectedExchange else { return false }
+        guard isValid, let exchange = selectedExchange,
+              let connection = selectedConnection else { return false }
         guard let amountValue = Decimal(string: amount) else { return false }
 
         isSubmitting = true
@@ -167,6 +184,7 @@ class AddPlanViewModel: ObservableObject {
 
             let plan = DcaPlan(
                 exchange: exchange,
+                connectionId: connection.id,
                 crypto: selectedCrypto,
                 fiat: selectedFiat,
                 amount: amountValue,

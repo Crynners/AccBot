@@ -169,8 +169,9 @@ struct DashboardView: View {
             if !viewModel.plans.isEmpty {
                 Button {
                     let exchanges = Set(viewModel.plans.map(\.exchange))
-                    if exchanges.count == 1, let exchange = exchanges.first {
-                        router.navigate(to: .exchangeDetail(exchange))
+                    if exchanges.count == 1, let exchange = exchanges.first,
+                       let connection = try? dependencies.activeDatabase.exchangeConnectionDao.getDefaultByExchange(exchange) {
+                        router.navigate(to: .exchangeDetail(exchange, connection.id))
                     } else {
                         router.navigate(to: .exchangeManagement)
                     }

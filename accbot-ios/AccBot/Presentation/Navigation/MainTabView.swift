@@ -248,8 +248,8 @@ struct MainTabView: View {
             ImportCsvView(planId: planId)
         case .exchangeManagement:
             ExchangeManagementView()
-        case .exchangeDetail(let exchange):
-            ExchangeDetailView(exchange: exchange)
+        case .exchangeDetail(let exchange, let connectionId):
+            ExchangeDetailView(exchange: exchange, connectionId: connectionId)
         case .addExchange(let exchange):
             AddExchangeView(preselectedExchange: exchange)
         case .history(let crypto, let fiat):

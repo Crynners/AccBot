@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 class ExchangeManagementViewModel: ObservableObject {
-    @Published var connectedExchanges: [Exchange] = []
+    @Published var connectedConnections: [ExchangeConnection] = []
     @Published var availableExchanges: [Exchange] = []
     @Published var showExperimental: Bool = false
     private(set) var dependencies: AppDependencies?
@@ -27,14 +27,14 @@ class ExchangeManagementViewModel: ObservableObject {
 
     func loadExchanges() {
         let isSandbox = deps.userPreferences.sandboxMode
-        let configured = deps.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox, using: deps.activeDatabase.exchangeConnectionDao)
-        let allAvailable = ExchangeFilter.getAvailableExchanges(
+        connectedConnections = deps.credentialsStore.getConfiguredConnections(
+            isSandbox: isSandbox,
+            using: deps.activeDatabase.exchangeConnectionDao
+        )
+        availableExchanges = ExchangeFilter.getAvailableExchanges(
             isSandboxMode: isSandbox,
             showExperimental: showExperimental
         )
-
-        connectedExchanges = configured
-        availableExchanges = allAvailable.filter { !configured.contains($0) }
     }
 
     func setExperimentalEnabled(_ enabled: Bool) {

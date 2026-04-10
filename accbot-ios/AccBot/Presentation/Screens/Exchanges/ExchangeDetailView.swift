@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ExchangeDetailView: View {
     let exchange: Exchange
+    let connectionId: Int64
 
     @EnvironmentObject var dependencies: AppDependencies
     @EnvironmentObject var router: AppRouter
@@ -32,7 +33,7 @@ struct ExchangeDetailView: View {
 
     private var isConnected: Bool {
         let isSandbox = dependencies.userPreferences.sandboxMode
-        return dependencies.credentialsStore.has(exchange: exchange, isSandbox: isSandbox, using: dependencies.activeDatabase.exchangeConnectionDao)
+        return dependencies.credentialsStore.has(connectionId: connectionId, isSandbox: isSandbox)
     }
 
     @State private var plans: [DcaPlan] = []
@@ -77,6 +78,7 @@ struct ExchangeDetailView: View {
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
             credentials.selectedExchange = exchange
+            credentials.targetConnectionId = connectionId
             plans = (try? dependencies.activeDatabase.planDao.getPlansByExchange(exchange)) ?? []
             loadCachedBalances()
         }
@@ -818,9 +820,8 @@ struct ExchangeDetailView: View {
         let isSandbox = dependencies.userPreferences.sandboxMode
 
         guard let credentials = dependencies.credentialsStore.get(
-            for: exchange,
-            isSandbox: isSandbox,
-            using: dependencies.activeDatabase.exchangeConnectionDao
+            connectionId: connectionId,
+            isSandbox: isSandbox
         ) else {
             importResultMessage = String(localized: "Credentials not found")
             showImportResult = true
@@ -884,9 +885,8 @@ struct ExchangeDetailView: View {
         let isSandbox = dependencies.userPreferences.sandboxMode
 
         guard let credentials = dependencies.credentialsStore.get(
-            for: exchange,
-            isSandbox: isSandbox,
-            using: dependencies.activeDatabase.exchangeConnectionDao
+            connectionId: connectionId,
+            isSandbox: isSandbox
         ) else {
             refreshError = String(localized: "Credentials not found")
             return
@@ -928,7 +928,9 @@ struct ExchangeDetailView: View {
 
     private func deleteConnection() {
         let isSandbox = dependencies.userPreferences.sandboxMode
-        dependencies.credentialsStore.delete(exchange: exchange, isSandbox: isSandbox, using: dependencies.activeDatabase.exchangeConnectionDao)
+        dependencies.credentialsStore.delete(connectionId: connectionId, isSandbox: isSandbox)
+        // Clean up the connection record itself
+        try? dependencies.activeDatabase.exchangeConnectionDao.deleteById(connectionId)
         // Clean up cached balances
         try? dependencies.activeDatabase.exchangeBalanceDao.deleteByExchange(exchange)
         router.pop()
@@ -948,6 +950,6 @@ struct ExchangeDetailView: View {
 
 #Preview {
     NavigationStack {
-        ExchangeDetailView(exchange: .binance)
+        ExchangeDetailView(exchange: .binance, connectionId: 1)
     }
 }

@@ -15,6 +15,8 @@ enum CredentialScanTarget {
 class CredentialFormDelegate: ObservableObject {
     // MARK: - Credential State
     @Published var selectedExchange: Exchange?
+    /// When set, save overwrites this connection's credentials. When nil, a new connection is created.
+    var targetConnectionId: Int64?
     @Published var apiKey = ""
     @Published var apiSecret = ""
     @Published var passphrase = ""
@@ -93,7 +95,16 @@ class CredentialFormDelegate: ObservableObject {
             let valid = try await api.validateCredentials()
 
             if valid {
-                try credentialsStore.save(credentials, isSandbox: isSandbox, using: exchangeConnectionDao)
+                if let connectionId = targetConnectionId {
+                    // Update existing connection
+                    try credentialsStore.save(credentials, connectionId: connectionId, isSandbox: isSandbox)
+                } else {
+                    // Create new connection
+                    let connectionId = try exchangeConnectionDao.insert(
+                        ExchangeConnection(exchange: exchange)
+                    )
+                    try credentialsStore.save(credentials, connectionId: connectionId, isSandbox: isSandbox)
+                }
                 isValid = true
                 isValidating = false
                 return true

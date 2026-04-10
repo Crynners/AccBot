@@ -3,7 +3,7 @@ import Foundation
 /// Represents one set of API credentials for one exchange.
 /// Multiple connections can target the same exchange (e.g. two Coinmate sub-accounts
 /// named "Hlavni" and "Sporeni").
-struct ExchangeConnection: Identifiable, Equatable, Sendable {
+struct ExchangeConnection: Identifiable, Equatable, Hashable, Sendable {
     let id: Int64
     let exchange: Exchange
     let name: String       // Empty = "Vychozi" (default envelope)

@@ -375,6 +375,7 @@ struct EditPlanView: View {
             let updatedPlan = DcaPlan(
                 id: existingPlan.id,
                 exchange: existingPlan.exchange,
+                connectionId: existingPlan.connectionId,
                 crypto: selectedCrypto,
                 fiat: selectedFiat,
                 amount: amountValue,
@@ -387,6 +388,8 @@ struct EditPlanView: View {
                     ? withdrawalAddress.trimmingCharacters(in: .whitespaces)
                     : nil,
                 targetAmount: targetAmount.isEmpty ? nil : Decimal(string: targetAmount),
+                name: existingPlan.name,
+                displayOrder: existingPlan.displayOrder,
                 createdAt: existingPlan.createdAt,
                 lastExecutedAt: existingPlan.lastExecutedAt,
                 nextExecutionAt: nextExecution

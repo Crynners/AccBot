@@ -323,11 +323,12 @@ private class FirstPlanViewModel: ObservableObject {
         guard let amountValue = Decimal(string: amount), amountValue > 0 else { return false }
 
         let isSandbox = dependencies.userPreferences.sandboxMode
-        let configuredExchanges = dependencies.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox, using: dependencies.activeDatabase.exchangeConnectionDao)
-        guard let exchange = configuredExchanges.first else {
+        let configuredConnections = dependencies.credentialsStore.getConfiguredConnections(isSandbox: isSandbox, using: dependencies.activeDatabase.exchangeConnectionDao)
+        guard let connection = configuredConnections.first else {
             errorMessage = String(localized: "No exchange configured.")
             return false
         }
+        let exchange = connection.exchange
 
         let now = Date()
         let nextExecution = Calendar.current.date(
@@ -338,6 +339,7 @@ private class FirstPlanViewModel: ObservableObject {
 
         let plan = DcaPlan(
             exchange: exchange,
+            connectionId: connection.id,
             crypto: selectedCrypto,
             fiat: selectedFiat,
             amount: amountValue,

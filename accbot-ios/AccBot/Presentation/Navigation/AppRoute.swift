@@ -10,7 +10,7 @@ enum AppRoute: Hashable {
 
     // Exchange screens
     case exchangeManagement
-    case exchangeDetail(Exchange)
+    case exchangeDetail(Exchange, Int64)
     case addExchange(Exchange?)
 
     // History screens

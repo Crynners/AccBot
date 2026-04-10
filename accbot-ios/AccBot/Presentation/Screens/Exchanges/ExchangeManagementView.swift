@@ -11,13 +11,11 @@ struct ExchangeManagementView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xxl) {
-                // Connected exchanges
+                // Connected connections
                 connectedSection
 
-                // Available exchanges
-                if !viewModel.availableExchanges.isEmpty {
-                    availableSection
-                }
+                // Available exchanges (always shown)
+                availableSection
 
                 // Experimental toggle
                 experimentalToggle
@@ -46,12 +44,12 @@ struct ExchangeManagementView: View {
 
                 Spacer()
 
-                Text("\(viewModel.connectedExchanges.count)")
+                Text("\(viewModel.connectedConnections.count)")
                     .font(AccBotFonts.caption)
                     .foregroundStyle(colors.onSurfaceVariant)
             }
 
-            if viewModel.connectedExchanges.isEmpty {
+            if viewModel.connectedConnections.isEmpty {
                 EmptyStateView(
                     systemImage: "link.badge.plus",
                     title: String(localized: "No Exchanges Connected"),
@@ -60,13 +58,12 @@ struct ExchangeManagementView: View {
                 .frame(height: 150)
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: Spacing.sm)], spacing: Spacing.sm) {
-                    ForEach(viewModel.connectedExchanges) { exchange in
-                        ExchangeTile(
-                            exchange: exchange,
-                            isConnected: true,
+                    ForEach(viewModel.connectedConnections) { connection in
+                        ConnectionTile(
+                            connection: connection,
                             colors: colors,
                             onTap: {
-                                router.navigate(to: .exchangeDetail(exchange))
+                                router.navigate(to: .exchangeDetail(connection.exchange, connection.id))
                             }
                         )
                     }
@@ -79,7 +76,7 @@ struct ExchangeManagementView: View {
 
     private var availableSection: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            Text(String(localized: "Available"))
+            Text(String(localized: "Add Connection"))
                 .font(AccBotFonts.titleSmall)
                 .foregroundStyle(colors.onSurface)
 
@@ -87,7 +84,6 @@ struct ExchangeManagementView: View {
                 ForEach(viewModel.availableExchanges) { exchange in
                     ExchangeTile(
                         exchange: exchange,
-                        isConnected: false,
                         showExperimentalBadge: !exchange.isStable,
                         colors: colors,
                         onTap: {
@@ -144,11 +140,52 @@ struct ExchangeManagementView: View {
     }
 }
 
-// MARK: - Exchange Tile (Grid item)
+// MARK: - Connection Tile (Grid item for connected connections)
+
+private struct ConnectionTile: View {
+    let connection: ExchangeConnection
+    let colors: AccBotColors
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: Spacing.sm) {
+                Image(connection.exchange.logoName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 48, height: 48)
+                    .clipShape(Circle())
+
+                Text(connection.displayLabel)
+                    .font(AccBotFonts.label)
+                    .foregroundStyle(colors.onSurface)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.success)
+                        .accessibilityHidden(true)
+                    Text(String(localized: "Connected"))
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.success)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(Spacing.lg)
+            .background(colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Exchange Tile (Grid item for available exchanges)
 
 private struct ExchangeTile: View {
     let exchange: Exchange
-    let isConnected: Bool
     var showExperimentalBadge: Bool = false
     let colors: AccBotColors
     let onTap: () -> Void
@@ -173,18 +210,10 @@ private struct ExchangeTile: View {
                         .foregroundStyle(colors.warning)
                         .lineLimit(1)
                 } else {
-                    HStack(spacing: 4) {
-                        Image(systemName: isConnected ? "checkmark.circle.fill" : "circle")
-                            .font(AccBotFonts.captionSmall)
-                            .foregroundStyle(isConnected ? colors.success : colors.onSurfaceVariant)
-                            .accessibilityHidden(true)
-                        Text(isConnected
-                             ? String(localized: "Connected")
-                             : String(localized: "\(exchange.supportedCryptos.count) cryptos"))
-                            .font(AccBotFonts.captionSmall)
-                            .foregroundStyle(isConnected ? colors.success : colors.onSurfaceVariant)
-                            .lineLimit(1)
-                    }
+                    Text(String(localized: "\(exchange.supportedCryptos.count) cryptos"))
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .lineLimit(1)
                 }
             }
             .frame(maxWidth: .infinity)

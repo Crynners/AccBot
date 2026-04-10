@@ -25,6 +25,11 @@ struct AddPlanView: View {
                 exchangeSection
 
                 if viewModel.selectedExchange != nil {
+                    // Connection picker (only if multiple connections)
+                    if viewModel.availableConnections.count > 1 {
+                        connectionSection
+                    }
+
                     // Crypto selection
                     cryptoSection
 
@@ -299,6 +304,32 @@ struct AddPlanView: View {
         .accessibilityLabel(exchange.displayName)
         .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
         .accessibilityValue(isSelected ? String(localized: "Selected") : String(localized: "Not selected"))
+    }
+
+    // MARK: - Connection Selection
+
+    private var connectionSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            sectionHeader(String(localized: "Connection"))
+
+            FlowLayout(spacing: Spacing.sm) {
+                ForEach(viewModel.availableConnections) { connection in
+                    let isSelected = viewModel.selectedConnection?.id == connection.id
+                    Button {
+                        viewModel.selectedConnection = connection
+                    } label: {
+                        Text(connection.displayName)
+                            .font(AccBotFonts.label)
+                            .foregroundStyle(isSelected ? colors.onPrimary : colors.onSurface)
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.vertical, Spacing.sm)
+                            .background(isSelected ? colors.primary : colors.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 
     // MARK: - Crypto Selection

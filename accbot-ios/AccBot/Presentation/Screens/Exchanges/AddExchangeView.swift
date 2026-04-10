@@ -180,20 +180,10 @@ struct AddExchangeView: View {
                 isSandboxMode: isSandbox,
                 showExperimental: dependencies.userPreferences.showExperimentalExchanges
             )
-            let alreadyConfigured = dependencies.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox, using: dependencies.activeDatabase.exchangeConnectionDao)
-            let unconfigured = available.filter { !alreadyConfigured.contains($0) }
 
-            if unconfigured.isEmpty {
-                EmptyStateView(
-                    systemImage: "checkmark.circle",
-                    title: String(localized: "All Exchanges Connected"),
-                    subtitle: String(localized: "You have connected all available exchanges")
-                )
-            } else {
-                LazyVGrid(columns: exchangeColumns, spacing: Spacing.md) {
-                    ForEach(unconfigured) { exchange in
-                        exchangeGridItem(exchange)
-                    }
+            LazyVGrid(columns: exchangeColumns, spacing: Spacing.md) {
+                ForEach(available) { exchange in
+                    exchangeGridItem(exchange)
                 }
             }
 
