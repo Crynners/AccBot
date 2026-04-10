@@ -80,7 +80,20 @@ class PlanFormDelegate(
     }
 
     fun selectFiat(fiat: String) {
-        _state.update { it.copy(selectedFiat = fiat) }
+        val exchange = currentExchange
+        val staticMin = exchange?.minOrderSize?.get(fiat)
+        _state.update {
+            val currentAmount = it.amount.toBigDecimalOrNull()
+            // If the current amount is below the new fiat's minimum (or was the old
+            // fiat's default minimum), bump it up so the user doesn't unknowingly
+            // submit an under-minimum plan.
+            val newAmount = if (staticMin != null && (currentAmount == null || currentAmount < staticMin)) {
+                staticMin.stripTrailingZeros().toPlainString()
+            } else {
+                it.amount
+            }
+            it.copy(selectedFiat = fiat, amount = newAmount)
+        }
         updateMonthlyCostEstimate()
         updateMinOrderSize()
     }

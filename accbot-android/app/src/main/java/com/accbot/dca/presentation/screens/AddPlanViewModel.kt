@@ -3,6 +3,7 @@ package com.accbot.dca.presentation.screens
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.CredentialsStore
+import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.data.repository.ExchangeConnectionRepository
 import com.accbot.dca.domain.model.DcaFrequency
@@ -62,6 +63,7 @@ class AddPlanViewModel @Inject constructor(
     private val createDcaPlanUseCase: CreateDcaPlanUseCase,
     private val userPreferences: UserPreferences,
     private val connectionRepository: ExchangeConnectionRepository,
+    private val dcaPlanDao: DcaPlanDao,
     calculateMonthlyCost: CalculateMonthlyCostUseCase,
     minOrderSizeRepository: MinOrderSizeRepository
 ) : ViewModel() {
@@ -72,7 +74,8 @@ class AddPlanViewModel @Inject constructor(
         validateAndSaveCredentialsUseCase = validateAndSaveCredentialsUseCase,
         userPreferences = userPreferences,
         coroutineScope = viewModelScope,
-        connectionRepository = connectionRepository
+        connectionRepository = connectionRepository,
+        dcaPlanDao = dcaPlanDao
     )
 
     private val _localState = MutableStateFlow(AddPlanUiState())

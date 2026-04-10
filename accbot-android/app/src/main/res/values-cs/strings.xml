@@ -10,6 +10,8 @@
     <string name="common_move_down">Posunout dolů</string>
     <string name="plan_details_name_hint">např. Dlouhodobé spoření, Měsíční BTC…</string>
     <string name="plan_details_add_name">Přidat název plánu</string>
+    <string name="import_api_multi_plan_warning">Toto pripojeni ma %1$d dalsi(ch) plan(u). Import stahne VSECHNY obchody z uctu burzy, ne jen obchody tohoto planu. Duplicitni transakce se filtruji automaticky.</string>
+    <string name="add_plan_multi_plan_warning">Toto pripojeni uz ma %1$d plan(u). Vsechny plany na jednom pripojeni sdili jeden ucet burzy, takze transakce importovane pres API budou viditelne ve vsech planech.</string>
     <string name="common_retry">Zkusit znovu</string>
     <string name="common_skip">Přeskočit</string>
     <string name="common_clear">Vymazat</string>

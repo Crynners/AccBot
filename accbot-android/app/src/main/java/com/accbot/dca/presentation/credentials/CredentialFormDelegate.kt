@@ -53,6 +53,8 @@ data class CredentialFormState(
      * "create new connection" mode and must fill the credentials form.
      */
     val selectedConnectionId: Long? = null,
+    /** Number of existing plans on the selected connection (for multi-plan warning). */
+    val existingPlansOnSelectedConnection: Int = 0,
     /**
      * True between [selectExchange]/[initWithExchange] and the async load of existing
      * connections completing. The UI must disable the Validate button while this is true,
@@ -89,7 +91,8 @@ class CredentialFormDelegate(
     private val validateAndSaveCredentialsUseCase: ValidateAndSaveCredentialsUseCase,
     private val userPreferences: UserPreferences,
     private val coroutineScope: CoroutineScope,
-    private val connectionRepository: ExchangeConnectionRepository? = null
+    private val connectionRepository: ExchangeConnectionRepository? = null,
+    private val dcaPlanDao: com.accbot.dca.data.local.DcaPlanDao? = null
 ) {
     private val _state = MutableStateFlow(CredentialFormState())
     val state: StateFlow<CredentialFormState> = _state.asStateFlow()
@@ -191,7 +194,8 @@ class CredentialFormDelegate(
 
     /**
      * User picked an existing connection from [CredentialFormState.existingConnections].
-     * Skips the credentials form — plan creation will reuse the existing envelope.
+     * Skips the credentials form - plan creation will reuse the existing envelope.
+     * Also loads the number of existing plans on that connection for a multi-plan warning.
      */
     fun selectExistingConnection(connectionId: Long) {
         _state.update {
@@ -199,8 +203,13 @@ class CredentialFormDelegate(
                 selectedConnectionId = connectionId,
                 hasCredentials = true,
                 credentialsValid = true,
+                existingPlansOnSelectedConnection = 0,
                 credentialsError = null, credentialsErrorRes = 0
             )
+        }
+        coroutineScope.launch {
+            val planCount = dcaPlanDao?.countPlansByConnection(connectionId) ?: 0
+            _state.update { it.copy(existingPlansOnSelectedConnection = planCount) }
         }
     }
 

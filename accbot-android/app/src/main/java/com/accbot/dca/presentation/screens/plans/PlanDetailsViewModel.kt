@@ -54,7 +54,9 @@ data class PlanDetailsUiState(
     val apiImportProgress: String = "",
     val apiImportResult: ApiImportResultState? = null,
     val showImportDialog: Boolean = false,
-    val importSinceMillis: Long? = null
+    val importSinceMillis: Long? = null,
+    /** Number of OTHER plans on the same connection. When > 0, import dialog shows a warning. */
+    val otherPlansOnSameConnection: Int = 0
 )
 
 @HiltViewModel
@@ -95,6 +97,10 @@ class PlanDetailsViewModel @Inject constructor(
 
                 val plan = planEntity.toDomain()
 
+                // Check how many OTHER plans share the same connection (for import warning)
+                val totalPlansOnConnection = dcaPlanDao.countPlansByConnection(planEntity.connectionId)
+                val otherPlans = (totalPlansOnConnection - 1).coerceAtLeast(0)
+
                 // Load transactions for this plan
                 transactionDao.getTransactionsByPlan(planId).collect { transactionEntities ->
                     val transactions = transactionEntities.map { it.toDomain() }
@@ -121,7 +127,8 @@ class PlanDetailsViewModel @Inject constructor(
                             averagePrice = averagePrice,
                             transactionCount = completedTransactions.size,
                             timeUntilNextExecution = timeUntilNext,
-                            isLoading = false
+                            isLoading = false,
+                            otherPlansOnSameConnection = otherPlans
                         )
                     }
 

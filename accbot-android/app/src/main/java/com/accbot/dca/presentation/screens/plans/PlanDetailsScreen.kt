@@ -177,7 +177,8 @@ fun PlanDetailsScreen(
             sinceMillis = uiState.importSinceMillis,
             onSinceDateChanged = { viewModel.setImportSinceDate(it) },
             onConfirm = { viewModel.confirmImport() },
-            onDismiss = { viewModel.dismissImportDialog() }
+            onDismiss = { viewModel.dismissImportDialog() },
+            otherPlansOnSameConnection = uiState.otherPlansOnSameConnection
         )
     }
 

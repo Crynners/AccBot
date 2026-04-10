@@ -283,6 +283,26 @@ fun AddPlanScreen(
                 }
             }
 
+            // Multi-plan warning (when adding to a connection that already has plans)
+            if (cred.selectedConnectionId != null && cred.existingPlansOnSelectedConnection > 0) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.add_plan_multi_plan_warning,
+                            cred.existingPlansOnSelectedConnection
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+
             // Plan form (crypto, fiat, amount, frequency, strategy, withdrawal, target)
             if (cred.selectedExchange != null) {
                 PlanFormContent(

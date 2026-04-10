@@ -12,6 +12,8 @@
     <string name="common_move_down">Move down</string>
     <string name="plan_details_name_hint">e.g. Long-term savings, Monthly BTC…</string>
     <string name="plan_details_add_name">Add plan name</string>
+    <string name="import_api_multi_plan_warning">This connection has %1$d other plan(s). Import will fetch ALL trades from the exchange account, not just trades from this plan. Duplicate transactions are filtered automatically.</string>
+    <string name="add_plan_multi_plan_warning">This connection already has %1$d plan(s). All plans on the same connection share one exchange account, so API-imported transactions will be visible across all plans.</string>
     <string name="common_retry">Retry</string>
     <string name="common_skip">Skip</string>
     <string name="common_clear">Clear</string>
