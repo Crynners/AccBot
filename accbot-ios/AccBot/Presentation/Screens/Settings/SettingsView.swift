@@ -90,7 +90,7 @@ struct SettingsView: View {
                 HStack {
                     Label(String(localized: "Manage Exchanges"), systemImage: "building.columns")
                     Spacer()
-                    Text(String(localized: "\(viewModel.connectedExchanges.count) connected"))
+                    Text(String(localized: "\(viewModel.connectedConnectionCount) connected"))
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.onSurfaceVariant)
                     Image(systemName: "chevron.right")

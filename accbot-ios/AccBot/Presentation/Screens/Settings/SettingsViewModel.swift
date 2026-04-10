@@ -3,7 +3,7 @@ import LocalAuthentication
 
 @MainActor
 final class SettingsViewModel: ObservableObject {
-    @Published var connectedExchanges: [Exchange] = []
+    @Published var connectedConnectionCount: Int = 0
     @Published var deleteTarget: DeleteTarget?
     @Published var biometricType: BiometricType = .none
     @Published var activeAlert: AlertType?
@@ -120,7 +120,7 @@ final class SettingsViewModel: ObservableObject {
 
     func loadConnectedExchanges() {
         let isSandbox = deps.userPreferences.isSandboxMode()
-        connectedExchanges = deps.credentialsStore.getConfiguredExchanges(isSandbox: isSandbox, using: deps.activeDatabase.exchangeConnectionDao)
+        connectedConnectionCount = deps.credentialsStore.getConfiguredConnections(isSandbox: isSandbox, using: deps.activeDatabase.exchangeConnectionDao).count
     }
 
     func loadCounts() {
