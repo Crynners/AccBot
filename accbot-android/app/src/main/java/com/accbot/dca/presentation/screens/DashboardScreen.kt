@@ -81,54 +81,57 @@ import java.math.RoundingMode
 import kotlinx.coroutines.delay
 
 /**
- * Remembers drag-to-reorder state for a LazyColumn of plan cards.
+ * State holder for drag-to-reorder in a LazyColumn of plan cards.
+ * Long-press on a card activates drag mode; dragging past the midpoint
+ * of an adjacent item triggers a swap.
  */
-@Composable
-private fun rememberPlanDragState(
-    onReorder: (from: Int, to: Int) -> Unit
-): PlanDragState {
-    return remember { PlanDragState(onReorder) }
-}
-
 private class PlanDragState(
     private val onReorder: (Int, Int) -> Unit
 ) {
     var draggedIndex by mutableIntStateOf(-1)
-        private set
     var dragOffset by mutableFloatStateOf(0f)
-        private set
-    private var itemHeights = mutableMapOf<Int, Int>()
+    private var accumulatedOffset = 0f
+    private var itemHeight = 0
 
-    fun registerItemHeight(index: Int, height: Int) {
-        itemHeights[index] = height
-    }
-
-    fun startDrag(index: Int) {
+    fun startDrag(index: Int, heightPx: Int) {
         draggedIndex = index
         dragOffset = 0f
+        accumulatedOffset = 0f
+        itemHeight = heightPx
     }
 
-    fun drag(delta: Float) {
-        if (draggedIndex < 0) return
-        dragOffset += delta
+    fun drag(delta: Float, totalItems: Int) {
+        if (draggedIndex < 0 || itemHeight == 0) return
+        accumulatedOffset += delta
+        dragOffset = accumulatedOffset
 
-        val draggedHeight = itemHeights[draggedIndex] ?: return
-        // Check if we've dragged past the midpoint of the next/previous item
-        if (dragOffset > draggedHeight * 0.5f && draggedIndex < itemHeights.size - 1) {
+        // Swap when dragged past midpoint of adjacent item
+        val threshold = itemHeight * 0.5f
+        if (accumulatedOffset > threshold && draggedIndex < totalItems - 1) {
             onReorder(draggedIndex, draggedIndex + 1)
-            draggedIndex = draggedIndex + 1
-            dragOffset -= draggedHeight
-        } else if (dragOffset < -draggedHeight * 0.5f && draggedIndex > 0) {
+            draggedIndex += 1
+            accumulatedOffset -= itemHeight
+            dragOffset = accumulatedOffset
+        } else if (accumulatedOffset < -threshold && draggedIndex > 0) {
             onReorder(draggedIndex, draggedIndex - 1)
-            draggedIndex = draggedIndex - 1
-            dragOffset += draggedHeight
+            draggedIndex -= 1
+            accumulatedOffset += itemHeight
+            dragOffset = accumulatedOffset
         }
     }
 
     fun endDrag() {
         draggedIndex = -1
         dragOffset = 0f
+        accumulatedOffset = 0f
     }
+}
+
+@Composable
+private fun rememberPlanDragState(
+    onReorder: (from: Int, to: Int) -> Unit
+): PlanDragState {
+    return remember { PlanDragState(onReorder) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -308,9 +311,8 @@ fun DashboardScreen(
                                 currentTime = currentTime,
                                 isDragging = index == landscapeDragState.draggedIndex,
                                 dragOffset = if (index == landscapeDragState.draggedIndex) landscapeDragState.dragOffset else 0f,
-                                onRegisterHeight = { height -> landscapeDragState.registerItemHeight(index, height) },
-                                onDragStart = { landscapeDragState.startDrag(index) },
-                                onDrag = { delta -> landscapeDragState.drag(delta) },
+                                onDragStart = { heightPx -> landscapeDragState.startDrag(index, heightPx) },
+                                onDrag = { delta -> landscapeDragState.drag(delta, uiState.activePlans.size) },
                                 onDragEnd = { landscapeDragState.endDrag() }
                             )
                         }
@@ -423,9 +425,8 @@ fun DashboardScreen(
                             currentTime = currentTime,
                             isDragging = index == portraitDragState.draggedIndex,
                             dragOffset = if (index == portraitDragState.draggedIndex) portraitDragState.dragOffset else 0f,
-                            onRegisterHeight = { height -> portraitDragState.registerItemHeight(index, height) },
-                            onDragStart = { portraitDragState.startDrag(index) },
-                            onDrag = { delta -> portraitDragState.drag(delta) },
+                            onDragStart = { heightPx -> portraitDragState.startDrag(index, heightPx) },
+                            onDrag = { delta -> portraitDragState.drag(delta, uiState.activePlans.size) },
                             onDragEnd = { portraitDragState.endDrag() }
                         )
                     }
@@ -1013,8 +1014,7 @@ internal fun DcaPlanCard(
     currentTime: Long = System.currentTimeMillis(),
     isDragging: Boolean = false,
     dragOffset: Float = 0f,
-    onRegisterHeight: ((Int) -> Unit)? = null,
-    onDragStart: (() -> Unit)? = null,
+    onDragStart: ((heightPx: Int) -> Unit)? = null,
     onDrag: ((Float) -> Unit)? = null,
     onDragEnd: (() -> Unit)? = null
 ) {
@@ -1022,6 +1022,11 @@ internal fun DcaPlanCard(
     val successCol = successColor()
     val accentCol = accentColor()
     val context = LocalContext.current
+    var cardHeight by remember { mutableIntStateOf(0) }
+    // Keep references fresh so pointerInput(Unit) always calls the latest lambdas
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
+    val currentOnDrag by rememberUpdatedState(onDrag)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1035,8 +1040,23 @@ internal fun DcaPlanCard(
                 }
             }
             .onGloballyPositioned { coordinates ->
-                onRegisterHeight?.invoke(coordinates.size.height)
+                cardHeight = coordinates.size.height
             }
+            .then(
+                if (onDragStart != null) {
+                    Modifier.pointerInput(Unit) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { currentOnDragStart?.invoke(cardHeight) },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                currentOnDrag?.invoke(dragAmount.y)
+                            },
+                            onDragEnd = { currentOnDragEnd?.invoke() },
+                            onDragCancel = { currentOnDragEnd?.invoke() }
+                        )
+                    }
+                } else Modifier
+            )
             .then(if (onClick != null && !isDragging) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -1045,7 +1065,7 @@ internal fun DcaPlanCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 4.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
+                .padding(start = if (isDragging) 4.dp else 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1053,23 +1073,12 @@ internal fun DcaPlanCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Drag handle
-                if (onDragStart != null) {
+                // Drag handle - only visible while dragging
+                if (isDragging) {
                     Icon(
                         imageVector = Icons.Default.DragHandle,
                         contentDescription = "Reorder",
                         modifier = Modifier
-                            .pointerInput(Unit) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = { onDragStart() },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        onDrag?.invoke(dragAmount.y)
-                                    },
-                                    onDragEnd = { onDragEnd?.invoke() },
-                                    onDragCancel = { onDragEnd?.invoke() }
-                                )
-                            }
                             .padding(end = 8.dp)
                             .size(24.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
