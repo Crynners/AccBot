@@ -578,17 +578,21 @@ class DashboardViewModel @Inject constructor(
     }
 
     /**
-     * Move a plan up or down in the dashboard display order.
-     * Swaps displayOrder values between the plan at [fromIndex] and [toIndex].
+     * Move a plan from [fromIndex] to [toIndex] in the dashboard display order.
+     * Re-assigns sequential displayOrder values (0, 1, 2, ...) to all plans.
      */
-    fun reorderPlan(fromIndex: Int, toIndex: Int) {
-        val plans = _uiState.value.activePlans
+    fun reorderPlans(fromIndex: Int, toIndex: Int) {
+        val plans = _uiState.value.activePlans.toMutableList()
         if (fromIndex !in plans.indices || toIndex !in plans.indices) return
-        val fromPlan = plans[fromIndex].plan
-        val toPlan = plans[toIndex].plan
+        if (fromIndex == toIndex) return
+        val moved = plans.removeAt(fromIndex)
+        plans.add(toIndex, moved)
+        // Update UI immediately for responsive feel
+        _uiState.update { it.copy(activePlans = plans) }
+        // Persist new order
+        val planOrders = plans.mapIndexed { index, pwb -> pwb.plan.id to index }
         viewModelScope.launch {
-            dcaPlanDao.updateDisplayOrder(fromPlan.id, toPlan.displayOrder)
-            dcaPlanDao.updateDisplayOrder(toPlan.id, fromPlan.displayOrder)
+            dcaPlanDao.updateAllDisplayOrders(planOrders)
         }
     }
 
