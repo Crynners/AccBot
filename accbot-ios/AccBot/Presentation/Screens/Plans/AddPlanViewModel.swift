@@ -133,6 +133,17 @@ class AddPlanViewModel: ObservableObject {
         }
     }
 
+    /// Called when user changes fiat currency. Bumps amount to new minimum if needed.
+    func selectFiat(_ fiat: String) {
+        selectedFiat = fiat
+        guard let exchange = selectedExchange,
+              let minSize = exchange.minOrderSize[fiat] else { return }
+        let currentAmount = Decimal(string: amount)
+        if currentAmount == nil || currentAmount! < minSize {
+            amount = "\(minSize)"
+        }
+    }
+
     func createPlan() async -> Bool {
         guard isValid, let exchange = selectedExchange else { return false }
         guard let amountValue = Decimal(string: amount) else { return false }

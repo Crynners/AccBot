@@ -24,6 +24,8 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
     var createdAt: Double    // timeIntervalSince1970
     var lastExecutedAt: Double?
     var nextExecutionAt: Double?
+    var name: String = ""           // Optional custom label
+    var displayOrder: Int = 0       // Dashboard sort order (lower = higher)
     var networkRetryCount: Int
     var nextNetworkRetryAt: Double?
     var originalScheduledAt: Double?
@@ -52,6 +54,8 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
             withdrawalEnabled: withdrawalEnabled,
             withdrawalAddress: withdrawalAddress,
             targetAmount: targetAmount.flatMap { Decimal(string: $0) },
+            name: name,
+            displayOrder: displayOrder,
             createdAt: Date(timeIntervalSince1970: createdAt),
             lastExecutedAt: lastExecutedAt.map { Date(timeIntervalSince1970: $0) },
             nextExecutionAt: nextExecutionAt.map { Date(timeIntervalSince1970: $0) },
@@ -77,6 +81,8 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
             withdrawalEnabled: plan.withdrawalEnabled,
             withdrawalAddress: plan.withdrawalAddress,
             targetAmount: plan.targetAmount.map { "\($0)" },
+            name: plan.name,
+            displayOrder: plan.displayOrder,
             createdAt: plan.createdAt.timeIntervalSince1970,
             lastExecutedAt: plan.lastExecutedAt?.timeIntervalSince1970,
             nextExecutionAt: plan.nextExecutionAt?.timeIntervalSince1970,

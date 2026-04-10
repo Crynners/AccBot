@@ -14,7 +14,10 @@ final class DcaPlanDao {
 
     func getAll() throws -> [DcaPlan] {
         try dbPool.read { db in
-            try DcaPlanRecord.fetchAll(db).map { $0.toDomain() }
+            try DcaPlanRecord
+                .order(Column("displayOrder").asc, Column("createdAt").desc)
+                .fetchAll(db)
+                .map { $0.toDomain() }
         }
     }
 
@@ -117,6 +120,24 @@ final class DcaPlanDao {
     func deleteAll() throws {
         try dbPool.write { db in
             _ = try DcaPlanRecord.deleteAll(db)
+        }
+    }
+
+    func renamePlan(id: Int64, name: String) throws {
+        try dbPool.write { db in
+            try db.execute(
+                sql: "UPDATE dca_plans SET name = ? WHERE id = ?",
+                arguments: [name, id]
+            )
+        }
+    }
+
+    func updateDisplayOrder(id: Int64, displayOrder: Int) throws {
+        try dbPool.write { db in
+            try db.execute(
+                sql: "UPDATE dca_plans SET displayOrder = ? WHERE id = ?",
+                arguments: [displayOrder, id]
+            )
         }
     }
 
@@ -263,7 +284,10 @@ final class DcaPlanDao {
 
     func observeAll() -> DatabasePublishers.Value<[DcaPlan]> {
         ValueObservation.tracking { db in
-            try DcaPlanRecord.fetchAll(db).map { $0.toDomain() }
+            try DcaPlanRecord
+                .order(Column("displayOrder").asc, Column("createdAt").desc)
+                .fetchAll(db)
+                .map { $0.toDomain() }
         }
         .publisher(in: dbPool, scheduling: .immediate)
     }
@@ -272,6 +296,7 @@ final class DcaPlanDao {
         ValueObservation.tracking { db in
             try DcaPlanRecord
                 .filter(Column("isEnabled") == true)
+                .order(Column("displayOrder").asc, Column("createdAt").desc)
                 .fetchAll(db)
                 .map { $0.toDomain() }
         }

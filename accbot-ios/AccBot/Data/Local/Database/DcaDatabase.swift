@@ -343,6 +343,12 @@ final class DcaDatabase {
             try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_bal_exchange ON exchange_balances(exchange)")
         }
 
+        // Add optional plan name and display order for Dashboard sorting
+        migrator.registerMigration("v7_plan_name_order") { db in
+            try db.execute(sql: "ALTER TABLE dca_plans ADD COLUMN name TEXT NOT NULL DEFAULT ''")
+            try db.execute(sql: "ALTER TABLE dca_plans ADD COLUMN displayOrder INTEGER NOT NULL DEFAULT 0")
+        }
+
         try migrator.migrate(dbPool)
     }
 }

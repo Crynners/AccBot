@@ -31,4 +31,12 @@ struct ExchangeConnection: Identifiable, Equatable, Sendable {
         }
         return "\(exchange.displayName) - \(name)"
     }
+
+    /// Name for display in connection lists. Returns "Vychozi pripojeni" if empty.
+    var displayName: String {
+        if name.isEmpty {
+            return String(localized: "Default connection")
+        }
+        return name
+    }
 }

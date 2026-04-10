@@ -330,7 +330,7 @@ struct AddPlanView: View {
                 label: { $0 },
                 icon: { FiatIcon(symbol: $0, size: 18) },
                 wrapping: true,
-                onSelect: { viewModel.selectedFiat = $0 }
+                onSelect: { viewModel.selectFiat($0) }
             )
         }
     }

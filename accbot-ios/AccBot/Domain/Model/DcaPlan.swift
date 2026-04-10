@@ -15,6 +15,10 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
     let withdrawalEnabled: Bool
     let withdrawalAddress: String?
     let targetAmount: Decimal?
+    /// Optional custom label for the plan
+    let name: String
+    /// Dashboard sort order (lower = higher)
+    let displayOrder: Int
     let createdAt: Date
     let lastExecutedAt: Date?
     let nextExecutionAt: Date?
@@ -40,6 +44,8 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
         withdrawalEnabled: Bool = false,
         withdrawalAddress: String? = nil,
         targetAmount: Decimal? = nil,
+        name: String = "",
+        displayOrder: Int = 0,
         createdAt: Date = Date(),
         lastExecutedAt: Date? = nil,
         nextExecutionAt: Date? = nil,
@@ -61,6 +67,8 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
         self.withdrawalEnabled = withdrawalEnabled
         self.withdrawalAddress = withdrawalAddress
         self.targetAmount = targetAmount
+        self.name = name
+        self.displayOrder = displayOrder
         self.createdAt = createdAt
         self.lastExecutedAt = lastExecutedAt
         self.nextExecutionAt = nextExecutionAt

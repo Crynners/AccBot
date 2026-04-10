@@ -251,7 +251,16 @@ struct EditPlanView: View {
                 label: { $0 },
                 icon: { FiatIcon(symbol: $0, size: 18) },
                 wrapping: true,
-                onSelect: { selectedFiat = $0 }
+                onSelect: { fiat in
+                    selectedFiat = fiat
+                    // Bump amount to new minimum if below
+                    if let exchange = plan?.exchange,
+                       let minSize = exchange.minOrderSize[fiat],
+                       let current = Decimal(string: amount),
+                       current < minSize {
+                        amount = "\(minSize)"
+                    }
+                }
             )
         }
     }
