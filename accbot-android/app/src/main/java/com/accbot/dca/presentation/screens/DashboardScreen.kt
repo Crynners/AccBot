@@ -1023,6 +1023,28 @@ internal fun DcaPlanCard(
     val accentCol = accentColor()
     val context = LocalContext.current
     var cardHeight by remember { mutableIntStateOf(0) }
+    var showDisableDialog by remember { mutableStateOf(false) }
+
+    if (showDisableDialog) {
+        AlertDialog(
+            onDismissRequest = { showDisableDialog = false },
+            title = { Text(stringResource(R.string.dashboard_disable_plan_title)) },
+            text = { Text(stringResource(R.string.dashboard_disable_plan_message, "${plan.crypto}/${plan.fiat}")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDisableDialog = false
+                    onToggle()
+                }) {
+                    Text(stringResource(R.string.dashboard_disable_plan_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDisableDialog = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
     // Keep references fresh so pointerInput(Unit) always calls the latest lambdas
     val currentOnDragStart by rememberUpdatedState(onDragStart)
     val currentOnDrag by rememberUpdatedState(onDrag)
@@ -1150,7 +1172,14 @@ internal fun DcaPlanCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (plan.isEnabled && plan.nextExecutionAt != null) {
+                    if (!plan.isEnabled) {
+                        Text(
+                            text = stringResource(R.string.dashboard_plan_paused),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Warning,
+                            fontWeight = FontWeight.Medium
+                        )
+                    } else if (plan.nextExecutionAt != null) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -1270,7 +1299,15 @@ internal fun DcaPlanCard(
             ) {
                 Switch(
                     checked = plan.isEnabled,
-                    onCheckedChange = { onToggle() },
+                    onCheckedChange = { newValue ->
+                        if (!newValue) {
+                            // Disabling: show confirmation dialog
+                            showDisableDialog = true
+                        } else {
+                            // Enabling: no confirmation needed
+                            onToggle()
+                        }
+                    },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = successCol,
                         checkedTrackColor = successCol.copy(alpha = 0.5f)

@@ -73,6 +73,10 @@
     <string name="dashboard_current_price">Current Price</string>
     <string name="dashboard_active_plans">My DCA Plans</string>
     <string name="dashboard_next_prefix">Next: %1$s</string>
+    <string name="dashboard_plan_paused">Paused</string>
+    <string name="dashboard_disable_plan_title">Disable plan?</string>
+    <string name="dashboard_disable_plan_message">DCA purchases for %1$s will be paused until you re-enable the plan.</string>
+    <string name="dashboard_disable_plan_confirm">Disable</string>
     <string name="dashboard_remaining_suffix">~%1$s remaining</string>
     <string name="dashboard_remaining_with_exec">~%1$s remaining (%2$d exec)</string>
     <string name="dashboard_no_plans_title">No DCA Plans Yet</string>

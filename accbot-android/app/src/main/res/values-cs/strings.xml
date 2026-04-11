@@ -72,6 +72,10 @@
     <string name="dashboard_current_price">Aktuální cena</string>
     <string name="dashboard_active_plans">Moje DCA plány</string>
     <string name="dashboard_next_prefix">Další: %1$s</string>
+    <string name="dashboard_plan_paused">Pozastaveno</string>
+    <string name="dashboard_disable_plan_title">Deaktivovat plán?</string>
+    <string name="dashboard_disable_plan_message">DCA nákupy pro %1$s budou pozastaveny, dokud plán znovu neaktivujete.</string>
+    <string name="dashboard_disable_plan_confirm">Deaktivovat</string>
     <string name="dashboard_remaining_suffix">~%1$s zbývá</string>
     <string name="dashboard_remaining_with_exec">~%1$s zbývá (%2$d nák.)</string>
     <string name="dashboard_no_plans_title">Zatím žádné DCA plány</string>
