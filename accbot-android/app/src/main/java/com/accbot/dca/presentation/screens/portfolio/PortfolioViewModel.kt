@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.TransactionEntity
 // TransactionStatus filtering now done in DAO query
@@ -26,11 +25,8 @@ enum class DenominationMode { FIAT, CRYPTO }
 
 sealed class PairPage {
     data class Aggregate(val fiat: String) : PairPage()
-    data class Plan(val planId: Long, val name: String, val crypto: String, val fiat: String) : PairPage()
+    data class SinglePair(val crypto: String, val fiat: String) : PairPage()
 }
-
-@Immutable
-data class PlanInfo(val id: Long, val name: String, val crypto: String, val fiat: String)
 
 @Immutable
 data class PortfolioUiState(
@@ -40,6 +36,8 @@ data class PortfolioUiState(
     val availableMonths: List<Int> = emptyList(),
     val canNavigatePrev: Boolean = false,
     val canNavigateNext: Boolean = false,
+    val selectedExchangeFilter: String? = null,
+    val availableExchanges: List<String> = emptyList(),
     val pages: List<PairPage> = emptyList(),
     val selectedPageIndex: Int = 0,
     val denominationMode: DenominationMode = DenominationMode.FIAT,
@@ -51,17 +49,13 @@ data class PortfolioUiState(
     val isLoading: Boolean = true,
     val isChartLoading: Boolean = false,
     val isPriceSyncing: Boolean = false,
-    val error: String? = null,
-    val allPlans: List<PlanInfo> = emptyList(),
-    val visiblePlanIds: Set<Long> = emptySet(),
-    val showTotalLine: Boolean = true
+    val error: String? = null
 )
 
 @HiltViewModel
 class PortfolioViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val transactionDao: TransactionDao,
-    private val dcaPlanDao: DcaPlanDao,
     private val syncDailyPricesUseCase: SyncDailyPricesUseCase,
     private val calculateChartDataUseCase: CalculateChartDataUseCase
 ) : ViewModel() {
@@ -94,44 +88,33 @@ class PortfolioViewModel @Inject constructor(
         portfolioJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
+                // Use pre-filtered, sorted query (avoids loading failed/pending into memory)
                 val completed = transactionDao.getCompletedTransactionsOrdered()
                 completedTransactions = completed
+                val exchanges = completed.map { it.exchange.name }.distinct().sorted()
+                val pairs = completed.map { it.crypto to it.fiat }.distinct()
 
-                // Load plans for page building
-                val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
-                val planInfos = allDbPlans.map { p ->
-                    PlanInfo(
-                        id = p.id,
-                        name = p.name.ifBlank { "${p.crypto}/${p.fiat}" },
-                        crypto = p.crypto,
-                        fiat = p.fiat
-                    )
-                }
-
-                // Build pages: aggregate per fiat (if 2+ plans in same fiat), then per plan
-                val plansByFiat = planInfos.groupBy { it.fiat }
+                val pairsByFiat = pairs.groupBy { it.second }
                 val pages = mutableListOf<PairPage>()
-                for ((fiat, fiatPlans) in plansByFiat) {
-                    if (fiatPlans.size >= 2) {
+                for ((fiat, fiatPairs) in pairsByFiat) {
+                    if (fiatPairs.size >= 2) {
                         pages.add(PairPage.Aggregate(fiat))
                     }
                 }
-                for (plan in planInfos) {
-                    pages.add(PairPage.Plan(plan.id, plan.name, plan.crypto, plan.fiat))
+                for (pair in pairs) {
+                    pages.add(PairPage.SinglePair(pair.first, pair.second))
                 }
 
                 val pageIndex = if (initialCrypto != null && initialFiat != null) {
-                    val idx = pages.indexOfFirst { it is PairPage.Plan && it.crypto == initialCrypto && it.fiat == initialFiat }
+                    val idx = pages.indexOfFirst { it is PairPage.SinglePair && it.crypto == initialCrypto && it.fiat == initialFiat }
                     if (idx >= 0) idx else 0
                 } else 0
 
                 _uiState.update { state ->
                     state.copy(
+                        availableExchanges = exchanges,
                         pages = pages,
                         selectedPageIndex = pageIndex,
-                        allPlans = planInfos,
-                        visiblePlanIds = emptySet(),
-                        showTotalLine = true,
                         isLoading = false
                     )
                 }
@@ -143,7 +126,10 @@ class PortfolioViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(isLoading = false, error = e.message ?: "Failed to load portfolio")
+                    it.copy(
+                        isLoading = false,
+                        error = e.message ?: "Failed to load portfolio"
+                    )
                 }
             }
         }
@@ -155,34 +141,27 @@ class PortfolioViewModel @Inject constructor(
             try {
                 val completed = transactionDao.getCompletedTransactionsOrdered()
                 completedTransactions = completed
+                val exchanges = completed.map { it.exchange.name }.distinct().sorted()
+                val pairs = completed.map { it.crypto to it.fiat }.distinct()
 
-                val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
-                val planInfos = allDbPlans.map { p ->
-                    PlanInfo(
-                        id = p.id,
-                        name = p.name.ifBlank { "${p.crypto}/${p.fiat}" },
-                        crypto = p.crypto,
-                        fiat = p.fiat
-                    )
-                }
-
-                val plansByFiat = planInfos.groupBy { it.fiat }
+                val pairsByFiat = pairs.groupBy { it.second }
                 val pages = mutableListOf<PairPage>()
-                for ((fiat, fiatPlans) in plansByFiat) {
-                    if (fiatPlans.size >= 2) {
+                for ((fiat, fiatPairs) in pairsByFiat) {
+                    if (fiatPairs.size >= 2) {
                         pages.add(PairPage.Aggregate(fiat))
                     }
                 }
-                for (plan in planInfos) {
-                    pages.add(PairPage.Plan(plan.id, plan.name, plan.crypto, plan.fiat))
+                for (pair in pairs) {
+                    pages.add(PairPage.SinglePair(pair.first, pair.second))
                 }
 
                 _uiState.update { state ->
+                    // Keep current page index if still valid, otherwise reset to 0
                     val pageIndex = state.selectedPageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
                     state.copy(
+                        availableExchanges = exchanges,
                         pages = pages,
-                        selectedPageIndex = pageIndex,
-                        allPlans = planInfos
+                        selectedPageIndex = pageIndex
                     )
                 }
                 updateNavigationState()
@@ -237,7 +216,7 @@ class PortfolioViewModel @Inject constructor(
                     if (yearIdx > 0) {
                         val prevYear = years[yearIdx - 1]
                         val prevMonths = calculateChartDataUseCase.getAvailableMonths(
-                            getFilteredTransactions(getCurrentPlanId()), prevYear
+                            getFilteredTransactions(), prevYear
                         )
                         if (prevMonths.isNotEmpty()) {
                             ChartZoomLevel.Month(prevYear, prevMonths.last())
@@ -282,7 +261,7 @@ class PortfolioViewModel @Inject constructor(
                         val nextYear = years[yearIdx + 1]
                         if (nextYear <= today.year) {
                             val nextMonths = calculateChartDataUseCase.getAvailableMonths(
-                                getFilteredTransactions(getCurrentPlanId()), nextYear
+                                getFilteredTransactions(), nextYear
                             )
                             if (nextMonths.isNotEmpty()) {
                                 val nextYm = java.time.YearMonth.of(nextYear, nextMonths.first())
@@ -302,6 +281,17 @@ class PortfolioViewModel @Inject constructor(
         loadChartData()
     }
 
+    fun selectExchangeFilter(exchange: String?) {
+        _uiState.update { it.copy(
+            selectedExchangeFilter = exchange,
+            selectedPageIndex = 0,
+            denominationMode = DenominationMode.FIAT,
+            zoomLevel = ChartZoomLevel.Overview
+        ) }
+        updateNavigationState()
+        loadChartData()
+    }
+
     fun selectPairPage(index: Int) {
         val page = _uiState.value.pages.getOrNull(index)
         val newMode = if (page is PairPage.Aggregate) DenominationMode.FIAT else _uiState.value.denominationMode
@@ -309,31 +299,15 @@ class PortfolioViewModel @Inject constructor(
             selectedPageIndex = index,
             denominationMode = newMode,
             visibleSeries = setOf(0, 1),
-            zoomLevel = ChartZoomLevel.Overview,
-            visiblePlanIds = emptySet(),
-            showTotalLine = true
+            zoomLevel = ChartZoomLevel.Overview
         ) }
         updateNavigationState()
         loadChartData()
     }
 
-    fun togglePlanVisibility(planId: Long) {
-        _uiState.update { state ->
-            val current = state.visiblePlanIds
-            val toggled = if (planId in current) current - planId else current + planId
-            state.copy(visiblePlanIds = toggled)
-        }
-        loadChartData()
-    }
-
-    fun toggleTotalLine() {
-        _uiState.update { it.copy(showTotalLine = !it.showTotalLine) }
-        loadChartData()
-    }
-
     fun toggleDenomination() {
         val page = _uiState.value.pages.getOrNull(_uiState.value.selectedPageIndex)
-        if (page !is PairPage.Plan) return
+        if (page !is PairPage.SinglePair) return
         _uiState.update { it.copy(
             denominationMode = if (it.denominationMode == DenominationMode.FIAT)
                 DenominationMode.CRYPTO else DenominationMode.FIAT,
@@ -373,21 +347,15 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
-    private fun getFilteredTransactions(planId: Long? = null): List<TransactionEntity> {
-        return if (planId != null) {
-            completedTransactions.filter { it.planId == planId }
-        } else {
-            completedTransactions
+    private fun getFilteredTransactions(): List<TransactionEntity> {
+        val state = _uiState.value
+        return completedTransactions.filter { tx ->
+            state.selectedExchangeFilter == null || tx.exchange.name == state.selectedExchangeFilter
         }
     }
 
-    private fun getCurrentPlanId(): Long? {
-        val page = _uiState.value.pages.getOrNull(_uiState.value.selectedPageIndex)
-        return (page as? PairPage.Plan)?.planId
-    }
-
     private fun updateNavigationState() {
-        val filteredTxs = getFilteredTransactions(getCurrentPlanId())
+        val filteredTxs = getFilteredTransactions()
         val state = _uiState.value
         val years = calculateChartDataUseCase.getAvailableYears(filteredTxs)
         val today = LocalDate.now()
@@ -440,16 +408,16 @@ class PortfolioViewModel @Inject constructor(
                 val state = _uiState.value
                 val page = state.pages.getOrNull(state.selectedPageIndex)
 
-                val (crypto, fiat, planId) = when (page) {
-                    is PairPage.Aggregate -> Triple(null, page.fiat, null)
-                    is PairPage.Plan -> Triple(page.crypto, page.fiat, page.planId)
-                    null -> Triple(null, null, null)
+                val (crypto, fiat) = when (page) {
+                    is PairPage.Aggregate -> null to page.fiat
+                    is PairPage.SinglePair -> page.crypto to page.fiat
+                    null -> null to null
                 }
 
-                val data = if (fiat == null) {
+                val data = if (crypto == null && fiat == null) {
                     emptyList()
                 } else {
-                    val filteredTxs = getFilteredTransactions(planId)
+                    val filteredTxs = getFilteredTransactions()
                     calculateChartDataUseCase.calculate(
                         transactions = filteredTxs,
                         crypto = crypto,
@@ -459,9 +427,9 @@ class PortfolioViewModel @Inject constructor(
                 }
 
                 val txCount = completedTransactions.count { tx ->
-                    (planId == null || tx.planId == planId) &&
                     (crypto == null || tx.crypto == crypto) &&
-                    (fiat == null || tx.fiat == fiat)
+                    (fiat == null || tx.fiat == fiat) &&
+                    (state.selectedExchangeFilter == null || tx.exchange.name == state.selectedExchangeFilter)
                 }
 
                 _uiState.update { it.copy(
