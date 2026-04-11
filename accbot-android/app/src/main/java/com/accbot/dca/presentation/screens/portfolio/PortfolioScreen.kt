@@ -87,7 +87,7 @@ fun PortfolioScreen(
         val hasAnyData = chartData.isNotEmpty()
         val hasData = chartData.size >= 2
         val currentPage = uiState.pages.getOrNull(uiState.selectedPageIndex)
-        val isSinglePair = currentPage is PairPage.SinglePair
+        val isPlan = currentPage is PairPage.Plan
 
         // Scrub-to-inspect state
         var scrubbedIndex by remember { mutableIntStateOf(-1) }
@@ -103,7 +103,7 @@ fun PortfolioScreen(
 
         val pairLabel = when (currentPage) {
             is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, currentPage.fiat)
-            is PairPage.SinglePair -> "${currentPage.crypto}/${currentPage.fiat}"
+            is PairPage.Plan -> currentPage.name
             null -> ""
         }
 
@@ -127,7 +127,7 @@ fun PortfolioScreen(
                         }
                         val legendEntries = rememberLegendEntries(
                             denominationMode = uiState.denominationMode,
-                            isSinglePair = isSinglePair,
+                            isPlan = isPlan,
                             currentPairCrypto = uiState.currentPairCrypto
                         )
                         PortfolioLineChart(
@@ -232,17 +232,19 @@ fun PortfolioScreen(
                     if (hasAnyData) {
                         LandscapeKpiContent(
                             uiState = uiState,
-                            isSinglePair = isSinglePair,
+                            isPlan = isPlan,
                             scrubbedDataPoint = scrubbedDataPoint
                         )
                     }
 
-                    // Exchange filter
-                    if (uiState.availableExchanges.size > 1) {
-                        ExchangeFilterRow(
-                            exchanges = uiState.availableExchanges,
-                            selectedExchange = uiState.selectedExchangeFilter,
-                            onExchangeSelected = { viewModel.selectExchangeFilter(it) }
+                    // Plan filter chips
+                    if (currentPage is PairPage.Aggregate && uiState.allPlans.any { it.fiat == currentPage.fiat }) {
+                        PlanFilterChips(
+                            plans = uiState.allPlans.filter { it.fiat == currentPage.fiat },
+                            visiblePlanIds = uiState.visiblePlanIds,
+                            showTotalLine = uiState.showTotalLine,
+                            onTogglePlan = { viewModel.togglePlanVisibility(it) },
+                            onToggleTotal = { viewModel.toggleTotalLine() }
                         )
                     }
                 }
@@ -298,7 +300,8 @@ fun PortfolioScreen(
                     onZoomOut = { viewModel.zoomOut() },
                     onNavigatePrev = { viewModel.navigatePrev() },
                     onNavigateNext = { viewModel.navigateNext() },
-                    onExchangeFilterSelected = { viewModel.selectExchangeFilter(it) },
+                    onTogglePlanVisibility = { viewModel.togglePlanVisibility(it) },
+                    onToggleTotalLine = { viewModel.toggleTotalLine() },
                     onPairPageSelected = { viewModel.selectPairPage(it) },
                     onToggleSeriesVisibility = { viewModel.toggleSeriesVisibility(it) },
                     onRefresh = { viewModel.syncPricesAndLoadChart() },
@@ -319,7 +322,8 @@ internal fun PortfolioContent(
     onZoomOut: () -> Unit,
     onNavigatePrev: () -> Unit,
     onNavigateNext: () -> Unit,
-    onExchangeFilterSelected: (String?) -> Unit,
+    onTogglePlanVisibility: (Long) -> Unit,
+    onToggleTotalLine: () -> Unit,
     onPairPageSelected: (Int) -> Unit,
     onToggleSeriesVisibility: (Int) -> Unit,
     onRefresh: () -> Unit,
@@ -344,7 +348,7 @@ internal fun PortfolioContent(
     }
 
     val currentPage = uiState.pages.getOrNull(uiState.selectedPageIndex)
-    val isSinglePair = currentPage is PairPage.SinglePair
+    val isPlan = currentPage is PairPage.Plan
 
     // Scrub-to-inspect state (ephemeral, local to composable)
     var scrubbedIndex by remember { mutableIntStateOf(-1) }
@@ -410,7 +414,7 @@ internal fun PortfolioContent(
                             val pageItem = uiState.pages.getOrNull(page)
                             val pairLabel = when (pageItem) {
                                 is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, pageItem.fiat)
-                                is PairPage.SinglePair -> "${pageItem.crypto}/${pageItem.fiat}"
+                                is PairPage.Plan -> pageItem.name
                                 null -> ""
                             }
 
@@ -430,7 +434,7 @@ internal fun PortfolioContent(
                                     Spacer(Modifier.height(8.dp))
                                     KpiCardContent(
                                         uiState = uiState,
-                                        isSinglePair = pageItem is PairPage.SinglePair,
+                                        isPlan = pageItem is PairPage.Plan,
                                         scrubbedDataPoint = scrubbedDataPoint
                                     )
                                 }
@@ -479,7 +483,7 @@ internal fun PortfolioContent(
                         val pageItem = uiState.pages.firstOrNull()
                         val pairLabel = when (pageItem) {
                             is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, pageItem.fiat)
-                            is PairPage.SinglePair -> "${pageItem.crypto}/${pageItem.fiat}"
+                            is PairPage.Plan -> pageItem.name
                             null -> ""
                         }
                         Text(
@@ -492,7 +496,7 @@ internal fun PortfolioContent(
                             Spacer(Modifier.height(8.dp))
                             KpiCardContent(
                                 uiState = uiState,
-                                isSinglePair = pageItem is PairPage.SinglePair,
+                                isPlan = pageItem is PairPage.Plan,
                                 scrubbedDataPoint = scrubbedDataPoint
                             )
                         }
@@ -548,7 +552,7 @@ internal fun PortfolioContent(
             item {
                 val legendEntries = rememberLegendEntries(
                     denominationMode = uiState.denominationMode,
-                    isSinglePair = isSinglePair,
+                    isPlan = isPlan,
                     currentPairCrypto = uiState.currentPairCrypto
                 )
                 InteractiveChartLegend(
@@ -584,13 +588,16 @@ internal fun PortfolioContent(
             )
         }
 
-        // Exchange filter chips
-        if (uiState.availableExchanges.size > 1) {
+        // Plan filter chips (only on aggregate page)
+        val currentPageForFilter = uiState.pages.getOrNull(uiState.selectedPageIndex)
+        if (currentPageForFilter is PairPage.Aggregate && uiState.allPlans.any { it.fiat == currentPageForFilter.fiat }) {
             item {
-                ExchangeFilterRow(
-                    exchanges = uiState.availableExchanges,
-                    selectedExchange = uiState.selectedExchangeFilter,
-                    onExchangeSelected = onExchangeFilterSelected
+                PlanFilterChips(
+                    plans = uiState.allPlans.filter { it.fiat == currentPageForFilter.fiat },
+                    visiblePlanIds = uiState.visiblePlanIds,
+                    showTotalLine = uiState.showTotalLine,
+                    onTogglePlan = onTogglePlanVisibility,
+                    onToggleTotal = onToggleTotalLine
                 )
             }
         }
@@ -605,7 +612,7 @@ internal fun PortfolioContent(
 @Composable
 private fun rememberLegendEntries(
     denominationMode: DenominationMode,
-    isSinglePair: Boolean,
+    isPlan: Boolean,
     currentPairCrypto: String?
 ): List<LegendEntry> {
     val (line1, line2) = when (denominationMode) {
@@ -616,11 +623,11 @@ private fun rememberLegendEntries(
     val cryptoPriceLabel = stringResource(R.string.chart_crypto_price, crypto)
     val accumulatedCryptoLabel = stringResource(R.string.chart_accumulated_crypto, crypto)
     val avgBuyPriceLabel = stringResource(R.string.chart_avg_buy_price)
-    return remember(denominationMode, isSinglePair, currentPairCrypto) {
+    return remember(denominationMode, isPlan, currentPairCrypto) {
         buildList {
             add(LegendEntry(0, line1, Primary))
             add(LegendEntry(1, line2, androidx.compose.ui.graphics.Color(0xFF888888)))
-            if (isSinglePair && denominationMode == DenominationMode.FIAT) {
+            if (isPlan && denominationMode == DenominationMode.FIAT) {
                 add(LegendEntry(2, cryptoPriceLabel, btcPriceColor))
                 add(LegendEntry(4, avgBuyPriceLabel, avgBuyPriceColor))
                 add(LegendEntry(3, accumulatedCryptoLabel, accumulatedCryptoColor))
@@ -881,7 +888,7 @@ private fun calculatePeriodRoi(uiState: PortfolioUiState): Pair<String?, BigDeci
 @Composable
 internal fun KpiCardContent(
     uiState: PortfolioUiState,
-    isSinglePair: Boolean,
+    isPlan: Boolean,
     scrubbedDataPoint: com.accbot.dca.domain.usecase.ChartDataPoint? = null
 ) {
     val displayPoint = scrubbedDataPoint ?: uiState.chartData.lastOrNull() ?: return
@@ -984,7 +991,7 @@ internal fun KpiCardContent(
                 fontWeight = FontWeight.SemiBold
             )
         }
-        if (isSinglePair) {
+        if (isPlan) {
             val crypto = uiState.currentPairCrypto ?: "BTC"
             Column(horizontalAlignment = Alignment.End) {
                 Text(
@@ -1000,8 +1007,8 @@ internal fun KpiCardContent(
         }
     }
 
-    // Row 3: Crypto Price | Accumulated Crypto (single pair only)
-    if (isSinglePair) {
+    // Row 3: Crypto Price | Accumulated Crypto (plan only)
+    if (isPlan) {
         val crypto = uiState.currentPairCrypto ?: "BTC"
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -1039,7 +1046,7 @@ internal fun KpiCardContent(
 @Composable
 private fun LandscapeKpiContent(
     uiState: PortfolioUiState,
-    isSinglePair: Boolean,
+    isPlan: Boolean,
     scrubbedDataPoint: com.accbot.dca.domain.usecase.ChartDataPoint? = null
 ) {
     val displayPoint = scrubbedDataPoint ?: uiState.chartData.lastOrNull() ?: return
@@ -1110,8 +1117,8 @@ private fun LandscapeKpiContent(
             )
         }
 
-        // Invested, Avg price, Crypto Price, Accumulated (single pair) or just Invested (aggregate)
-        if (isSinglePair) {
+        // Invested, Avg price, Crypto Price, Accumulated (plan) or just Invested (aggregate)
+        if (isPlan) {
             val crypto = uiState.currentPairCrypto ?: "BTC"
 
             // Invested
@@ -1184,26 +1191,26 @@ private fun LandscapeKpiContent(
 }
 
 @Composable
-private fun ExchangeFilterRow(
-    exchanges: List<String>,
-    selectedExchange: String?,
-    onExchangeSelected: (String?) -> Unit
+private fun PlanFilterChips(
+    plans: List<PlanInfo>,
+    visiblePlanIds: Set<Long>,
+    showTotalLine: Boolean,
+    onTogglePlan: (Long) -> Unit,
+    onToggleTotal: () -> Unit
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             FilterChip(
-                selected = selectedExchange == null,
-                onClick = { onExchangeSelected(null) },
-                label = { Text(stringResource(R.string.chart_filter_all_exchanges)) }
+                selected = showTotalLine,
+                onClick = onToggleTotal,
+                label = { Text("Celkem") }
             )
         }
-        items(exchanges) { exchange ->
+        items(plans) { plan ->
             FilterChip(
-                selected = exchange == selectedExchange,
-                onClick = { onExchangeSelected(exchange) },
-                label = { Text(exchange) }
+                selected = plan.id in visiblePlanIds,
+                onClick = { onTogglePlan(plan.id) },
+                label = { Text(plan.name) }
             )
         }
     }
