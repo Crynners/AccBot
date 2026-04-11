@@ -16,6 +16,7 @@ import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.domain.usecase.ImportTradeHistoryUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.presentation.utils.NumberFormatters
+import com.accbot.dca.R
 import com.accbot.dca.presentation.utils.TimeUtils
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -115,8 +116,12 @@ class PlanDetailsViewModel @Inject constructor(
                         BigDecimal.ZERO
                     }
 
-                    // Calculate time until next execution
-                    val timeUntilNext = TimeUtils.formatTimeUntil(plan.nextExecutionAt, context)
+                    // Calculate time until next execution (only when plan is enabled)
+                    val timeUntilNext = if (plan.isEnabled) {
+                        TimeUtils.formatTimeUntil(plan.nextExecutionAt, context)
+                    } else {
+                        context.getString(R.string.dashboard_plan_paused)
+                    }
 
                     _uiState.update { state ->
                         state.copy(
