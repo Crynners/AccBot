@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.TransactionEntity
 // TransactionStatus filtering now done in DAO query
@@ -29,6 +30,13 @@ sealed class PairPage {
 }
 
 @Immutable
+data class PlanLineInfo(
+    val planId: Long,
+    val name: String,
+    val values: List<Float> = emptyList() // aligned to main chartData indices
+)
+
+@Immutable
 data class PortfolioUiState(
     val chartData: List<ChartDataPoint> = emptyList(),
     val zoomLevel: ChartZoomLevel = ChartZoomLevel.Overview,
@@ -46,6 +54,8 @@ data class PortfolioUiState(
     val totalTransactions: Int = 0,
     val visibleSeries: Set<Int> = setOf(0, 1),
     val scrubbedIndex: Int? = null,
+    val planLines: List<PlanLineInfo> = emptyList(),
+    val visiblePlanLineIds: Set<Long> = emptySet(),
     val isLoading: Boolean = true,
     val isChartLoading: Boolean = false,
     val isPriceSyncing: Boolean = false,
@@ -56,6 +66,7 @@ data class PortfolioUiState(
 class PortfolioViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val transactionDao: TransactionDao,
+    private val dcaPlanDao: DcaPlanDao,
     private val syncDailyPricesUseCase: SyncDailyPricesUseCase,
     private val calculateChartDataUseCase: CalculateChartDataUseCase
 ) : ViewModel() {
@@ -299,7 +310,9 @@ class PortfolioViewModel @Inject constructor(
             selectedPageIndex = index,
             denominationMode = newMode,
             visibleSeries = setOf(0, 1),
-            zoomLevel = ChartZoomLevel.Overview
+            zoomLevel = ChartZoomLevel.Overview,
+            planLines = emptyList(),
+            visiblePlanLineIds = emptySet()
         ) }
         updateNavigationState()
         loadChartData()
@@ -325,6 +338,14 @@ class PortfolioViewModel @Inject constructor(
             val toggled = if (seriesIndex in current) current - seriesIndex else current + seriesIndex
             if (toggled.isEmpty()) return
             state.copy(visibleSeries = toggled)
+        }
+    }
+
+    fun togglePlanLineVisibility(planId: Long) {
+        _uiState.update { state ->
+            val current = state.visiblePlanLineIds
+            val toggled = if (planId in current) current - planId else current + planId
+            state.copy(visiblePlanLineIds = toggled)
         }
     }
 
@@ -414,10 +435,10 @@ class PortfolioViewModel @Inject constructor(
                     null -> null to null
                 }
 
+                val filteredTxs = getFilteredTransactions()
                 val data = if (crypto == null && fiat == null) {
                     emptyList()
                 } else {
-                    val filteredTxs = getFilteredTransactions()
                     calculateChartDataUseCase.calculate(
                         transactions = filteredTxs,
                         crypto = crypto,
@@ -425,6 +446,39 @@ class PortfolioViewModel @Inject constructor(
                         zoomLevel = state.zoomLevel
                     )
                 }
+
+                // Calculate per-plan lines for SinglePair pages
+                val planLinesList = if (page is PairPage.SinglePair && data.isNotEmpty()) {
+                    try {
+                        val plans = dcaPlanDao.getAllPlansOnceOrdered()
+                            .filter { it.crypto == crypto && it.fiat == fiat }
+                        if (plans.size >= 2) {
+                            val mainEpochDays = data.map { it.epochDay }
+                            plans.mapNotNull { plan ->
+                                val planTxs = filteredTxs.filter { it.planId == plan.id }
+                                if (planTxs.isEmpty()) return@mapNotNull null
+                                val planData = calculateChartDataUseCase.calculate(
+                                    transactions = planTxs,
+                                    crypto = crypto,
+                                    fiat = fiat,
+                                    zoomLevel = state.zoomLevel
+                                )
+                                // Align to main chart's epoch days
+                                val planByDay = planData.associateBy { it.epochDay }
+                                var lastValue = 0f
+                                val aligned = mainEpochDays.map { day ->
+                                    val v = planByDay[day]?.portfolioValue?.toFloat()
+                                    if (v != null) { lastValue = v; v } else lastValue
+                                }
+                                PlanLineInfo(
+                                    planId = plan.id,
+                                    name = plan.name.ifBlank { "${plan.crypto}/${plan.fiat} #${plan.id}" },
+                                    values = aligned
+                                )
+                            }
+                        } else emptyList()
+                    } catch (_: Exception) { emptyList() }
+                } else emptyList()
 
                 val txCount = completedTransactions.count { tx ->
                     (crypto == null || tx.crypto == crypto) &&
@@ -437,6 +491,7 @@ class PortfolioViewModel @Inject constructor(
                     currentPairCrypto = crypto,
                     currentPairFiat = fiat,
                     totalTransactions = txCount,
+                    planLines = planLinesList,
                     isChartLoading = false
                 ) }
             } catch (e: OutOfMemoryError) {

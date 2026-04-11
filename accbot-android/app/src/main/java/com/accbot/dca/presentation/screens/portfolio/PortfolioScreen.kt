@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -137,6 +138,8 @@ fun PortfolioScreen(
                             fiatSymbol = uiState.currentPairFiat ?: "EUR",
                             cryptoSymbol = uiState.currentPairCrypto ?: "",
                             visibleSeries = uiState.visibleSeries,
+                            planLines = uiState.planLines,
+                            visiblePlanLineIds = uiState.visiblePlanLineIds,
                             zoomLevel = uiState.zoomLevel,
                             onScrub = { idx -> scrubbedIndex = idx ?: -1 },
                             modifier = Modifier
@@ -151,6 +154,14 @@ fun PortfolioScreen(
                             onToggleSeries = { viewModel.toggleSeriesVisibility(it) },
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
+                        // Per-plan legend (landscape)
+                        if (uiState.planLines.isNotEmpty()) {
+                            PlanLinesLegend(
+                                planLines = uiState.planLines,
+                                visiblePlanLineIds = uiState.visiblePlanLineIds,
+                                onToggle = { viewModel.togglePlanLineVisibility(it) }
+                            )
+                        }
 
                         // Zoom header + drill-down chips
                         Column(
@@ -301,6 +312,7 @@ fun PortfolioScreen(
                     onExchangeFilterSelected = { viewModel.selectExchangeFilter(it) },
                     onPairPageSelected = { viewModel.selectPairPage(it) },
                     onToggleSeriesVisibility = { viewModel.toggleSeriesVisibility(it) },
+                    onTogglePlanLineVisibility = { viewModel.togglePlanLineVisibility(it) },
                     onRefresh = { viewModel.syncPricesAndLoadChart() },
                     onChartTouching = onChartTouching,
                     modifier = Modifier.padding(paddingValues)
@@ -322,6 +334,7 @@ internal fun PortfolioContent(
     onExchangeFilterSelected: (String?) -> Unit,
     onPairPageSelected: (Int) -> Unit,
     onToggleSeriesVisibility: (Int) -> Unit,
+    onTogglePlanLineVisibility: (Long) -> Unit,
     onRefresh: () -> Unit,
     onChartTouching: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
@@ -524,6 +537,8 @@ internal fun PortfolioContent(
                     fiatSymbol = uiState.currentPairFiat ?: "EUR",
                     cryptoSymbol = uiState.currentPairCrypto ?: "",
                     visibleSeries = uiState.visibleSeries,
+                    planLines = uiState.planLines,
+                    visiblePlanLineIds = uiState.visiblePlanLineIds,
                     zoomLevel = uiState.zoomLevel,
                     onScrub = { idx -> scrubbedIndex = idx ?: -1 },
                     modifier = Modifier.fillMaxWidth()
@@ -556,6 +571,15 @@ internal fun PortfolioContent(
                     visibleSeries = uiState.visibleSeries,
                     onToggleSeries = onToggleSeriesVisibility
                 )
+                // Per-plan legend entries
+                if (uiState.planLines.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    PlanLinesLegend(
+                        planLines = uiState.planLines,
+                        visiblePlanLineIds = uiState.visiblePlanLineIds,
+                        onToggle = onTogglePlanLineVisibility
+                    )
+                }
             }
         }
 
@@ -1180,6 +1204,50 @@ private fun LandscapeKpiContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun PlanLinesLegend(
+    planLines: List<PlanLineInfo>,
+    visiblePlanLineIds: Set<Long>,
+    onToggle: (Long) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        planLines.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.Center) {
+                row.forEachIndexed { i, planLine ->
+                    if (i > 0) Spacer(Modifier.width(24.dp))
+                    val colorIndex = planLines.indexOf(planLine)
+                    val color = planLineColors[colorIndex % planLineColors.size]
+                    val enabled = planLine.planId in visiblePlanLineIds
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clickable { onToggle(planLine.planId) }
+                            .padding(4.dp)
+                    ) {
+                        Box(
+                            Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(if (enabled) color else color.copy(alpha = 0.3f))
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            planLine.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            textDecoration = if (enabled) null else TextDecoration.LineThrough
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

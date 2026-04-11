@@ -24,6 +24,7 @@ import android.util.Log
 import com.accbot.dca.domain.usecase.ChartDataPoint
 import com.accbot.dca.domain.usecase.ChartZoomLevel
 import com.accbot.dca.presentation.screens.portfolio.DenominationMode
+import com.accbot.dca.presentation.screens.portfolio.PlanLineInfo
 import com.accbot.dca.presentation.ui.theme.Primary
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
@@ -61,6 +62,15 @@ private val costBasisColor = Color(0xFF888888)
 internal val btcPriceColor = Color(0xFFF7931A)
 internal val accumulatedCryptoColor = Color(0xFF4CAF50)
 internal val avgBuyPriceColor = Color(0xFF9C27B0)
+
+internal val planLineColors = listOf(
+    Color(0xFFFF6B6B), // red
+    Color(0xFF4ECDC4), // teal
+    Color(0xFFFFD93D), // yellow
+    Color(0xFF6C63FF), // purple
+    Color(0xFFFF8A65), // orange
+    Color(0xFF81C784), // green
+)
 
 data class LegendEntry(
     val seriesIndex: Int,
@@ -139,6 +149,8 @@ fun PortfolioLineChart(
     fiatSymbol: String = "",
     cryptoSymbol: String = "",
     visibleSeries: Set<Int> = setOf(0, 1),
+    planLines: List<PlanLineInfo> = emptyList(),
+    visiblePlanLineIds: Set<Long> = emptySet(),
     zoomLevel: ChartZoomLevel = ChartZoomLevel.Overview,
     onScrub: (Int?) -> Unit = {},
     modifier: Modifier = Modifier
@@ -149,7 +161,7 @@ fun PortfolioLineChart(
     val hasRightAxis = cryptoSymbol.isNotEmpty() && 3 in visibleSeries
 
     // Update model when data, denomination, or visibility changes
-    LaunchedEffect(chartData, denominationMode, visibleSeries) {
+    LaunchedEffect(chartData, denominationMode, visibleSeries, planLines, visiblePlanLineIds) {
         try {
             modelProducer.runTransaction {
                 // Layer 1: left axis (portfolio value, cost basis, crypto price – all fiat)
@@ -166,7 +178,15 @@ fun PortfolioLineChart(
                     if (1 in visibleSeries) series(series1)
                     if (2 in visibleSeries) series(chartData.map { it.price.toFloat() })
                     if (4 in visibleSeries) series(chartData.map { it.avgBuyPrice.toFloat() })
-                    if (setOf(0, 1, 2, 4).none { it in visibleSeries }) {
+                    // Per-plan value lines
+                    for (planLine in planLines) {
+                        if (planLine.planId in visiblePlanLineIds && planLine.values.size == chartData.size) {
+                            series(planLine.values)
+                        }
+                    }
+                    if (setOf(0, 1, 2, 4).none { it in visibleSeries } &&
+                        planLines.none { it.planId in visiblePlanLineIds && it.values.size == chartData.size }
+                    ) {
                         series(List(chartData.size) { 0f })
                     }
                 }
@@ -224,12 +244,27 @@ fun PortfolioLineChart(
         fill = LineCartesianLayer.LineFill.single(fill(Color.Transparent))
     )
 
+    // Pre-create plan line styles (max 6 plans)
+    val planLineStyle0 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[0])))
+    val planLineStyle1 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[1])))
+    val planLineStyle2 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[2])))
+    val planLineStyle3 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[3])))
+    val planLineStyle4 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[4])))
+    val planLineStyle5 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[5])))
+    val planLineStyles = listOf(planLineStyle0, planLineStyle1, planLineStyle2, planLineStyle3, planLineStyle4, planLineStyle5)
+
     // Build visible line lists for each layer
     val leftLines = buildList<LineCartesianLayer.Line> {
         if (0 in visibleSeries) add(valueLine)
         if (1 in visibleSeries) add(costBasisLine)
         if (2 in visibleSeries) add(priceLine)
         if (4 in visibleSeries) add(avgBuyPriceLine)
+        // Per-plan line styles
+        planLines.forEachIndexed { idx, planLine ->
+            if (planLine.planId in visiblePlanLineIds && planLine.values.size == chartData.size) {
+                add(planLineStyles[idx % planLineStyles.size])
+            }
+        }
         if (isEmpty()) add(hiddenLine)
     }
     val rightLines = buildList<LineCartesianLayer.Line> {
