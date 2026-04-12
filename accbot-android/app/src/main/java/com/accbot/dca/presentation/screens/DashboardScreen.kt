@@ -1572,6 +1572,15 @@ private fun RunNowBottomSheet(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column(modifier = Modifier.weight(1f)) {
+                        // Show custom plan name (if set) above the pair label
+                        if (plan.name.isNotBlank()) {
+                            Text(
+                                text = plan.name,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)

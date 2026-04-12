@@ -349,10 +349,16 @@ internal fun PortfolioContent(
         pageCount = { pageCount }
     )
 
-    // Sync pager with ViewModel
+    // Sync pager -> ViewModel (swipe changes page)
     LaunchedEffect(pagerState.currentPage) {
         if (pagerState.currentPage != uiState.selectedPageIndex) {
             onPairPageSelected(pagerState.currentPage)
+        }
+    }
+    // Sync ViewModel -> pager (chip tap changes page)
+    LaunchedEffect(uiState.selectedPageIndex) {
+        if (pagerState.currentPage != uiState.selectedPageIndex) {
+            pagerState.animateScrollToPage(uiState.selectedPageIndex)
         }
     }
 
