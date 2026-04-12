@@ -1299,7 +1299,9 @@ private fun PlanLinesLegend(
     isAdvancedExpanded: Boolean = false,
     onToggleAdvanced: () -> Unit = {}
 ) {
-    val planLineColors = com.accbot.dca.presentation.components.planLineColors
+    val distinctColors = com.accbot.dca.presentation.components.distinctLineColors
+    fun planMetricColor(planIdx: Int, metric: PlanLineType): androidx.compose.ui.graphics.Color =
+        distinctColors[com.accbot.dca.presentation.components.distinctColorIdx(planIdx, metric.ordinal)]
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1307,14 +1309,13 @@ private fun PlanLinesLegend(
     ) {
         // Primary section: value + invested per plan
         planLines.forEachIndexed { index, planLine ->
-            val baseColor = planLineColors[index % planLineColors.size]
             Row(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 val valueEnabled = (planLine.planId to PlanLineType.VALUE) in visiblePlanLines
                 LegendTextEntry(
-                    color = baseColor,
+                    color = planMetricColor(index, PlanLineType.VALUE),
                     label = stringResource(R.string.chart_plan_value, planLine.name),
                     enabled = valueEnabled,
                     onClick = { onToggle(planLine.planId, PlanLineType.VALUE) }
@@ -1324,7 +1325,7 @@ private fun PlanLinesLegend(
 
                 val investedEnabled = (planLine.planId to PlanLineType.INVESTED) in visiblePlanLines
                 LegendTextEntry(
-                    color = baseColor.copy(alpha = 0.4f),
+                    color = planMetricColor(index, PlanLineType.INVESTED),
                     label = stringResource(R.string.chart_plan_invested, planLine.name),
                     enabled = investedEnabled,
                     onClick = { onToggle(planLine.planId, PlanLineType.INVESTED) }
@@ -1389,14 +1390,13 @@ private fun PlanLinesLegend(
 
             // Per-plan advanced rows: Prům. nák. cena + Akumulováno
             planLines.forEachIndexed { index, planLine ->
-                val baseColor = planLineColors[index % planLineColors.size]
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     val avgEnabled = (planLine.planId to PlanLineType.AVG_BUY_PRICE) in visiblePlanLines
                     LegendTextEntry(
-                        color = baseColor.copy(alpha = 0.7f),
+                        color = planMetricColor(index, PlanLineType.AVG_BUY_PRICE),
                         label = stringResource(R.string.chart_plan_avg_buy, planLine.name),
                         enabled = avgEnabled,
                         onClick = { onToggle(planLine.planId, PlanLineType.AVG_BUY_PRICE) }
@@ -1406,7 +1406,7 @@ private fun PlanLinesLegend(
 
                     val accEnabled = (planLine.planId to PlanLineType.ACCUMULATED) in visiblePlanLines
                     LegendTextEntry(
-                        color = baseColor.copy(alpha = 0.85f),
+                        color = planMetricColor(index, PlanLineType.ACCUMULATED),
                         label = stringResource(R.string.chart_plan_accumulated, planLine.name),
                         enabled = accEnabled,
                         onClick = { onToggle(planLine.planId, PlanLineType.ACCUMULATED) }

@@ -349,8 +349,8 @@
     <string name="chart_plan_accumulated">Akumulováno %1$s</string>
     <string name="chart_crypto_price_label">Cena %1$s</string>
     <string name="chart_total_accumulated_label">Celkem akumulováno %1$s</string>
-    <string name="chart_advanced_show">Pokročilé</string>
-    <string name="chart_advanced_hide">Skrýt pokročilé</string>
+    <string name="chart_advanced_show">Další metriky</string>
+    <string name="chart_advanced_hide">Skrýt metriky</string>
     <string name="chart_legend_crypto_held">Držené krypto</string>
     <string name="chart_legend_invested_equiv">Ekvivalent investice</string>
     <string name="chart_avg_price">Prům. cena</string>
