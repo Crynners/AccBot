@@ -115,20 +115,31 @@ class CredentialsStore @Inject constructor(
 
         Log.d(TAG, "Running CredentialsStore v2→v3 migration")
         try {
-            migrateV2ToV3ForEnv(prodDb, isSandbox = false)
-            migrateV2ToV3ForEnv(sandboxDb, isSandbox = true)
-            encryptedPrefs.edit().putBoolean(KEY_MIGRATION_V3_DONE, true).commit()
-            Log.d(TAG, "CredentialsStore v2→v3 migration complete")
+            val prodOk = migrateV2ToV3ForEnv(prodDb, isSandbox = false)
+            val sandboxOk = migrateV2ToV3ForEnv(sandboxDb, isSandbox = true)
+            if (prodOk && sandboxOk) {
+                encryptedPrefs.edit().putBoolean(KEY_MIGRATION_V3_DONE, true).commit()
+                Log.d(TAG, "CredentialsStore v2→v3 migration complete")
+            } else {
+                // Don't flag as done - next launch will retry any exchanges that failed.
+                Log.w(TAG, "CredentialsStore v2→v3 migration partial; will retry next launch")
+            }
         } catch (e: Exception) {
             // Don't set the flag - next launch will retry. Log so we notice.
             Log.e(TAG, "CredentialsStore v2→v3 migration failed; will retry next launch", e)
         }
     }
 
-    private suspend fun migrateV2ToV3ForEnv(db: DcaDatabase, isSandbox: Boolean) {
+    /**
+     * @return `true` if every exchange with a v2 key was successfully migrated (or had
+     * nothing to migrate). `false` if at least one exchange failed - caller must NOT
+     * set the migration-done flag so the remaining exchanges get another chance.
+     */
+    private suspend fun migrateV2ToV3ForEnv(db: DcaDatabase, isSandbox: Boolean): Boolean {
         val v2Prefix = if (isSandbox) KEY_PREFIX_SANDBOX_V2 else KEY_PREFIX_PROD_V2
         val v3Prefix = if (isSandbox) KEY_PREFIX_SANDBOX_V3 else KEY_PREFIX_PROD_V3
         val connectionDao = db.exchangeConnectionDao()
+        var allOk = true
 
         for (exchange in Exchange.entries) {
             val oldKey = "$v2Prefix${exchange.name}"
@@ -151,6 +162,7 @@ class CredentialsStore @Inject constructor(
                 // re-fetch and use the existing row.
                 connectionDao.getDefaultByExchange(exchange)?.id ?: run {
                     Log.e(TAG, "Failed to resolve connection for ${exchange.name} after constraint", e)
+                    allOk = false
                     continue
                 }
             }
@@ -167,6 +179,7 @@ class CredentialsStore @Inject constructor(
                 .commit()
             Log.d(TAG, "Migrated credentials for ${exchange.name} (sandbox=$isSandbox) → connectionId=$connectionId")
         }
+        return allOk
     }
 
     // ───────────────────────────────────────────────────────────────────────

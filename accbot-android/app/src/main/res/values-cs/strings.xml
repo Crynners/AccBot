@@ -794,6 +794,8 @@
     <string name="notification_missed_purchases_title">AccBot: Zmeškané nákupy</string>
     <string name="notification_missed_purchases_text">Zmeškaných %1$d nákupů %2$s na %3$s během offline.</string>
     <string name="notification_missed_purchases_banner">Zmeškaných %1$d nákupů %2$s na %3$s během offline.</string>
+    <string name="notification_missing_credentials_title">AccBot: Chybí API klíče</string>
+    <string name="notification_missing_credentials_text">Plán %1$s na %2$s nemůže běžet - chybí API přihlašovací údaje. Otevři Správu burz a zadej klíče znovu.</string>
     <string name="missed_purchases_buy">Dokoupit</string>
     <string name="missed_purchases_skip">Přeskočit</string>
     <string name="dashboard_withdrawal_ready">%1$s %2$s na burze – zvažte výběr</string>

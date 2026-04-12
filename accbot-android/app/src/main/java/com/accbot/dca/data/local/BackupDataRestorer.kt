@@ -170,15 +170,22 @@ class BackupDataRestorer @Inject constructor(
                     }
                 }
 
-                // 2. Transactions with remapped planId (merge: skip duplicates by exchangeOrderId)
+                // 2. Transactions with remapped planId.
+                // Merge dedup is scoped to (exchangeOrderId, connectionId): two connections
+                // on the same exchange can legitimately share an orderId (e.g. main vs
+                // savings envelope, or after an API key rotation), so a global lookup
+                // would silently drop the second set.
                 for (tx in payload.transactions) {
                     val remappedPlanId = planIdMap[tx.planId] ?: tx.planId
-                    if (restoreMode == RestoreMode.Merge && !tx.exchangeOrderId.isNullOrEmpty()) {
-                        val existing = transactionDao.getByExchangeOrderId(tx.exchangeOrderId)
-                        if (existing != null) continue // Already imported, skip
-                    }
                     val txExchange = Exchange.valueOf(tx.exchange)
                     val connectionId = resolveConnectionForRestore(tx.connectionId, txExchange)
+                    if (restoreMode == RestoreMode.Merge && !tx.exchangeOrderId.isNullOrEmpty()) {
+                        val existing = transactionDao.getByExchangeOrderIdAndConnection(
+                            tx.exchangeOrderId,
+                            connectionId
+                        )
+                        if (existing != null) continue // Already imported on this connection, skip
+                    }
                     transactionDao.insertTransaction(tx.toEntity(remappedPlanId, connectionId))
                 }
 
@@ -245,13 +252,52 @@ class BackupDataRestorer @Inject constructor(
                 }
             }
 
-            if (failedCredentials > 0) {
-                BackupResult.Success("Restored, but $failedCredentials credential set(s) could not be saved")
+            // Post-restore integrity check: find connections that now have plans but
+            // no credentials. This catches both the "backup had no credentials for this
+            // connection" case and the "credential save failed" case (e.g. app died
+            // between DB commit and credential save). Without this warning, DcaWorker
+            // would silently loop "no credentials" forever for the orphaned connection.
+            val orphanedConnections = findConnectionsMissingCredentials(isSandbox)
+
+            val warnings = buildList {
+                if (failedCredentials > 0) {
+                    add("$failedCredentials credential set(s) could not be saved")
+                }
+                if (orphanedConnections.isNotEmpty()) {
+                    val names = orphanedConnections.joinToString(", ") { (exch, name) ->
+                        if (name.isBlank()) exch.displayName else "${exch.displayName} ($name)"
+                    }
+                    add("missing API keys for: $names")
+                }
+            }
+
+            if (warnings.isNotEmpty()) {
+                BackupResult.Success("Restored, but " + warnings.joinToString("; "))
             } else {
                 BackupResult.Success()
             }
         } catch (e: Exception) {
             BackupResult.Error(e.message ?: "Unknown error during restore")
+        }
+    }
+
+    /**
+     * Walk the DB looking for connections that have at least one plan but no credentials
+     * stored for the current environment. Returns a list of (exchange, connectionName)
+     * pairs to surface in the restore result message.
+     */
+    private suspend fun findConnectionsMissingCredentials(isSandbox: Boolean): List<Pair<Exchange, String>> {
+        return try {
+            val plans = dcaPlanDao.getAllPlansOnce()
+            val connectionIdsWithPlans = plans.map { it.connectionId }.toSet()
+            if (connectionIdsWithPlans.isEmpty()) return emptyList()
+            connectionIdsWithPlans.mapNotNull { id ->
+                val conn = exchangeConnectionDao.getById(id) ?: return@mapNotNull null
+                if (credentialsStore.hasCredentials(id, isSandbox)) null
+                else conn.exchange to conn.name
+            }
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 

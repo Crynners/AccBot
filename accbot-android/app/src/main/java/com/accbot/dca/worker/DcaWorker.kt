@@ -114,8 +114,30 @@ class DcaWorker @AssistedInject constructor(
                 val credentials = credentialsStore.getCredentials(plan.connectionId, isSandbox)
                 if (credentials == null) {
                     Log.e(TAG, "No credentials for connection ${plan.connectionId} (${plan.exchange}, sandbox=$isSandbox)")
+                    // Notify the user once per plan per worker lifetime so a missing-credentials
+                    // plan doesn't just silently fail forever (e.g. after a half-completed
+                    // backup restore or a deleted connection). Dedup is in-memory, which
+                    // means we re-notify after the worker is recreated - acceptable, since
+                    // the user needs to act on it anyway.
+                    if (credentialErrorNotifiedPlans.add(plan.id)) {
+                        val connectionName = try {
+                            database.exchangeConnectionDao().getById(plan.connectionId)?.name ?: ""
+                        } catch (_: Exception) { "" }
+                        notificationService.showErrorNotification(
+                            planId = plan.id,
+                            exchange = plan.exchange,
+                            connectionId = plan.connectionId,
+                            templateArgs = NotificationTemplateArgs.MissingCredentials(
+                                crypto = plan.crypto,
+                                exchangeName = plan.exchange.displayName,
+                                connectionName = connectionName
+                            )
+                        )
+                    }
                     continue
                 }
+                // Credentials are back - allow future notifications if they disappear again
+                credentialErrorNotifiedPlans.remove(plan.id)
 
                 // Calculate purchase amount based on strategy
                 val strategyResult = calculateStrategyMultiplier(
@@ -477,6 +499,14 @@ class DcaWorker @AssistedInject constructor(
         private const val KEY_PLAN_ID = "planId"
         private const val KEY_REPEAT_COUNT = "repeatCount"
         const val WORK_NAME = "dca_periodic_work"
+
+        /**
+         * Plan IDs we've already shown a "missing credentials" notification for in
+         * this process lifetime. Prevents spamming the notification tray on every
+         * alarm tick (~hourly) for a plan whose credentials will stay missing until
+         * the user acts. Cleared when credentials reappear for that plan.
+         */
+        private val credentialErrorNotifiedPlans = java.util.Collections.synchronizedSet(mutableSetOf<Long>())
 
         /**
          * Schedule periodic DCA work as a safety net (backs up AlarmManager).

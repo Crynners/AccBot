@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.DcaPlanDao
+import com.accbot.dca.data.local.DcaPlanEntity
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.data.local.UserPreferences
@@ -16,9 +17,11 @@ import com.accbot.dca.domain.usecase.SyncDailyPricesUseCase
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -89,13 +92,31 @@ class PortfolioViewModel @Inject constructor(
     private val userPreferences: UserPreferences
 ) : ViewModel() {
 
-    private val initialCrypto: String? = savedStateHandle["crypto"]
-    private val initialFiat: String? = savedStateHandle["fiat"]
+    // Consumed once on first loadPortfolio() and then nulled out so a process-death
+    // restore (which repopulates SavedStateHandle from the bundle) doesn't override
+    // the user's persisted chip selection.
+    private var initialCrypto: String? = savedStateHandle["crypto"]
+    private var initialFiat: String? = savedStateHandle["fiat"]
+
+    init {
+        // Drop the deep-link args from SavedStateHandle so they don't survive process
+        // death and re-override the restored chip selection on the next recreate.
+        savedStateHandle.remove<String>("crypto")
+        savedStateHandle.remove<String>("fiat")
+    }
 
     private val _uiState = MutableStateFlow(PortfolioUiState())
     val uiState: StateFlow<PortfolioUiState> = _uiState.asStateFlow()
 
     private var completedTransactions: List<TransactionEntity> = emptyList()
+    /**
+     * Cached plan list used by [loadChartData] to build aggregate per-plan lines.
+     * Refreshed by [loadPortfolio] and [refreshTransactionsAndPairs]. Without this
+     * cache, every chart navigation (zoom, chip tap, navigate prev/next) would
+     * re-query the DB once per render, multiplying with per-plan chart calculation
+     * into an O(plans × days) blocking call on the main thread.
+     */
+    private var cachedDbPlans: List<DcaPlanEntity> = emptyList()
 
     private var portfolioJob: Job? = null
     private var syncJob: Job? = null
@@ -132,6 +153,7 @@ class PortfolioViewModel @Inject constructor(
 
                 // Load all plans (including disabled) for page building
                 val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
+                cachedDbPlans = allDbPlans
 
                 // Build pages: aggregate per fiat (if 2+ plans in same fiat), then per plan
                 val plansByFiat = allDbPlans.groupBy { it.fiat }
@@ -150,10 +172,16 @@ class PortfolioViewModel @Inject constructor(
                     ))
                 }
 
+                val deepLinkCrypto = initialCrypto
+                val deepLinkFiat = initialFiat
+                // One-shot consumption: null after first use so subsequent
+                // forceRefresh/refreshIfStale calls honour the user's chip selection.
+                initialCrypto = null
+                initialFiat = null
                 val pageIndex = when {
-                    initialCrypto != null && initialFiat != null -> {
+                    deepLinkCrypto != null && deepLinkFiat != null -> {
                         // Explicit deep-link from dashboard takes priority
-                        val idx = pages.indexOfFirst { it is PairPage.Plan && it.crypto == initialCrypto && it.fiat == initialFiat }
+                        val idx = pages.indexOfFirst { it is PairPage.Plan && it.crypto == deepLinkCrypto && it.fiat == deepLinkFiat }
                         if (idx >= 0) idx else 0
                     }
                     else -> {
@@ -198,6 +226,7 @@ class PortfolioViewModel @Inject constructor(
                 completedTransactions = completed
 
                 val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
+                cachedDbPlans = allDbPlans
                 val plansByFiat = allDbPlans.groupBy { it.fiat }
                 val pages = mutableListOf<PairPage>()
                 for ((fiat, fiatPlans) in plansByFiat) {
@@ -478,147 +507,177 @@ class PortfolioViewModel @Inject constructor(
         chartJob?.cancel()
         chartJob = viewModelScope.launch {
             _uiState.update { it.copy(isChartLoading = true) }
-            try {
-                val state = _uiState.value
-                val page = state.pages.getOrNull(state.selectedPageIndex)
-
-                val (crypto, fiat, planId) = when (page) {
-                    is PairPage.Aggregate -> Triple(null, page.fiat, null)
-                    is PairPage.Plan -> Triple(page.crypto, page.fiat, page.planId)
-                    null -> Triple(null, null, null)
+            // Heavy chart calculations (per-plan and per-crypto-group line alignment)
+            // can run for hundreds of ms on datasets with many plans * many days.
+            // Offload to the Default dispatcher so we don't stall the main thread
+            // during zoom/scrub/navigate interactions.
+            val chartResult = try {
+                withContext(Dispatchers.Default) {
+                    computeChartData()
                 }
-
-                val filteredTxs = if (planId != null) {
-                    completedTransactions.filter { it.planId == planId }
-                } else {
-                    completedTransactions
-                }
-
-                val data = if (fiat == null) {
-                    emptyList()
-                } else {
-                    calculateChartDataUseCase.calculate(
-                        transactions = filteredTxs,
-                        crypto = crypto,
-                        fiat = fiat,
-                        zoomLevel = state.zoomLevel
-                    )
-                }
-
-                // Compute relevantPlans once so both planLines and cryptoGroupLines can use it
-                val relevantPlans = if (page is PairPage.Aggregate) {
-                    try { dcaPlanDao.getAllPlansOnceOrdered().filter { it.fiat == page.fiat } }
-                    catch (_: Exception) { emptyList() }
-                } else emptyList()
-
-                // Calculate per-plan lines (only for Aggregate pages - Plan pages show a single plan's main line)
-                val planLinesList = if (page is PairPage.Aggregate && data.isNotEmpty()) {
-                    try {
-                        if (relevantPlans.size >= 2) {
-                            val mainEpochDays = data.map { it.epochDay }
-                            relevantPlans.mapNotNull { plan ->
-                                val planTxs = completedTransactions.filter { it.planId == plan.id }
-                                if (planTxs.isEmpty()) return@mapNotNull null
-                                val planData = calculateChartDataUseCase.calculate(
-                                    transactions = planTxs,
-                                    crypto = plan.crypto,
-                                    fiat = plan.fiat,
-                                    zoomLevel = state.zoomLevel
-                                )
-                                // Align to main chart's epoch days via forward-fill
-                                val planByDay = planData.associateBy { it.epochDay }
-                                var lastValue = 0f
-                                var lastInvested = 0f
-                                var lastAvg = 0f
-                                var lastAccum = 0f
-                                val valueAligned = mainEpochDays.map { day ->
-                                    val v = planByDay[day]?.portfolioValue?.toFloat()
-                                    if (v != null) { lastValue = v; v } else lastValue
-                                }
-                                val investedAligned = mainEpochDays.map { day ->
-                                    val v = planByDay[day]?.totalInvested?.toFloat()
-                                    if (v != null) { lastInvested = v; v } else lastInvested
-                                }
-                                val avgBuyAligned = mainEpochDays.map { day ->
-                                    val v = planByDay[day]?.avgBuyPrice?.toFloat()
-                                    if (v != null) { lastAvg = v; v } else lastAvg
-                                }
-                                val accumulatedAligned = mainEpochDays.map { day ->
-                                    val v = planByDay[day]?.cumulativeCrypto?.toFloat()
-                                    if (v != null) { lastAccum = v; v } else lastAccum
-                                }
-                                PlanLineInfo(
-                                    planId = plan.id,
-                                    name = plan.name.ifBlank { "${plan.crypto}/${plan.fiat} #${plan.id}" },
-                                    crypto = plan.crypto,
-                                    valueSeries = valueAligned,
-                                    investedSeries = investedAligned,
-                                    avgBuyPriceSeries = avgBuyAligned,
-                                    accumulatedSeries = accumulatedAligned
-                                )
-                            }
-                        } else emptyList()
-                    } catch (_: Exception) { emptyList() }
-                } else emptyList()
-
-                // Calculate per-crypto-group lines (price + total accumulated per unique crypto within the aggregate)
-                val cryptoGroupLinesList = if (page is PairPage.Aggregate && data.isNotEmpty()) {
-                    try {
-                        val uniqueCryptos = relevantPlans.map { it.crypto }.distinct()
-                        val mainEpochDays = data.map { it.epochDay }
-                        uniqueCryptos.mapNotNull { crypto ->
-                            val cryptoTxs = completedTransactions.filter { it.crypto == crypto && it.fiat == page.fiat }
-                            if (cryptoTxs.isEmpty()) return@mapNotNull null
-                            val cryptoChartData = calculateChartDataUseCase.calculate(
-                                transactions = cryptoTxs,
-                                crypto = crypto,
-                                fiat = page.fiat,
-                                zoomLevel = state.zoomLevel
-                            )
-                            val byDay = cryptoChartData.associateBy { it.epochDay }
-                            var lastPrice = 0f
-                            var lastAccum = 0f
-                            val priceAligned = mainEpochDays.map { day ->
-                                val v = byDay[day]?.price?.toFloat()
-                                if (v != null) { lastPrice = v; v } else lastPrice
-                            }
-                            val accAligned = mainEpochDays.map { day ->
-                                val v = byDay[day]?.cumulativeCrypto?.toFloat()
-                                if (v != null) { lastAccum = v; v } else lastAccum
-                            }
-                            CryptoGroupLineInfo(
-                                crypto = crypto,
-                                priceSeries = priceAligned,
-                                totalAccumulatedSeries = accAligned
-                            )
-                        }
-                    } catch (_: Exception) { emptyList() }
-                } else emptyList()
-
-                val txCount = filteredTxs.count { tx ->
-                    (crypto == null || tx.crypto == crypto) &&
-                    (fiat == null || tx.fiat == fiat)
-                }
-
-                _uiState.update { it.copy(
-                    chartData = data,
-                    currentPairCrypto = crypto,
-                    currentPairFiat = fiat,
-                    totalTransactions = txCount,
-                    planLines = planLinesList,
-                    cryptoGroupLines = cryptoGroupLinesList,
-                    isChartLoading = false
-                ) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: OutOfMemoryError) {
                 Log.e("PortfolioVM", "OOM calculating chart data", e)
                 _uiState.update { it.copy(isChartLoading = false, error = "Not enough memory for chart") }
-            } catch (e: CancellationException) {
-                throw e
+                return@launch
             } catch (e: Exception) {
                 Log.e("PortfolioVM", "Error loading chart data", e)
                 _uiState.update { it.copy(isChartLoading = false) }
+                return@launch
             }
+
+            _uiState.update { it.copy(
+                chartData = chartResult.data,
+                currentPairCrypto = chartResult.crypto,
+                currentPairFiat = chartResult.fiat,
+                totalTransactions = chartResult.txCount,
+                planLines = chartResult.planLines,
+                cryptoGroupLines = chartResult.cryptoGroupLines,
+                isChartLoading = false
+            ) }
         }
+    }
+
+    private data class ChartComputeResult(
+        val data: List<ChartDataPoint>,
+        val crypto: String?,
+        val fiat: String?,
+        val txCount: Int,
+        val planLines: List<PlanLineInfo>,
+        val cryptoGroupLines: List<CryptoGroupLineInfo>
+    )
+
+    private suspend fun computeChartData(): ChartComputeResult {
+        val state = _uiState.value
+        val page = state.pages.getOrNull(state.selectedPageIndex)
+
+        val (crypto, fiat, planId) = when (page) {
+            is PairPage.Aggregate -> Triple(null, page.fiat, null)
+            is PairPage.Plan -> Triple(page.crypto, page.fiat, page.planId)
+            null -> Triple(null, null, null)
+        }
+
+        val filteredTxs = if (planId != null) {
+            completedTransactions.filter { it.planId == planId }
+        } else {
+            completedTransactions
+        }
+
+        val data = if (fiat == null) {
+            emptyList()
+        } else {
+            calculateChartDataUseCase.calculate(
+                transactions = filteredTxs,
+                crypto = crypto,
+                fiat = fiat,
+                zoomLevel = state.zoomLevel
+            )
+        }
+
+        // Use cached plans (refreshed by loadPortfolio / refreshTransactionsAndPairs)
+        // instead of hitting the DB on every chart render.
+        val relevantPlans = if (page is PairPage.Aggregate) {
+            cachedDbPlans.filter { it.fiat == page.fiat }
+        } else emptyList()
+
+        // Calculate per-plan lines (only for Aggregate pages - Plan pages show a single plan's main line)
+        val planLinesList = if (page is PairPage.Aggregate && data.isNotEmpty()) {
+            try {
+                if (relevantPlans.size >= 2) {
+                    val mainEpochDays = data.map { it.epochDay }
+                    relevantPlans.mapNotNull { plan ->
+                        val planTxs = completedTransactions.filter { it.planId == plan.id }
+                        if (planTxs.isEmpty()) return@mapNotNull null
+                        val planData = calculateChartDataUseCase.calculate(
+                            transactions = planTxs,
+                            crypto = plan.crypto,
+                            fiat = plan.fiat,
+                            zoomLevel = state.zoomLevel
+                        )
+                        // Align to main chart's epoch days via forward-fill
+                        val planByDay = planData.associateBy { it.epochDay }
+                        var lastValue = 0f
+                        var lastInvested = 0f
+                        var lastAvg = 0f
+                        var lastAccum = 0f
+                        val valueAligned = mainEpochDays.map { day ->
+                            val v = planByDay[day]?.portfolioValue?.toFloat()
+                            if (v != null) { lastValue = v; v } else lastValue
+                        }
+                        val investedAligned = mainEpochDays.map { day ->
+                            val v = planByDay[day]?.totalInvested?.toFloat()
+                            if (v != null) { lastInvested = v; v } else lastInvested
+                        }
+                        val avgBuyAligned = mainEpochDays.map { day ->
+                            val v = planByDay[day]?.avgBuyPrice?.toFloat()
+                            if (v != null) { lastAvg = v; v } else lastAvg
+                        }
+                        val accumulatedAligned = mainEpochDays.map { day ->
+                            val v = planByDay[day]?.cumulativeCrypto?.toFloat()
+                            if (v != null) { lastAccum = v; v } else lastAccum
+                        }
+                        PlanLineInfo(
+                            planId = plan.id,
+                            name = plan.name.ifBlank { "${plan.crypto}/${plan.fiat} #${plan.id}" },
+                            crypto = plan.crypto,
+                            valueSeries = valueAligned,
+                            investedSeries = investedAligned,
+                            avgBuyPriceSeries = avgBuyAligned,
+                            accumulatedSeries = accumulatedAligned
+                        )
+                    }
+                } else emptyList()
+            } catch (_: Exception) { emptyList() }
+        } else emptyList()
+
+        // Calculate per-crypto-group lines (price + total accumulated per unique crypto within the aggregate)
+        val cryptoGroupLinesList = if (page is PairPage.Aggregate && data.isNotEmpty()) {
+            try {
+                val uniqueCryptos = relevantPlans.map { it.crypto }.distinct()
+                val mainEpochDays = data.map { it.epochDay }
+                uniqueCryptos.mapNotNull { cryptoSym ->
+                    val cryptoTxs = completedTransactions.filter { it.crypto == cryptoSym && it.fiat == page.fiat }
+                    if (cryptoTxs.isEmpty()) return@mapNotNull null
+                    val cryptoChartData = calculateChartDataUseCase.calculate(
+                        transactions = cryptoTxs,
+                        crypto = cryptoSym,
+                        fiat = page.fiat,
+                        zoomLevel = state.zoomLevel
+                    )
+                    val byDay = cryptoChartData.associateBy { it.epochDay }
+                    var lastPrice = 0f
+                    var lastAccum = 0f
+                    val priceAligned = mainEpochDays.map { day ->
+                        val v = byDay[day]?.price?.toFloat()
+                        if (v != null) { lastPrice = v; v } else lastPrice
+                    }
+                    val accAligned = mainEpochDays.map { day ->
+                        val v = byDay[day]?.cumulativeCrypto?.toFloat()
+                        if (v != null) { lastAccum = v; v } else lastAccum
+                    }
+                    CryptoGroupLineInfo(
+                        crypto = cryptoSym,
+                        priceSeries = priceAligned,
+                        totalAccumulatedSeries = accAligned
+                    )
+                }
+            } catch (_: Exception) { emptyList() }
+        } else emptyList()
+
+        val txCount = filteredTxs.count { tx ->
+            (crypto == null || tx.crypto == crypto) &&
+            (fiat == null || tx.fiat == fiat)
+        }
+
+        return ChartComputeResult(
+            data = data,
+            crypto = crypto,
+            fiat = fiat,
+            txCount = txCount,
+            planLines = planLinesList,
+            cryptoGroupLines = cryptoGroupLinesList
+        )
     }
 
     fun refreshIfStale() {

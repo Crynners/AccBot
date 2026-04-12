@@ -3,6 +3,7 @@ package com.accbot.dca.domain.model
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.accbot.dca.R
+import com.google.gson.annotations.SerializedName
 import java.math.BigDecimal
 import java.time.Instant
 
@@ -174,14 +175,18 @@ data class DcaPlan(
 )
 
 /**
- * API credentials - encrypted and stored locally only
+ * API credentials - encrypted and stored locally only.
+ *
+ * Fields are annotated with @SerializedName so Gson deserialization survives R8 field
+ * renaming. Without this, a release build could silently return null fields and every
+ * DCA purchase would fail with a cryptic "no credentials" error.
  */
 data class ExchangeCredentials(
-    val exchange: Exchange,
-    val apiKey: String,
-    val apiSecret: String,
-    val passphrase: String? = null, // Some exchanges require this (KuCoin, Coinbase)
-    val clientId: String? = null    // Coinmate requires separate Client ID
+    @SerializedName("exchange") val exchange: Exchange,
+    @SerializedName("apiKey") val apiKey: String,
+    @SerializedName("apiSecret") val apiSecret: String,
+    @SerializedName("passphrase") val passphrase: String? = null, // Some exchanges require this (KuCoin, Coinbase)
+    @SerializedName("clientId") val clientId: String? = null    // Coinmate requires separate Client ID
 )
 
 /**

@@ -344,6 +344,15 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE exchangeOrderId = :orderId LIMIT 1")
     suspend fun getByExchangeOrderId(orderId: String): TransactionEntity?
 
+    /**
+     * Connection-scoped lookup: find a transaction by exchange order id within a
+     * specific connection. Used by backup restore dedup so two connections
+     * (e.g. prod vs sandbox, or "main" vs "savings") that happen to share an
+     * exchangeOrderId don't collapse into one row.
+     */
+    @Query("SELECT * FROM transactions WHERE exchangeOrderId = :orderId AND connectionId = :connectionId LIMIT 1")
+    suspend fun getByExchangeOrderIdAndConnection(orderId: String, connectionId: Long): TransactionEntity?
+
     @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE planId = :planId AND status = 'COMPLETED'")
     suspend fun getAccumulatedCryptoByPlan(planId: Long): String
 }

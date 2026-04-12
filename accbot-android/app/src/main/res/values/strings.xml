@@ -791,6 +791,8 @@
     <string name="notification_missed_purchases_title">AccBot: Missed Purchases</string>
     <string name="notification_missed_purchases_text">%1$d %2$s purchase(s) on %3$s were missed while offline.</string>
     <string name="notification_missed_purchases_banner">%1$d missed %2$s purchase(s) on %3$s while offline.</string>
+    <string name="notification_missing_credentials_title">AccBot: Missing API Keys</string>
+    <string name="notification_missing_credentials_text">%1$s plan on %2$s cannot run - API credentials are missing. Open Exchange Management to re-enter keys.</string>
     <string name="missed_purchases_buy">Buy now</string>
     <string name="missed_purchases_skip">Skip</string>
     <string name="dashboard_withdrawal_ready">%1$s %2$s on exchange – consider withdrawal</string>

@@ -33,6 +33,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.coroutineContext
 import java.math.BigDecimal
@@ -140,6 +142,14 @@ class DashboardViewModel @Inject constructor(
     private var lastLoadedAt: Long = 0
     private var lastMarketDataFetchedAt: Long = 0
 
+    /**
+     * Serializes plan-reorder writes. Without this, rapid drags could enqueue two
+     * concurrent `updateAllDisplayOrders` calls with different snapshots of the list
+     * and Room's writer thread might commit them out of order, leaving the persisted
+     * order inconsistent with the user's final gesture.
+     */
+    private val reorderMutex = Mutex()
+
     init {
         loadData()
     }
@@ -160,11 +170,27 @@ class DashboardViewModel @Inject constructor(
             }
 
             combine(
-                dcaPlanDao.getAllPlans(),
-                transactionDao.getHoldingsByPairFlow()
-            ) { planEntities, dbHoldings ->
-                Pair(planEntities, dbHoldings)
-            }.collectLatest { (planEntities, dbHoldings) ->
+                // Skip emits that only differ by displayOrder: after a drag-reorder the
+                // DAO Flow re-emits with identical content but a new ordering. Without
+                // this guard, collectLatest would cancel in-flight balance/price fetches
+                // on every swap and restart them from scratch (API spam + UI flicker).
+                dcaPlanDao.getAllPlans().distinctUntilChanged { old, new ->
+                    val oldById = old.associateBy { it.id }
+                    val newById = new.associateBy { it.id }
+                    oldById.keys == newById.keys &&
+                        oldById.all { (id, entity) ->
+                            val other = newById.getValue(id)
+                            entity.copy(displayOrder = 0) == other.copy(displayOrder = 0)
+                        }
+                },
+                transactionDao.getHoldingsByPairFlow(),
+                // Fold connections into the combine so we don't do per-emit DB lookups
+                // for connection names. Re-emits naturally when the user renames a
+                // connection on the Exchange Management screen.
+                exchangeConnectionDao.getAllFlow()
+            ) { planEntities, dbHoldings, connections ->
+                Triple(planEntities, dbHoldings, connections)
+            }.collectLatest { (planEntities, dbHoldings, connections) ->
                 refreshPricesJob?.cancel()
                 val plans = planEntities.map { it.toDomain() }
 
@@ -176,15 +202,7 @@ class DashboardViewModel @Inject constructor(
                     launch { DcaAlarmScheduler.scheduleNextAlarm(application) }
                 }
 
-                // Pre-load connection names for all unique connectionIds in one batch.
-                // Avoids one DB call per plan during the map below.
-                val connectionNames: Map<Long, String> = plans
-                    .map { it.connectionId }
-                    .distinct()
-                    .mapNotNull { id ->
-                        exchangeConnectionDao.getById(id)?.let { id to it.name }
-                    }
-                    .toMap()
+                val connectionNames: Map<Long, String> = connections.associate { it.id to it.name }
 
                 val plansWithBalance = plans.map { plan ->
                     val accumulated = if (plan.targetAmount != null) {
@@ -580,6 +598,11 @@ class DashboardViewModel @Inject constructor(
     /**
      * Move a plan from [fromIndex] to [toIndex] in the dashboard display order.
      * Re-assigns sequential displayOrder values (0, 1, 2, ...) to all plans.
+     *
+     * Persistence is serialized through [reorderMutex] so rapid drags can't commit
+     * their snapshots out of order. The optimistic UI update still happens
+     * synchronously so the list feels responsive even while a previous write is
+     * still draining.
      */
     fun reorderPlans(fromIndex: Int, toIndex: Int) {
         val plans = _uiState.value.activePlans.toMutableList()
@@ -589,10 +612,12 @@ class DashboardViewModel @Inject constructor(
         plans.add(toIndex, moved)
         // Update UI immediately for responsive feel
         _uiState.update { it.copy(activePlans = plans) }
-        // Persist new order
+        // Persist new order (serialized)
         val planOrders = plans.mapIndexed { index, pwb -> pwb.plan.id to index }
         viewModelScope.launch {
-            dcaPlanDao.updateAllDisplayOrders(planOrders)
+            reorderMutex.withLock {
+                dcaPlanDao.updateAllDisplayOrders(planOrders)
+            }
         }
     }
 

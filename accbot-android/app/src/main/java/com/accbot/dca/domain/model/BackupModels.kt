@@ -1,5 +1,6 @@
 package com.accbot.dca.domain.model
 
+import com.google.gson.annotations.SerializedName
 import java.time.Instant
 
 /**
@@ -12,18 +13,23 @@ import java.time.Instant
  *   fields on plans/transactions/withdrawals/notifications/credentials/thresholds so
  *   multiple connections per exchange can roundtrip cleanly. v1 backups are still
  *   restored by auto-creating one default connection per exchange.
+ *
+ * All fields in this file are annotated with @SerializedName so Gson deserialization
+ * survives R8 field renaming even if the containing package is ever moved outside the
+ * ProGuard keep rules. Without these, a release build could silently return null
+ * fields for restored backups.
  */
 data class BackupEnvelope(
-    val format: String = FORMAT_IDENTIFIER,
-    val version: Int = CURRENT_VERSION,
-    val createdAt: Long = Instant.now().toEpochMilli(),
-    val appVersion: String = "",
-    val platform: String = "android",
-    val environment: String = "prod",
-    val encrypted: Boolean = true,
-    val compressed: Boolean = true,
-    val sections: List<String> = emptyList(),
-    val data: String = "" // base64(salt ‖ IV ‖ ciphertext ‖ GCM-tag) or plain JSON
+    @SerializedName("format") val format: String = FORMAT_IDENTIFIER,
+    @SerializedName("version") val version: Int = CURRENT_VERSION,
+    @SerializedName("createdAt") val createdAt: Long = Instant.now().toEpochMilli(),
+    @SerializedName("appVersion") val appVersion: String = "",
+    @SerializedName("platform") val platform: String = "android",
+    @SerializedName("environment") val environment: String = "prod",
+    @SerializedName("encrypted") val encrypted: Boolean = true,
+    @SerializedName("compressed") val compressed: Boolean = true,
+    @SerializedName("sections") val sections: List<String> = emptyList(),
+    @SerializedName("data") val data: String = "" // base64(salt ‖ IV ‖ ciphertext ‖ GCM-tag) or plain JSON
 ) {
     companion object {
         const val FORMAT_IDENTIFIER = "accbot-backup"
@@ -39,15 +45,15 @@ data class BackupEnvelope(
  * time); during restore, BackupDataRestorer remaps these to fresh local IDs.
  */
 data class BackupPayload(
-    val plans: List<BackupPlan> = emptyList(),
-    val settings: BackupSettings? = null,
-    val withdrawalThresholds: List<BackupWithdrawalThreshold> = emptyList(),
-    val credentials: List<BackupCredentials> = emptyList(),
-    val transactions: List<BackupTransaction> = emptyList(),
-    val notifications: List<BackupNotification> = emptyList(),
-    val withdrawals: List<BackupWithdrawal> = emptyList(),
+    @SerializedName("plans") val plans: List<BackupPlan> = emptyList(),
+    @SerializedName("settings") val settings: BackupSettings? = null,
+    @SerializedName("withdrawalThresholds") val withdrawalThresholds: List<BackupWithdrawalThreshold> = emptyList(),
+    @SerializedName("credentials") val credentials: List<BackupCredentials> = emptyList(),
+    @SerializedName("transactions") val transactions: List<BackupTransaction> = emptyList(),
+    @SerializedName("notifications") val notifications: List<BackupNotification> = emptyList(),
+    @SerializedName("withdrawals") val withdrawals: List<BackupWithdrawal> = emptyList(),
     /** v2+: list of [ExchangeConnectionEntity]-equivalent rows. Empty for legacy v1 backups. */
-    val connections: List<BackupExchangeConnection> = emptyList()
+    @SerializedName("connections") val connections: List<BackupExchangeConnection> = emptyList()
 )
 
 /**
@@ -55,48 +61,48 @@ data class BackupPayload(
  */
 data class BackupExchangeConnection(
     /** Source DB's autoincrement id at export time. Used as the join key for plans/etc. */
-    val id: Long,
-    val exchange: String,
-    val name: String = "",
-    val createdAt: Long = 0,
-    val displayOrder: Int = 0
+    @SerializedName("id") val id: Long,
+    @SerializedName("exchange") val exchange: String,
+    @SerializedName("name") val name: String = "",
+    @SerializedName("createdAt") val createdAt: Long = 0,
+    @SerializedName("displayOrder") val displayOrder: Int = 0
 )
 
 /**
  * Serializable DCA plan for backup (primitives/strings for platform independence).
  */
 data class BackupPlan(
-    val id: Long,
-    val exchange: String,
-    val crypto: String,
-    val fiat: String,
-    val amount: String,           // BigDecimal.toPlainString()
-    val frequency: String,        // DcaFrequency.name
-    val cronExpression: String? = null,
-    val strategy: String = "Classic", // DcaStrategy DB string
-    val isEnabled: Boolean = true,
-    val withdrawalEnabled: Boolean = false,
-    val withdrawalAddress: String? = null,
-    val createdAt: Long = 0,      // Instant epoch millis
-    val lastExecutedAt: Long? = null,
-    val nextExecutionAt: Long? = null,
-    val targetAmount: String? = null,  // BigDecimal.toPlainString()
+    @SerializedName("id") val id: Long,
+    @SerializedName("exchange") val exchange: String,
+    @SerializedName("crypto") val crypto: String,
+    @SerializedName("fiat") val fiat: String,
+    @SerializedName("amount") val amount: String,           // BigDecimal.toPlainString()
+    @SerializedName("frequency") val frequency: String,        // DcaFrequency.name
+    @SerializedName("cronExpression") val cronExpression: String? = null,
+    @SerializedName("strategy") val strategy: String = "Classic", // DcaStrategy DB string
+    @SerializedName("isEnabled") val isEnabled: Boolean = true,
+    @SerializedName("withdrawalEnabled") val withdrawalEnabled: Boolean = false,
+    @SerializedName("withdrawalAddress") val withdrawalAddress: String? = null,
+    @SerializedName("createdAt") val createdAt: Long = 0,      // Instant epoch millis
+    @SerializedName("lastExecutedAt") val lastExecutedAt: Long? = null,
+    @SerializedName("nextExecutionAt") val nextExecutionAt: Long? = null,
+    @SerializedName("targetAmount") val targetAmount: String? = null,  // BigDecimal.toPlainString()
     /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
-    val connectionId: Long? = null
+    @SerializedName("connectionId") val connectionId: Long? = null
 )
 
 /**
  * Serializable user settings for backup.
  */
 data class BackupSettings(
-    val appTheme: String = "DARK",
-    val notificationsEnabled: Boolean = true,
-    val purchaseNotifications: Boolean = true,
-    val errorNotifications: Boolean = true,
-    val weeklySummaryNotifications: Boolean = false,
-    val languageTag: String = "",
-    val biometricLockEnabled: Boolean = false,
-    val lowBalanceThresholdDays: Int = 2
+    @SerializedName("appTheme") val appTheme: String = "DARK",
+    @SerializedName("notificationsEnabled") val notificationsEnabled: Boolean = true,
+    @SerializedName("purchaseNotifications") val purchaseNotifications: Boolean = true,
+    @SerializedName("errorNotifications") val errorNotifications: Boolean = true,
+    @SerializedName("weeklySummaryNotifications") val weeklySummaryNotifications: Boolean = false,
+    @SerializedName("languageTag") val languageTag: String = "",
+    @SerializedName("biometricLockEnabled") val biometricLockEnabled: Boolean = false,
+    @SerializedName("lowBalanceThresholdDays") val lowBalanceThresholdDays: Int = 2
 )
 
 /**
@@ -107,74 +113,74 @@ data class BackupSettings(
  * to the default connection per exchange.
  */
 data class BackupCredentials(
-    val exchange: String,
-    val apiKey: String,
-    val apiSecret: String,
-    val passphrase: String? = null,
-    val clientId: String? = null,
+    @SerializedName("exchange") val exchange: String,
+    @SerializedName("apiKey") val apiKey: String,
+    @SerializedName("apiSecret") val apiSecret: String,
+    @SerializedName("passphrase") val passphrase: String? = null,
+    @SerializedName("clientId") val clientId: String? = null,
     /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
-    val connectionId: Long? = null
+    @SerializedName("connectionId") val connectionId: Long? = null
 )
 
 /**
  * Serializable transaction for backup.
  */
 data class BackupTransaction(
-    val id: Long,
-    val planId: Long,
-    val exchange: String,
-    val crypto: String,
-    val fiat: String,
-    val fiatAmount: String,
-    val cryptoAmount: String,
-    val price: String,
-    val fee: String,
-    val feeAsset: String = "",
-    val status: String,
-    val exchangeOrderId: String? = null,
-    val errorMessage: String? = null,
-    val warningMessage: String? = null,
-    val executedAt: Long = 0,
+    @SerializedName("id") val id: Long,
+    @SerializedName("planId") val planId: Long,
+    @SerializedName("exchange") val exchange: String,
+    @SerializedName("crypto") val crypto: String,
+    @SerializedName("fiat") val fiat: String,
+    @SerializedName("fiatAmount") val fiatAmount: String,
+    @SerializedName("cryptoAmount") val cryptoAmount: String,
+    @SerializedName("price") val price: String,
+    @SerializedName("fee") val fee: String,
+    @SerializedName("feeAsset") val feeAsset: String = "",
+    @SerializedName("status") val status: String,
+    @SerializedName("exchangeOrderId") val exchangeOrderId: String? = null,
+    @SerializedName("errorMessage") val errorMessage: String? = null,
+    @SerializedName("warningMessage") val warningMessage: String? = null,
+    @SerializedName("executedAt") val executedAt: Long = 0,
     /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
-    val connectionId: Long? = null
+    @SerializedName("connectionId") val connectionId: Long? = null
 )
 
 /**
  * Serializable notification for backup.
  */
 data class BackupNotification(
-    val id: Long,
-    val type: String,
-    val title: String,
-    val message: String,
-    val planId: Long? = null,
-    val crypto: String? = null,
-    val exchange: String? = null,
-    val isRead: Boolean = false,
-    val isArchived: Boolean = false,
-    val templateArgs: String? = null,
-    val createdAt: Long = 0,
+    @SerializedName("id") val id: Long,
+    @SerializedName("type") val type: String,
+    @SerializedName("title") val title: String,
+    @SerializedName("message") val message: String,
+    @SerializedName("planId") val planId: Long? = null,
+    @SerializedName("crypto") val crypto: String? = null,
+    @SerializedName("exchange") val exchange: String? = null,
+    @SerializedName("isRead") val isRead: Boolean = false,
+    @SerializedName("isArchived") val isArchived: Boolean = false,
+    @SerializedName("templateArgs") val templateArgs: String? = null,
+    @SerializedName("createdAt") val createdAt: Long = 0,
     /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
-    val connectionId: Long? = null
+    @SerializedName("connectionId") val connectionId: Long? = null
 )
 
 /**
  * Serializable withdrawal for backup.
  */
 data class BackupWithdrawal(
-    val id: Long,
-    val planId: Long,
-    val exchange: String,
-    val crypto: String,
-    val amount: String,
-    val address: String,
-    val txHash: String? = null,
-    val fee: String,
-    val status: String,
-    val errorMessage: String? = null,
-    val createdAt: Long = 0,
+    @SerializedName("id") val id: Long,
+    @SerializedName("planId") val planId: Long,
+    @SerializedName("exchange") val exchange: String,
+    @SerializedName("crypto") val crypto: String,
+    @SerializedName("amount") val amount: String,
+    @SerializedName("address") val address: String,
+    @SerializedName("txHash") val txHash: String? = null,
+    @SerializedName("fee") val fee: String,
+    @SerializedName("status") val status: String,
+    @SerializedName("errorMessage") val errorMessage: String? = null,
+    @SerializedName("createdAt") val createdAt: Long = 0,
     /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
-    val connectionId: Long? = null
+    @SerializedName("connectionId") val connectionId: Long? = null
 )
 
 /**
@@ -185,11 +191,11 @@ data class BackupWithdrawal(
  * be parsed by older code that only reads [exchange].
  */
 data class BackupWithdrawalThreshold(
-    val crypto: String,
-    val exchange: String,
-    val thresholdAmount: String,
+    @SerializedName("crypto") val crypto: String,
+    @SerializedName("exchange") val exchange: String,
+    @SerializedName("thresholdAmount") val thresholdAmount: String,
     /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
-    val connectionId: Long? = null
+    @SerializedName("connectionId") val connectionId: Long? = null
 )
 
 /**

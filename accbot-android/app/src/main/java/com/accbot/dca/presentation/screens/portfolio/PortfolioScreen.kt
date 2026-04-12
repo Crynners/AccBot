@@ -360,6 +360,20 @@ internal fun PortfolioContent(
         pageCount = { pageCount }
     )
 
+    // Structural key for the page list: changes whenever a plan is added, removed,
+    // renamed, or re-ordered. Used to force-align the pager with the ViewModel's
+    // selectedPageIndex after plans change - without this, pagerState.currentPage
+    // keeps its stale value and the user ends up on the wrong chart after adding
+    // or deleting a plan.
+    val pagesKey = remember(uiState.pages) {
+        uiState.pages.joinToString("|") { page ->
+            when (page) {
+                is PairPage.Aggregate -> "agg:${page.fiat}"
+                is PairPage.Plan -> "plan:${page.planId}:${page.name}"
+            }
+        }
+    }
+
     // Sync pager -> ViewModel (only after pager settles, not during animation)
     // Using settledPage avoids intermediate values from programmatic scroll animations
     LaunchedEffect(pagerState.settledPage) {
@@ -371,6 +385,14 @@ internal fun PortfolioContent(
     LaunchedEffect(uiState.selectedPageIndex) {
         if (pagerState.currentPage != uiState.selectedPageIndex) {
             pagerState.animateScrollToPage(uiState.selectedPageIndex)
+        }
+    }
+    // Re-align pager when the page list changes structure (plan added/removed/renamed).
+    // Jumps without animation so we don't flash through unrelated pages.
+    LaunchedEffect(pagesKey) {
+        val target = uiState.selectedPageIndex.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
+        if (pageCount > 0 && pagerState.currentPage != target) {
+            pagerState.scrollToPage(target)
         }
     }
 

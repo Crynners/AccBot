@@ -85,45 +85,60 @@ import kotlinx.coroutines.delay
  * Long-press on a card activates drag mode; dragging past the midpoint
  * of an adjacent item triggers a swap.
  */
+/**
+ * Drag state tracked by plan *ID* rather than by list index. Flow emits on the
+ * plan list (add/remove/toggle) are safe during drag: the caller re-resolves the
+ * current index from the live list on every drag event, so stale indices from an
+ * older composition never leak into the reorder call.
+ */
 private class PlanDragState(
     private val onReorder: (Int, Int) -> Unit
 ) {
-    var draggedIndex by mutableIntStateOf(-1)
+    var draggedId by mutableLongStateOf(NO_DRAG)
     var dragOffset by mutableFloatStateOf(0f)
     private var accumulatedOffset = 0f
     private var itemHeight = 0
 
-    fun startDrag(index: Int, heightPx: Int) {
-        draggedIndex = index
+    fun startDrag(planId: Long, heightPx: Int) {
+        draggedId = planId
         dragOffset = 0f
         accumulatedOffset = 0f
         itemHeight = heightPx
     }
 
-    fun drag(delta: Float, totalItems: Int) {
-        if (draggedIndex < 0 || itemHeight == 0) return
+    /**
+     * Advance the drag by [delta]. [currentIndex] must be freshly resolved from
+     * the live list at call time. If the dragged plan has disappeared from the
+     * list (currentIndex = -1) the call is a no-op.
+     */
+    fun drag(delta: Float, currentIndex: Int, totalItems: Int) {
+        if (draggedId == NO_DRAG || itemHeight == 0 || currentIndex < 0) return
         accumulatedOffset += delta
         dragOffset = accumulatedOffset
 
         // Swap when dragged past midpoint of adjacent item
         val threshold = itemHeight * 0.5f
-        if (accumulatedOffset > threshold && draggedIndex < totalItems - 1) {
-            onReorder(draggedIndex, draggedIndex + 1)
-            draggedIndex += 1
+        if (accumulatedOffset > threshold && currentIndex < totalItems - 1) {
+            onReorder(currentIndex, currentIndex + 1)
             accumulatedOffset -= itemHeight
             dragOffset = accumulatedOffset
-        } else if (accumulatedOffset < -threshold && draggedIndex > 0) {
-            onReorder(draggedIndex, draggedIndex - 1)
-            draggedIndex -= 1
+        } else if (accumulatedOffset < -threshold && currentIndex > 0) {
+            onReorder(currentIndex, currentIndex - 1)
             accumulatedOffset += itemHeight
             dragOffset = accumulatedOffset
         }
     }
 
     fun endDrag() {
-        draggedIndex = -1
+        draggedId = NO_DRAG
         dragOffset = 0f
         accumulatedOffset = 0f
+    }
+
+    fun isDragging(planId: Long): Boolean = draggedId == planId
+
+    companion object {
+        const val NO_DRAG = -1L
     }
 }
 
@@ -303,16 +318,21 @@ fun DashboardScreen(
                             EmptyPlansCard(onAddPlan = onNavigateToPlans)
                         }
                     } else {
-                        itemsIndexed(uiState.activePlans, key = { _, p -> p.plan.id }) { index, planWithBalance ->
+                        itemsIndexed(uiState.activePlans, key = { _, p -> p.plan.id }) { _, planWithBalance ->
+                            val planId = planWithBalance.plan.id
                             DcaPlanCard(
                                 planWithBalance = planWithBalance,
-                                onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
-                                onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
+                                onToggle = { viewModel.togglePlan(planId) },
+                                onClick = { onNavigateToPlanDetails?.invoke(planId) },
                                 currentTime = currentTime,
-                                isDragging = index == landscapeDragState.draggedIndex,
-                                dragOffset = if (index == landscapeDragState.draggedIndex) landscapeDragState.dragOffset else 0f,
-                                onDragStart = { heightPx -> landscapeDragState.startDrag(index, heightPx) },
-                                onDrag = { delta -> landscapeDragState.drag(delta, uiState.activePlans.size) },
+                                isDragging = landscapeDragState.isDragging(planId),
+                                dragOffset = if (landscapeDragState.isDragging(planId)) landscapeDragState.dragOffset else 0f,
+                                onDragStart = { heightPx -> landscapeDragState.startDrag(planId, heightPx) },
+                                onDrag = { delta ->
+                                    val live = uiState.activePlans
+                                    val currentIdx = live.indexOfFirst { it.plan.id == planId }
+                                    landscapeDragState.drag(delta, currentIdx, live.size)
+                                },
                                 onDragEnd = { landscapeDragState.endDrag() }
                             )
                         }
@@ -417,16 +437,21 @@ fun DashboardScreen(
                         EmptyPlansCard(onAddPlan = onNavigateToPlans)
                     }
                 } else {
-                    itemsIndexed(uiState.activePlans, key = { _, p -> p.plan.id }) { index, planWithBalance ->
+                    itemsIndexed(uiState.activePlans, key = { _, p -> p.plan.id }) { _, planWithBalance ->
+                        val planId = planWithBalance.plan.id
                         DcaPlanCard(
                             planWithBalance = planWithBalance,
-                            onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
-                            onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
+                            onToggle = { viewModel.togglePlan(planId) },
+                            onClick = { onNavigateToPlanDetails?.invoke(planId) },
                             currentTime = currentTime,
-                            isDragging = index == portraitDragState.draggedIndex,
-                            dragOffset = if (index == portraitDragState.draggedIndex) portraitDragState.dragOffset else 0f,
-                            onDragStart = { heightPx -> portraitDragState.startDrag(index, heightPx) },
-                            onDrag = { delta -> portraitDragState.drag(delta, uiState.activePlans.size) },
+                            isDragging = portraitDragState.isDragging(planId),
+                            dragOffset = if (portraitDragState.isDragging(planId)) portraitDragState.dragOffset else 0f,
+                            onDragStart = { heightPx -> portraitDragState.startDrag(planId, heightPx) },
+                            onDrag = { delta ->
+                                val live = uiState.activePlans
+                                val currentIdx = live.indexOfFirst { it.plan.id == planId }
+                                portraitDragState.drag(delta, currentIdx, live.size)
+                            },
                             onDragEnd = { portraitDragState.endDrag() }
                         )
                     }
