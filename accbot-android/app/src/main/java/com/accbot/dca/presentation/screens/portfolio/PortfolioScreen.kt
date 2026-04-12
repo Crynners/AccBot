@@ -130,7 +130,8 @@ fun PortfolioScreen(
                         val legendEntries = rememberLegendEntries(
                             denominationMode = uiState.denominationMode,
                             isSinglePair = isSinglePair,
-                            currentPairCrypto = uiState.currentPairCrypto
+                            currentPairCrypto = uiState.currentPairCrypto,
+                            isAggregate = currentPage is PairPage.Aggregate
                         )
                         PortfolioLineChart(
                             chartData = chartData,
@@ -140,7 +141,7 @@ fun PortfolioScreen(
                             cryptoSymbol = uiState.currentPairCrypto ?: "",
                             visibleSeries = uiState.visibleSeries,
                             planLines = uiState.planLines,
-                            visiblePlanLineIds = uiState.visiblePlanLineIds,
+                            visiblePlanLines = uiState.visiblePlanLines,
                             zoomLevel = uiState.zoomLevel,
                             onScrub = { idx -> scrubbedIndex = idx ?: -1 },
                             modifier = Modifier
@@ -159,8 +160,8 @@ fun PortfolioScreen(
                         if (uiState.planLines.isNotEmpty()) {
                             PlanLinesLegend(
                                 planLines = uiState.planLines,
-                                visiblePlanLineIds = uiState.visiblePlanLineIds,
-                                onToggle = { viewModel.togglePlanLineVisibility(it) }
+                                visiblePlanLines = uiState.visiblePlanLines,
+                                onToggle = { id, type -> viewModel.togglePlanLineVisibility(id, type) }
                             )
                         }
 
@@ -312,7 +313,7 @@ fun PortfolioScreen(
                     onNavigateNext = { viewModel.navigateNext() },
                     onPairPageSelected = { viewModel.selectPairPage(it) },
                     onToggleSeriesVisibility = { viewModel.toggleSeriesVisibility(it) },
-                    onTogglePlanLineVisibility = { viewModel.togglePlanLineVisibility(it) },
+                    onTogglePlanLineVisibility = { id, type -> viewModel.togglePlanLineVisibility(id, type) },
                     onRefresh = { viewModel.syncPricesAndLoadChart() },
                     onChartTouching = onChartTouching,
                     modifier = Modifier.padding(paddingValues)
@@ -333,7 +334,7 @@ internal fun PortfolioContent(
     onNavigateNext: () -> Unit,
     onPairPageSelected: (Int) -> Unit,
     onToggleSeriesVisibility: (Int) -> Unit,
-    onTogglePlanLineVisibility: (Long) -> Unit,
+    onTogglePlanLineVisibility: (Long, PlanLineType) -> Unit,
     onRefresh: () -> Unit,
     onChartTouching: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
@@ -537,7 +538,7 @@ internal fun PortfolioContent(
                     cryptoSymbol = uiState.currentPairCrypto ?: "",
                     visibleSeries = uiState.visibleSeries,
                     planLines = uiState.planLines,
-                    visiblePlanLineIds = uiState.visiblePlanLineIds,
+                    visiblePlanLines = uiState.visiblePlanLines,
                     zoomLevel = uiState.zoomLevel,
                     onScrub = { idx -> scrubbedIndex = idx ?: -1 },
                     modifier = Modifier.fillMaxWidth()
@@ -563,7 +564,8 @@ internal fun PortfolioContent(
                 val legendEntries = rememberLegendEntries(
                     denominationMode = uiState.denominationMode,
                     isSinglePair = isSinglePair,
-                    currentPairCrypto = uiState.currentPairCrypto
+                    currentPairCrypto = uiState.currentPairCrypto,
+                    isAggregate = currentPage is PairPage.Aggregate
                 )
                 InteractiveChartLegend(
                     entries = legendEntries,
@@ -575,7 +577,7 @@ internal fun PortfolioContent(
                     Spacer(Modifier.height(4.dp))
                     PlanLinesLegend(
                         planLines = uiState.planLines,
-                        visiblePlanLineIds = uiState.visiblePlanLineIds,
+                        visiblePlanLines = uiState.visiblePlanLines,
                         onToggle = onTogglePlanLineVisibility
                     )
                 }
@@ -629,17 +631,24 @@ internal fun PortfolioContent(
 private fun rememberLegendEntries(
     denominationMode: DenominationMode,
     isSinglePair: Boolean,
-    currentPairCrypto: String?
+    currentPairCrypto: String?,
+    isAggregate: Boolean = false
 ): List<LegendEntry> {
-    val (line1, line2) = when (denominationMode) {
-        DenominationMode.FIAT -> stringResource(R.string.chart_portfolio_value) to stringResource(R.string.chart_cost_basis)
-        DenominationMode.CRYPTO -> stringResource(R.string.chart_legend_crypto_held) to stringResource(R.string.chart_legend_invested_equiv)
+    val line1 = when {
+        isAggregate && denominationMode == DenominationMode.FIAT -> stringResource(R.string.chart_total_value)
+        denominationMode == DenominationMode.FIAT -> stringResource(R.string.chart_portfolio_value)
+        else -> stringResource(R.string.chart_legend_crypto_held)
+    }
+    val line2 = when {
+        isAggregate && denominationMode == DenominationMode.FIAT -> stringResource(R.string.chart_total_invested)
+        denominationMode == DenominationMode.FIAT -> stringResource(R.string.chart_cost_basis)
+        else -> stringResource(R.string.chart_legend_invested_equiv)
     }
     val crypto = currentPairCrypto ?: "BTC"
     val cryptoPriceLabel = stringResource(R.string.chart_crypto_price, crypto)
     val accumulatedCryptoLabel = stringResource(R.string.chart_accumulated_crypto, crypto)
     val avgBuyPriceLabel = stringResource(R.string.chart_avg_buy_price)
-    return remember(denominationMode, isSinglePair, currentPairCrypto) {
+    return remember(denominationMode, isSinglePair, currentPairCrypto, isAggregate, line1, line2) {
         buildList {
             add(LegendEntry(0, line1, Primary))
             add(LegendEntry(1, line2, androidx.compose.ui.graphics.Color(0xFF888888)))
@@ -1209,41 +1218,70 @@ private fun LandscapeKpiContent(
 @Composable
 private fun PlanLinesLegend(
     planLines: List<PlanLineInfo>,
-    visiblePlanLineIds: Set<Long>,
-    onToggle: (Long) -> Unit
+    visiblePlanLines: Set<Pair<Long, PlanLineType>>,
+    onToggle: (Long, PlanLineType) -> Unit
 ) {
+    val planLineColors = com.accbot.dca.presentation.components.planLineColors
     Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        planLines.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.Center) {
-                row.forEachIndexed { i, planLine ->
-                    if (i > 0) Spacer(Modifier.width(24.dp))
-                    val colorIndex = planLines.indexOf(planLine)
-                    val color = planLineColors[colorIndex % planLineColors.size]
-                    val enabled = planLine.planId in visiblePlanLineIds
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clickable { onToggle(planLine.planId) }
-                            .padding(4.dp)
-                    ) {
-                        Box(
-                            Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(if (enabled) color else color.copy(alpha = 0.3f))
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            planLine.name,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                            textDecoration = if (enabled) null else TextDecoration.LineThrough
-                        )
-                    }
+        planLines.forEachIndexed { index, planLine ->
+            val baseColor = planLineColors[index % planLineColors.size]
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Value entry
+                val valueEnabled = (planLine.planId to PlanLineType.VALUE) in visiblePlanLines
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clickable { onToggle(planLine.planId, PlanLineType.VALUE) }
+                        .padding(4.dp)
+                ) {
+                    Box(
+                        Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(if (valueEnabled) baseColor else baseColor.copy(alpha = 0.3f))
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(R.string.chart_plan_value, planLine.name),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (valueEnabled) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        textDecoration = if (valueEnabled) null else TextDecoration.LineThrough
+                    )
+                }
+
+                Spacer(Modifier.width(16.dp))
+
+                // Invested entry
+                val investedEnabled = (planLine.planId to PlanLineType.INVESTED) in visiblePlanLines
+                val investedColor = baseColor.copy(alpha = 0.4f)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clickable { onToggle(planLine.planId, PlanLineType.INVESTED) }
+                        .padding(4.dp)
+                ) {
+                    Box(
+                        Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(if (investedEnabled) investedColor else investedColor.copy(alpha = 0.3f))
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(R.string.chart_plan_invested, planLine.name),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (investedEnabled) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        textDecoration = if (investedEnabled) null else TextDecoration.LineThrough
+                    )
                 }
             }
         }

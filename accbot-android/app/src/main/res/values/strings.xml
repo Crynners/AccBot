@@ -340,6 +340,10 @@
     <string name="chart_invested">Invested</string>
     <string name="chart_portfolio_value">Portfolio Value</string>
     <string name="chart_cost_basis">Invested</string>
+    <string name="chart_total_value">Total value</string>
+    <string name="chart_total_invested">Total invested</string>
+    <string name="chart_plan_value">Value %1$s</string>
+    <string name="chart_plan_invested">Invested %1$s</string>
     <string name="chart_legend_crypto_held">Crypto Held</string>
     <string name="chart_legend_invested_equiv">Invested Equiv.</string>
     <string name="chart_avg_price">Avg. Price</string>

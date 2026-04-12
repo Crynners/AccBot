@@ -25,6 +25,7 @@ import com.accbot.dca.domain.usecase.ChartDataPoint
 import com.accbot.dca.domain.usecase.ChartZoomLevel
 import com.accbot.dca.presentation.screens.portfolio.DenominationMode
 import com.accbot.dca.presentation.screens.portfolio.PlanLineInfo
+import com.accbot.dca.presentation.screens.portfolio.PlanLineType
 import com.accbot.dca.presentation.ui.theme.Primary
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
@@ -150,7 +151,7 @@ fun PortfolioLineChart(
     cryptoSymbol: String = "",
     visibleSeries: Set<Int> = setOf(0, 1),
     planLines: List<PlanLineInfo> = emptyList(),
-    visiblePlanLineIds: Set<Long> = emptySet(),
+    visiblePlanLines: Set<Pair<Long, PlanLineType>> = emptySet(),
     zoomLevel: ChartZoomLevel = ChartZoomLevel.Overview,
     onScrub: (Int?) -> Unit = {},
     modifier: Modifier = Modifier
@@ -161,7 +162,7 @@ fun PortfolioLineChart(
     val hasRightAxis = cryptoSymbol.isNotEmpty() && 3 in visibleSeries
 
     // Update model when data, denomination, or visibility changes
-    LaunchedEffect(chartData, denominationMode, visibleSeries, planLines, visiblePlanLineIds) {
+    LaunchedEffect(chartData, denominationMode, visibleSeries, planLines, visiblePlanLines) {
         try {
             modelProducer.runTransaction {
                 // Layer 1: left axis (portfolio value, cost basis, crypto price – all fiat)
@@ -178,15 +179,21 @@ fun PortfolioLineChart(
                     if (1 in visibleSeries) series(series1)
                     if (2 in visibleSeries) series(chartData.map { it.price.toFloat() })
                     if (4 in visibleSeries) series(chartData.map { it.avgBuyPrice.toFloat() })
-                    // Per-plan value lines
+                    // Per-plan lines (value + invested per plan, only when visible)
+                    var anyPlanSeriesAdded = false
                     for (planLine in planLines) {
-                        if (planLine.planId in visiblePlanLineIds && planLine.values.size == chartData.size) {
-                            series(planLine.values)
+                        val valueKey = planLine.planId to PlanLineType.VALUE
+                        if (valueKey in visiblePlanLines && planLine.valueSeries.size == chartData.size) {
+                            series(planLine.valueSeries)
+                            anyPlanSeriesAdded = true
+                        }
+                        val investedKey = planLine.planId to PlanLineType.INVESTED
+                        if (investedKey in visiblePlanLines && planLine.investedSeries.size == chartData.size) {
+                            series(planLine.investedSeries)
+                            anyPlanSeriesAdded = true
                         }
                     }
-                    if (setOf(0, 1, 2, 4).none { it in visibleSeries } &&
-                        planLines.none { it.planId in visiblePlanLineIds && it.values.size == chartData.size }
-                    ) {
+                    if (setOf(0, 1, 2, 4).none { it in visibleSeries } && !anyPlanSeriesAdded) {
                         series(List(chartData.size) { 0f })
                     }
                 }
@@ -244,14 +251,23 @@ fun PortfolioLineChart(
         fill = LineCartesianLayer.LineFill.single(fill(Color.Transparent))
     )
 
-    // Pre-create plan line styles (max 6 plans)
-    val planLineStyle0 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[0])))
-    val planLineStyle1 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[1])))
-    val planLineStyle2 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[2])))
-    val planLineStyle3 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[3])))
-    val planLineStyle4 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[4])))
-    val planLineStyle5 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[5])))
-    val planLineStyles = listOf(planLineStyle0, planLineStyle1, planLineStyle2, planLineStyle3, planLineStyle4, planLineStyle5)
+    // Pre-create plan line styles (max 6 plans) - value lines (solid, full color)
+    val planValueStyle0 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[0])))
+    val planValueStyle1 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[1])))
+    val planValueStyle2 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[2])))
+    val planValueStyle3 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[3])))
+    val planValueStyle4 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[4])))
+    val planValueStyle5 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[5])))
+    val planValueStyles = listOf(planValueStyle0, planValueStyle1, planValueStyle2, planValueStyle3, planValueStyle4, planValueStyle5)
+
+    // Invested lines (lighter/translucent, same base color)
+    val planInvestedStyle0 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[0].copy(alpha = 0.4f))))
+    val planInvestedStyle1 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[1].copy(alpha = 0.4f))))
+    val planInvestedStyle2 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[2].copy(alpha = 0.4f))))
+    val planInvestedStyle3 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[3].copy(alpha = 0.4f))))
+    val planInvestedStyle4 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[4].copy(alpha = 0.4f))))
+    val planInvestedStyle5 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[5].copy(alpha = 0.4f))))
+    val planInvestedStyles = listOf(planInvestedStyle0, planInvestedStyle1, planInvestedStyle2, planInvestedStyle3, planInvestedStyle4, planInvestedStyle5)
 
     // Build visible line lists for each layer
     val leftLines = buildList<LineCartesianLayer.Line> {
@@ -259,11 +275,18 @@ fun PortfolioLineChart(
         if (1 in visibleSeries) add(costBasisLine)
         if (2 in visibleSeries) add(priceLine)
         if (4 in visibleSeries) add(avgBuyPriceLine)
-        // Per-plan line styles
-        planLines.forEachIndexed { idx, planLine ->
-            if (planLine.planId in visiblePlanLineIds && planLine.values.size == chartData.size) {
-                add(planLineStyles[idx % planLineStyles.size])
+        // Per-plan line styles (value + invested share the same color index per plan)
+        var planStyleIdx = 0
+        planLines.forEach { planLine ->
+            val valueKey = planLine.planId to PlanLineType.VALUE
+            val investedKey = planLine.planId to PlanLineType.INVESTED
+            if (valueKey in visiblePlanLines && planLine.valueSeries.size == chartData.size) {
+                add(planValueStyles[planStyleIdx % planValueStyles.size])
             }
+            if (investedKey in visiblePlanLines && planLine.investedSeries.size == chartData.size) {
+                add(planInvestedStyles[planStyleIdx % planInvestedStyles.size])
+            }
+            planStyleIdx++  // increment per plan, not per line, so value and invested share the color
         }
         if (isEmpty()) add(hiddenLine)
     }

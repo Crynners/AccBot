@@ -29,11 +29,14 @@ sealed class PairPage {
     data class Plan(val planId: Long, val name: String, val crypto: String, val fiat: String) : PairPage()
 }
 
+enum class PlanLineType { VALUE, INVESTED }
+
 @Immutable
 data class PlanLineInfo(
     val planId: Long,
     val name: String,
-    val values: List<Float> = emptyList() // aligned to main chartData indices
+    val valueSeries: List<Float> = emptyList(),    // aligned to main chartData indices
+    val investedSeries: List<Float> = emptyList()  // aligned to main chartData indices
 )
 
 @Immutable
@@ -53,7 +56,7 @@ data class PortfolioUiState(
     val visibleSeries: Set<Int> = setOf(0, 1),
     val scrubbedIndex: Int? = null,
     val planLines: List<PlanLineInfo> = emptyList(),
-    val visiblePlanLineIds: Set<Long> = emptySet(),
+    val visiblePlanLines: Set<Pair<Long, PlanLineType>> = emptySet(),
     val isLoading: Boolean = true,
     val isChartLoading: Boolean = false,
     val isPriceSyncing: Boolean = false,
@@ -308,7 +311,7 @@ class PortfolioViewModel @Inject constructor(
             visibleSeries = setOf(0, 1),
             zoomLevel = ChartZoomLevel.Overview,
             planLines = emptyList(),
-            visiblePlanLineIds = emptySet()
+            visiblePlanLines = emptySet()
         ) }
         updateNavigationState()
         loadChartData()
@@ -337,11 +340,12 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
-    fun togglePlanLineVisibility(planId: Long) {
+    fun togglePlanLineVisibility(planId: Long, type: PlanLineType) {
         _uiState.update { state ->
-            val current = state.visiblePlanLineIds
-            val toggled = if (planId in current) current - planId else current + planId
-            state.copy(visiblePlanLineIds = toggled)
+            val key = planId to type
+            val current = state.visiblePlanLines
+            val toggled = if (key in current) current - key else current + key
+            state.copy(visiblePlanLines = toggled)
         }
     }
 
@@ -445,21 +449,10 @@ class PortfolioViewModel @Inject constructor(
                     )
                 }
 
-                // Calculate per-plan lines
-                val planLinesList = if (data.isNotEmpty()) {
+                // Calculate per-plan lines (only for Aggregate pages - Plan pages show a single plan's main line)
+                val planLinesList = if (page is PairPage.Aggregate && data.isNotEmpty()) {
                     try {
-                        val relevantPlans = when (page) {
-                            is PairPage.Aggregate -> {
-                                // All plans in this fiat
-                                dcaPlanDao.getAllPlansOnceOrdered().filter { it.fiat == page.fiat }
-                            }
-                            is PairPage.Plan -> {
-                                // All plans for this specific pair
-                                dcaPlanDao.getAllPlansOnceOrdered()
-                                    .filter { it.crypto == page.crypto && it.fiat == page.fiat }
-                            }
-                            null -> emptyList()
-                        }
+                        val relevantPlans = dcaPlanDao.getAllPlansOnceOrdered().filter { it.fiat == page.fiat }
                         if (relevantPlans.size >= 2) {
                             val mainEpochDays = data.map { it.epochDay }
                             relevantPlans.mapNotNull { plan ->
@@ -474,14 +467,20 @@ class PortfolioViewModel @Inject constructor(
                                 // Align to main chart's epoch days via forward-fill
                                 val planByDay = planData.associateBy { it.epochDay }
                                 var lastValue = 0f
-                                val aligned = mainEpochDays.map { day ->
+                                var lastInvested = 0f
+                                val valueAligned = mainEpochDays.map { day ->
                                     val v = planByDay[day]?.portfolioValue?.toFloat()
                                     if (v != null) { lastValue = v; v } else lastValue
+                                }
+                                val investedAligned = mainEpochDays.map { day ->
+                                    val v = planByDay[day]?.totalInvested?.toFloat()
+                                    if (v != null) { lastInvested = v; v } else lastInvested
                                 }
                                 PlanLineInfo(
                                     planId = plan.id,
                                     name = plan.name.ifBlank { "${plan.crypto}/${plan.fiat} #${plan.id}" },
-                                    values = aligned
+                                    valueSeries = valueAligned,
+                                    investedSeries = investedAligned
                                 )
                             }
                         } else emptyList()

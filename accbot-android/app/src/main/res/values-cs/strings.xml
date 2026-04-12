@@ -341,6 +341,10 @@
     <string name="chart_invested">Investováno</string>
     <string name="chart_portfolio_value">Hodnota portfolia</string>
     <string name="chart_cost_basis">Investováno</string>
+    <string name="chart_total_value">Celkem hodnota</string>
+    <string name="chart_total_invested">Celkem investováno</string>
+    <string name="chart_plan_value">Hodnota %1$s</string>
+    <string name="chart_plan_invested">Investováno %1$s</string>
     <string name="chart_legend_crypto_held">Držené krypto</string>
     <string name="chart_legend_invested_equiv">Ekvivalent investice</string>
     <string name="chart_avg_price">Prům. cena</string>
