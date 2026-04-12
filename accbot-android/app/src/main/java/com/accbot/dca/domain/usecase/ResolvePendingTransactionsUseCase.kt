@@ -30,7 +30,15 @@ class ResolvePendingTransactionsUseCase @Inject constructor(
 
         for (tx in pendingTransactions) {
             try {
-                val credentials = credentialsStore.getCredentials(tx.exchange, isSandbox) ?: continue
+                // Use the transaction's connectionId (set by migration); fall back to a
+                // legacy lookup by exchange enum if it's null (very old transactions
+                // somehow not backfilled by v18→v19 migration).
+                @Suppress("DEPRECATION")
+                val credentials = if (tx.connectionId != null) {
+                    credentialsStore.getCredentials(tx.connectionId, isSandbox)
+                } else {
+                    credentialsStore.getCredentials(tx.exchange, isSandbox)
+                } ?: continue
                 val api = exchangeApiFactory.create(credentials)
                 val orderId = tx.exchangeOrderId ?: continue
 

@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.AccBot" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:statusBarColor">@color/background</item>
-        <item name="android:navigationBarColor">@color/background</item>
+        <!--
+            Edge-to-edge: status/navigation bar colors are no longer set via theme attributes
+            (deprecated in Android 15 / API 35). MainActivity calls enableEdgeToEdge() and the
+            system bars are drawn transparent with content extending behind them.
+        -->
         <item name="android:windowBackground">@color/background</item>
     </style>
 </resources>

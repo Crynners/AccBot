@@ -102,6 +102,43 @@ class Converters {
 }
 
 /**
+ * Exchange connection entity - represents one set of API credentials for one exchange.
+ * Multiple connections can target the same exchange enum (e.g. two Coinmate sub-accounts
+ * as "Hlavní" and "Spoření" envelopes). The actual API key/secret is stored separately
+ * in [CredentialsStore], keyed by this entity's [id].
+ *
+ * Note: there is no `isSandbox` column because production and sandbox are stored in
+ * separate Room database files (see [DcaDatabase]); a connection is implicitly tied to
+ * the environment of the database it lives in.
+ *
+ * The unique index on `(exchange, name)` enforces:
+ *  - At most ONE connection with the empty default name "" per exchange (the auto-created
+ *    "Default" envelope after migration or first credentials save).
+ *  - At most ONE connection with any given non-empty name per exchange (no duplicate
+ *    "Spoření" connections on Coinmate).
+ *
+ * UI rule (enforced in [CredentialFormDelegate]): when adding a 2nd connection on the same
+ * exchange, a non-empty name is required so both envelopes are distinguishable.
+ */
+@Entity(
+    tableName = "exchange_connections",
+    indices = [
+        Index(value = ["exchange"]),
+        Index(value = ["exchange", "name"], unique = true)
+    ]
+)
+@TypeConverters(Converters::class)
+data class ExchangeConnectionEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val exchange: Exchange,
+    /** Empty string means "no custom name" - UI displays the exchange display name only. */
+    val name: String = "",
+    val createdAt: Instant = Instant.now(),
+    val displayOrder: Int = 0
+)
+
+/**
  * DCA Plan entity - stored in Room database
  */
 @Entity(
@@ -109,6 +146,7 @@ class Converters {
     indices = [
         Index(value = ["isEnabled"]),
         Index(value = ["exchange"]),
+        Index(value = ["connectionId"]),
         Index(value = ["nextExecutionAt"]),
         Index(value = ["isEnabled", "nextExecutionAt"])
     ]
@@ -118,6 +156,13 @@ data class DcaPlanEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val exchange: Exchange,
+    /**
+     * FK to [ExchangeConnectionEntity.id]. Set by migration for legacy plans, required
+     * for new plans. Resolved via [ExchangeConnectionDao] at plan creation time.
+     */
+    val connectionId: Long = 0,
+    /** Optional custom label. Empty string = no label (UI shows "BTC/EUR" as default). */
+    val name: String = "",
     val crypto: String,
     val fiat: String,
     val amount: BigDecimal,
@@ -134,7 +179,9 @@ data class DcaPlanEntity(
     val networkRetryCount: Int = 0,
     val nextNetworkRetryAt: Instant? = null,
     val originalScheduledAt: Instant? = null,
-    val missedPurchaseCount: Int = 0
+    val missedPurchaseCount: Int = 0,
+    /** Order for Dashboard display. Lower values shown first. */
+    val displayOrder: Int = 0
 )
 
 /**
@@ -145,6 +192,7 @@ data class DcaPlanEntity(
     indices = [
         Index(value = ["planId"]),
         Index(value = ["exchange"]),
+        Index(value = ["connectionId"]),
         Index(value = ["crypto"]),
         Index(value = ["status"]),
         Index(value = ["executedAt"]),
@@ -159,6 +207,13 @@ data class TransactionEntity(
     val id: Long = 0,
     val planId: Long,
     val exchange: Exchange,
+    /**
+     * FK-like reference to [ExchangeConnectionEntity.id]. Nullable so historical
+     * transactions survive deletion of their parent connection (no FK constraint).
+     * UI falls back to [exchange] display name when this is null or the connection
+     * was deleted.
+     */
+    val connectionId: Long? = null,
     val crypto: String,
     val fiat: String,
     val fiatAmount: BigDecimal,
@@ -190,6 +245,8 @@ data class WithdrawalEntity(
     val id: Long = 0,
     val planId: Long,
     val exchange: Exchange,
+    /** Nullable reference to [ExchangeConnectionEntity.id], no FK constraint. */
+    val connectionId: Long? = null,
     val crypto: String,
     val amount: BigDecimal,
     val address: String,
@@ -201,21 +258,27 @@ data class WithdrawalEntity(
 )
 
 /**
- * Exchange balance cache entity
- * Stores cached balances from exchanges for quick display
+ * Exchange balance cache entity.
+ * Stores cached balances from exchanges for quick display.
+ *
+ * PK is composite `(connectionId, currency)` so that two connections targeting the same
+ * exchange (e.g. two Coinmate sub-accounts) keep separate balance caches. The [exchange]
+ * field is retained as a redundant fallback for display when the parent connection is
+ * deleted.
  */
 @Entity(
     tableName = "exchange_balances",
+    primaryKeys = ["connectionId", "currency"],
     indices = [
+        Index(value = ["connectionId"]),
         Index(value = ["exchange"])
     ]
 )
 @TypeConverters(Converters::class)
 data class ExchangeBalanceEntity(
-    @PrimaryKey
-    val id: String,  // "${exchange}_${currency}"
-    val exchange: Exchange,
+    val connectionId: Long,
     val currency: String,
+    val exchange: Exchange,
     val balance: BigDecimal,
     val lastUpdated: Instant = Instant.now()
 )
@@ -276,6 +339,8 @@ data class NotificationEntity(
     val planId: Long? = null,
     val crypto: String? = null,
     val exchange: Exchange? = null,
+    /** Optional reference to [ExchangeConnectionEntity.id], no FK constraint. */
+    val connectionId: Long? = null,
     val isRead: Boolean = false,
     val isArchived: Boolean = false,
     val systemNotificationId: Int? = null,
@@ -284,15 +349,26 @@ data class NotificationEntity(
 )
 
 /**
- * Withdrawal threshold configuration per crypto+exchange pair
+ * Withdrawal threshold configuration per crypto+connection pair.
+ *
+ * After v18→v19 migration the PK changed from `(crypto, exchange)` to
+ * `(crypto, connectionId)` so each connection (envelope) has its own withdrawal target.
+ *
+ * No DB-level FOREIGN KEY: cascade-on-connection-delete is handled explicitly by
+ * [ExchangeConnectionRepository.delete] via [WithdrawalThresholdDao.deleteByConnection],
+ * because FK enforcement (`PRAGMA foreign_keys`) is currently disabled in the Room
+ * database builder.
  */
 @Entity(
     tableName = "withdrawal_thresholds",
-    primaryKeys = ["crypto", "exchange"]
+    primaryKeys = ["crypto", "connectionId"],
+    indices = [
+        Index(value = ["connectionId"])
+    ]
 )
 @TypeConverters(Converters::class)
 data class WithdrawalThresholdEntity(
     val crypto: String,
-    val exchange: Exchange,
+    val connectionId: Long,
     val thresholdAmount: BigDecimal
 )

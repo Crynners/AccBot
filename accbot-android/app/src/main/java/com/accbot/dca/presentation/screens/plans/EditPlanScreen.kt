@@ -153,6 +153,8 @@ fun EditPlanScreen(
                             availableCryptos = listOf(uiState.crypto),
                             availableFiats = listOf(uiState.fiat),
                             showCryptoFiatSelection = false,
+                            showNameField = false,
+                            onNameChanged = viewModel.planForm::setName,
                             onCryptoSelected = viewModel.planForm::selectCrypto,
                             onFiatSelected = viewModel.planForm::selectFiat,
                             onAmountChanged = viewModel.planForm::setAmount,

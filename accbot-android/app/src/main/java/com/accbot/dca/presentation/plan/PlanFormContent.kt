@@ -45,6 +45,7 @@ fun PlanFormContent(
     state: PlanFormState,
     availableCryptos: List<String>,
     availableFiats: List<String>,
+    onNameChanged: (String) -> Unit,
     onCryptoSelected: (String) -> Unit,
     onFiatSelected: (String) -> Unit,
     onAmountChanged: (String) -> Unit,
@@ -57,12 +58,27 @@ fun PlanFormContent(
     modifier: Modifier = Modifier,
     exchange: Exchange? = null,
     showCryptoFiatSelection: Boolean = true,
+    showNameField: Boolean = true,
     errorMessage: String? = null
 ) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
+        // Optional plan name
+        if (showNameField) {
+            Column {
+                SectionTitle(stringResource(R.string.plan_details_add_name))
+                OutlinedTextField(
+                    value = state.name,
+                    onValueChange = onNameChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(stringResource(R.string.plan_details_name_hint)) },
+                    singleLine = true
+                )
+            }
+        }
+
         // Crypto selection
         if (showCryptoFiatSelection) {
             Column {

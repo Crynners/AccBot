@@ -8,6 +8,7 @@ import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.ExchangeBalanceDao
 import com.accbot.dca.data.local.ExchangeBalanceEntity
+import com.accbot.dca.data.local.ExchangeConnectionDao
 import com.accbot.dca.data.local.CryptoFiatHolding
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.UserPreferences
@@ -32,6 +33,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.coroutineContext
 import java.math.BigDecimal
@@ -63,7 +66,9 @@ data class DcaPlanWithBalance(
     val isOverWithdrawalThreshold: Boolean = false,
     val exchangeCryptoBalance: BigDecimal? = null,
     val accumulatedCrypto: BigDecimal? = null,
-    val strategyMultiplier: StrategyMultiplierResult? = null
+    val strategyMultiplier: StrategyMultiplierResult? = null,
+    /** Connection name for display (empty if the connection has no custom name). */
+    val connectionName: String = ""
 )
 
 @Immutable
@@ -119,6 +124,7 @@ class DashboardViewModel @Inject constructor(
     private val credentialsStore: CredentialsStore,
     private val exchangeBalanceDao: ExchangeBalanceDao,
     private val withdrawalThresholdDao: WithdrawalThresholdDao,
+    private val exchangeConnectionDao: ExchangeConnectionDao,
     private val calculateStrategyMultiplier: CalculateStrategyMultiplierUseCase
 ) : AndroidViewModel(application) {
 
@@ -135,6 +141,14 @@ class DashboardViewModel @Inject constructor(
     private var refreshPricesJob: Job? = null
     private var lastLoadedAt: Long = 0
     private var lastMarketDataFetchedAt: Long = 0
+
+    /**
+     * Serializes plan-reorder writes. Without this, rapid drags could enqueue two
+     * concurrent `updateAllDisplayOrders` calls with different snapshots of the list
+     * and Room's writer thread might commit them out of order, leaving the persisted
+     * order inconsistent with the user's final gesture.
+     */
+    private val reorderMutex = Mutex()
 
     init {
         loadData()
@@ -156,11 +170,27 @@ class DashboardViewModel @Inject constructor(
             }
 
             combine(
-                dcaPlanDao.getAllPlans(),
-                transactionDao.getHoldingsByPairFlow()
-            ) { planEntities, dbHoldings ->
-                Pair(planEntities, dbHoldings)
-            }.collectLatest { (planEntities, dbHoldings) ->
+                // Skip emits that only differ by displayOrder: after a drag-reorder the
+                // DAO Flow re-emits with identical content but a new ordering. Without
+                // this guard, collectLatest would cancel in-flight balance/price fetches
+                // on every swap and restart them from scratch (API spam + UI flicker).
+                dcaPlanDao.getAllPlans().distinctUntilChanged { old, new ->
+                    val oldById = old.associateBy { it.id }
+                    val newById = new.associateBy { it.id }
+                    oldById.keys == newById.keys &&
+                        oldById.all { (id, entity) ->
+                            val other = newById.getValue(id)
+                            entity.copy(displayOrder = 0) == other.copy(displayOrder = 0)
+                        }
+                },
+                transactionDao.getHoldingsByPairFlow(),
+                // Fold connections into the combine so we don't do per-emit DB lookups
+                // for connection names. Re-emits naturally when the user renames a
+                // connection on the Exchange Management screen.
+                exchangeConnectionDao.getAllFlow()
+            ) { planEntities, dbHoldings, connections ->
+                Triple(planEntities, dbHoldings, connections)
+            }.collectLatest { (planEntities, dbHoldings, connections) ->
                 refreshPricesJob?.cancel()
                 val plans = planEntities.map { it.toDomain() }
 
@@ -172,13 +202,19 @@ class DashboardViewModel @Inject constructor(
                     launch { DcaAlarmScheduler.scheduleNextAlarm(application) }
                 }
 
+                val connectionNames: Map<Long, String> = connections.associate { it.id to it.name }
+
                 val plansWithBalance = plans.map { plan ->
                     val accumulated = if (plan.targetAmount != null) {
                         try {
                             BigDecimal(transactionDao.getAccumulatedCryptoByPlan(plan.id))
                         } catch (_: Exception) { null }
                     } else null
-                    DcaPlanWithBalance(plan = plan, accumulatedCrypto = accumulated)
+                    DcaPlanWithBalance(
+                        plan = plan,
+                        accumulatedCrypto = accumulated,
+                        connectionName = connectionNames[plan.connectionId] ?: ""
+                    )
                 }
 
                 // Merge existing prices into fresh holdings to avoid KPI flash
@@ -324,28 +360,29 @@ class DashboardViewModel @Inject constructor(
         val thresholdDays = userPreferences.getLowBalanceThresholdDays()
         val existingAccumulated = _uiState.value.activePlans.associate { it.plan.id to it.accumulatedCrypto }
 
-        // Group by exchange+fiat to avoid duplicate API calls
+        // Group by connection+fiat to avoid duplicate API calls. Each connection (envelope)
+        // has independent balances even if two connections target the same exchange.
         val balanceCache = mutableMapOf<String, BigDecimal?>()
 
         val plansWithBalance = plans.map { plan ->
             if (!plan.isEnabled) return@map DcaPlanWithBalance(plan = plan, accumulatedCrypto = existingAccumulated[plan.id])
 
-            val balanceKey = "${plan.exchange}_${plan.fiat}"
+            val balanceKey = "${plan.connectionId}_${plan.fiat}"
             val balance = balanceCache.getOrPut(balanceKey) {
                 try {
-                    val credentials = credentialsStore.getCredentials(plan.exchange, isSandbox)
+                    val credentials = credentialsStore.getCredentials(plan.connectionId, isSandbox)
                         ?: return@getOrPut null
                     val api = exchangeApiFactory.create(credentials)
                     val fetchedBalance = withTimeoutOrNull(10_000) {
                         api.getBalance(plan.fiat)
                     }
-                    // Cache in DB
+                    // Cache in DB per (connectionId, currency)
                     if (fetchedBalance != null) {
                         exchangeBalanceDao.insertBalance(
                             ExchangeBalanceEntity(
-                                id = balanceKey,
-                                exchange = plan.exchange,
+                                connectionId = plan.connectionId,
                                 currency = plan.fiat,
+                                exchange = plan.exchange,
                                 balance = fetchedBalance,
                                 lastUpdated = Instant.now()
                             )
@@ -353,22 +390,22 @@ class DashboardViewModel @Inject constructor(
                     }
                     fetchedBalance
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error fetching balance for ${plan.exchange}/${plan.fiat}", e)
+                    Log.e(TAG, "Error fetching balance for connection=${plan.connectionId}/${plan.fiat}", e)
                     // Try cached balance from DB
                     try {
-                        exchangeBalanceDao.getBalance(balanceKey)?.balance
+                        exchangeBalanceDao.getBalance(plan.connectionId, plan.fiat)?.balance
                     } catch (_: Exception) { null }
                 }
             }
 
             // Check withdrawal threshold using live crypto balance from exchange
             val withdrawalThreshold = try {
-                withdrawalThresholdDao.getThresholdAmount(plan.exchange, plan.crypto)
+                withdrawalThresholdDao.getThresholdAmount(plan.connectionId, plan.crypto)
             } catch (_: Exception) { null }
-            val cryptoBalanceKey = "${plan.exchange}_${plan.crypto}"
+            val cryptoBalanceKey = "${plan.connectionId}_${plan.crypto}"
             val exchangeCryptoBalance = balanceCache.getOrPut(cryptoBalanceKey) {
                 try {
-                    val creds = credentialsStore.getCredentials(plan.exchange, isSandbox)
+                    val creds = credentialsStore.getCredentials(plan.connectionId, isSandbox)
                         ?: return@getOrPut null
                     val api = exchangeApiFactory.create(creds)
                     withTimeoutOrNull(10_000) { api.getBalance(plan.crypto) }
@@ -555,6 +592,32 @@ class DashboardViewModel @Inject constructor(
             val plan = dcaPlanDao.getPlanById(planId) ?: return@launch
             dcaPlanDao.setEnabled(planId, !plan.isEnabled)
             DcaAlarmScheduler.scheduleNextAlarm(application)
+        }
+    }
+
+    /**
+     * Move a plan from [fromIndex] to [toIndex] in the dashboard display order.
+     * Re-assigns sequential displayOrder values (0, 1, 2, ...) to all plans.
+     *
+     * Persistence is serialized through [reorderMutex] so rapid drags can't commit
+     * their snapshots out of order. The optimistic UI update still happens
+     * synchronously so the list feels responsive even while a previous write is
+     * still draining.
+     */
+    fun reorderPlans(fromIndex: Int, toIndex: Int) {
+        val plans = _uiState.value.activePlans.toMutableList()
+        if (fromIndex !in plans.indices || toIndex !in plans.indices) return
+        if (fromIndex == toIndex) return
+        val moved = plans.removeAt(fromIndex)
+        plans.add(toIndex, moved)
+        // Update UI immediately for responsive feel
+        _uiState.update { it.copy(activePlans = plans) }
+        // Persist new order (serialized)
+        val planOrders = plans.mapIndexed { index, pwb -> pwb.plan.id to index }
+        viewModelScope.launch {
+            reorderMutex.withLock {
+                dcaPlanDao.updateAllDisplayOrders(planOrders)
+            }
         }
     }
 

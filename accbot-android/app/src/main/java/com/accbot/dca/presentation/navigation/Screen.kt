@@ -29,12 +29,23 @@ sealed class Screen(val route: String) {
     }
     // Exchange screens
     data object ExchangeManagement : Screen("exchanges/manage")
-    data object ExchangeDetail : Screen("exchanges/detail/{exchange}?autoImport={autoImport}") {
-        fun createRoute(exchangeName: String, autoImport: Boolean = false): String {
-            return if (autoImport) "exchanges/detail/$exchangeName?autoImport=true"
-            else "exchanges/detail/$exchangeName"
+
+    /**
+     * Detail of a single exchange connection (envelope). Keyed by connectionId
+     * (Long autoincrement from ExchangeConnectionEntity).
+     */
+    data object ExchangeDetail : Screen("exchanges/detail/{connectionId}?autoImport={autoImport}") {
+        fun createRoute(connectionId: Long, autoImport: Boolean = false): String {
+            return if (autoImport) "exchanges/detail/$connectionId?autoImport=true"
+            else "exchanges/detail/$connectionId"
         }
     }
+
+    /**
+     * Add exchange flow. Optional pre-selected exchange (when triggered from a tile in
+     * ExchangeManagement). Phase 7+ allows multiple connections per exchange so the
+     * filter on "exchanges without credentials" was removed.
+     */
     data object AddExchange : Screen("exchanges/add?exchange={exchange}") {
         fun createRoute(exchangeName: String? = null): String {
             return if (exchangeName != null) "exchanges/add?exchange=$exchangeName" else "exchanges/add"
@@ -63,6 +74,7 @@ sealed class Screen(val route: String) {
         const val PLAN_ID_ARG = "planId"
         const val TRANSACTION_ID_ARG = "transactionId"
         const val EXCHANGE_ARG = "exchange"
+        const val CONNECTION_ID_ARG = "connectionId"
     }
 }
 

@@ -21,6 +21,7 @@ import java.math.BigDecimal
 
 @Immutable
 data class PlanFormState(
+    val name: String = "",
     val selectedCrypto: String = "BTC",
     val selectedFiat: String = "EUR",
     val amount: String = "100",
@@ -73,6 +74,10 @@ class PlanFormDelegate(
     private var estimateJob: Job? = null
     private var currentExchange: Exchange? = null
 
+    fun setName(name: String) {
+        _state.update { it.copy(name = name) }
+    }
+
     fun selectCrypto(crypto: String) {
         _state.update { it.copy(selectedCrypto = crypto) }
         updateMonthlyCostEstimate()
@@ -80,7 +85,20 @@ class PlanFormDelegate(
     }
 
     fun selectFiat(fiat: String) {
-        _state.update { it.copy(selectedFiat = fiat) }
+        val exchange = currentExchange
+        val staticMin = exchange?.minOrderSize?.get(fiat)
+        _state.update {
+            val currentAmount = it.amount.toBigDecimalOrNull()
+            // If the current amount is below the new fiat's minimum (or was the old
+            // fiat's default minimum), bump it up so the user doesn't unknowingly
+            // submit an under-minimum plan.
+            val newAmount = if (staticMin != null && (currentAmount == null || currentAmount < staticMin)) {
+                staticMin.stripTrailingZeros().toPlainString()
+            } else {
+                it.amount
+            }
+            it.copy(selectedFiat = fiat, amount = newAmount)
+        }
         updateMonthlyCostEstimate()
         updateMinOrderSize()
     }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -33,6 +34,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -87,7 +89,7 @@ fun PortfolioScreen(
         val hasAnyData = chartData.isNotEmpty()
         val hasData = chartData.size >= 2
         val currentPage = uiState.pages.getOrNull(uiState.selectedPageIndex)
-        val isSinglePair = currentPage is PairPage.SinglePair
+        val isSinglePair = currentPage is PairPage.Plan
 
         // Scrub-to-inspect state
         var scrubbedIndex by remember { mutableIntStateOf(-1) }
@@ -103,7 +105,7 @@ fun PortfolioScreen(
 
         val pairLabel = when (currentPage) {
             is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, currentPage.fiat)
-            is PairPage.SinglePair -> "${currentPage.crypto}/${currentPage.fiat}"
+            is PairPage.Plan -> currentPage.name
             null -> ""
         }
 
@@ -128,7 +130,8 @@ fun PortfolioScreen(
                         val legendEntries = rememberLegendEntries(
                             denominationMode = uiState.denominationMode,
                             isSinglePair = isSinglePair,
-                            currentPairCrypto = uiState.currentPairCrypto
+                            currentPairCrypto = uiState.currentPairCrypto,
+                            isAggregate = currentPage is PairPage.Aggregate
                         )
                         PortfolioLineChart(
                             chartData = chartData,
@@ -137,6 +140,10 @@ fun PortfolioScreen(
                             fiatSymbol = uiState.currentPairFiat ?: "EUR",
                             cryptoSymbol = uiState.currentPairCrypto ?: "",
                             visibleSeries = uiState.visibleSeries,
+                            planLines = uiState.planLines,
+                            visiblePlanLines = uiState.visiblePlanLines,
+                            cryptoGroupLines = uiState.cryptoGroupLines,
+                            visibleCryptoGroupLines = uiState.visibleCryptoGroupLines,
                             zoomLevel = uiState.zoomLevel,
                             onScrub = { idx -> scrubbedIndex = idx ?: -1 },
                             modifier = Modifier
@@ -151,6 +158,19 @@ fun PortfolioScreen(
                             onToggleSeries = { viewModel.toggleSeriesVisibility(it) },
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
+                        // Per-plan legend (landscape)
+                        if (uiState.planLines.isNotEmpty() || uiState.cryptoGroupLines.isNotEmpty()) {
+                            PlanLinesLegend(
+                                planLines = uiState.planLines,
+                                visiblePlanLines = uiState.visiblePlanLines,
+                                onToggle = { id, type -> viewModel.togglePlanLineVisibility(id, type) },
+                                cryptoGroupLines = uiState.cryptoGroupLines,
+                                visibleCryptoGroupLines = uiState.visibleCryptoGroupLines,
+                                onToggleCryptoGroup = { crypto, type -> viewModel.toggleCryptoGroupLineVisibility(crypto, type) },
+                                isAdvancedExpanded = uiState.isAdvancedLegendExpanded,
+                                onToggleAdvanced = { viewModel.toggleAdvancedLegendExpanded() }
+                            )
+                        }
 
                         // Zoom header + drill-down chips
                         Column(
@@ -237,12 +257,12 @@ fun PortfolioScreen(
                         )
                     }
 
-                    // Exchange filter
-                    if (uiState.availableExchanges.size > 1) {
-                        ExchangeFilterRow(
-                            exchanges = uiState.availableExchanges,
-                            selectedExchange = uiState.selectedExchangeFilter,
-                            onExchangeSelected = { viewModel.selectExchangeFilter(it) }
+                    // Plan chip row
+                    if (uiState.pages.size > 1) {
+                        PlanChipRow(
+                            pages = uiState.pages,
+                            selectedIndex = uiState.selectedPageIndex,
+                            onPageSelected = { viewModel.selectPairPage(it) }
                         )
                     }
                 }
@@ -298,9 +318,11 @@ fun PortfolioScreen(
                     onZoomOut = { viewModel.zoomOut() },
                     onNavigatePrev = { viewModel.navigatePrev() },
                     onNavigateNext = { viewModel.navigateNext() },
-                    onExchangeFilterSelected = { viewModel.selectExchangeFilter(it) },
                     onPairPageSelected = { viewModel.selectPairPage(it) },
                     onToggleSeriesVisibility = { viewModel.toggleSeriesVisibility(it) },
+                    onTogglePlanLineVisibility = { id, type -> viewModel.togglePlanLineVisibility(id, type) },
+                    onToggleCryptoGroupLineVisibility = { crypto, type -> viewModel.toggleCryptoGroupLineVisibility(crypto, type) },
+                    onToggleAdvancedLegend = { viewModel.toggleAdvancedLegendExpanded() },
                     onRefresh = { viewModel.syncPricesAndLoadChart() },
                     onChartTouching = onChartTouching,
                     modifier = Modifier.padding(paddingValues)
@@ -319,9 +341,11 @@ internal fun PortfolioContent(
     onZoomOut: () -> Unit,
     onNavigatePrev: () -> Unit,
     onNavigateNext: () -> Unit,
-    onExchangeFilterSelected: (String?) -> Unit,
     onPairPageSelected: (Int) -> Unit,
     onToggleSeriesVisibility: (Int) -> Unit,
+    onTogglePlanLineVisibility: (Long, PlanLineType) -> Unit,
+    onToggleCryptoGroupLineVisibility: (String, CryptoGroupLineType) -> Unit,
+    onToggleAdvancedLegend: () -> Unit,
     onRefresh: () -> Unit,
     onChartTouching: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
@@ -336,15 +360,44 @@ internal fun PortfolioContent(
         pageCount = { pageCount }
     )
 
-    // Sync pager with ViewModel
-    LaunchedEffect(pagerState.currentPage) {
+    // Structural key for the page list: changes whenever a plan is added, removed,
+    // renamed, or re-ordered. Used to force-align the pager with the ViewModel's
+    // selectedPageIndex after plans change - without this, pagerState.currentPage
+    // keeps its stale value and the user ends up on the wrong chart after adding
+    // or deleting a plan.
+    val pagesKey = remember(uiState.pages) {
+        uiState.pages.joinToString("|") { page ->
+            when (page) {
+                is PairPage.Aggregate -> "agg:${page.fiat}"
+                is PairPage.Plan -> "plan:${page.planId}:${page.name}"
+            }
+        }
+    }
+
+    // Sync pager -> ViewModel (only after pager settles, not during animation)
+    // Using settledPage avoids intermediate values from programmatic scroll animations
+    LaunchedEffect(pagerState.settledPage) {
+        if (pagerState.settledPage != uiState.selectedPageIndex) {
+            onPairPageSelected(pagerState.settledPage)
+        }
+    }
+    // Sync ViewModel -> pager (chip tap changes page)
+    LaunchedEffect(uiState.selectedPageIndex) {
         if (pagerState.currentPage != uiState.selectedPageIndex) {
-            onPairPageSelected(pagerState.currentPage)
+            pagerState.animateScrollToPage(uiState.selectedPageIndex)
+        }
+    }
+    // Re-align pager when the page list changes structure (plan added/removed/renamed).
+    // Jumps without animation so we don't flash through unrelated pages.
+    LaunchedEffect(pagesKey) {
+        val target = uiState.selectedPageIndex.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
+        if (pageCount > 0 && pagerState.currentPage != target) {
+            pagerState.scrollToPage(target)
         }
     }
 
     val currentPage = uiState.pages.getOrNull(uiState.selectedPageIndex)
-    val isSinglePair = currentPage is PairPage.SinglePair
+    val isSinglePair = currentPage is PairPage.Plan
 
     // Scrub-to-inspect state (ephemeral, local to composable)
     var scrubbedIndex by remember { mutableIntStateOf(-1) }
@@ -410,7 +463,7 @@ internal fun PortfolioContent(
                             val pageItem = uiState.pages.getOrNull(page)
                             val pairLabel = when (pageItem) {
                                 is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, pageItem.fiat)
-                                is PairPage.SinglePair -> "${pageItem.crypto}/${pageItem.fiat}"
+                                is PairPage.Plan -> pageItem.name
                                 null -> ""
                             }
 
@@ -430,7 +483,7 @@ internal fun PortfolioContent(
                                     Spacer(Modifier.height(8.dp))
                                     KpiCardContent(
                                         uiState = uiState,
-                                        isSinglePair = pageItem is PairPage.SinglePair,
+                                        isSinglePair = pageItem is PairPage.Plan,
                                         scrubbedDataPoint = scrubbedDataPoint
                                     )
                                 }
@@ -479,7 +532,7 @@ internal fun PortfolioContent(
                         val pageItem = uiState.pages.firstOrNull()
                         val pairLabel = when (pageItem) {
                             is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, pageItem.fiat)
-                            is PairPage.SinglePair -> "${pageItem.crypto}/${pageItem.fiat}"
+                            is PairPage.Plan -> pageItem.name
                             null -> ""
                         }
                         Text(
@@ -492,7 +545,7 @@ internal fun PortfolioContent(
                             Spacer(Modifier.height(8.dp))
                             KpiCardContent(
                                 uiState = uiState,
-                                isSinglePair = pageItem is PairPage.SinglePair,
+                                isSinglePair = pageItem is PairPage.Plan,
                                 scrubbedDataPoint = scrubbedDataPoint
                             )
                         }
@@ -524,6 +577,10 @@ internal fun PortfolioContent(
                     fiatSymbol = uiState.currentPairFiat ?: "EUR",
                     cryptoSymbol = uiState.currentPairCrypto ?: "",
                     visibleSeries = uiState.visibleSeries,
+                    planLines = uiState.planLines,
+                    visiblePlanLines = uiState.visiblePlanLines,
+                    cryptoGroupLines = uiState.cryptoGroupLines,
+                    visibleCryptoGroupLines = uiState.visibleCryptoGroupLines,
                     zoomLevel = uiState.zoomLevel,
                     onScrub = { idx -> scrubbedIndex = idx ?: -1 },
                     modifier = Modifier.fillMaxWidth()
@@ -549,13 +606,28 @@ internal fun PortfolioContent(
                 val legendEntries = rememberLegendEntries(
                     denominationMode = uiState.denominationMode,
                     isSinglePair = isSinglePair,
-                    currentPairCrypto = uiState.currentPairCrypto
+                    currentPairCrypto = uiState.currentPairCrypto,
+                    isAggregate = currentPage is PairPage.Aggregate
                 )
                 InteractiveChartLegend(
                     entries = legendEntries,
                     visibleSeries = uiState.visibleSeries,
                     onToggleSeries = onToggleSeriesVisibility
                 )
+                // Per-plan legend entries
+                if (uiState.planLines.isNotEmpty() || uiState.cryptoGroupLines.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    PlanLinesLegend(
+                        planLines = uiState.planLines,
+                        visiblePlanLines = uiState.visiblePlanLines,
+                        onToggle = onTogglePlanLineVisibility,
+                        cryptoGroupLines = uiState.cryptoGroupLines,
+                        visibleCryptoGroupLines = uiState.visibleCryptoGroupLines,
+                        onToggleCryptoGroup = onToggleCryptoGroupLineVisibility,
+                        isAdvancedExpanded = uiState.isAdvancedLegendExpanded,
+                        onToggleAdvanced = onToggleAdvancedLegend
+                    )
+                }
             }
         }
 
@@ -584,13 +656,13 @@ internal fun PortfolioContent(
             )
         }
 
-        // Exchange filter chips
-        if (uiState.availableExchanges.size > 1) {
+        // Plan chip row (replaces exchange filter)
+        if (uiState.pages.size > 1) {
             item {
-                ExchangeFilterRow(
-                    exchanges = uiState.availableExchanges,
-                    selectedExchange = uiState.selectedExchangeFilter,
-                    onExchangeSelected = onExchangeFilterSelected
+                PlanChipRow(
+                    pages = uiState.pages,
+                    selectedIndex = uiState.selectedPageIndex,
+                    onPageSelected = onPairPageSelected
                 )
             }
         }
@@ -606,17 +678,24 @@ internal fun PortfolioContent(
 private fun rememberLegendEntries(
     denominationMode: DenominationMode,
     isSinglePair: Boolean,
-    currentPairCrypto: String?
+    currentPairCrypto: String?,
+    isAggregate: Boolean = false
 ): List<LegendEntry> {
-    val (line1, line2) = when (denominationMode) {
-        DenominationMode.FIAT -> stringResource(R.string.chart_portfolio_value) to stringResource(R.string.chart_cost_basis)
-        DenominationMode.CRYPTO -> stringResource(R.string.chart_legend_crypto_held) to stringResource(R.string.chart_legend_invested_equiv)
+    val line1 = when {
+        isAggregate && denominationMode == DenominationMode.FIAT -> stringResource(R.string.chart_total_value)
+        denominationMode == DenominationMode.FIAT -> stringResource(R.string.chart_portfolio_value)
+        else -> stringResource(R.string.chart_legend_crypto_held)
+    }
+    val line2 = when {
+        isAggregate && denominationMode == DenominationMode.FIAT -> stringResource(R.string.chart_total_invested)
+        denominationMode == DenominationMode.FIAT -> stringResource(R.string.chart_cost_basis)
+        else -> stringResource(R.string.chart_legend_invested_equiv)
     }
     val crypto = currentPairCrypto ?: "BTC"
     val cryptoPriceLabel = stringResource(R.string.chart_crypto_price, crypto)
     val accumulatedCryptoLabel = stringResource(R.string.chart_accumulated_crypto, crypto)
     val avgBuyPriceLabel = stringResource(R.string.chart_avg_buy_price)
-    return remember(denominationMode, isSinglePair, currentPairCrypto) {
+    return remember(denominationMode, isSinglePair, currentPairCrypto, isAggregate, line1, line2) {
         buildList {
             add(LegendEntry(0, line1, Primary))
             add(LegendEntry(1, line2, androidx.compose.ui.graphics.Color(0xFF888888)))
@@ -1183,27 +1262,201 @@ private fun LandscapeKpiContent(
     }
 }
 
+private val legendCryptoDisplayColors = mapOf(
+    "BTC" to androidx.compose.ui.graphics.Color(0xFFF7931A),
+    "ETH" to androidx.compose.ui.graphics.Color(0xFF627EEA),
+    "LTC" to androidx.compose.ui.graphics.Color(0xFFA6A9AA),
+    "BCH" to androidx.compose.ui.graphics.Color(0xFF8DC351),
+    "XRP" to androidx.compose.ui.graphics.Color(0xFF00A5E0),
+    "ADA" to androidx.compose.ui.graphics.Color(0xFF0033AD),
+    "SOL" to androidx.compose.ui.graphics.Color(0xFF9945FF),
+    "DOT" to androidx.compose.ui.graphics.Color(0xFFE6007A),
+)
+private fun legendColorFor(crypto: String): androidx.compose.ui.graphics.Color =
+    legendCryptoDisplayColors[crypto] ?: androidx.compose.ui.graphics.Color(0xFF888888)
+
 @Composable
-private fun ExchangeFilterRow(
-    exchanges: List<String>,
-    selectedExchange: String?,
-    onExchangeSelected: (String?) -> Unit
+private fun LegendDot(color: androidx.compose.ui.graphics.Color, enabled: Boolean) {
+    Box(
+        Modifier
+            .size(12.dp)
+            .clip(CircleShape)
+            .background(if (enabled) color else color.copy(alpha = 0.3f))
+    )
+}
+
+@Composable
+private fun LegendTextEntry(
+    color: androidx.compose.ui.graphics.Color,
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clickable { onClick() }
+            .padding(4.dp)
+    ) {
+        LegendDot(color, enabled)
+        Spacer(Modifier.width(6.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+            textDecoration = if (enabled) null else TextDecoration.LineThrough
+        )
+    }
+}
+
+@Composable
+private fun PlanLinesLegend(
+    planLines: List<PlanLineInfo>,
+    visiblePlanLines: Set<Pair<Long, PlanLineType>>,
+    onToggle: (Long, PlanLineType) -> Unit,
+    cryptoGroupLines: List<CryptoGroupLineInfo> = emptyList(),
+    visibleCryptoGroupLines: Set<Pair<String, CryptoGroupLineType>> = emptySet(),
+    onToggleCryptoGroup: (String, CryptoGroupLineType) -> Unit = { _, _ -> },
+    isAdvancedExpanded: Boolean = false,
+    onToggleAdvanced: () -> Unit = {}
+) {
+    val distinctColors = com.accbot.dca.presentation.components.distinctLineColors
+    fun planMetricColor(planIdx: Int, metric: PlanLineType): androidx.compose.ui.graphics.Color =
+        distinctColors[com.accbot.dca.presentation.components.distinctColorIdx(planIdx, metric.ordinal)]
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        // Primary section: value + invested per plan
+        planLines.forEachIndexed { index, planLine ->
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val valueEnabled = (planLine.planId to PlanLineType.VALUE) in visiblePlanLines
+                LegendTextEntry(
+                    color = planMetricColor(index, PlanLineType.VALUE),
+                    label = stringResource(R.string.chart_plan_value, planLine.name),
+                    enabled = valueEnabled,
+                    onClick = { onToggle(planLine.planId, PlanLineType.VALUE) }
+                )
+
+                Spacer(Modifier.width(16.dp))
+
+                val investedEnabled = (planLine.planId to PlanLineType.INVESTED) in visiblePlanLines
+                LegendTextEntry(
+                    color = planMetricColor(index, PlanLineType.INVESTED),
+                    label = stringResource(R.string.chart_plan_invested, planLine.name),
+                    enabled = investedEnabled,
+                    onClick = { onToggle(planLine.planId, PlanLineType.INVESTED) }
+                )
+            }
+        }
+
+        // Advanced toggle button (shown only when we have any advanced content)
+        if (planLines.isNotEmpty() || cryptoGroupLines.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggleAdvanced() }
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    stringResource(if (isAdvancedExpanded) R.string.chart_advanced_hide else R.string.chart_advanced_show),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    if (isAdvancedExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Advanced section content
+        if (isAdvancedExpanded) {
+            // Per-crypto-group rows: Cena + Celkem akumulováno per unique crypto
+            cryptoGroupLines.forEach { cgLine ->
+                val cryptoColor = legendColorFor(cgLine.crypto)
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val priceEnabled = (cgLine.crypto to CryptoGroupLineType.PRICE) in visibleCryptoGroupLines
+                    LegendTextEntry(
+                        color = cryptoColor,
+                        label = stringResource(R.string.chart_crypto_price_label, cgLine.crypto),
+                        enabled = priceEnabled,
+                        onClick = { onToggleCryptoGroup(cgLine.crypto, CryptoGroupLineType.PRICE) }
+                    )
+
+                    Spacer(Modifier.width(16.dp))
+
+                    val accEnabled = (cgLine.crypto to CryptoGroupLineType.TOTAL_ACCUMULATED) in visibleCryptoGroupLines
+                    LegendTextEntry(
+                        color = cryptoColor.copy(alpha = 0.6f),
+                        label = stringResource(R.string.chart_total_accumulated_label, cgLine.crypto),
+                        enabled = accEnabled,
+                        onClick = { onToggleCryptoGroup(cgLine.crypto, CryptoGroupLineType.TOTAL_ACCUMULATED) }
+                    )
+                }
+            }
+
+            // Per-plan advanced rows: Prům. nák. cena + Akumulováno
+            planLines.forEachIndexed { index, planLine ->
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val avgEnabled = (planLine.planId to PlanLineType.AVG_BUY_PRICE) in visiblePlanLines
+                    LegendTextEntry(
+                        color = planMetricColor(index, PlanLineType.AVG_BUY_PRICE),
+                        label = stringResource(R.string.chart_plan_avg_buy, planLine.name),
+                        enabled = avgEnabled,
+                        onClick = { onToggle(planLine.planId, PlanLineType.AVG_BUY_PRICE) }
+                    )
+
+                    Spacer(Modifier.width(16.dp))
+
+                    val accEnabled = (planLine.planId to PlanLineType.ACCUMULATED) in visiblePlanLines
+                    LegendTextEntry(
+                        color = planMetricColor(index, PlanLineType.ACCUMULATED),
+                        label = stringResource(R.string.chart_plan_accumulated, planLine.name),
+                        enabled = accEnabled,
+                        onClick = { onToggle(planLine.planId, PlanLineType.ACCUMULATED) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlanChipRow(
+    pages: List<PairPage>,
+    selectedIndex: Int,
+    onPageSelected: (Int) -> Unit
 ) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        item {
+        itemsIndexed(pages) { index, page ->
+            val label = when (page) {
+                is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, page.fiat)
+                is PairPage.Plan -> page.name
+            }
             FilterChip(
-                selected = selectedExchange == null,
-                onClick = { onExchangeSelected(null) },
-                label = { Text(stringResource(R.string.chart_filter_all_exchanges)) }
-            )
-        }
-        items(exchanges) { exchange ->
-            FilterChip(
-                selected = exchange == selectedExchange,
-                onClick = { onExchangeSelected(exchange) },
-                label = { Text(exchange) }
+                selected = index == selectedIndex,
+                onClick = { onPageSelected(index) },
+                label = { Text(label) }
             )
         }
     }

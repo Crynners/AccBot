@@ -98,6 +98,8 @@ class DcaWorker @AssistedInject constructor(
                         Log.d(TAG, "Plan ${plan.id} reached target ${plan.targetAmount}, auto-disabled")
                         notificationService.showErrorNotification(
                             planId = plan.id,
+                            exchange = plan.exchange,
+                            connectionId = plan.connectionId,
                             templateArgs = NotificationTemplateArgs.TargetReached(
                                 targetAmount = plan.targetAmount.toPlainString(),
                                 crypto = plan.crypto
@@ -107,13 +109,35 @@ class DcaWorker @AssistedInject constructor(
                     }
                 }
 
-                // Get credentials (using current sandbox mode)
+                // Get credentials for this plan's connection (using current sandbox mode)
                 val isSandbox = userPreferences.isSandboxMode()
-                val credentials = credentialsStore.getCredentials(plan.exchange, isSandbox)
+                val credentials = credentialsStore.getCredentials(plan.connectionId, isSandbox)
                 if (credentials == null) {
-                    Log.e(TAG, "No credentials for ${plan.exchange} (sandbox=$isSandbox)")
+                    Log.e(TAG, "No credentials for connection ${plan.connectionId} (${plan.exchange}, sandbox=$isSandbox)")
+                    // Notify the user once per plan per worker lifetime so a missing-credentials
+                    // plan doesn't just silently fail forever (e.g. after a half-completed
+                    // backup restore or a deleted connection). Dedup is in-memory, which
+                    // means we re-notify after the worker is recreated - acceptable, since
+                    // the user needs to act on it anyway.
+                    if (credentialErrorNotifiedPlans.add(plan.id)) {
+                        val connectionName = try {
+                            database.exchangeConnectionDao().getById(plan.connectionId)?.name ?: ""
+                        } catch (_: Exception) { "" }
+                        notificationService.showErrorNotification(
+                            planId = plan.id,
+                            exchange = plan.exchange,
+                            connectionId = plan.connectionId,
+                            templateArgs = NotificationTemplateArgs.MissingCredentials(
+                                crypto = plan.crypto,
+                                exchangeName = plan.exchange.displayName,
+                                connectionName = connectionName
+                            )
+                        )
+                    }
                     continue
                 }
+                // Credentials are back - allow future notifications if they disappear again
+                credentialErrorNotifiedPlans.remove(plan.id)
 
                 // Calculate purchase amount based on strategy
                 val strategyResult = calculateStrategyMultiplier(
@@ -138,6 +162,7 @@ class DcaWorker @AssistedInject constructor(
                         val transaction = TransactionEntity(
                             planId = plan.id,
                             exchange = plan.exchange,
+                            connectionId = plan.connectionId,
                             crypto = plan.crypto,
                             fiat = plan.fiat,
                             fiatAmount = purchaseAmount,
@@ -158,6 +183,8 @@ class DcaWorker @AssistedInject constructor(
 
                     notificationService.showErrorNotification(
                         planId = plan.id,
+                        exchange = plan.exchange,
+                        connectionId = plan.connectionId,
                         templateArgs = NotificationTemplateArgs.BelowMinimum(
                             crypto = plan.crypto,
                             purchaseAmount = purchaseAmount.toPlainString(),
@@ -231,7 +258,8 @@ class DcaWorker @AssistedInject constructor(
                                     exchangeName = plan.exchange.displayName,
                                     missedCount = missed,
                                     planId = plan.id,
-                                    exchange = plan.exchange
+                                    exchange = plan.exchange,
+                                    connectionId = plan.connectionId
                                 )
                             }
                         } catch (_: Exception) {}
@@ -241,6 +269,7 @@ class DcaWorker @AssistedInject constructor(
                             val transaction = TransactionEntity(
                                 planId = plan.id,
                                 exchange = plan.exchange,
+                                connectionId = plan.connectionId,
                                 crypto = plan.crypto,
                                 fiat = plan.fiat,
                                 fiatAmount = finalResult.transaction.fiatAmount,
@@ -279,6 +308,7 @@ class DcaWorker @AssistedInject constructor(
                             plan.id,
                             pending = isPending,
                             exchange = plan.exchange,
+                            connectionId = plan.connectionId,
                             scheduledAt = scheduledTime,
                             executedAt = if (scheduledTime != null) executedNow else null
                         )
@@ -296,7 +326,7 @@ class DcaWorker @AssistedInject constructor(
                         } else {
                             plan.frequency.intervalMinutes
                         }
-                        checkLowBalance(api, plan.exchange.displayName, plan.fiat, plan.amount, effectiveInterval, plan.id)
+                        checkLowBalance(api, plan.exchange.displayName, plan.fiat, plan.amount, effectiveInterval, plan.id, plan.connectionId)
                     }
 
                     is DcaResult.Error -> {
@@ -320,7 +350,8 @@ class DcaWorker @AssistedInject constructor(
                                         nextRetryAt = retryTime,
                                         attemptCount = 1,
                                         planId = plan.id,
-                                        exchange = plan.exchange
+                                        exchange = plan.exchange,
+                                        connectionId = plan.connectionId
                                     )
                                 }
                             } catch (e: Exception) {
@@ -335,6 +366,7 @@ class DcaWorker @AssistedInject constructor(
                                 val transaction = TransactionEntity(
                                     planId = plan.id,
                                     exchange = plan.exchange,
+                                    connectionId = plan.connectionId,
                                     crypto = plan.crypto,
                                     fiat = plan.fiat,
                                     fiatAmount = plan.amount,
@@ -360,6 +392,8 @@ class DcaWorker @AssistedInject constructor(
 
                             notificationService.showErrorNotification(
                                 planId = plan.id,
+                                exchange = plan.exchange,
+                                connectionId = plan.connectionId,
                                 templateArgs = NotificationTemplateArgs.Error(
                                     crypto = plan.crypto,
                                     errorMessage = finalResult.message
@@ -418,7 +452,8 @@ class DcaWorker @AssistedInject constructor(
 
     private suspend fun checkWithdrawalThreshold(plan: DcaPlanEntity, api: ExchangeApi) {
         try {
-            val threshold = database.withdrawalThresholdDao().getThresholdAmount(plan.exchange, plan.crypto) ?: return
+            // Per-connection threshold lookup; the plan carries connectionId since migration v18→v19.
+            val threshold = database.withdrawalThresholdDao().getThresholdAmount(plan.connectionId, plan.crypto) ?: return
             val cryptoBalance = withTimeoutOrNull(10_000) { api.getBalance(plan.crypto) } ?: return
             if (cryptoBalance >= threshold) {
                 notificationService.showWithdrawalThresholdNotification(
@@ -426,7 +461,8 @@ class DcaWorker @AssistedInject constructor(
                     exchange = plan.exchange.displayName,
                     amount = cryptoBalance,
                     threshold = threshold,
-                    planId = plan.id
+                    planId = plan.id,
+                    connectionId = plan.connectionId
                 )
             }
         } catch (e: Exception) {
@@ -440,7 +476,8 @@ class DcaWorker @AssistedInject constructor(
         fiat: String,
         planAmount: BigDecimal,
         intervalMinutes: Long,
-        planId: Long
+        planId: Long,
+        connectionId: Long
     ) {
         try {
             val balance = api.getBalance(fiat) ?: return
@@ -448,7 +485,7 @@ class DcaWorker @AssistedInject constructor(
             val remainingDays = (remainingExec.toLong() * intervalMinutes) / 1440.0
             val thresholdDays = userPreferences.getLowBalanceThresholdDays()
             if (remainingDays < thresholdDays) {
-                notificationService.showLowBalanceNotification(exchangeName, fiat, remainingDays, planId)
+                notificationService.showLowBalanceNotification(exchangeName, fiat, remainingDays, planId, connectionId)
                 Log.w(TAG, "Low balance on $exchangeName: ~$remainingDays days of $fiat remaining")
             }
         } catch (e: Exception) {
@@ -462,6 +499,14 @@ class DcaWorker @AssistedInject constructor(
         private const val KEY_PLAN_ID = "planId"
         private const val KEY_REPEAT_COUNT = "repeatCount"
         const val WORK_NAME = "dca_periodic_work"
+
+        /**
+         * Plan IDs we've already shown a "missing credentials" notification for in
+         * this process lifetime. Prevents spamming the notification tray on every
+         * alarm tick (~hourly) for a plan whose credentials will stay missing until
+         * the user acts. Cleared when credentials reappear for that plan.
+         */
+        private val credentialErrorNotifiedPlans = java.util.Collections.synchronizedSet(mutableSetOf<Long>())
 
         /**
          * Schedule periodic DCA work as a safety net (backs up AlarmManager).
@@ -569,8 +614,16 @@ class DcaWorker @AssistedInject constructor(
 
         /**
          * Run DCA from an alarm trigger.
-         * Creates an expedited OneTimeWorkRequest that respects nextExecutionAt checks
+         * Creates a OneTimeWorkRequest that respects nextExecutionAt checks
          * (does NOT set KEY_FORCE_RUN).
+         *
+         * Note: deliberately NOT using setExpedited(). On Android 11 and below, expedited
+         * work runs as a foreground service, and when this chain is reachable from a
+         * BOOT_COMPLETED broadcast (BootReceiver re-arms the alarm after boot, the alarm
+         * fires shortly after, and triggers this work), Google Play flags it as starting
+         * a restricted "dataSync" foreground service from BOOT_COMPLETED - which is not
+         * allowed for apps targeting Android 15+. The alarm wakes the device anyway, so
+         * regular OneTimeWorkRequest runs immediately.
          */
         private const val ALARM_WORK_NAME = "dca_alarm_execution"
 
@@ -578,14 +631,13 @@ class DcaWorker @AssistedInject constructor(
             // No network constraint – worker must run even when offline so it can
             // show a network-retry notification instead of silently waiting.
             val oneTimeWorkRequest = OneTimeWorkRequestBuilder<DcaWorker>()
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
                 .build()
 
             WorkManager.getInstance(context)
                 .enqueueUniqueWork(ALARM_WORK_NAME, ExistingWorkPolicy.REPLACE, oneTimeWorkRequest)
 
-            Log.d(TAG, "DCA alarm-triggered work enqueued (expedited, unique=$ALARM_WORK_NAME)")
+            Log.d(TAG, "DCA alarm-triggered work enqueued (unique=$ALARM_WORK_NAME)")
         }
 
         /**

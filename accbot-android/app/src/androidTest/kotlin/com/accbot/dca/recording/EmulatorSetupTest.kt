@@ -3,6 +3,7 @@ package com.accbot.dca.recording
 import androidx.test.platform.app.InstrumentationRegistry
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaDatabase
+import com.accbot.dca.data.local.ExchangeConnectionEntity
 import com.accbot.dca.data.local.OnboardingPreferences
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.Exchange
@@ -46,22 +47,31 @@ class EmulatorSetupTest {
         userPrefs.setSandboxMode(true)
         userPrefs.setBiometricLockEnabled(false)
 
-        // 4. Save Binance sandbox credentials
-        val credentialsStore = CredentialsStore(context)
+        // 4. Save Binance sandbox credentials. CredentialsStore now needs the connection
+        // DAO from the sandbox database (separate file from prod).
+        val sandboxDb = DcaDatabase.getInstance(context, isSandbox = true)
+        val credentialsStore = CredentialsStore(context, sandboxDb.exchangeConnectionDao())
         val credentials = ExchangeCredentials(
             exchange = Exchange.BINANCE,
             apiKey = "EHF3PoIyxgXkJa1iUy7OsGPqtu7eSi6dis9O9QOBZL9SUXp16ThTyPHcIGc5ZidW",
             apiSecret = "pg6Xj5bBJUer1OnFsy6kanNK9YW6A5Xk6hsjp5AEMxEgum0Yqf7vbkpDg0MbZNHo"
         )
-        val saved = credentialsStore.saveCredentials(credentials, isSandbox = true)
-        assert(saved) { "Failed to save Binance sandbox credentials" }
 
-        // DCA plan is NOT created here — it will be created via UI in ForegroundServiceDemoTest
+        kotlinx.coroutines.runBlocking {
+            // Create a default Binance connection then save credentials under it.
+            val binanceConnectionId = sandboxDb.exchangeConnectionDao().insert(
+                ExchangeConnectionEntity(exchange = Exchange.BINANCE, name = "")
+            )
+            val saved = credentialsStore.saveCredentials(binanceConnectionId, credentials, isSandbox = true)
+            assert(saved) { "Failed to save Binance sandbox credentials" }
 
-        // Verify setup
-        val hasCredentials = credentialsStore.hasCredentials(Exchange.BINANCE, isSandbox = true)
-        assert(hasCredentials) { "Binance sandbox credentials not found after save" }
-        assert(userPrefs.isSandboxMode()) { "Sandbox mode not enabled" }
-        assert(onboarding.isOnboardingCompleted()) { "Onboarding not marked as completed" }
+            // DCA plan is NOT created here - it will be created via UI in ForegroundServiceDemoTest
+
+            // Verify setup
+            val hasCredentials = credentialsStore.hasCredentials(binanceConnectionId, isSandbox = true)
+            assert(hasCredentials) { "Binance sandbox credentials not found after save" }
+            assert(userPrefs.isSandboxMode()) { "Sandbox mode not enabled" }
+            assert(onboarding.isOnboardingCompleted()) { "Onboarding not marked as completed" }
+        }
     }
 }

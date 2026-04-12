@@ -7,8 +7,38 @@ import java.math.BigDecimal
 import java.time.Instant
 
 @Dao
+interface ExchangeConnectionDao {
+    @Query("SELECT * FROM exchange_connections ORDER BY exchange, displayOrder, createdAt")
+    fun getAllFlow(): Flow<List<ExchangeConnectionEntity>>
+
+    @Query("SELECT * FROM exchange_connections ORDER BY exchange, displayOrder, createdAt")
+    suspend fun getAll(): List<ExchangeConnectionEntity>
+
+    @Query("SELECT * FROM exchange_connections WHERE exchange = :exchange ORDER BY displayOrder, createdAt")
+    suspend fun getByExchange(exchange: Exchange): List<ExchangeConnectionEntity>
+
+    @Query("SELECT * FROM exchange_connections WHERE exchange = :exchange ORDER BY displayOrder, createdAt LIMIT 1")
+    suspend fun getDefaultByExchange(exchange: Exchange): ExchangeConnectionEntity?
+
+    @Query("SELECT * FROM exchange_connections WHERE id = :id")
+    suspend fun getById(id: Long): ExchangeConnectionEntity?
+
+    @Query("SELECT COUNT(*) FROM exchange_connections WHERE exchange = :exchange")
+    suspend fun countByExchange(exchange: Exchange): Int
+
+    @Insert
+    suspend fun insert(connection: ExchangeConnectionEntity): Long
+
+    @Update
+    suspend fun update(connection: ExchangeConnectionEntity)
+
+    @Query("DELETE FROM exchange_connections WHERE id = :id")
+    suspend fun deleteById(id: Long)
+}
+
+@Dao
 interface DcaPlanDao {
-    @Query("SELECT * FROM dca_plans ORDER BY createdAt DESC")
+    @Query("SELECT * FROM dca_plans ORDER BY displayOrder ASC, createdAt DESC")
     fun getAllPlans(): Flow<List<DcaPlanEntity>>
 
     @Query("SELECT * FROM dca_plans WHERE isEnabled = 1")
@@ -22,6 +52,15 @@ interface DcaPlanDao {
 
     @Query("SELECT * FROM dca_plans WHERE exchange = :exchange")
     fun getPlansByExchange(exchange: Exchange): Flow<List<DcaPlanEntity>>
+
+    @Query("SELECT * FROM dca_plans WHERE connectionId = :connectionId")
+    fun getPlansByConnection(connectionId: Long): Flow<List<DcaPlanEntity>>
+
+    @Query("SELECT COUNT(*) FROM dca_plans WHERE connectionId = :connectionId")
+    suspend fun countPlansByConnection(connectionId: Long): Int
+
+    @Query("DELETE FROM dca_plans WHERE connectionId = :connectionId")
+    suspend fun deletePlansByConnection(connectionId: Long)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlan(plan: DcaPlanEntity): Long
@@ -81,6 +120,25 @@ interface DcaPlanDao {
 
     @Query("UPDATE dca_plans SET missedPurchaseCount = 0 WHERE id = :planId")
     suspend fun resetMissedPurchaseCount(planId: Long)
+
+    @Query("UPDATE dca_plans SET name = :name WHERE id = :planId")
+    suspend fun renamePlan(planId: Long, name: String)
+
+    @Query("UPDATE dca_plans SET displayOrder = :displayOrder WHERE id = :planId")
+    suspend fun updateDisplayOrder(planId: Long, displayOrder: Int)
+
+    @Query("SELECT * FROM dca_plans ORDER BY displayOrder ASC, createdAt DESC")
+    suspend fun getAllPlansOnceOrdered(): List<DcaPlanEntity>
+
+    @Query("SELECT COALESCE(MAX(displayOrder), -1) FROM dca_plans")
+    suspend fun getMaxDisplayOrder(): Int
+
+    @Transaction
+    suspend fun updateAllDisplayOrders(planOrders: List<Pair<Long, Int>>) {
+        for ((planId, order) in planOrders) {
+            updateDisplayOrder(planId, order)
+        }
+    }
 
 }
 
@@ -280,8 +338,20 @@ interface TransactionDao {
     @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE exchange = :exchange AND crypto = :crypto AND status = 'COMPLETED'")
     suspend fun getTotalCryptoByExchangeAndCrypto(exchange: String, crypto: String): String
 
+    @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE connectionId = :connectionId AND crypto = :crypto AND status = 'COMPLETED'")
+    suspend fun getTotalCryptoByConnectionAndCrypto(connectionId: Long, crypto: String): String
+
     @Query("SELECT * FROM transactions WHERE exchangeOrderId = :orderId LIMIT 1")
     suspend fun getByExchangeOrderId(orderId: String): TransactionEntity?
+
+    /**
+     * Connection-scoped lookup: find a transaction by exchange order id within a
+     * specific connection. Used by backup restore dedup so two connections
+     * (e.g. prod vs sandbox, or "main" vs "savings") that happen to share an
+     * exchangeOrderId don't collapse into one row.
+     */
+    @Query("SELECT * FROM transactions WHERE exchangeOrderId = :orderId AND connectionId = :connectionId LIMIT 1")
+    suspend fun getByExchangeOrderIdAndConnection(orderId: String, connectionId: Long): TransactionEntity?
 
     @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE planId = :planId AND status = 'COMPLETED'")
     suspend fun getAccumulatedCryptoByPlan(planId: Long): String
@@ -346,8 +416,11 @@ interface ExchangeBalanceDao {
     @Query("SELECT * FROM exchange_balances WHERE exchange = :exchange")
     fun getBalancesByExchange(exchange: Exchange): Flow<List<ExchangeBalanceEntity>>
 
-    @Query("SELECT * FROM exchange_balances WHERE id = :id")
-    suspend fun getBalance(id: String): ExchangeBalanceEntity?
+    @Query("SELECT * FROM exchange_balances WHERE connectionId = :connectionId")
+    fun getBalancesByConnection(connectionId: Long): Flow<List<ExchangeBalanceEntity>>
+
+    @Query("SELECT * FROM exchange_balances WHERE connectionId = :connectionId AND currency = :currency")
+    suspend fun getBalance(connectionId: Long, currency: String): ExchangeBalanceEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBalance(balance: ExchangeBalanceEntity)
@@ -357,6 +430,9 @@ interface ExchangeBalanceDao {
 
     @Query("DELETE FROM exchange_balances WHERE exchange = :exchange")
     suspend fun deleteBalancesByExchange(exchange: Exchange)
+
+    @Query("DELETE FROM exchange_balances WHERE connectionId = :connectionId")
+    suspend fun deleteBalancesByConnection(connectionId: Long)
 
     @Query("DELETE FROM exchange_balances")
     suspend fun deleteAllBalances()
@@ -442,17 +518,28 @@ interface WithdrawalThresholdDao {
     @Query("SELECT * FROM withdrawal_thresholds")
     fun getAll(): Flow<List<WithdrawalThresholdEntity>>
 
-    @Query("SELECT * FROM withdrawal_thresholds WHERE crypto = :crypto AND exchange = :exchange")
-    suspend fun get(crypto: String, exchange: Exchange): WithdrawalThresholdEntity?
+    @Query("SELECT * FROM withdrawal_thresholds WHERE crypto = :crypto AND connectionId = :connectionId")
+    suspend fun get(crypto: String, connectionId: Long): WithdrawalThresholdEntity?
+
+    @Query("SELECT * FROM withdrawal_thresholds WHERE connectionId = :connectionId")
+    fun getByConnection(connectionId: Long): Flow<List<WithdrawalThresholdEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: WithdrawalThresholdEntity)
 
-    @Query("DELETE FROM withdrawal_thresholds WHERE crypto = :crypto AND exchange = :exchange")
-    suspend fun delete(crypto: String, exchange: Exchange)
+    @Query("DELETE FROM withdrawal_thresholds WHERE crypto = :crypto AND connectionId = :connectionId")
+    suspend fun delete(crypto: String, connectionId: Long)
 
-    @Query("SELECT thresholdAmount FROM withdrawal_thresholds WHERE exchange = :exchange AND crypto = :crypto")
-    suspend fun getThresholdAmount(exchange: Exchange, crypto: String): BigDecimal?
+    /**
+     * Delete all thresholds for a connection. Used as manual cascade when an
+     * [ExchangeConnectionEntity] is deleted, since FK enforcement (`PRAGMA foreign_keys`)
+     * is currently disabled in Room and the schema-level `ON DELETE CASCADE` is a no-op.
+     */
+    @Query("DELETE FROM withdrawal_thresholds WHERE connectionId = :connectionId")
+    suspend fun deleteByConnection(connectionId: Long)
+
+    @Query("SELECT thresholdAmount FROM withdrawal_thresholds WHERE connectionId = :connectionId AND crypto = :crypto")
+    suspend fun getThresholdAmount(connectionId: Long, crypto: String): BigDecimal?
 
     @Query("DELETE FROM withdrawal_thresholds")
     suspend fun deleteAll()

@@ -54,7 +54,7 @@ import com.accbot.dca.presentation.ui.theme.successColor
 fun AddExchangeScreen(
     onNavigateBack: () -> Unit,
     onExchangeAdded: () -> Unit,
-    onNavigateToExchangeDetail: ((String) -> Unit)? = null,
+    onNavigateToExchangeManagement: (() -> Unit)? = null,
     viewModel: AddExchangeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,9 +70,9 @@ fun AddExchangeScreen(
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.dismissImportOffer()
-                    uiState.credentialForm.selectedExchange?.let { exchange ->
-                        onNavigateToExchangeDetail?.invoke(exchange.name)
-                    }
+                    // Phase 7+: route through Exchange Management list to pick the
+                    // specific connection to import balances into.
+                    onNavigateToExchangeManagement?.invoke()
                 }) {
                     Text(stringResource(R.string.import_api_title))
                 }
@@ -135,12 +135,17 @@ fun AddExchangeScreen(
                 apiKey = uiState.credentialForm.apiKey,
                 apiSecret = uiState.credentialForm.apiSecret,
                 passphrase = uiState.credentialForm.passphrase,
+                connectionName = uiState.credentialForm.connectionName,
+                requireConnectionName = uiState.credentialForm.requireConnectionName,
+                existingConnectionNames = uiState.credentialForm.existingConnectionsForExchange,
+                isLoadingExchangeContext = uiState.credentialForm.isLoadingExchangeContext,
                 isValidating = uiState.credentialForm.isValidatingCredentials,
                 error = uiState.credentialForm.resolvedCredentialsError,
                 onClientIdChange = viewModel.credentialForm::setClientId,
                 onApiKeyChange = viewModel.credentialForm::setApiKey,
                 onApiSecretChange = viewModel.credentialForm::setApiSecret,
                 onPassphraseChange = viewModel.credentialForm::setPassphrase,
+                onConnectionNameChange = viewModel.credentialForm::setConnectionName,
                 onValidate = { viewModel.validateAndSave(onExchangeAdded) },
                 modifier = Modifier.padding(paddingValues)
             )
@@ -439,12 +444,17 @@ private fun CredentialsStep(
     apiKey: String,
     apiSecret: String,
     passphrase: String,
+    connectionName: String,
+    requireConnectionName: Boolean,
+    existingConnectionNames: List<String>,
+    isLoadingExchangeContext: Boolean,
     isValidating: Boolean,
     error: String?,
     onClientIdChange: (String) -> Unit,
     onApiKeyChange: (String) -> Unit,
     onApiSecretChange: (String) -> Unit,
     onPassphraseChange: (String) -> Unit,
+    onConnectionNameChange: (String) -> Unit,
     onValidate: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -459,6 +469,29 @@ private fun CredentialsStep(
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        // Connection name input - required when there's already at least one connection
+        // on this exchange (i.e. user is adding a 2nd "envelope")
+        if (requireConnectionName || existingConnectionNames.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = connectionName,
+                onValueChange = onConnectionNameChange,
+                label = { Text(stringResource(R.string.exchanges_connection_name_label)) },
+                placeholder = { Text(stringResource(R.string.exchanges_connection_name_hint)) },
+                singleLine = true,
+                isError = requireConnectionName && connectionName.isBlank(),
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (requireConnectionName && existingConnectionNames.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.exchanges_connection_name_required),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -479,14 +512,18 @@ private fun CredentialsStep(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Validate button
+        // Validate button - disabled while existing-connections lookup is in flight
+        // (otherwise user could race past the duplicate-name check).
+        val nameOk = !requireConnectionName || connectionName.isNotBlank()
         Button(
             onClick = onValidate,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             enabled = areCredentialsComplete(exchange, clientId, apiKey, apiSecret, passphrase) &&
-                    !isValidating,
+                    nameOk &&
+                    !isValidating &&
+                    !isLoadingExchangeContext,
             colors = ButtonDefaults.buttonColors(containerColor = accentColor())
         ) {
             if (isValidating) {

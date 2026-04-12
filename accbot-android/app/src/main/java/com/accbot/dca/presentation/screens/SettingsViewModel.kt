@@ -10,6 +10,7 @@ import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DailyPriceDao
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.ExchangeBalanceDao
+import com.accbot.dca.data.local.ExchangeConnectionDao
 import com.accbot.dca.data.local.MonthlySummaryDao
 import com.accbot.dca.data.local.NotificationDao
 import com.accbot.dca.data.local.OnboardingPreferences
@@ -36,6 +37,12 @@ import javax.inject.Inject
 @Immutable
 data class SettingsUiState(
     val configuredExchanges: List<Exchange> = emptyList(),
+    /**
+     * Total number of exchange *connections* (envelopes) - can exceed
+     * `configuredExchanges.size` when the user has multiple connections on the same
+     * exchange (e.g. two Coinmate sub-accounts).
+     */
+    val connectionCount: Int = 0,
     val isBatteryOptimized: Boolean = true,
     val isSandboxMode: Boolean = false,
     val showRestartDialog: Boolean = false,
@@ -70,7 +77,8 @@ class SettingsViewModel @Inject constructor(
     private val monthlySummaryDao: MonthlySummaryDao,
     private val dailyPriceDao: DailyPriceDao,
     private val withdrawalDao: WithdrawalDao,
-    private val withdrawalThresholdDao: WithdrawalThresholdDao
+    private val withdrawalThresholdDao: WithdrawalThresholdDao,
+    private val exchangeConnectionDao: ExchangeConnectionDao
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -81,6 +89,25 @@ class SettingsViewModel @Inject constructor(
         loadSettings()
         loadWithdrawalThresholds()
         loadDataCounts()
+        observeConnections()
+    }
+
+    /**
+     * Reactive flow on the connection list so the Settings card subtitle ("X connections
+     * connected") and the legacy `configuredExchanges` field stay in sync as the user
+     * adds or removes envelopes - no manual reload needed.
+     */
+    private fun observeConnections() {
+        viewModelScope.launch {
+            exchangeConnectionDao.getAllFlow().collect { connections ->
+                _uiState.update {
+                    it.copy(
+                        connectionCount = connections.size,
+                        configuredExchanges = connections.map { c -> c.exchange }.distinct()
+                    )
+                }
+            }
+        }
     }
 
     /** Re-read non-reactive data (credentials, battery, counts). Called on ON_RESUME. */
@@ -91,14 +118,14 @@ class SettingsViewModel @Inject constructor(
 
     private fun loadSettings() {
         val isSandbox = userPreferences.isSandboxMode()
-        val configuredExchanges = credentialsStore.getConfiguredExchanges(isSandbox)
-
         val powerManager = application.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
         val isBatteryOptimized = !powerManager.isIgnoringBatteryOptimizations(application.packageName)
 
+        // Sync UI state immediately for non-suspend prefs values.
+        // Note: `configuredExchanges` and `connectionCount` are populated reactively by
+        // [observeConnections] from the connection DAO flow - no manual lookup here.
         _uiState.update {
             it.copy(
-                configuredExchanges = configuredExchanges,
                 isBatteryOptimized = isBatteryOptimized,
                 isSandboxMode = isSandbox,
                 lowBalanceThresholdDays = userPreferences.getLowBalanceThresholdDays(),
@@ -205,10 +232,19 @@ class SettingsViewModel @Inject constructor(
 
     private fun loadWithdrawalThresholds() {
         viewModelScope.launch {
-            // Collect available crypto/exchange pairs from enabled plans
-            dcaPlanDao.getAllPlans().combine(withdrawalThresholdDao.getAll()) { plans, thresholds ->
+            // 3-way combine on plans, thresholds AND connections so the UI also reflects
+            // connection renames immediately. Pre-loading connections as a Map<id, Entity>
+            // avoids the previous N+1 lookup-per-threshold pattern that ran on every emit.
+            kotlinx.coroutines.flow.combine(
+                dcaPlanDao.getAllPlans(),
+                withdrawalThresholdDao.getAll(),
+                exchangeConnectionDao.getAllFlow()
+            ) { plans, thresholds, connections ->
+                val connectionsById = connections.associateBy { it.id }
                 val pairs = plans.map { it.crypto to it.exchange }.distinct()
-                val thresholdDomains = thresholds.map { it.toDomain() }
+                val thresholdDomains = thresholds.mapNotNull { entity ->
+                    connectionsById[entity.connectionId]?.let { entity.toDomain(it) }
+                }
                 Pair(pairs, thresholdDomains)
             }.collect { (pairs, thresholds) ->
                 _uiState.update {
@@ -221,17 +257,28 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Resolve the default connection for an exchange. Phase 1 / Phase 7 stop-gap:
+     * the Settings UI still picks an [Exchange] enum, so we map it to the first
+     * connection of that exchange. After Fáze 7 lands, the UI will pick a connection
+     * directly and this helper goes away.
+     */
+    private suspend fun resolveDefaultConnectionId(exchange: Exchange): Long? =
+        exchangeConnectionDao.getDefaultByExchange(exchange)?.id
+
     fun setWithdrawalThreshold(crypto: String, exchange: Exchange, amount: BigDecimal) {
         viewModelScope.launch {
+            val connectionId = resolveDefaultConnectionId(exchange) ?: return@launch
             withdrawalThresholdDao.upsert(
-                WithdrawalThresholdEntity(crypto = crypto, exchange = exchange, thresholdAmount = amount)
+                WithdrawalThresholdEntity(crypto = crypto, connectionId = connectionId, thresholdAmount = amount)
             )
         }
     }
 
     fun removeWithdrawalThreshold(crypto: String, exchange: Exchange) {
         viewModelScope.launch {
-            withdrawalThresholdDao.delete(crypto, exchange)
+            val connectionId = resolveDefaultConnectionId(exchange) ?: return@launch
+            withdrawalThresholdDao.delete(crypto, connectionId)
         }
     }
 
@@ -269,8 +316,11 @@ class SettingsViewModel @Inject constructor(
 
     fun removeExchangeCredentials(exchange: Exchange) {
         val isSandbox = userPreferences.isSandboxMode()
-        credentialsStore.deleteCredentials(exchange, isSandbox)
-        loadSettings()
+        viewModelScope.launch {
+            @Suppress("DEPRECATION")
+            credentialsStore.deleteCredentials(exchange, isSandbox)
+            loadSettings()
+        }
     }
 
     fun deleteAllData() {

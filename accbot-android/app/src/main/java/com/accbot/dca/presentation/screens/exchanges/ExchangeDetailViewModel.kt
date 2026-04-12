@@ -8,8 +8,10 @@ import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.DcaPlanEntity
+import com.accbot.dca.data.local.ExchangeConnectionEntity
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.UserPreferences
+import com.accbot.dca.data.repository.ExchangeConnectionRepository
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.usecase.ApiImportProgress
 import com.accbot.dca.domain.usecase.ApiImportResultState
@@ -28,6 +30,7 @@ import javax.inject.Inject
 
 @Immutable
 data class ExchangeDetailUiState(
+    val connection: ExchangeConnectionEntity? = null,
     val exchange: Exchange? = null,
     val credentialsExpanded: Boolean = false,
     val plans: List<DcaPlanEntity> = emptyList(),
@@ -46,6 +49,7 @@ class ExchangeDetailViewModel @Inject constructor(
     private val credentialsStore: CredentialsStore,
     private val userPreferences: UserPreferences,
     private val validateAndSaveCredentialsUseCase: ValidateAndSaveCredentialsUseCase,
+    private val connectionRepository: ExchangeConnectionRepository,
     private val dcaPlanDao: DcaPlanDao,
     private val transactionDao: TransactionDao,
     private val importTradeHistoryUseCase: ImportTradeHistoryUseCase,
@@ -53,7 +57,13 @@ class ExchangeDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    val credentialForm = CredentialFormDelegate(credentialsStore, validateAndSaveCredentialsUseCase, userPreferences, viewModelScope)
+    val credentialForm = CredentialFormDelegate(
+        credentialsStore = credentialsStore,
+        validateAndSaveCredentialsUseCase = validateAndSaveCredentialsUseCase,
+        userPreferences = userPreferences,
+        coroutineScope = viewModelScope,
+        connectionRepository = connectionRepository
+    )
 
     private val _localState = MutableStateFlow(ExchangeDetailUiState())
     val uiState: StateFlow<ExchangeDetailUiState> = combine(
@@ -64,28 +74,39 @@ class ExchangeDetailViewModel @Inject constructor(
 
     init {
         credentialForm.initialize()
-        val exchangeName = savedStateHandle.get<String>("exchange")
+        // v7+: route is keyed by connectionId (Long).
+        val connectionId = savedStateHandle.get<Long>("connectionId")
         val autoImport = savedStateHandle.get<Boolean>("autoImport") ?: false
-        val exchange = exchangeName?.let { name ->
-            Exchange.entries.find { it.name == name }
-        }
 
-        if (exchange != null) {
-            _localState.update { it.copy(exchange = exchange) }
-            credentialForm.initWithExchange(exchange)
-
-            // Load plans for this exchange
-            var autoImportTriggered = false
+        if (connectionId != null) {
             viewModelScope.launch {
-                dcaPlanDao.getPlansByExchange(exchange).collect { plans ->
+                val connection = connectionRepository.getById(connectionId) ?: return@launch
+                _localState.update { it.copy(connection = connection, exchange = connection.exchange) }
+                credentialForm.initWithExchange(connection.exchange)
+
+                // Load plans for this connection (was: per exchange - now per connection envelope)
+                var autoImportTriggered = false
+                dcaPlanDao.getPlansByConnection(connectionId).collect { plans ->
                     _localState.update { it.copy(plans = plans) }
-                    // Auto-trigger import when navigated from import offer dialog
                     if (autoImport && !autoImportTriggered && plans.isNotEmpty()) {
                         autoImportTriggered = true
                         importViaApi()
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Rename this connection's display label. Empty string resets to "Default".
+     */
+    fun renameConnection(newName: String) {
+        val connection = _localState.value.connection ?: return
+        viewModelScope.launch {
+            connectionRepository.rename(connection.id, newName)
+            // Reload the connection so UI reflects the change
+            val updated = connectionRepository.getById(connection.id)
+            _localState.update { it.copy(connection = updated) }
         }
     }
 
@@ -126,6 +147,7 @@ class ExchangeDetailViewModel @Inject constructor(
 
             try {
                 val isSandbox = userPreferences.isSandboxMode()
+                @Suppress("DEPRECATION")
                 val credentials = credentialsStore.getCredentials(exchange, isSandbox)
                 if (credentials == null) {
                     _localState.update { it.copy(
@@ -203,14 +225,16 @@ class ExchangeDetailViewModel @Inject constructor(
         _localState.update { it.copy(apiImportResult = null) }
     }
 
+    /**
+     * Delete this connection (envelope) and its associated plans/credentials/balances/
+     * thresholds. Transactions are kept for history (their `connectionId` becomes orphaned;
+     * the History UI falls back to the [Exchange] enum label).
+     */
     fun removeExchange(onRemoved: () -> Unit) {
         val state = _localState.value
-        val exchange = state.exchange ?: return
+        val connection = state.connection ?: return
         viewModelScope.launch {
-            // Delete transactions, plans and credentials for this exchange
-            transactionDao.deleteTransactionsByExchange(exchange)
-            dcaPlanDao.deletePlansByExchange(exchange)
-            credentialsStore.deleteCredentials(exchange, credentialForm.state.value.isSandboxMode)
+            connectionRepository.delete(connection.id, deletePlans = true)
             onRemoved()
         }
     }

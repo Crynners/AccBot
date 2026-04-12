@@ -3,6 +3,7 @@ package com.accbot.dca.domain.model
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.accbot.dca.R
+import com.google.gson.annotations.SerializedName
 import java.math.BigDecimal
 import java.time.Instant
 
@@ -152,6 +153,10 @@ enum class DcaFrequency(
 data class DcaPlan(
     val id: Long = 0,
     val exchange: Exchange,
+    /** FK to ExchangeConnectionEntity.id - every plan belongs to one connection. */
+    val connectionId: Long,
+    /** Optional custom label. Empty = UI shows "BTC/EUR" as default title. */
+    val name: String = "",
     val crypto: String,
     val fiat: String,
     val amount: BigDecimal,           // Base amount (strategy may modify)
@@ -164,18 +169,24 @@ data class DcaPlan(
     val createdAt: Instant = Instant.now(),
     val lastExecutedAt: Instant? = null,
     val nextExecutionAt: Instant? = null,
-    val targetAmount: BigDecimal? = null
+    val targetAmount: BigDecimal? = null,
+    /** Order for Dashboard display. Lower values shown first. */
+    val displayOrder: Int = 0
 )
 
 /**
- * API credentials - encrypted and stored locally only
+ * API credentials - encrypted and stored locally only.
+ *
+ * Fields are annotated with @SerializedName so Gson deserialization survives R8 field
+ * renaming. Without this, a release build could silently return null fields and every
+ * DCA purchase would fail with a cryptic "no credentials" error.
  */
 data class ExchangeCredentials(
-    val exchange: Exchange,
-    val apiKey: String,
-    val apiSecret: String,
-    val passphrase: String? = null, // Some exchanges require this (KuCoin, Coinbase)
-    val clientId: String? = null    // Coinmate requires separate Client ID
+    @SerializedName("exchange") val exchange: Exchange,
+    @SerializedName("apiKey") val apiKey: String,
+    @SerializedName("apiSecret") val apiSecret: String,
+    @SerializedName("passphrase") val passphrase: String? = null, // Some exchanges require this (KuCoin, Coinbase)
+    @SerializedName("clientId") val clientId: String? = null    // Coinmate requires separate Client ID
 )
 
 /**
@@ -185,6 +196,8 @@ data class Transaction(
     val id: Long = 0,
     val planId: Long,
     val exchange: Exchange,
+    /** Optional connection reference; null for legacy or post-deletion. */
+    val connectionId: Long? = null,
     val crypto: String,
     val fiat: String,
     val fiatAmount: BigDecimal,
@@ -266,17 +279,24 @@ data class AppNotification(
     val planId: Long? = null,
     val crypto: String? = null,
     val exchange: Exchange? = null,
+    val connectionId: Long? = null,
     val isRead: Boolean,
     val isArchived: Boolean = false,
     val createdAt: Instant
 )
 
 /**
- * Withdrawal threshold configuration
+ * Withdrawal threshold configuration - per (crypto, connection) pair.
+ *
+ * `exchange` is denormalized from the parent connection so UI can group/display by exchange
+ * without joining; it is filled in at the ViewModel layer when loading thresholds.
+ * `connectionName` may be empty if the connection has no custom name.
  */
 data class WithdrawalThreshold(
     val crypto: String,
+    val connectionId: Long,
     val exchange: Exchange,
+    val connectionName: String,
     val thresholdAmount: BigDecimal
 )
 

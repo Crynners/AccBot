@@ -177,7 +177,8 @@ fun PlanDetailsScreen(
             sinceMillis = uiState.importSinceMillis,
             onSinceDateChanged = { viewModel.setImportSinceDate(it) },
             onConfirm = { viewModel.confirmImport() },
-            onDismiss = { viewModel.dismissImportDialog() }
+            onDismiss = { viewModel.dismissImportDialog() },
+            otherPlansOnSameConnection = uiState.otherPlansOnSameConnection
         )
     }
 
@@ -252,6 +253,65 @@ fun PlanDetailsScreen(
                                 CryptoIcon(crypto = plan.crypto, size = 64)
 
                                 Spacer(modifier = Modifier.height(16.dp))
+
+                                // Editable plan name (inline)
+                                var isRenamingPlan by rememberSaveable { mutableStateOf(false) }
+                                var planNameText by rememberSaveable(plan.name) { mutableStateOf(plan.name) }
+
+                                if (isRenamingPlan) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        OutlinedTextField(
+                                            value = planNameText,
+                                            onValueChange = { planNameText = it },
+                                            singleLine = true,
+                                            placeholder = { Text(stringResource(R.string.plan_details_name_hint)) },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        TextButton(onClick = {
+                                            viewModel.renamePlan(planNameText.trim())
+                                            isRenamingPlan = false
+                                        }) {
+                                            Text(stringResource(R.string.common_save))
+                                        }
+                                    }
+                                } else if (plan.name.isNotBlank()) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.clickable { isRenamingPlan = true }
+                                    ) {
+                                        Text(
+                                            text = plan.name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = accentColor()
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = stringResource(R.string.common_rename),
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                } else {
+                                    // No name yet - show "add name" link
+                                    TextButton(onClick = { isRenamingPlan = true }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = stringResource(R.string.plan_details_add_name),
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
 
                                 Text(
                                     text = "${plan.crypto}/${plan.fiat}",

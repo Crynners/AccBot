@@ -441,7 +441,7 @@ fun SettingsScreen(
             item {
                 SettingsCard(
                     title = stringResource(R.string.settings_manage_exchanges),
-                    subtitle = stringResource(R.string.settings_exchanges_connected, uiState.configuredExchanges.size),
+                    subtitle = stringResource(R.string.settings_exchanges_connected, uiState.connectionCount),
                     icon = Icons.Default.AccountBalance,
                     onClick = { onNavigateToExchanges?.invoke() }
                 )

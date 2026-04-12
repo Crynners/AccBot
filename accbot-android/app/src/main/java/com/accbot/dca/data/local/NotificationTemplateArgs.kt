@@ -160,6 +160,23 @@ sealed class NotificationTemplateArgs {
         }.toString()
     }
 
+    /**
+     * Plan can't execute because the API credentials for its connection are missing
+     * (deleted, never imported, or lost during a failed backup restore).
+     */
+    data class MissingCredentials(
+        val crypto: String,
+        val exchangeName: String,
+        val connectionName: String
+    ) : NotificationTemplateArgs() {
+        override fun toJson(): String = JSONObject().apply {
+            put(KEY_TYPE, TYPE_MISSING_CREDENTIALS)
+            put("crypto", crypto)
+            put("exchangeName", exchangeName)
+            put("connectionName", connectionName)
+        }.toString()
+    }
+
     companion object {
         private const val KEY_TYPE = "type"
         private const val TYPE_PURCHASE = "purchase"
@@ -171,6 +188,7 @@ sealed class NotificationTemplateArgs {
         private const val TYPE_BELOW_MINIMUM = "below_minimum"
         private const val TYPE_NETWORK_RETRY = "network_retry"
         private const val TYPE_MISSED_PURCHASES = "missed_purchases"
+        private const val TYPE_MISSING_CREDENTIALS = "missing_credentials"
 
         fun fromJson(json: String): NotificationTemplateArgs? = try {
             val obj = JSONObject(json)
@@ -229,6 +247,11 @@ sealed class NotificationTemplateArgs {
                     nextRetryAtEpochMs = obj.getLong("nextRetryAtEpochMs"),
                     attemptCount = obj.optInt("attemptCount", 1),
                     planId = obj.optLong("planId", 0)
+                )
+                TYPE_MISSING_CREDENTIALS -> MissingCredentials(
+                    crypto = obj.getString("crypto"),
+                    exchangeName = obj.getString("exchangeName"),
+                    connectionName = obj.optString("connectionName", "")
                 )
                 else -> null
             }

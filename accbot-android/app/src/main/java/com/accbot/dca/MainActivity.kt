@@ -10,6 +10,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Row
@@ -94,6 +95,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Edge-to-edge is required for apps targeting Android 15+ (SDK 35+).
+        // Must be called before super.onCreate() so the system bar styles are applied
+        // before the splash screen transitions away.
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         if (!isInstrumentedTest() && onboardingPreferences.isOnboardingCompleted()) {
@@ -407,9 +412,9 @@ fun AccBotApp(
             AddPlanScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onPlanCreated = { navController.popBackStack() },
-                onNavigateToExchangeDetail = { exchangeName ->
+                onNavigateToExchangeManagement = {
                     navController.popBackStack()
-                    navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName, autoImport = true))
+                    navController.navigate(Screen.ExchangeManagement.route)
                 }
             )
         }
@@ -457,8 +462,8 @@ fun AccBotApp(
                 onNavigateToAddExchange = { exchangeName ->
                     navController.navigate(Screen.AddExchange.createRoute(exchangeName))
                 },
-                onNavigateToExchangeDetail = { exchangeName ->
-                    navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName))
+                onNavigateToExchangeDetail = { connectionId ->
+                    navController.navigate(Screen.ExchangeDetail.createRoute(connectionId))
                 }
             )
         }
@@ -466,7 +471,7 @@ fun AccBotApp(
         composable(
             route = Screen.ExchangeDetail.route,
             arguments = listOf(
-                navArgument(Screen.EXCHANGE_ARG) { type = NavType.StringType },
+                navArgument(Screen.CONNECTION_ID_ARG) { type = NavType.LongType },
                 navArgument("autoImport") { type = NavType.BoolType; defaultValue = false }
             )
         ) {
@@ -486,9 +491,9 @@ fun AccBotApp(
             AddExchangeScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onExchangeAdded = { navController.popBackStack() },
-                onNavigateToExchangeDetail = { exchangeName ->
+                onNavigateToExchangeManagement = {
                     navController.popBackStack()
-                    navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName, autoImport = true))
+                    navController.navigate(Screen.ExchangeManagement.route)
                 }
             )
         }
@@ -548,12 +553,8 @@ private fun MainTabPage(
                 navController.navigate(Screen.PlanDetails.createRoute(planId))
             },
             onNavigateToPortfolio = { _, _ -> onSwitchToTab(1) },
-            onNavigateToExchangeDetail = { exchangeName ->
-                if (exchangeName.isNotEmpty()) {
-                    navController.navigate(Screen.ExchangeDetail.createRoute(exchangeName))
-                } else {
-                    navController.navigate(Screen.ExchangeManagement.route)
-                }
+            onNavigateToExchangeManagement = {
+                navController.navigate(Screen.ExchangeManagement.route)
             }
         )
         1 -> PortfolioScreen(

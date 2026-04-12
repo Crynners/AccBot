@@ -24,7 +24,10 @@ fun ImportConfigDialog(
     sinceMillis: Long?,
     onSinceDateChanged: (Long?) -> Unit,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** When > 0, shows a warning that this connection has other plans and the import
+     *  will fetch ALL trades from the exchange account, not just this plan's trades. */
+    otherPlansOnSameConnection: Int = 0
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     val dateFormatter = remember {
@@ -67,6 +70,23 @@ fun ImportConfigDialog(
             Column {
                 if (planCount != null) {
                     Text(pluralStringResource(R.plurals.import_api_dialog_text, planCount, planCount))
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+                // Multi-plan warning
+                if (otherPlansOnSameConnection > 0) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.import_api_multi_plan_warning, otherPlansOnSameConnection),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
                 Text(

@@ -6,12 +6,14 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -36,8 +38,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Constraints
 import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalConfiguration
@@ -50,6 +54,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -75,6 +80,75 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlinx.coroutines.delay
 
+/**
+ * State holder for drag-to-reorder in a LazyColumn of plan cards.
+ * Long-press on a card activates drag mode; dragging past the midpoint
+ * of an adjacent item triggers a swap.
+ */
+/**
+ * Drag state tracked by plan *ID* rather than by list index. Flow emits on the
+ * plan list (add/remove/toggle) are safe during drag: the caller re-resolves the
+ * current index from the live list on every drag event, so stale indices from an
+ * older composition never leak into the reorder call.
+ */
+private class PlanDragState(
+    private val onReorder: (Int, Int) -> Unit
+) {
+    var draggedId by mutableLongStateOf(NO_DRAG)
+    var dragOffset by mutableFloatStateOf(0f)
+    private var accumulatedOffset = 0f
+    private var itemHeight = 0
+
+    fun startDrag(planId: Long, heightPx: Int) {
+        draggedId = planId
+        dragOffset = 0f
+        accumulatedOffset = 0f
+        itemHeight = heightPx
+    }
+
+    /**
+     * Advance the drag by [delta]. [currentIndex] must be freshly resolved from
+     * the live list at call time. If the dragged plan has disappeared from the
+     * list (currentIndex = -1) the call is a no-op.
+     */
+    fun drag(delta: Float, currentIndex: Int, totalItems: Int) {
+        if (draggedId == NO_DRAG || itemHeight == 0 || currentIndex < 0) return
+        accumulatedOffset += delta
+        dragOffset = accumulatedOffset
+
+        // Swap when dragged past midpoint of adjacent item
+        val threshold = itemHeight * 0.5f
+        if (accumulatedOffset > threshold && currentIndex < totalItems - 1) {
+            onReorder(currentIndex, currentIndex + 1)
+            accumulatedOffset -= itemHeight
+            dragOffset = accumulatedOffset
+        } else if (accumulatedOffset < -threshold && currentIndex > 0) {
+            onReorder(currentIndex, currentIndex - 1)
+            accumulatedOffset += itemHeight
+            dragOffset = accumulatedOffset
+        }
+    }
+
+    fun endDrag() {
+        draggedId = NO_DRAG
+        dragOffset = 0f
+        accumulatedOffset = 0f
+    }
+
+    fun isDragging(planId: Long): Boolean = draggedId == planId
+
+    companion object {
+        const val NO_DRAG = -1L
+    }
+}
+
+@Composable
+private fun rememberPlanDragState(
+    onReorder: (from: Int, to: Int) -> Unit
+): PlanDragState {
+    return remember { PlanDragState(onReorder) }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -83,7 +157,7 @@ fun DashboardScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToPlanDetails: ((Long) -> Unit)? = null,
     onNavigateToPortfolio: ((String, String) -> Unit)? = null,
-    onNavigateToExchangeDetail: ((String) -> Unit)? = null,
+    onNavigateToExchangeManagement: (() -> Unit)? = null,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -189,12 +263,9 @@ fun DashboardScreen(
                     HoldingsPager(
                         holdings = uiState.holdings,
                         onHoldingClick = onNavigateToPortfolio,
-                        onImportViaApi = onNavigateToExchangeDetail?.let { nav ->
-                            {
-                                val exchanges = uiState.activePlans.map { it.plan.exchange.name }.distinct()
-                                if (exchanges.size == 1) nav(exchanges.first()) else nav("")
-                            }
-                        },
+                        // Phase 7+: route to Exchange Management list rather than deep-linking
+                        // into a specific connection. User picks the connection there.
+                        onImportViaApi = onNavigateToExchangeManagement?.let { nav -> { nav() } },
                         compact = true
                     )
 
@@ -216,6 +287,9 @@ fun DashboardScreen(
                 }
 
                 // Right column: DCA Plans
+                val landscapeDragState = rememberPlanDragState { from, to ->
+                    viewModel.reorderPlans(from, to)
+                }
                 LazyColumn(
                     modifier = Modifier.weight(0.5f),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -244,12 +318,22 @@ fun DashboardScreen(
                             EmptyPlansCard(onAddPlan = onNavigateToPlans)
                         }
                     } else {
-                        items(uiState.activePlans, key = { it.plan.id }) { planWithBalance ->
+                        itemsIndexed(uiState.activePlans, key = { _, p -> p.plan.id }) { _, planWithBalance ->
+                            val planId = planWithBalance.plan.id
                             DcaPlanCard(
                                 planWithBalance = planWithBalance,
-                                onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
-                                onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
-                                currentTime = currentTime
+                                onToggle = { viewModel.togglePlan(planId) },
+                                onClick = { onNavigateToPlanDetails?.invoke(planId) },
+                                currentTime = currentTime,
+                                isDragging = landscapeDragState.isDragging(planId),
+                                dragOffset = if (landscapeDragState.isDragging(planId)) landscapeDragState.dragOffset else 0f,
+                                onDragStart = { heightPx -> landscapeDragState.startDrag(planId, heightPx) },
+                                onDrag = { delta ->
+                                    val live = uiState.activePlans
+                                    val currentIdx = live.indexOfFirst { it.plan.id == planId }
+                                    landscapeDragState.drag(delta, currentIdx, live.size)
+                                },
+                                onDragEnd = { landscapeDragState.endDrag() }
                             )
                         }
                     }
@@ -261,6 +345,9 @@ fun DashboardScreen(
             }
         } else {
             // Portrait: single column
+            val portraitDragState = rememberPlanDragState { from, to ->
+                viewModel.reorderPlans(from, to)
+            }
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -308,12 +395,8 @@ fun DashboardScreen(
                     HoldingsPager(
                         holdings = uiState.holdings,
                         onHoldingClick = onNavigateToPortfolio,
-                        onImportViaApi = onNavigateToExchangeDetail?.let { nav ->
-                            {
-                                val exchanges = uiState.activePlans.map { it.plan.exchange.name }.distinct()
-                                if (exchanges.size == 1) nav(exchanges.first()) else nav("")
-                            }
-                        }
+                        // Phase 7+: route to Exchange Management list rather than deep-linking.
+                        onImportViaApi = onNavigateToExchangeManagement?.let { nav -> { nav() } }
                     )
                 }
 
@@ -354,12 +437,22 @@ fun DashboardScreen(
                         EmptyPlansCard(onAddPlan = onNavigateToPlans)
                     }
                 } else {
-                    items(uiState.activePlans, key = { it.plan.id }) { planWithBalance ->
+                    itemsIndexed(uiState.activePlans, key = { _, p -> p.plan.id }) { _, planWithBalance ->
+                        val planId = planWithBalance.plan.id
                         DcaPlanCard(
                             planWithBalance = planWithBalance,
-                            onToggle = { viewModel.togglePlan(planWithBalance.plan.id) },
-                            onClick = { onNavigateToPlanDetails?.invoke(planWithBalance.plan.id) },
-                            currentTime = currentTime
+                            onToggle = { viewModel.togglePlan(planId) },
+                            onClick = { onNavigateToPlanDetails?.invoke(planId) },
+                            currentTime = currentTime,
+                            isDragging = portraitDragState.isDragging(planId),
+                            dragOffset = if (portraitDragState.isDragging(planId)) portraitDragState.dragOffset else 0f,
+                            onDragStart = { heightPx -> portraitDragState.startDrag(planId, heightPx) },
+                            onDrag = { delta ->
+                                val live = uiState.activePlans
+                                val currentIdx = live.indexOfFirst { it.plan.id == planId }
+                                portraitDragState.drag(delta, currentIdx, live.size)
+                            },
+                            onDragEnd = { portraitDragState.endDrag() }
                         )
                     }
                 }
@@ -943,16 +1036,75 @@ internal fun DcaPlanCard(
     planWithBalance: DcaPlanWithBalance,
     onToggle: () -> Unit,
     onClick: (() -> Unit)? = null,
-    currentTime: Long = System.currentTimeMillis()
+    currentTime: Long = System.currentTimeMillis(),
+    isDragging: Boolean = false,
+    dragOffset: Float = 0f,
+    onDragStart: ((heightPx: Int) -> Unit)? = null,
+    onDrag: ((Float) -> Unit)? = null,
+    onDragEnd: (() -> Unit)? = null
 ) {
     val plan = planWithBalance.plan
     val successCol = successColor()
     val accentCol = accentColor()
     val context = LocalContext.current
+    var cardHeight by remember { mutableIntStateOf(0) }
+    var showDisableDialog by remember { mutableStateOf(false) }
+
+    if (showDisableDialog) {
+        AlertDialog(
+            onDismissRequest = { showDisableDialog = false },
+            title = { Text(stringResource(R.string.dashboard_disable_plan_title)) },
+            text = { Text(stringResource(R.string.dashboard_disable_plan_message, "${plan.crypto}/${plan.fiat}")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDisableDialog = false
+                    onToggle()
+                }) {
+                    Text(stringResource(R.string.dashboard_disable_plan_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDisableDialog = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+    // Keep references fresh so pointerInput(Unit) always calls the latest lambdas
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
+    val currentOnDrag by rememberUpdatedState(onDrag)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier),
+            .zIndex(if (isDragging) 1f else 0f)
+            .graphicsLayer {
+                translationY = dragOffset
+                if (isDragging) {
+                    shadowElevation = 8f
+                    scaleX = 1.02f
+                    scaleY = 1.02f
+                }
+            }
+            .onGloballyPositioned { coordinates ->
+                cardHeight = coordinates.size.height
+            }
+            .then(
+                if (onDragStart != null) {
+                    Modifier.pointerInput(Unit) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { currentOnDragStart?.invoke(cardHeight) },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                currentOnDrag?.invoke(dragAmount.y)
+                            },
+                            onDragEnd = { currentOnDragEnd?.invoke() },
+                            onDragCancel = { currentOnDragEnd?.invoke() }
+                        )
+                    }
+                } else Modifier
+            )
+            .then(if (onClick != null && !isDragging) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -960,7 +1112,7 @@ internal fun DcaPlanCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(start = if (isDragging) 4.dp else 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -968,9 +1120,29 @@ internal fun DcaPlanCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
+                // Drag handle - only visible while dragging
+                if (isDragging) {
+                    Icon(
+                        imageVector = Icons.Default.DragHandle,
+                        contentDescription = "Reorder",
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .size(24.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
                 CryptoIcon(crypto = plan.crypto)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
+                    // Custom plan label (if set)
+                    if (plan.name.isNotBlank()) {
+                        Text(
+                            text = plan.name,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = accentCol
+                        )
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1017,11 +1189,22 @@ internal fun DcaPlanCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = plan.exchange.displayName,
+                        // Render connection name as suffix when present (Phase 8 multi-connection)
+                        text = if (planWithBalance.connectionName.isNotBlank())
+                            "${plan.exchange.displayName} - ${planWithBalance.connectionName}"
+                        else
+                            plan.exchange.displayName,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (plan.isEnabled && plan.nextExecutionAt != null) {
+                    if (!plan.isEnabled) {
+                        Text(
+                            text = stringResource(R.string.dashboard_plan_paused),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Warning,
+                            fontWeight = FontWeight.Medium
+                        )
+                    } else if (plan.nextExecutionAt != null) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -1136,14 +1319,26 @@ internal fun DcaPlanCard(
                     }
                 }
             }
-            Switch(
-                checked = plan.isEnabled,
-                onCheckedChange = { onToggle() },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = successCol,
-                    checkedTrackColor = successCol.copy(alpha = 0.5f)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Switch(
+                    checked = plan.isEnabled,
+                    onCheckedChange = { newValue ->
+                        if (!newValue) {
+                            // Disabling: show confirmation dialog
+                            showDisableDialog = true
+                        } else {
+                            // Enabling: no confirmation needed
+                            onToggle()
+                        }
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = successCol,
+                        checkedTrackColor = successCol.copy(alpha = 0.5f)
+                    )
                 )
-            )
+            }
         }
     }
 }
@@ -1402,6 +1597,15 @@ private fun RunNowBottomSheet(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column(modifier = Modifier.weight(1f)) {
+                        // Show custom plan name (if set) above the pair label
+                        if (plan.name.isNotBlank()) {
+                            Text(
+                                text = plan.name,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)

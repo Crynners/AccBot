@@ -203,15 +203,14 @@ object SampleData {
         availableYears = listOf(2024, 2025, 2026),
         pages = listOf(
             PairPage.Aggregate("EUR"),
-            PairPage.SinglePair("BTC", "EUR"),
-            PairPage.SinglePair("ETH", "EUR")
+            PairPage.Plan(planId = 1L, name = "BTC/EUR", crypto = "BTC", fiat = "EUR"),
+            PairPage.Plan(planId = 2L, name = "ETH/EUR", crypto = "ETH", fiat = "EUR")
         ),
         selectedPageIndex = 0,
         denominationMode = DenominationMode.FIAT,
         currentPairCrypto = null,
         currentPairFiat = "EUR",
         totalTransactions = 199,
-        availableExchanges = listOf("Coinmate", "Binance"),
         isLoading = false,
         isChartLoading = false
     )

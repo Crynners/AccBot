@@ -16,6 +16,7 @@ import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.domain.usecase.ImportTradeHistoryUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.presentation.utils.NumberFormatters
+import com.accbot.dca.R
 import com.accbot.dca.presentation.utils.TimeUtils
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -54,7 +55,9 @@ data class PlanDetailsUiState(
     val apiImportProgress: String = "",
     val apiImportResult: ApiImportResultState? = null,
     val showImportDialog: Boolean = false,
-    val importSinceMillis: Long? = null
+    val importSinceMillis: Long? = null,
+    /** Number of OTHER plans on the same connection. When > 0, import dialog shows a warning. */
+    val otherPlansOnSameConnection: Int = 0
 )
 
 @HiltViewModel
@@ -95,6 +98,10 @@ class PlanDetailsViewModel @Inject constructor(
 
                 val plan = planEntity.toDomain()
 
+                // Check how many OTHER plans share the same connection (for import warning)
+                val totalPlansOnConnection = dcaPlanDao.countPlansByConnection(planEntity.connectionId)
+                val otherPlans = (totalPlansOnConnection - 1).coerceAtLeast(0)
+
                 // Load transactions for this plan
                 transactionDao.getTransactionsByPlan(planId).collect { transactionEntities ->
                     val transactions = transactionEntities.map { it.toDomain() }
@@ -109,8 +116,12 @@ class PlanDetailsViewModel @Inject constructor(
                         BigDecimal.ZERO
                     }
 
-                    // Calculate time until next execution
-                    val timeUntilNext = TimeUtils.formatTimeUntil(plan.nextExecutionAt, context)
+                    // Calculate time until next execution (only when plan is enabled)
+                    val timeUntilNext = if (plan.isEnabled) {
+                        TimeUtils.formatTimeUntil(plan.nextExecutionAt, context)
+                    } else {
+                        context.getString(R.string.dashboard_plan_paused)
+                    }
 
                     _uiState.update { state ->
                         state.copy(
@@ -121,7 +132,8 @@ class PlanDetailsViewModel @Inject constructor(
                             averagePrice = averagePrice,
                             transactionCount = completedTransactions.size,
                             timeUntilNextExecution = timeUntilNext,
-                            isLoading = false
+                            isLoading = false,
+                            otherPlansOnSameConnection = otherPlans
                         )
                     }
 
@@ -176,7 +188,7 @@ class PlanDetailsViewModel @Inject constructor(
             _uiState.update { it.copy(isBalanceLoading = true) }
             try {
                 val isSandbox = userPreferences.isSandboxMode()
-                val credentials = credentialsStore.getCredentials(plan.exchange, isSandbox)
+                val credentials = credentialsStore.getCredentials(plan.connectionId, isSandbox)
                 if (credentials != null) {
                     val api = exchangeApiFactory.create(credentials)
                     val balance = withTimeoutOrNull(10_000) { api.getBalance(plan.fiat) }
@@ -209,6 +221,14 @@ class PlanDetailsViewModel @Inject constructor(
                 Log.w(TAG, "Failed to fetch balance: ${e.message}")
                 _uiState.update { it.copy(isBalanceLoading = false) }
             }
+        }
+    }
+
+    fun renamePlan(newName: String) {
+        viewModelScope.launch {
+            dcaPlanDao.renamePlan(planId, newName)
+            val updatedPlan = dcaPlanDao.getPlanById(planId)?.toDomain()
+            _uiState.update { it.copy(plan = updatedPlan) }
         }
     }
 
@@ -273,7 +293,7 @@ class PlanDetailsViewModel @Inject constructor(
 
             try {
                 val isSandbox = userPreferences.isSandboxMode()
-                val credentials = credentialsStore.getCredentials(plan.exchange, isSandbox)
+                val credentials = credentialsStore.getCredentials(plan.connectionId, isSandbox)
                 if (credentials == null) {
                     _uiState.update { it.copy(
                         isApiImporting = false,

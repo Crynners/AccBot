@@ -17,9 +17,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         MonthlySummaryEntity::class,
         DailyPriceEntity::class,
         NotificationEntity::class,
-        WithdrawalThresholdEntity::class
+        WithdrawalThresholdEntity::class,
+        ExchangeConnectionEntity::class
     ],
-    version = 18,
+    version = 20,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -32,6 +33,7 @@ abstract class DcaDatabase : RoomDatabase() {
     abstract fun dailyPriceDao(): DailyPriceDao
     abstract fun notificationDao(): NotificationDao
     abstract fun withdrawalThresholdDao(): WithdrawalThresholdDao
+    abstract fun exchangeConnectionDao(): ExchangeConnectionDao
 
     companion object {
         private const val LEGACY_DATABASE_NAME = "accbot_dca.db"
@@ -215,6 +217,163 @@ abstract class DcaDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 18 to 19: Multi-credentials per exchange.
+        // Adds exchange_connections table, plus connectionId column to dca_plans, transactions,
+        // withdrawals, notifications. Recreates withdrawal_thresholds (PK changes to
+        // (crypto, connectionId)) and exchange_balances (PK changes to (connectionId, currency)).
+        // Auto-creates one empty-named connection per Exchange enum used by existing data so
+        // every legacy row gets a valid connectionId.
+        private val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // 1) Create exchange_connections table
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS exchange_connections (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        exchange TEXT NOT NULL,
+                        name TEXT NOT NULL DEFAULT '',
+                        createdAt INTEGER NOT NULL,
+                        displayOrder INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_exchange_connections_exchange ON exchange_connections(exchange)")
+                // Non-partial unique index on (exchange, name). The empty default name ""
+                // counts as a distinct value so each exchange can have AT MOST ONE empty-named
+                // connection (the auto-created default), AT MOST ONE per non-empty name.
+                // Crucially this lets `INSERT OR IGNORE` from multiple seed sources below
+                // converge on a single default row per exchange instead of duplicating.
+                database.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_exchange_connections_exchange_name " +
+                        "ON exchange_connections(exchange, name)"
+                )
+
+                // 2) Auto-create one default connection per exchange used by existing data.
+                // The non-partial unique index on (exchange, name) ensures each exchange gets
+                // exactly ONE empty-named connection regardless of which seed source(s) reference it.
+                val nowMillis = System.currentTimeMillis()
+                val seedSources = listOf(
+                    "SELECT DISTINCT exchange FROM dca_plans",
+                    "SELECT DISTINCT exchange FROM transactions",
+                    "SELECT DISTINCT exchange FROM withdrawals",
+                    "SELECT DISTINCT exchange FROM withdrawal_thresholds",
+                    "SELECT DISTINCT exchange FROM exchange_balances",
+                    "SELECT DISTINCT exchange FROM notifications WHERE exchange IS NOT NULL"
+                )
+                for (src in seedSources) {
+                    database.execSQL(
+                        "INSERT OR IGNORE INTO exchange_connections (exchange, name, createdAt, displayOrder) " +
+                            "SELECT exchange, '', $nowMillis, 0 FROM ($src)"
+                    )
+                }
+
+                // 3) dca_plans - add connectionId column and backfill from default connection
+                database.execSQL("ALTER TABLE dca_plans ADD COLUMN connectionId INTEGER NOT NULL DEFAULT 0")
+                database.execSQL(
+                    "UPDATE dca_plans SET connectionId = " +
+                        "(SELECT id FROM exchange_connections WHERE exchange = dca_plans.exchange LIMIT 1)"
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_dca_plans_connectionId ON dca_plans(connectionId)")
+
+                // Sanity assertion: any plan with connectionId = 0 means an exchange enum
+                // existed in dca_plans but no row was created in exchange_connections - bug.
+                database.query("SELECT COUNT(*) FROM dca_plans WHERE connectionId = 0").use { c ->
+                    if (c.moveToFirst() && c.getInt(0) > 0) {
+                        throw IllegalStateException(
+                            "Migration 18->19 left ${c.getInt(0)} dca_plans rows with connectionId=0; " +
+                                "exchange_connections seeding failed for some Exchange enum"
+                        )
+                    }
+                }
+
+                // 4) transactions - nullable connectionId, no FK
+                database.execSQL("ALTER TABLE transactions ADD COLUMN connectionId INTEGER DEFAULT NULL")
+                database.execSQL(
+                    "UPDATE transactions SET connectionId = " +
+                        "(SELECT id FROM exchange_connections WHERE exchange = transactions.exchange LIMIT 1)"
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_connectionId ON transactions(connectionId)")
+
+                // 5) withdrawals - nullable connectionId, no FK
+                database.execSQL("ALTER TABLE withdrawals ADD COLUMN connectionId INTEGER DEFAULT NULL")
+                database.execSQL(
+                    "UPDATE withdrawals SET connectionId = " +
+                        "(SELECT id FROM exchange_connections WHERE exchange = withdrawals.exchange LIMIT 1)"
+                )
+
+                // 6) withdrawal_thresholds - recreate with new PK (crypto, connectionId).
+                // No FOREIGN KEY constraint here: the entity declaration in Entities.kt
+                // doesn't declare one (Room schema validation requires the migrated table
+                // to match the entity exactly), and FK enforcement (`PRAGMA foreign_keys`)
+                // is disabled anyway. Cascade-on-connection-delete is handled explicitly
+                // by [ExchangeConnectionRepository.delete] via WithdrawalThresholdDao.
+                database.execSQL(
+                    """
+                    CREATE TABLE withdrawal_thresholds_new (
+                        crypto TEXT NOT NULL,
+                        connectionId INTEGER NOT NULL,
+                        thresholdAmount TEXT NOT NULL,
+                        PRIMARY KEY (crypto, connectionId)
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    INSERT INTO withdrawal_thresholds_new (crypto, connectionId, thresholdAmount)
+                    SELECT wt.crypto, ec.id, wt.thresholdAmount
+                    FROM withdrawal_thresholds wt
+                    JOIN exchange_connections ec ON ec.exchange = wt.exchange
+                    """.trimIndent()
+                )
+                database.execSQL("DROP TABLE withdrawal_thresholds")
+                database.execSQL("ALTER TABLE withdrawal_thresholds_new RENAME TO withdrawal_thresholds")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_withdrawal_thresholds_connectionId ON withdrawal_thresholds(connectionId)")
+
+                // 7) exchange_balances - recreate with new composite PK (connectionId, currency)
+                database.execSQL(
+                    """
+                    CREATE TABLE exchange_balances_new (
+                        connectionId INTEGER NOT NULL,
+                        currency TEXT NOT NULL,
+                        exchange TEXT NOT NULL,
+                        balance TEXT NOT NULL,
+                        lastUpdated INTEGER NOT NULL,
+                        PRIMARY KEY (connectionId, currency)
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    INSERT INTO exchange_balances_new (connectionId, currency, exchange, balance, lastUpdated)
+                    SELECT ec.id, eb.currency, eb.exchange, eb.balance, eb.lastUpdated
+                    FROM exchange_balances eb
+                    JOIN exchange_connections ec ON ec.exchange = eb.exchange
+                    """.trimIndent()
+                )
+                database.execSQL("DROP TABLE exchange_balances")
+                database.execSQL("ALTER TABLE exchange_balances_new RENAME TO exchange_balances")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_exchange_balances_connectionId ON exchange_balances(connectionId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_exchange_balances_exchange ON exchange_balances(exchange)")
+
+                // 8) notifications - nullable connectionId, no FK
+                database.execSQL("ALTER TABLE notifications ADD COLUMN connectionId INTEGER DEFAULT NULL")
+                database.execSQL(
+                    "UPDATE notifications SET connectionId = " +
+                        "(SELECT id FROM exchange_connections WHERE exchange = notifications.exchange LIMIT 1) " +
+                        "WHERE exchange IS NOT NULL"
+                )
+            }
+        }
+
+        // Migration from version 19 to 20: Add name and displayOrder columns to dca_plans
+        // for custom plan labels and manual ordering on the Dashboard.
+        private val MIGRATION_19_20 = object : Migration(19, 20) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE dca_plans ADD COLUMN name TEXT NOT NULL DEFAULT ''")
+                database.execSQL("ALTER TABLE dca_plans ADD COLUMN displayOrder INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         // Migration from version 9 to 10: Add notifications and withdrawal_thresholds tables
         private val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -317,7 +476,7 @@ abstract class DcaDatabase : RoomDatabase() {
                 DcaDatabase::class.java,
                 databaseName
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
                 // Only allow destructive migration on app downgrade, never on failed upgrade
                 // This protects user's transaction history from accidental deletion
                 .fallbackToDestructiveMigrationOnDowngrade()

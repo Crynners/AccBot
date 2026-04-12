@@ -134,6 +134,18 @@ object NotificationRenderer {
                 )
                 title to message
             }
+
+            is NotificationTemplateArgs.MissingCredentials -> {
+                val title = context.getString(R.string.notification_missing_credentials_title)
+                val label = if (args.connectionName.isBlank()) args.exchangeName
+                    else "${args.exchangeName} (${args.connectionName})"
+                val message = context.getString(
+                    R.string.notification_missing_credentials_text,
+                    args.crypto,
+                    label
+                )
+                title to message
+            }
         }
     }
 
