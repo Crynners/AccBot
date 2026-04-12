@@ -26,7 +26,7 @@ enum class DenominationMode { FIAT, CRYPTO }
 
 sealed class PairPage {
     data class Aggregate(val fiat: String) : PairPage()
-    data class SinglePair(val crypto: String, val fiat: String) : PairPage()
+    data class Plan(val planId: Long, val name: String, val crypto: String, val fiat: String) : PairPage()
 }
 
 @Immutable
@@ -44,8 +44,6 @@ data class PortfolioUiState(
     val availableMonths: List<Int> = emptyList(),
     val canNavigatePrev: Boolean = false,
     val canNavigateNext: Boolean = false,
-    val selectedExchangeFilter: String? = null,
-    val availableExchanges: List<String> = emptyList(),
     val pages: List<PairPage> = emptyList(),
     val selectedPageIndex: Int = 0,
     val denominationMode: DenominationMode = DenominationMode.FIAT,
@@ -102,28 +100,34 @@ class PortfolioViewModel @Inject constructor(
                 // Use pre-filtered, sorted query (avoids loading failed/pending into memory)
                 val completed = transactionDao.getCompletedTransactionsOrdered()
                 completedTransactions = completed
-                val exchanges = completed.map { it.exchange.name }.distinct().sorted()
-                val pairs = completed.map { it.crypto to it.fiat }.distinct()
 
-                val pairsByFiat = pairs.groupBy { it.second }
+                // Load all plans (including disabled) for page building
+                val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
+
+                // Build pages: aggregate per fiat (if 2+ plans in same fiat), then per plan
+                val plansByFiat = allDbPlans.groupBy { it.fiat }
                 val pages = mutableListOf<PairPage>()
-                for ((fiat, fiatPairs) in pairsByFiat) {
-                    if (fiatPairs.size >= 2) {
+                for ((fiat, fiatPlans) in plansByFiat) {
+                    if (fiatPlans.size >= 2) {
                         pages.add(PairPage.Aggregate(fiat))
                     }
                 }
-                for (pair in pairs) {
-                    pages.add(PairPage.SinglePair(pair.first, pair.second))
+                for (plan in allDbPlans) {
+                    pages.add(PairPage.Plan(
+                        planId = plan.id,
+                        name = plan.name.ifBlank { "${plan.crypto}/${plan.fiat}" },
+                        crypto = plan.crypto,
+                        fiat = plan.fiat
+                    ))
                 }
 
                 val pageIndex = if (initialCrypto != null && initialFiat != null) {
-                    val idx = pages.indexOfFirst { it is PairPage.SinglePair && it.crypto == initialCrypto && it.fiat == initialFiat }
+                    val idx = pages.indexOfFirst { it is PairPage.Plan && it.crypto == initialCrypto && it.fiat == initialFiat }
                     if (idx >= 0) idx else 0
                 } else 0
 
                 _uiState.update { state ->
                     state.copy(
-                        availableExchanges = exchanges,
                         pages = pages,
                         selectedPageIndex = pageIndex,
                         isLoading = false
@@ -152,25 +156,28 @@ class PortfolioViewModel @Inject constructor(
             try {
                 val completed = transactionDao.getCompletedTransactionsOrdered()
                 completedTransactions = completed
-                val exchanges = completed.map { it.exchange.name }.distinct().sorted()
-                val pairs = completed.map { it.crypto to it.fiat }.distinct()
 
-                val pairsByFiat = pairs.groupBy { it.second }
+                val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
+                val plansByFiat = allDbPlans.groupBy { it.fiat }
                 val pages = mutableListOf<PairPage>()
-                for ((fiat, fiatPairs) in pairsByFiat) {
-                    if (fiatPairs.size >= 2) {
+                for ((fiat, fiatPlans) in plansByFiat) {
+                    if (fiatPlans.size >= 2) {
                         pages.add(PairPage.Aggregate(fiat))
                     }
                 }
-                for (pair in pairs) {
-                    pages.add(PairPage.SinglePair(pair.first, pair.second))
+                for (plan in allDbPlans) {
+                    pages.add(PairPage.Plan(
+                        planId = plan.id,
+                        name = plan.name.ifBlank { "${plan.crypto}/${plan.fiat}" },
+                        crypto = plan.crypto,
+                        fiat = plan.fiat
+                    ))
                 }
 
                 _uiState.update { state ->
                     // Keep current page index if still valid, otherwise reset to 0
                     val pageIndex = state.selectedPageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
                     state.copy(
-                        availableExchanges = exchanges,
                         pages = pages,
                         selectedPageIndex = pageIndex
                     )
@@ -292,17 +299,6 @@ class PortfolioViewModel @Inject constructor(
         loadChartData()
     }
 
-    fun selectExchangeFilter(exchange: String?) {
-        _uiState.update { it.copy(
-            selectedExchangeFilter = exchange,
-            selectedPageIndex = 0,
-            denominationMode = DenominationMode.FIAT,
-            zoomLevel = ChartZoomLevel.Overview
-        ) }
-        updateNavigationState()
-        loadChartData()
-    }
-
     fun selectPairPage(index: Int) {
         val page = _uiState.value.pages.getOrNull(index)
         val newMode = if (page is PairPage.Aggregate) DenominationMode.FIAT else _uiState.value.denominationMode
@@ -320,7 +316,7 @@ class PortfolioViewModel @Inject constructor(
 
     fun toggleDenomination() {
         val page = _uiState.value.pages.getOrNull(_uiState.value.selectedPageIndex)
-        if (page !is PairPage.SinglePair) return
+        if (page !is PairPage.Plan) return
         _uiState.update { it.copy(
             denominationMode = if (it.denominationMode == DenominationMode.FIAT)
                 DenominationMode.CRYPTO else DenominationMode.FIAT,
@@ -369,10 +365,7 @@ class PortfolioViewModel @Inject constructor(
     }
 
     private fun getFilteredTransactions(): List<TransactionEntity> {
-        val state = _uiState.value
-        return completedTransactions.filter { tx ->
-            state.selectedExchangeFilter == null || tx.exchange.name == state.selectedExchangeFilter
-        }
+        return completedTransactions
     }
 
     private fun updateNavigationState() {
@@ -429,14 +422,19 @@ class PortfolioViewModel @Inject constructor(
                 val state = _uiState.value
                 val page = state.pages.getOrNull(state.selectedPageIndex)
 
-                val (crypto, fiat) = when (page) {
-                    is PairPage.Aggregate -> null to page.fiat
-                    is PairPage.SinglePair -> page.crypto to page.fiat
-                    null -> null to null
+                val (crypto, fiat, planId) = when (page) {
+                    is PairPage.Aggregate -> Triple(null, page.fiat, null)
+                    is PairPage.Plan -> Triple(page.crypto, page.fiat, page.planId)
+                    null -> Triple(null, null, null)
                 }
 
-                val filteredTxs = getFilteredTransactions()
-                val data = if (crypto == null && fiat == null) {
+                val filteredTxs = if (planId != null) {
+                    completedTransactions.filter { it.planId == planId }
+                } else {
+                    completedTransactions
+                }
+
+                val data = if (fiat == null) {
                     emptyList()
                 } else {
                     calculateChartDataUseCase.calculate(
@@ -447,23 +445,33 @@ class PortfolioViewModel @Inject constructor(
                     )
                 }
 
-                // Calculate per-plan lines for SinglePair pages
-                val planLinesList = if (page is PairPage.SinglePair && data.isNotEmpty()) {
+                // Calculate per-plan lines
+                val planLinesList = if (data.isNotEmpty()) {
                     try {
-                        val plans = dcaPlanDao.getAllPlansOnceOrdered()
-                            .filter { it.crypto == crypto && it.fiat == fiat }
-                        if (plans.size >= 2) {
+                        val relevantPlans = when (page) {
+                            is PairPage.Aggregate -> {
+                                // All plans in this fiat
+                                dcaPlanDao.getAllPlansOnceOrdered().filter { it.fiat == page.fiat }
+                            }
+                            is PairPage.Plan -> {
+                                // All plans for this specific pair
+                                dcaPlanDao.getAllPlansOnceOrdered()
+                                    .filter { it.crypto == page.crypto && it.fiat == page.fiat }
+                            }
+                            null -> emptyList()
+                        }
+                        if (relevantPlans.size >= 2) {
                             val mainEpochDays = data.map { it.epochDay }
-                            plans.mapNotNull { plan ->
-                                val planTxs = filteredTxs.filter { it.planId == plan.id }
+                            relevantPlans.mapNotNull { plan ->
+                                val planTxs = completedTransactions.filter { it.planId == plan.id }
                                 if (planTxs.isEmpty()) return@mapNotNull null
                                 val planData = calculateChartDataUseCase.calculate(
                                     transactions = planTxs,
-                                    crypto = crypto,
-                                    fiat = fiat,
+                                    crypto = plan.crypto,
+                                    fiat = plan.fiat,
                                     zoomLevel = state.zoomLevel
                                 )
-                                // Align to main chart's epoch days
+                                // Align to main chart's epoch days via forward-fill
                                 val planByDay = planData.associateBy { it.epochDay }
                                 var lastValue = 0f
                                 val aligned = mainEpochDays.map { day ->
@@ -480,10 +488,9 @@ class PortfolioViewModel @Inject constructor(
                     } catch (_: Exception) { emptyList() }
                 } else emptyList()
 
-                val txCount = completedTransactions.count { tx ->
+                val txCount = filteredTxs.count { tx ->
                     (crypto == null || tx.crypto == crypto) &&
-                    (fiat == null || tx.fiat == fiat) &&
-                    (state.selectedExchangeFilter == null || tx.exchange.name == state.selectedExchangeFilter)
+                    (fiat == null || tx.fiat == fiat)
                 }
 
                 _uiState.update { it.copy(

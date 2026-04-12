@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -88,7 +89,7 @@ fun PortfolioScreen(
         val hasAnyData = chartData.isNotEmpty()
         val hasData = chartData.size >= 2
         val currentPage = uiState.pages.getOrNull(uiState.selectedPageIndex)
-        val isSinglePair = currentPage is PairPage.SinglePair
+        val isSinglePair = currentPage is PairPage.Plan
 
         // Scrub-to-inspect state
         var scrubbedIndex by remember { mutableIntStateOf(-1) }
@@ -104,7 +105,7 @@ fun PortfolioScreen(
 
         val pairLabel = when (currentPage) {
             is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, currentPage.fiat)
-            is PairPage.SinglePair -> "${currentPage.crypto}/${currentPage.fiat}"
+            is PairPage.Plan -> currentPage.name
             null -> ""
         }
 
@@ -248,12 +249,12 @@ fun PortfolioScreen(
                         )
                     }
 
-                    // Exchange filter
-                    if (uiState.availableExchanges.size > 1) {
-                        ExchangeFilterRow(
-                            exchanges = uiState.availableExchanges,
-                            selectedExchange = uiState.selectedExchangeFilter,
-                            onExchangeSelected = { viewModel.selectExchangeFilter(it) }
+                    // Plan chip row
+                    if (uiState.pages.size > 1) {
+                        PlanChipRow(
+                            pages = uiState.pages,
+                            selectedIndex = uiState.selectedPageIndex,
+                            onPageSelected = { viewModel.selectPairPage(it) }
                         )
                     }
                 }
@@ -309,7 +310,6 @@ fun PortfolioScreen(
                     onZoomOut = { viewModel.zoomOut() },
                     onNavigatePrev = { viewModel.navigatePrev() },
                     onNavigateNext = { viewModel.navigateNext() },
-                    onExchangeFilterSelected = { viewModel.selectExchangeFilter(it) },
                     onPairPageSelected = { viewModel.selectPairPage(it) },
                     onToggleSeriesVisibility = { viewModel.toggleSeriesVisibility(it) },
                     onTogglePlanLineVisibility = { viewModel.togglePlanLineVisibility(it) },
@@ -331,7 +331,6 @@ internal fun PortfolioContent(
     onZoomOut: () -> Unit,
     onNavigatePrev: () -> Unit,
     onNavigateNext: () -> Unit,
-    onExchangeFilterSelected: (String?) -> Unit,
     onPairPageSelected: (Int) -> Unit,
     onToggleSeriesVisibility: (Int) -> Unit,
     onTogglePlanLineVisibility: (Long) -> Unit,
@@ -357,7 +356,7 @@ internal fun PortfolioContent(
     }
 
     val currentPage = uiState.pages.getOrNull(uiState.selectedPageIndex)
-    val isSinglePair = currentPage is PairPage.SinglePair
+    val isSinglePair = currentPage is PairPage.Plan
 
     // Scrub-to-inspect state (ephemeral, local to composable)
     var scrubbedIndex by remember { mutableIntStateOf(-1) }
@@ -423,7 +422,7 @@ internal fun PortfolioContent(
                             val pageItem = uiState.pages.getOrNull(page)
                             val pairLabel = when (pageItem) {
                                 is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, pageItem.fiat)
-                                is PairPage.SinglePair -> "${pageItem.crypto}/${pageItem.fiat}"
+                                is PairPage.Plan -> pageItem.name
                                 null -> ""
                             }
 
@@ -443,7 +442,7 @@ internal fun PortfolioContent(
                                     Spacer(Modifier.height(8.dp))
                                     KpiCardContent(
                                         uiState = uiState,
-                                        isSinglePair = pageItem is PairPage.SinglePair,
+                                        isSinglePair = pageItem is PairPage.Plan,
                                         scrubbedDataPoint = scrubbedDataPoint
                                     )
                                 }
@@ -492,7 +491,7 @@ internal fun PortfolioContent(
                         val pageItem = uiState.pages.firstOrNull()
                         val pairLabel = when (pageItem) {
                             is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, pageItem.fiat)
-                            is PairPage.SinglePair -> "${pageItem.crypto}/${pageItem.fiat}"
+                            is PairPage.Plan -> pageItem.name
                             null -> ""
                         }
                         Text(
@@ -505,7 +504,7 @@ internal fun PortfolioContent(
                             Spacer(Modifier.height(8.dp))
                             KpiCardContent(
                                 uiState = uiState,
-                                isSinglePair = pageItem is PairPage.SinglePair,
+                                isSinglePair = pageItem is PairPage.Plan,
                                 scrubbedDataPoint = scrubbedDataPoint
                             )
                         }
@@ -608,13 +607,13 @@ internal fun PortfolioContent(
             )
         }
 
-        // Exchange filter chips
-        if (uiState.availableExchanges.size > 1) {
+        // Plan chip row (replaces exchange filter)
+        if (uiState.pages.size > 1) {
             item {
-                ExchangeFilterRow(
-                    exchanges = uiState.availableExchanges,
-                    selectedExchange = uiState.selectedExchangeFilter,
-                    onExchangeSelected = onExchangeFilterSelected
+                PlanChipRow(
+                    pages = uiState.pages,
+                    selectedIndex = uiState.selectedPageIndex,
+                    onPageSelected = onPairPageSelected
                 )
             }
         }
@@ -1252,26 +1251,23 @@ private fun PlanLinesLegend(
 }
 
 @Composable
-private fun ExchangeFilterRow(
-    exchanges: List<String>,
-    selectedExchange: String?,
-    onExchangeSelected: (String?) -> Unit
+private fun PlanChipRow(
+    pages: List<PairPage>,
+    selectedIndex: Int,
+    onPageSelected: (Int) -> Unit
 ) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        item {
+        itemsIndexed(pages) { index, page ->
+            val label = when (page) {
+                is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, page.fiat)
+                is PairPage.Plan -> page.name
+            }
             FilterChip(
-                selected = selectedExchange == null,
-                onClick = { onExchangeSelected(null) },
-                label = { Text(stringResource(R.string.chart_filter_all_exchanges)) }
-            )
-        }
-        items(exchanges) { exchange ->
-            FilterChip(
-                selected = exchange == selectedExchange,
-                onClick = { onExchangeSelected(exchange) },
-                label = { Text(exchange) }
+                selected = index == selectedIndex,
+                onClick = { onPageSelected(index) },
+                label = { Text(label) }
             )
         }
     }
