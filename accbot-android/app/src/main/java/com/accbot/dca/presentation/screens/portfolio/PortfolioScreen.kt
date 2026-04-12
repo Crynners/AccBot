@@ -349,10 +349,11 @@ internal fun PortfolioContent(
         pageCount = { pageCount }
     )
 
-    // Sync pager -> ViewModel (swipe changes page)
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage != uiState.selectedPageIndex) {
-            onPairPageSelected(pagerState.currentPage)
+    // Sync pager -> ViewModel (only after pager settles, not during animation)
+    // Using settledPage avoids intermediate values from programmatic scroll animations
+    LaunchedEffect(pagerState.settledPage) {
+        if (pagerState.settledPage != uiState.selectedPageIndex) {
+            onPairPageSelected(pagerState.settledPage)
         }
     }
     // Sync ViewModel -> pager (chip tap changes page)
