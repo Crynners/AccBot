@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.TransactionEntity
+import com.accbot.dca.data.local.UserPreferences
 // TransactionStatus filtering now done in DAO query
 import com.accbot.dca.domain.usecase.CalculateChartDataUseCase
 import com.accbot.dca.domain.usecase.ChartDataPoint
@@ -69,7 +70,8 @@ class PortfolioViewModel @Inject constructor(
     private val transactionDao: TransactionDao,
     private val dcaPlanDao: DcaPlanDao,
     private val syncDailyPricesUseCase: SyncDailyPricesUseCase,
-    private val calculateChartDataUseCase: CalculateChartDataUseCase
+    private val calculateChartDataUseCase: CalculateChartDataUseCase,
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
 
     private val initialCrypto: String? = savedStateHandle["crypto"]
@@ -89,6 +91,15 @@ class PortfolioViewModel @Inject constructor(
     companion object {
         private const val STALENESS_THRESHOLD_MS = 5 * 60 * 1000L // 5 minutes
         private const val TRANSACTION_REFRESH_THRESHOLD_MS = 30 * 1000L // 30 seconds
+
+        /**
+         * Stable identifier for a PairPage used for persisting the selected chip
+         * across app restarts. Format: "agg:<fiat>" for Aggregate, "plan:<id>" for Plan.
+         */
+        private fun pageIdOf(page: PairPage): String = when (page) {
+            is PairPage.Aggregate -> "agg:${page.fiat}"
+            is PairPage.Plan -> "plan:${page.planId}"
+        }
     }
 
     init {
@@ -124,10 +135,21 @@ class PortfolioViewModel @Inject constructor(
                     ))
                 }
 
-                val pageIndex = if (initialCrypto != null && initialFiat != null) {
-                    val idx = pages.indexOfFirst { it is PairPage.Plan && it.crypto == initialCrypto && it.fiat == initialFiat }
-                    if (idx >= 0) idx else 0
-                } else 0
+                val pageIndex = when {
+                    initialCrypto != null && initialFiat != null -> {
+                        // Explicit deep-link from dashboard takes priority
+                        val idx = pages.indexOfFirst { it is PairPage.Plan && it.crypto == initialCrypto && it.fiat == initialFiat }
+                        if (idx >= 0) idx else 0
+                    }
+                    else -> {
+                        // Restore from preferences
+                        val savedId = userPreferences.getPortfolioSelectedPageId()
+                        if (savedId != null) {
+                            val idx = pages.indexOfFirst { pageIdOf(it) == savedId }
+                            if (idx >= 0) idx else 0
+                        } else 0
+                    }
+                }
 
                 _uiState.update { state ->
                     state.copy(
@@ -313,6 +335,10 @@ class PortfolioViewModel @Inject constructor(
             planLines = emptyList(),
             visiblePlanLines = emptySet()
         ) }
+        // Persist selection so the same chip is restored on next app launch
+        if (page != null) {
+            userPreferences.setPortfolioSelectedPageId(pageIdOf(page))
+        }
         updateNavigationState()
         loadChartData()
     }

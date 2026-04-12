@@ -211,6 +211,21 @@ class UserPreferences @Inject constructor(
         prefs.edit().putBoolean(KEY_SANDBOX_MODE, enabled).commit()
     }
 
+    // ==================== Portfolio ====================
+
+    /**
+     * Get the persisted portfolio page identifier (e.g., "agg:EUR" or "plan:123").
+     * Returns null if not set. The identifier is stable across plan add/remove/reorder,
+     * unlike a raw index.
+     */
+    fun getPortfolioSelectedPageId(): String? {
+        return prefs.getString(KEY_PORTFOLIO_SELECTED_PAGE, null)
+    }
+
+    fun setPortfolioSelectedPageId(pageId: String) {
+        prefs.edit().putString(KEY_PORTFOLIO_SELECTED_PAGE, pageId).apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "accbot_user_prefs"
         private const val KEY_APP_THEME = "app_theme"
@@ -226,5 +241,6 @@ class UserPreferences @Inject constructor(
         private const val KEY_MARKET_PULSE_ENABLED = "market_pulse_enabled"
         private const val KEY_MARKET_PULSE_EXPANDED = "market_pulse_expanded"
         private const val KEY_EXPERIMENTAL_EXCHANGES = "experimental_exchanges_enabled"
+        private const val KEY_PORTFOLIO_SELECTED_PAGE = "portfolio_selected_page"
     }
 }
