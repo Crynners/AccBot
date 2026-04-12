@@ -43,7 +43,8 @@ class CreateDcaPlanUseCase @Inject constructor(
         withdrawalEnabled: Boolean = false,
         withdrawalAddress: String? = null,
         targetAmount: BigDecimal? = null,
-        connectionId: Long? = null
+        connectionId: Long? = null,
+        name: String = ""
     ) {
         val now = Instant.now()
         val nextExecution = if (frequency == DcaFrequency.CUSTOM && cronExpression != null) {
@@ -64,6 +65,7 @@ class CreateDcaPlanUseCase @Inject constructor(
         val plan = DcaPlanEntity(
             exchange = exchange,
             connectionId = resolvedConnectionId,
+            name = name.trim(),
             crypto = crypto,
             fiat = fiat,
             amount = amount,

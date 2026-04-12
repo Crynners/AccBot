@@ -93,6 +93,7 @@ fun FirstPlanScreen(
                     state = uiState.planForm,
                     availableCryptos = uiState.credentialForm.selectedExchange!!.supportedCryptos,
                     availableFiats = uiState.credentialForm.selectedExchange!!.supportedFiats,
+                    onNameChanged = viewModel.planForm::setName,
                     onCryptoSelected = viewModel.planForm::selectCrypto,
                     onFiatSelected = viewModel.planForm::selectFiat,
                     onAmountChanged = viewModel.planForm::setAmount,

@@ -309,6 +309,7 @@ fun AddPlanScreen(
                     state = uiState.planForm,
                     availableCryptos = cred.selectedExchange!!.supportedCryptos,
                     availableFiats = cred.selectedExchange!!.supportedFiats,
+                    onNameChanged = viewModel.planForm::setName,
                     onCryptoSelected = viewModel.planForm::selectCrypto,
                     onFiatSelected = viewModel.planForm::selectFiat,
                     onAmountChanged = viewModel.planForm::setAmount,

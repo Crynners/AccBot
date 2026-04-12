@@ -126,7 +126,8 @@ class OnboardingViewModel @Inject constructor(
                     strategy = form.selectedStrategy,
                     withdrawalEnabled = form.withdrawalEnabled,
                     withdrawalAddress = if (form.withdrawalEnabled) form.withdrawalAddress.trim() else null,
-                    targetAmount = form.targetAmount.toBigDecimalOrNull()
+                    targetAmount = form.targetAmount.toBigDecimalOrNull(),
+                    name = form.name.trim()
                 )
 
                 onboardingPreferences.setPlanCreatedDuringOnboarding(true)

@@ -21,6 +21,7 @@ import java.math.BigDecimal
 
 @Immutable
 data class PlanFormState(
+    val name: String = "",
     val selectedCrypto: String = "BTC",
     val selectedFiat: String = "EUR",
     val amount: String = "100",
@@ -72,6 +73,10 @@ class PlanFormDelegate(
 
     private var estimateJob: Job? = null
     private var currentExchange: Exchange? = null
+
+    fun setName(name: String) {
+        _state.update { it.copy(name = name) }
+    }
 
     fun selectCrypto(crypto: String) {
         _state.update { it.copy(selectedCrypto = crypto) }
