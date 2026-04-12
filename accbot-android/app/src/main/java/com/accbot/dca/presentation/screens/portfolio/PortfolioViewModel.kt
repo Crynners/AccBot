@@ -379,7 +379,6 @@ class PortfolioViewModel @Inject constructor(
         _uiState.update { state ->
             val current = state.visibleSeries
             val toggled = if (seriesIndex in current) current - seriesIndex else current + seriesIndex
-            if (toggled.isEmpty()) return
             state.copy(visibleSeries = toggled)
         }
     }
