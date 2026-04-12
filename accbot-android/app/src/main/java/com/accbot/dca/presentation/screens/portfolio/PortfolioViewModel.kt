@@ -30,14 +30,26 @@ sealed class PairPage {
     data class Plan(val planId: Long, val name: String, val crypto: String, val fiat: String) : PairPage()
 }
 
-enum class PlanLineType { VALUE, INVESTED }
+enum class PlanLineType { VALUE, INVESTED, AVG_BUY_PRICE, ACCUMULATED }
 
 @Immutable
 data class PlanLineInfo(
     val planId: Long,
     val name: String,
+    val crypto: String = "",
     val valueSeries: List<Float> = emptyList(),    // aligned to main chartData indices
-    val investedSeries: List<Float> = emptyList()  // aligned to main chartData indices
+    val investedSeries: List<Float> = emptyList(), // aligned to main chartData indices
+    val avgBuyPriceSeries: List<Float> = emptyList(),
+    val accumulatedSeries: List<Float> = emptyList()
+)
+
+enum class CryptoGroupLineType { PRICE, TOTAL_ACCUMULATED }
+
+@Immutable
+data class CryptoGroupLineInfo(
+    val crypto: String,
+    val priceSeries: List<Float> = emptyList(),
+    val totalAccumulatedSeries: List<Float> = emptyList()
 )
 
 @Immutable
@@ -58,6 +70,9 @@ data class PortfolioUiState(
     val scrubbedIndex: Int? = null,
     val planLines: List<PlanLineInfo> = emptyList(),
     val visiblePlanLines: Set<Pair<Long, PlanLineType>> = emptySet(),
+    val cryptoGroupLines: List<CryptoGroupLineInfo> = emptyList(),
+    val visibleCryptoGroupLines: Set<Pair<String, CryptoGroupLineType>> = emptySet(),
+    val isAdvancedLegendExpanded: Boolean = false,
     val isLoading: Boolean = true,
     val isChartLoading: Boolean = false,
     val isPriceSyncing: Boolean = false,
@@ -333,7 +348,10 @@ class PortfolioViewModel @Inject constructor(
             visibleSeries = setOf(0, 1),
             zoomLevel = ChartZoomLevel.Overview,
             planLines = emptyList(),
-            visiblePlanLines = emptySet()
+            visiblePlanLines = emptySet(),
+            cryptoGroupLines = emptyList(),
+            visibleCryptoGroupLines = emptySet(),
+            isAdvancedLegendExpanded = false
         ) }
         // Persist selection so the same chip is restored on next app launch
         if (page != null) {
@@ -373,6 +391,19 @@ class PortfolioViewModel @Inject constructor(
             val toggled = if (key in current) current - key else current + key
             state.copy(visiblePlanLines = toggled)
         }
+    }
+
+    fun toggleCryptoGroupLineVisibility(crypto: String, type: CryptoGroupLineType) {
+        _uiState.update { state ->
+            val key = crypto to type
+            val current = state.visibleCryptoGroupLines
+            val toggled = if (key in current) current - key else current + key
+            state.copy(visibleCryptoGroupLines = toggled)
+        }
+    }
+
+    fun toggleAdvancedLegendExpanded() {
+        _uiState.update { it.copy(isAdvancedLegendExpanded = !it.isAdvancedLegendExpanded) }
     }
 
     fun syncPricesAndLoadChart() {
@@ -475,10 +506,15 @@ class PortfolioViewModel @Inject constructor(
                     )
                 }
 
+                // Compute relevantPlans once so both planLines and cryptoGroupLines can use it
+                val relevantPlans = if (page is PairPage.Aggregate) {
+                    try { dcaPlanDao.getAllPlansOnceOrdered().filter { it.fiat == page.fiat } }
+                    catch (_: Exception) { emptyList() }
+                } else emptyList()
+
                 // Calculate per-plan lines (only for Aggregate pages - Plan pages show a single plan's main line)
                 val planLinesList = if (page is PairPage.Aggregate && data.isNotEmpty()) {
                     try {
-                        val relevantPlans = dcaPlanDao.getAllPlansOnceOrdered().filter { it.fiat == page.fiat }
                         if (relevantPlans.size >= 2) {
                             val mainEpochDays = data.map { it.epochDay }
                             relevantPlans.mapNotNull { plan ->
@@ -494,6 +530,8 @@ class PortfolioViewModel @Inject constructor(
                                 val planByDay = planData.associateBy { it.epochDay }
                                 var lastValue = 0f
                                 var lastInvested = 0f
+                                var lastAvg = 0f
+                                var lastAccum = 0f
                                 val valueAligned = mainEpochDays.map { day ->
                                     val v = planByDay[day]?.portfolioValue?.toFloat()
                                     if (v != null) { lastValue = v; v } else lastValue
@@ -502,14 +540,59 @@ class PortfolioViewModel @Inject constructor(
                                     val v = planByDay[day]?.totalInvested?.toFloat()
                                     if (v != null) { lastInvested = v; v } else lastInvested
                                 }
+                                val avgBuyAligned = mainEpochDays.map { day ->
+                                    val v = planByDay[day]?.avgBuyPrice?.toFloat()
+                                    if (v != null) { lastAvg = v; v } else lastAvg
+                                }
+                                val accumulatedAligned = mainEpochDays.map { day ->
+                                    val v = planByDay[day]?.cumulativeCrypto?.toFloat()
+                                    if (v != null) { lastAccum = v; v } else lastAccum
+                                }
                                 PlanLineInfo(
                                     planId = plan.id,
                                     name = plan.name.ifBlank { "${plan.crypto}/${plan.fiat} #${plan.id}" },
+                                    crypto = plan.crypto,
                                     valueSeries = valueAligned,
-                                    investedSeries = investedAligned
+                                    investedSeries = investedAligned,
+                                    avgBuyPriceSeries = avgBuyAligned,
+                                    accumulatedSeries = accumulatedAligned
                                 )
                             }
                         } else emptyList()
+                    } catch (_: Exception) { emptyList() }
+                } else emptyList()
+
+                // Calculate per-crypto-group lines (price + total accumulated per unique crypto within the aggregate)
+                val cryptoGroupLinesList = if (page is PairPage.Aggregate && data.isNotEmpty()) {
+                    try {
+                        val uniqueCryptos = relevantPlans.map { it.crypto }.distinct()
+                        val mainEpochDays = data.map { it.epochDay }
+                        uniqueCryptos.mapNotNull { crypto ->
+                            val cryptoTxs = completedTransactions.filter { it.crypto == crypto && it.fiat == page.fiat }
+                            if (cryptoTxs.isEmpty()) return@mapNotNull null
+                            val cryptoChartData = calculateChartDataUseCase.calculate(
+                                transactions = cryptoTxs,
+                                crypto = crypto,
+                                fiat = page.fiat,
+                                zoomLevel = state.zoomLevel
+                            )
+                            val byDay = cryptoChartData.associateBy { it.epochDay }
+                            var lastPrice = 0f
+                            var lastAccum = 0f
+                            val priceAligned = mainEpochDays.map { day ->
+                                val v = byDay[day]?.price?.toFloat()
+                                if (v != null) { lastPrice = v; v } else lastPrice
+                            }
+                            val accAligned = mainEpochDays.map { day ->
+                                val v = byDay[day]?.cumulativeCrypto?.toFloat()
+                                if (v != null) { lastAccum = v; v } else lastAccum
+                            }
+                            CryptoGroupLineInfo(
+                                crypto = crypto,
+                                priceSeries = priceAligned,
+                                totalAccumulatedSeries = accAligned
+                            )
+                        }
                     } catch (_: Exception) { emptyList() }
                 } else emptyList()
 
@@ -524,6 +607,7 @@ class PortfolioViewModel @Inject constructor(
                     currentPairFiat = fiat,
                     totalTransactions = txCount,
                     planLines = planLinesList,
+                    cryptoGroupLines = cryptoGroupLinesList,
                     isChartLoading = false
                 ) }
             } catch (e: OutOfMemoryError) {

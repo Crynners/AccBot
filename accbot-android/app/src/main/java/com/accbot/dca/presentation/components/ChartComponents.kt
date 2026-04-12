@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.sp
 import android.util.Log
 import com.accbot.dca.domain.usecase.ChartDataPoint
 import com.accbot.dca.domain.usecase.ChartZoomLevel
+import com.accbot.dca.presentation.screens.portfolio.CryptoGroupLineInfo
+import com.accbot.dca.presentation.screens.portfolio.CryptoGroupLineType
 import com.accbot.dca.presentation.screens.portfolio.DenominationMode
 import com.accbot.dca.presentation.screens.portfolio.PlanLineInfo
 import com.accbot.dca.presentation.screens.portfolio.PlanLineType
@@ -72,6 +74,20 @@ internal val planLineColors = listOf(
     Color(0xFFFF8A65), // orange
     Color(0xFF81C784), // green
 )
+
+internal val cryptoGroupColors = mapOf(
+    "BTC" to Color(0xFFF7931A),
+    "ETH" to Color(0xFF627EEA),
+    "LTC" to Color(0xFFA6A9AA),
+    "BCH" to Color(0xFF8DC351),
+    "XRP" to Color(0xFF00A5E0),
+    "ADA" to Color(0xFF0033AD),
+    "SOL" to Color(0xFF9945FF),
+    "DOT" to Color(0xFFE6007A),
+)
+internal val defaultCryptoGroupColor = Color(0xFF888888)
+internal fun colorForCrypto(crypto: String): Color =
+    cryptoGroupColors[crypto] ?: defaultCryptoGroupColor
 
 data class LegendEntry(
     val seriesIndex: Int,
@@ -152,6 +168,8 @@ fun PortfolioLineChart(
     visibleSeries: Set<Int> = setOf(0, 1),
     planLines: List<PlanLineInfo> = emptyList(),
     visiblePlanLines: Set<Pair<Long, PlanLineType>> = emptySet(),
+    cryptoGroupLines: List<CryptoGroupLineInfo> = emptyList(),
+    visibleCryptoGroupLines: Set<Pair<String, CryptoGroupLineType>> = emptySet(),
     zoomLevel: ChartZoomLevel = ChartZoomLevel.Overview,
     onScrub: (Int?) -> Unit = {},
     modifier: Modifier = Modifier
@@ -159,10 +177,26 @@ fun PortfolioLineChart(
     if (chartData.isEmpty()) return
 
     val modelProducer = remember { CartesianChartModelProducer() }
-    val hasRightAxis = cryptoSymbol.isNotEmpty() && 3 in visibleSeries
+    val hasRightAxis = (cryptoSymbol.isNotEmpty() && 3 in visibleSeries) ||
+        planLines.any { planLine ->
+            (planLine.planId to PlanLineType.ACCUMULATED) in visiblePlanLines &&
+            planLine.accumulatedSeries.size == chartData.size
+        } ||
+        cryptoGroupLines.any { cgLine ->
+            (cgLine.crypto to CryptoGroupLineType.TOTAL_ACCUMULATED) in visibleCryptoGroupLines &&
+            cgLine.totalAccumulatedSeries.size == chartData.size
+        }
 
     // Update model when data, denomination, or visibility changes
-    LaunchedEffect(chartData, denominationMode, visibleSeries, planLines, visiblePlanLines) {
+    LaunchedEffect(
+        chartData,
+        denominationMode,
+        visibleSeries,
+        planLines,
+        visiblePlanLines,
+        cryptoGroupLines,
+        visibleCryptoGroupLines
+    ) {
         try {
             modelProducer.runTransaction {
                 // Layer 1: left axis (portfolio value, cost basis, crypto price – all fiat)
@@ -180,27 +214,65 @@ fun PortfolioLineChart(
                     if (2 in visibleSeries) series(chartData.map { it.price.toFloat() })
                     if (4 in visibleSeries) series(chartData.map { it.avgBuyPrice.toFloat() })
                     // Per-plan lines (value + invested per plan, only when visible)
-                    var anyPlanSeriesAdded = false
+                    var anyLeftSeriesAdded = false
                     for (planLine in planLines) {
                         val valueKey = planLine.planId to PlanLineType.VALUE
                         if (valueKey in visiblePlanLines && planLine.valueSeries.size == chartData.size) {
                             series(planLine.valueSeries)
-                            anyPlanSeriesAdded = true
+                            anyLeftSeriesAdded = true
                         }
                         val investedKey = planLine.planId to PlanLineType.INVESTED
                         if (investedKey in visiblePlanLines && planLine.investedSeries.size == chartData.size) {
                             series(planLine.investedSeries)
-                            anyPlanSeriesAdded = true
+                            anyLeftSeriesAdded = true
                         }
                     }
-                    if (setOf(0, 1, 2, 4).none { it in visibleSeries } && !anyPlanSeriesAdded) {
+                    // Per-plan avg buy price (left axis, fiat)
+                    for (planLine in planLines) {
+                        val key = planLine.planId to PlanLineType.AVG_BUY_PRICE
+                        if (key in visiblePlanLines && planLine.avgBuyPriceSeries.size == chartData.size) {
+                            series(planLine.avgBuyPriceSeries)
+                            anyLeftSeriesAdded = true
+                        }
+                    }
+                    // Per-crypto price (left axis, fiat)
+                    for (cgLine in cryptoGroupLines) {
+                        val key = cgLine.crypto to CryptoGroupLineType.PRICE
+                        if (key in visibleCryptoGroupLines && cgLine.priceSeries.size == chartData.size) {
+                            series(cgLine.priceSeries)
+                            anyLeftSeriesAdded = true
+                        }
+                    }
+                    if (setOf(0, 1, 2, 4).none { it in visibleSeries } && !anyLeftSeriesAdded) {
                         series(List(chartData.size) { 0f })
                     }
                 }
                 // Layer 2: right axis (accumulated crypto – BTC units)
                 lineSeries {
-                    if (3 in visibleSeries) series(chartData.map { it.cumulativeCrypto.toFloat() })
-                    else series(List(chartData.size) { 0f })
+                    var anyRightSeriesAdded = false
+                    if (3 in visibleSeries) {
+                        series(chartData.map { it.cumulativeCrypto.toFloat() })
+                        anyRightSeriesAdded = true
+                    }
+                    // Per-plan accumulated (right axis, crypto amount)
+                    for (planLine in planLines) {
+                        val key = planLine.planId to PlanLineType.ACCUMULATED
+                        if (key in visiblePlanLines && planLine.accumulatedSeries.size == chartData.size) {
+                            series(planLine.accumulatedSeries)
+                            anyRightSeriesAdded = true
+                        }
+                    }
+                    // Per-crypto total accumulated (right axis, crypto amount)
+                    for (cgLine in cryptoGroupLines) {
+                        val key = cgLine.crypto to CryptoGroupLineType.TOTAL_ACCUMULATED
+                        if (key in visibleCryptoGroupLines && cgLine.totalAccumulatedSeries.size == chartData.size) {
+                            series(cgLine.totalAccumulatedSeries)
+                            anyRightSeriesAdded = true
+                        }
+                    }
+                    if (!anyRightSeriesAdded) {
+                        series(List(chartData.size) { 0f })
+                    }
                 }
             }
         } catch (e: OutOfMemoryError) {
@@ -269,6 +341,68 @@ fun PortfolioLineChart(
     val planInvestedStyle5 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[5].copy(alpha = 0.4f))))
     val planInvestedStyles = listOf(planInvestedStyle0, planInvestedStyle1, planInvestedStyle2, planInvestedStyle3, planInvestedStyle4, planInvestedStyle5)
 
+    // Avg buy price lines (alpha 0.7)
+    val planAvgBuyStyle0 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[0].copy(alpha = 0.7f))))
+    val planAvgBuyStyle1 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[1].copy(alpha = 0.7f))))
+    val planAvgBuyStyle2 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[2].copy(alpha = 0.7f))))
+    val planAvgBuyStyle3 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[3].copy(alpha = 0.7f))))
+    val planAvgBuyStyle4 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[4].copy(alpha = 0.7f))))
+    val planAvgBuyStyle5 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[5].copy(alpha = 0.7f))))
+    val planAvgBuyStyles = listOf(planAvgBuyStyle0, planAvgBuyStyle1, planAvgBuyStyle2, planAvgBuyStyle3, planAvgBuyStyle4, planAvgBuyStyle5)
+
+    // Accumulated lines (alpha 0.85)
+    val planAccumulatedStyle0 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[0].copy(alpha = 0.85f))))
+    val planAccumulatedStyle1 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[1].copy(alpha = 0.85f))))
+    val planAccumulatedStyle2 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[2].copy(alpha = 0.85f))))
+    val planAccumulatedStyle3 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[3].copy(alpha = 0.85f))))
+    val planAccumulatedStyle4 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[4].copy(alpha = 0.85f))))
+    val planAccumulatedStyle5 = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(planLineColors[5].copy(alpha = 0.85f))))
+    val planAccumulatedStyles = listOf(planAccumulatedStyle0, planAccumulatedStyle1, planAccumulatedStyle2, planAccumulatedStyle3, planAccumulatedStyle4, planAccumulatedStyle5)
+
+    // Crypto group price line styles (full alpha) - pre-allocated for known cryptos
+    val btcPriceStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFFF7931A))))
+    val ethPriceStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFF627EEA))))
+    val ltcPriceStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFFA6A9AA))))
+    val bchPriceStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFF8DC351))))
+    val xrpPriceStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFF00A5E0))))
+    val adaPriceStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFF0033AD))))
+    val solPriceStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFF9945FF))))
+    val dotPriceStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFFE6007A))))
+    val defaultCryptoPriceStyle = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(defaultCryptoGroupColor)))
+
+    val cryptoPriceStylesMap = mapOf(
+        "BTC" to btcPriceStyleLine,
+        "ETH" to ethPriceStyleLine,
+        "LTC" to ltcPriceStyleLine,
+        "BCH" to bchPriceStyleLine,
+        "XRP" to xrpPriceStyleLine,
+        "ADA" to adaPriceStyleLine,
+        "SOL" to solPriceStyleLine,
+        "DOT" to dotPriceStyleLine,
+    )
+
+    // Crypto group accumulated line styles (alpha 0.6)
+    val btcAccStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFFF7931A).copy(alpha = 0.6f))))
+    val ethAccStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFF627EEA).copy(alpha = 0.6f))))
+    val ltcAccStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFFA6A9AA).copy(alpha = 0.6f))))
+    val bchAccStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFF8DC351).copy(alpha = 0.6f))))
+    val xrpAccStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFF00A5E0).copy(alpha = 0.6f))))
+    val adaAccStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFF0033AD).copy(alpha = 0.6f))))
+    val solAccStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFF9945FF).copy(alpha = 0.6f))))
+    val dotAccStyleLine = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(Color(0xFFE6007A).copy(alpha = 0.6f))))
+    val defaultCryptoAccStyle = LineCartesianLayer.rememberLine(fill = LineCartesianLayer.LineFill.single(fill(defaultCryptoGroupColor.copy(alpha = 0.6f))))
+
+    val cryptoAccStylesMap = mapOf(
+        "BTC" to btcAccStyleLine,
+        "ETH" to ethAccStyleLine,
+        "LTC" to ltcAccStyleLine,
+        "BCH" to bchAccStyleLine,
+        "XRP" to xrpAccStyleLine,
+        "ADA" to adaAccStyleLine,
+        "SOL" to solAccStyleLine,
+        "DOT" to dotAccStyleLine,
+    )
+
     // Build visible line lists for each layer
     val leftLines = buildList<LineCartesianLayer.Line> {
         if (0 in visibleSeries) add(valueLine)
@@ -288,10 +422,42 @@ fun PortfolioLineChart(
             }
             planStyleIdx++  // increment per plan, not per line, so value and invested share the color
         }
+        // Per-plan avg buy price styles
+        var planStyleIdxAvg = 0
+        planLines.forEach { planLine ->
+            val key = planLine.planId to PlanLineType.AVG_BUY_PRICE
+            if (key in visiblePlanLines && planLine.avgBuyPriceSeries.size == chartData.size) {
+                add(planAvgBuyStyles[planStyleIdxAvg % planAvgBuyStyles.size])
+            }
+            planStyleIdxAvg++
+        }
+        // Per-crypto price styles
+        cryptoGroupLines.forEach { cgLine ->
+            val key = cgLine.crypto to CryptoGroupLineType.PRICE
+            if (key in visibleCryptoGroupLines && cgLine.priceSeries.size == chartData.size) {
+                add(cryptoPriceStylesMap[cgLine.crypto] ?: defaultCryptoPriceStyle)
+            }
+        }
         if (isEmpty()) add(hiddenLine)
     }
     val rightLines = buildList<LineCartesianLayer.Line> {
         if (3 in visibleSeries) add(accumulatedLine)
+        // Per-plan accumulated styles
+        var planStyleIdxAcc = 0
+        planLines.forEach { planLine ->
+            val key = planLine.planId to PlanLineType.ACCUMULATED
+            if (key in visiblePlanLines && planLine.accumulatedSeries.size == chartData.size) {
+                add(planAccumulatedStyles[planStyleIdxAcc % planAccumulatedStyles.size])
+            }
+            planStyleIdxAcc++
+        }
+        // Per-crypto accumulated styles
+        cryptoGroupLines.forEach { cgLine ->
+            val key = cgLine.crypto to CryptoGroupLineType.TOTAL_ACCUMULATED
+            if (key in visibleCryptoGroupLines && cgLine.totalAccumulatedSeries.size == chartData.size) {
+                add(cryptoAccStylesMap[cgLine.crypto] ?: defaultCryptoAccStyle)
+            }
+        }
         if (isEmpty()) add(hiddenLine)
     }
 

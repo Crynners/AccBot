@@ -344,6 +344,12 @@
     <string name="chart_total_invested">Total invested</string>
     <string name="chart_plan_value">Value %1$s</string>
     <string name="chart_plan_invested">Invested %1$s</string>
+    <string name="chart_plan_avg_buy">Avg buy %1$s</string>
+    <string name="chart_plan_accumulated">Accumulated %1$s</string>
+    <string name="chart_crypto_price_label">Price %1$s</string>
+    <string name="chart_total_accumulated_label">Total accumulated %1$s</string>
+    <string name="chart_advanced_show">Advanced</string>
+    <string name="chart_advanced_hide">Hide advanced</string>
     <string name="chart_legend_crypto_held">Crypto Held</string>
     <string name="chart_legend_invested_equiv">Invested Equiv.</string>
     <string name="chart_avg_price">Avg. Price</string>

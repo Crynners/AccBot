@@ -142,6 +142,8 @@ fun PortfolioScreen(
                             visibleSeries = uiState.visibleSeries,
                             planLines = uiState.planLines,
                             visiblePlanLines = uiState.visiblePlanLines,
+                            cryptoGroupLines = uiState.cryptoGroupLines,
+                            visibleCryptoGroupLines = uiState.visibleCryptoGroupLines,
                             zoomLevel = uiState.zoomLevel,
                             onScrub = { idx -> scrubbedIndex = idx ?: -1 },
                             modifier = Modifier
@@ -157,11 +159,16 @@ fun PortfolioScreen(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                         // Per-plan legend (landscape)
-                        if (uiState.planLines.isNotEmpty()) {
+                        if (uiState.planLines.isNotEmpty() || uiState.cryptoGroupLines.isNotEmpty()) {
                             PlanLinesLegend(
                                 planLines = uiState.planLines,
                                 visiblePlanLines = uiState.visiblePlanLines,
-                                onToggle = { id, type -> viewModel.togglePlanLineVisibility(id, type) }
+                                onToggle = { id, type -> viewModel.togglePlanLineVisibility(id, type) },
+                                cryptoGroupLines = uiState.cryptoGroupLines,
+                                visibleCryptoGroupLines = uiState.visibleCryptoGroupLines,
+                                onToggleCryptoGroup = { crypto, type -> viewModel.toggleCryptoGroupLineVisibility(crypto, type) },
+                                isAdvancedExpanded = uiState.isAdvancedLegendExpanded,
+                                onToggleAdvanced = { viewModel.toggleAdvancedLegendExpanded() }
                             )
                         }
 
@@ -314,6 +321,8 @@ fun PortfolioScreen(
                     onPairPageSelected = { viewModel.selectPairPage(it) },
                     onToggleSeriesVisibility = { viewModel.toggleSeriesVisibility(it) },
                     onTogglePlanLineVisibility = { id, type -> viewModel.togglePlanLineVisibility(id, type) },
+                    onToggleCryptoGroupLineVisibility = { crypto, type -> viewModel.toggleCryptoGroupLineVisibility(crypto, type) },
+                    onToggleAdvancedLegend = { viewModel.toggleAdvancedLegendExpanded() },
                     onRefresh = { viewModel.syncPricesAndLoadChart() },
                     onChartTouching = onChartTouching,
                     modifier = Modifier.padding(paddingValues)
@@ -335,6 +344,8 @@ internal fun PortfolioContent(
     onPairPageSelected: (Int) -> Unit,
     onToggleSeriesVisibility: (Int) -> Unit,
     onTogglePlanLineVisibility: (Long, PlanLineType) -> Unit,
+    onToggleCryptoGroupLineVisibility: (String, CryptoGroupLineType) -> Unit,
+    onToggleAdvancedLegend: () -> Unit,
     onRefresh: () -> Unit,
     onChartTouching: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
@@ -546,6 +557,8 @@ internal fun PortfolioContent(
                     visibleSeries = uiState.visibleSeries,
                     planLines = uiState.planLines,
                     visiblePlanLines = uiState.visiblePlanLines,
+                    cryptoGroupLines = uiState.cryptoGroupLines,
+                    visibleCryptoGroupLines = uiState.visibleCryptoGroupLines,
                     zoomLevel = uiState.zoomLevel,
                     onScrub = { idx -> scrubbedIndex = idx ?: -1 },
                     modifier = Modifier.fillMaxWidth()
@@ -580,12 +593,17 @@ internal fun PortfolioContent(
                     onToggleSeries = onToggleSeriesVisibility
                 )
                 // Per-plan legend entries
-                if (uiState.planLines.isNotEmpty()) {
+                if (uiState.planLines.isNotEmpty() || uiState.cryptoGroupLines.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
                     PlanLinesLegend(
                         planLines = uiState.planLines,
                         visiblePlanLines = uiState.visiblePlanLines,
-                        onToggle = onTogglePlanLineVisibility
+                        onToggle = onTogglePlanLineVisibility,
+                        cryptoGroupLines = uiState.cryptoGroupLines,
+                        visibleCryptoGroupLines = uiState.visibleCryptoGroupLines,
+                        onToggleCryptoGroup = onToggleCryptoGroupLineVisibility,
+                        isAdvancedExpanded = uiState.isAdvancedLegendExpanded,
+                        onToggleAdvanced = onToggleAdvancedLegend
                     )
                 }
             }
@@ -1222,11 +1240,64 @@ private fun LandscapeKpiContent(
     }
 }
 
+private val legendCryptoDisplayColors = mapOf(
+    "BTC" to androidx.compose.ui.graphics.Color(0xFFF7931A),
+    "ETH" to androidx.compose.ui.graphics.Color(0xFF627EEA),
+    "LTC" to androidx.compose.ui.graphics.Color(0xFFA6A9AA),
+    "BCH" to androidx.compose.ui.graphics.Color(0xFF8DC351),
+    "XRP" to androidx.compose.ui.graphics.Color(0xFF00A5E0),
+    "ADA" to androidx.compose.ui.graphics.Color(0xFF0033AD),
+    "SOL" to androidx.compose.ui.graphics.Color(0xFF9945FF),
+    "DOT" to androidx.compose.ui.graphics.Color(0xFFE6007A),
+)
+private fun legendColorFor(crypto: String): androidx.compose.ui.graphics.Color =
+    legendCryptoDisplayColors[crypto] ?: androidx.compose.ui.graphics.Color(0xFF888888)
+
+@Composable
+private fun LegendDot(color: androidx.compose.ui.graphics.Color, enabled: Boolean) {
+    Box(
+        Modifier
+            .size(12.dp)
+            .clip(CircleShape)
+            .background(if (enabled) color else color.copy(alpha = 0.3f))
+    )
+}
+
+@Composable
+private fun LegendTextEntry(
+    color: androidx.compose.ui.graphics.Color,
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clickable { onClick() }
+            .padding(4.dp)
+    ) {
+        LegendDot(color, enabled)
+        Spacer(Modifier.width(6.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+            textDecoration = if (enabled) null else TextDecoration.LineThrough
+        )
+    }
+}
+
 @Composable
 private fun PlanLinesLegend(
     planLines: List<PlanLineInfo>,
     visiblePlanLines: Set<Pair<Long, PlanLineType>>,
-    onToggle: (Long, PlanLineType) -> Unit
+    onToggle: (Long, PlanLineType) -> Unit,
+    cryptoGroupLines: List<CryptoGroupLineInfo> = emptyList(),
+    visibleCryptoGroupLines: Set<Pair<String, CryptoGroupLineType>> = emptySet(),
+    onToggleCryptoGroup: (String, CryptoGroupLineType) -> Unit = { _, _ -> },
+    isAdvancedExpanded: Boolean = false,
+    onToggleAdvanced: () -> Unit = {}
 ) {
     val planLineColors = com.accbot.dca.presentation.components.planLineColors
     Column(
@@ -1234,60 +1305,111 @@ private fun PlanLinesLegend(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
+        // Primary section: value + invested per plan
         planLines.forEachIndexed { index, planLine ->
             val baseColor = planLineColors[index % planLineColors.size]
             Row(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Value entry
                 val valueEnabled = (planLine.planId to PlanLineType.VALUE) in visiblePlanLines
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clickable { onToggle(planLine.planId, PlanLineType.VALUE) }
-                        .padding(4.dp)
-                ) {
-                    Box(
-                        Modifier
-                            .size(12.dp)
-                            .clip(CircleShape)
-                            .background(if (valueEnabled) baseColor else baseColor.copy(alpha = 0.3f))
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        stringResource(R.string.chart_plan_value, planLine.name),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (valueEnabled) MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        textDecoration = if (valueEnabled) null else TextDecoration.LineThrough
-                    )
-                }
+                LegendTextEntry(
+                    color = baseColor,
+                    label = stringResource(R.string.chart_plan_value, planLine.name),
+                    enabled = valueEnabled,
+                    onClick = { onToggle(planLine.planId, PlanLineType.VALUE) }
+                )
 
                 Spacer(Modifier.width(16.dp))
 
-                // Invested entry
                 val investedEnabled = (planLine.planId to PlanLineType.INVESTED) in visiblePlanLines
-                val investedColor = baseColor.copy(alpha = 0.4f)
+                LegendTextEntry(
+                    color = baseColor.copy(alpha = 0.4f),
+                    label = stringResource(R.string.chart_plan_invested, planLine.name),
+                    enabled = investedEnabled,
+                    onClick = { onToggle(planLine.planId, PlanLineType.INVESTED) }
+                )
+            }
+        }
+
+        // Advanced toggle button (shown only when we have any advanced content)
+        if (planLines.isNotEmpty() || cryptoGroupLines.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggleAdvanced() }
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    stringResource(if (isAdvancedExpanded) R.string.chart_advanced_hide else R.string.chart_advanced_show),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    if (isAdvancedExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Advanced section content
+        if (isAdvancedExpanded) {
+            // Per-crypto-group rows: Cena + Celkem akumulováno per unique crypto
+            cryptoGroupLines.forEach { cgLine ->
+                val cryptoColor = legendColorFor(cgLine.crypto)
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clickable { onToggle(planLine.planId, PlanLineType.INVESTED) }
-                        .padding(4.dp)
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
-                        Modifier
-                            .size(12.dp)
-                            .clip(CircleShape)
-                            .background(if (investedEnabled) investedColor else investedColor.copy(alpha = 0.3f))
+                    val priceEnabled = (cgLine.crypto to CryptoGroupLineType.PRICE) in visibleCryptoGroupLines
+                    LegendTextEntry(
+                        color = cryptoColor,
+                        label = stringResource(R.string.chart_crypto_price_label, cgLine.crypto),
+                        enabled = priceEnabled,
+                        onClick = { onToggleCryptoGroup(cgLine.crypto, CryptoGroupLineType.PRICE) }
                     )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        stringResource(R.string.chart_plan_invested, planLine.name),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (investedEnabled) MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        textDecoration = if (investedEnabled) null else TextDecoration.LineThrough
+
+                    Spacer(Modifier.width(16.dp))
+
+                    val accEnabled = (cgLine.crypto to CryptoGroupLineType.TOTAL_ACCUMULATED) in visibleCryptoGroupLines
+                    LegendTextEntry(
+                        color = cryptoColor.copy(alpha = 0.6f),
+                        label = stringResource(R.string.chart_total_accumulated_label, cgLine.crypto),
+                        enabled = accEnabled,
+                        onClick = { onToggleCryptoGroup(cgLine.crypto, CryptoGroupLineType.TOTAL_ACCUMULATED) }
+                    )
+                }
+            }
+
+            // Per-plan advanced rows: Prům. nák. cena + Akumulováno
+            planLines.forEachIndexed { index, planLine ->
+                val baseColor = planLineColors[index % planLineColors.size]
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val avgEnabled = (planLine.planId to PlanLineType.AVG_BUY_PRICE) in visiblePlanLines
+                    LegendTextEntry(
+                        color = baseColor.copy(alpha = 0.7f),
+                        label = stringResource(R.string.chart_plan_avg_buy, planLine.name),
+                        enabled = avgEnabled,
+                        onClick = { onToggle(planLine.planId, PlanLineType.AVG_BUY_PRICE) }
+                    )
+
+                    Spacer(Modifier.width(16.dp))
+
+                    val accEnabled = (planLine.planId to PlanLineType.ACCUMULATED) in visiblePlanLines
+                    LegendTextEntry(
+                        color = baseColor.copy(alpha = 0.85f),
+                        label = stringResource(R.string.chart_plan_accumulated, planLine.name),
+                        enabled = accEnabled,
+                        onClick = { onToggle(planLine.planId, PlanLineType.ACCUMULATED) }
                     )
                 }
             }
