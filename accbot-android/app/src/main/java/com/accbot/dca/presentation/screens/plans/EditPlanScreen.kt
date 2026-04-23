@@ -67,6 +67,28 @@ fun EditPlanScreen(
         )
     }
 
+    // Confirmation dialog when disabling sells while open sell orders exist on the exchange.
+    // See EditPlanViewModel.setAllowSells for the trigger.
+    uiState.showDisableSellsDialog?.let { openCount ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDisableSellsDialog() },
+            title = { Text(stringResource(R.string.edit_plan_disable_sells_dialog_title)) },
+            text = {
+                Text(stringResource(R.string.edit_plan_disable_sells_dialog_text, openCount))
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmDisableSells() }) {
+                    Text(stringResource(R.string.edit_plan_disable_sells_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissDisableSellsDialog() }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             AccBotTopAppBar(
@@ -165,7 +187,10 @@ fun EditPlanScreen(
                             onWithdrawalAddressChanged = viewModel.planForm::setWithdrawalAddress,
                             onTargetAmountChanged = viewModel.planForm::setTargetAmount,
                             exchange = uiState.exchange,
-                            errorMessage = if (uiState.isSaving) uiState.error else null
+                            errorMessage = if (uiState.isSaving) uiState.error else null,
+                            showSellSection = uiState.tradingEnabled,
+                            onAllowSellsChanged = viewModel::setAllowSells,
+                            onTargetProfitAmountChanged = viewModel.planForm::setTargetProfitAmount
                         )
                     }
 
