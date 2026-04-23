@@ -20,6 +20,11 @@ import java.time.Instant
 enum class NotificationType { PURCHASE, ERROR, LOW_BALANCE, WITHDRAWAL_THRESHOLD, NETWORK_RETRY, MISSED_PURCHASES }
 
 /**
+ * Direction of a transaction - BUY for DCA purchases, SELL for user-initiated limit sell orders.
+ */
+enum class TransactionSide { BUY, SELL }
+
+/**
  * Room type converters
  */
 class Converters {
@@ -98,6 +103,17 @@ class Converters {
     } catch (e: IllegalArgumentException) {
         Log.w(TAG, "Unknown NotificationType '$value', falling back to ERROR")
         NotificationType.ERROR
+    }
+
+    @TypeConverter
+    fun fromTransactionSide(value: TransactionSide): String = value.name
+
+    @TypeConverter
+    fun toTransactionSide(value: String): TransactionSide = try {
+        TransactionSide.valueOf(value)
+    } catch (e: IllegalArgumentException) {
+        Log.w(TAG, "Unknown TransactionSide '$value', falling back to BUY")
+        TransactionSide.BUY
     }
 }
 
@@ -181,7 +197,17 @@ data class DcaPlanEntity(
     val originalScheduledAt: Instant? = null,
     val missedPurchaseCount: Int = 0,
     /** Order for Dashboard display. Lower values shown first. */
-    val displayOrder: Int = 0
+    val displayOrder: Int = 0,
+    /**
+     * Opt-in per-plan toggle for sell extension. When true (and global trading is enabled),
+     * plan-detail shows P&L card, open sell orders list, and sell wizard button.
+     */
+    val allowSells: Boolean = false,
+    /**
+     * Optional profit goal (in [fiat]). When set, plan-detail shows progress bar toward this.
+     * Null when user didn't specify a target.
+     */
+    val targetProfitAmount: BigDecimal? = null
 )
 
 /**
@@ -225,7 +251,20 @@ data class TransactionEntity(
     val exchangeOrderId: String? = null,
     val errorMessage: String? = null,
     val warningMessage: String? = null,
-    val executedAt: Instant = Instant.now()
+    val executedAt: Instant = Instant.now(),
+    /**
+     * BUY for DCA purchases (default), SELL for limit sell orders placed via sell extension.
+     */
+    val side: TransactionSide = TransactionSide.BUY,
+    /**
+     * Requested limit price for SELL orders; null for market BUYs.
+     */
+    val limitPrice: BigDecimal? = null,
+    /**
+     * Original requested crypto amount for SELL orders (fixed across lifecycle).
+     * [cryptoAmount] tracks filled amount (progresses 0 -> requested). Null for BUYs.
+     */
+    val requestedCryptoAmount: BigDecimal? = null
 )
 
 /**
