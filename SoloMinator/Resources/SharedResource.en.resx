@@ -53,6 +53,7 @@
   <data name="Index_PoolEuSolo" xml:space="preserve"><value>eusolo.ckpool.org (Europe/Africa)</value></data>
   <data name="Index_PoolAuSolo" xml:space="preserve"><value>ausolo.ckpool.org (Oceania)</value></data>
   <data name="Index_PoolBraiins" xml:space="preserve"><value>solo.braiins.com (SoloBraiins)</value></data>
+  <data name="Index_PoolMineshop" xml:space="preserve"><value>solo.mineshop.eu (Mineshop)</value></data>
   <data name="Index_Feature1_Title" xml:space="preserve"><value>Best Share Alerts</value></data>
   <data name="Index_Feature1_Desc" xml:space="preserve"><value>Notification within an hour when you beat your record</value></data>
   <data name="Index_Feature2_Title" xml:space="preserve"><value>Difficulty Updates</value></data>

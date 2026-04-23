@@ -35,6 +35,7 @@
                             <li><a href="https://eusolo.ckpool.org" target="_blank">eusolo.ckpool.org</a></li>
                             <li><a href="https://ausolo.ckpool.org" target="_blank">ausolo.ckpool.org</a></li>
                             <li><a href="https://solo.braiins.com" target="_blank">solo.braiins.com</a></li>
+                            <li><a href="https://solo.mineshop.eu" target="_blank">solo.mineshop.eu</a></li>
                         </ul>
                     </div>
 
@@ -90,7 +91,7 @@ else
                     else
                     {
                         <span class="badge pool-badge rounded-pill">
-                            <i class="bi bi-globe me-1"></i>@(Model.Registration.PoolVariant).ckpool.org
+                            <i class="bi bi-globe me-1"></i>@Model.Registration.PoolDisplayName
                         </span>
                     }
                     <form method="post" asp-page-handler="DiscoverPools" class="d-inline">

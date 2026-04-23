@@ -60,7 +60,7 @@ else
                     else
                     {
                         <span class="badge pool-badge rounded-pill">
-                            <i class="bi bi-globe me-1"></i>@(Model.Registration.PoolVariant).ckpool.org
+                            <i class="bi bi-globe me-1"></i>@Model.Registration.PoolDisplayName
                         </span>
                     }
                     <form method="post" asp-page-handler="DiscoverPools" class="d-inline">
@@ -220,7 +220,7 @@ else
                         </div>
                         <div class="col-md-6">
                             <div class="stat-label">@L["Settings_Pool"]</div>
-                            <span>@(Model.Registration.PoolVariant).ckpool.org</span>
+                            <span>@Model.Registration.PoolDisplayName</span>
                         </div>
                         <div class="col-md-6">
                             <div class="stat-label">@L["Settings_Registered"]</div>

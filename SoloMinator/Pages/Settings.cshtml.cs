@@ -95,29 +95,6 @@ public class SettingsModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostUpdateTelegramAsync(string address, string pool, string? telegramChatId, bool notificationsEnabled)
-    {
-        if (!await InitializePageContextAsync(address, pool))
-            return Page();
-
-        try
-        {
-            await _registrationService.UpdateTelegramSettingsAsync(Address, Pool, telegramChatId?.Trim(), notificationsEnabled);
-            // Reload registration to get updated values
-            Registration = await _registrationService.GetByAddressAndPoolAsync(Address, Pool);
-            Subscriptions = await _subscriptionService.GetSubscriptionsForRegistrationAsync(Registration!.Id);
-            SuccessMessage = "Settings_Saved";
-            _logger.LogInformation("Updated Telegram settings for {Address} on {Pool}", Registration?.MiningAddress, Pool);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating Telegram settings");
-            ErrorMessage = "Settings_SaveError";
-        }
-
-        return Page();
-    }
-
     public async Task<IActionResult> OnPostGenerateLinkAsync(string address, string pool)
     {
         if (!await InitializePageContextAsync(address, pool))

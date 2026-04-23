@@ -21,7 +21,8 @@ public class CKPoolService : ICKPoolService
         ["solo"] = "https://solo.ckpool.org",
         ["eusolo"] = "https://eusolo.ckpool.org",
         ["ausolo"] = "https://ausolo.ckpool.org",
-        ["braiins"] = "https://solo.braiins.com"
+        ["braiins"] = "https://solo.braiins.com",
+        ["mineshop"] = "https://solo.mineshop.eu"
     };
 
     private static readonly IReadOnlyList<string> CachedAvailablePools = PoolUrls.Keys.ToList().AsReadOnly();
@@ -35,6 +36,13 @@ public class CKPoolService : ICKPoolService
     public string GetPoolUrl(string poolVariant)
     {
         return PoolUrls.TryGetValue(poolVariant.ToLower(), out var url) ? url : PoolUrls["solo"];
+    }
+
+    private static string BuildApiUrl(string baseUrl, string poolVariant, string address)
+    {
+        if (poolVariant == "mineshop")
+            return $"{baseUrl}/api/miner.php?wallet={address}";
+        return $"{baseUrl}/users/{address}";
     }
 
     public IReadOnlyList<string> AvailablePools => CachedAvailablePools;
@@ -71,7 +79,7 @@ public class CKPoolService : ICKPoolService
         try
         {
             var baseUrl = GetPoolUrl(poolVariant);
-            var url = $"{baseUrl}/users/{address}";
+            var url = BuildApiUrl(baseUrl, poolVariant, address);
 
             _logger.LogInformation("Validating address {Address} on {Pool}", address, poolVariant);
 

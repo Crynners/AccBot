@@ -16,7 +16,7 @@ public class UserRegistrationEntity
 
     [Required]
     [MaxLength(50)]
-    public string PoolVariant { get; set; } = "solo"; // solo, eusolo, ausolo, braiins
+    public string PoolVariant { get; set; } = "solo"; // solo, eusolo, ausolo, braiins, mineshop
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
@@ -28,6 +28,10 @@ public class UserRegistrationEntity
         "eusolo" => "https://eusolo.ckpool.org",
         "ausolo" => "https://ausolo.ckpool.org",
         "braiins" => "https://solo.braiins.com",
+        "mineshop" => "https://solo.mineshop.eu",
         _ => "https://solo.ckpool.org"
     };
+
+    [NotMapped]
+    public string PoolDisplayName => new Uri(PoolBaseUrl).Host;
 }

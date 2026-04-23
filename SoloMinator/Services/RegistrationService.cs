@@ -10,7 +10,6 @@ public interface IRegistrationService
     Task<UserRegistrationEntity?> GetByAddressAndPoolAsync(string address, string poolVariant);
     Task<List<UserRegistrationEntity>> GetAllPoolsForAddressAsync(string address);
     Task<UserRegistrationEntity> CreateRegistrationAsync(string address, string poolVariant);
-    Task<UserRegistrationEntity> UpdateTelegramSettingsAsync(string address, string poolVariant, string? chatId, bool notificationsEnabled);
     Task<bool> DeleteRegistrationAsync(string address, string poolVariant);
 }
 
@@ -67,25 +66,6 @@ public class RegistrationService : IRegistrationService
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Created registration for {Address} on {Pool}", address, poolVariant);
-
-        return registration;
-    }
-
-    public async Task<UserRegistrationEntity> UpdateTelegramSettingsAsync(string address, string poolVariant, string? chatId, bool notificationsEnabled)
-    {
-        var registration = await GetByAddressAndPoolAsync(address, poolVariant.ToLowerInvariant());
-        if (registration == null)
-        {
-            throw new InvalidOperationException("Registration not found");
-        }
-
-        registration.TelegramChatId = chatId;
-        registration.NotificationsEnabled = notificationsEnabled && !string.IsNullOrWhiteSpace(chatId);
-        registration.UpdatedAt = DateTime.UtcNow;
-
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Updated Telegram settings for {Address} on {Pool}", registration.MiningAddress, poolVariant);
 
         return registration;
     }
