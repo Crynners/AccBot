@@ -210,6 +210,13 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE planId = :planId ORDER BY executedAt DESC")
     fun getTransactionsByPlan(planId: Long): Flow<List<TransactionEntity>>
 
+    /**
+     * One-shot snapshot of all transactions for a plan. Used by PnL / validation
+     * logic where a Flow isn't practical (suspend call from use case).
+     */
+    @Query("SELECT * FROM transactions WHERE planId = :planId ORDER BY executedAt DESC")
+    suspend fun getTransactionsByPlanSync(planId: Long): List<TransactionEntity>
+
     @Query("SELECT * FROM transactions WHERE crypto = :crypto ORDER BY executedAt DESC")
     fun getTransactionsByCrypto(crypto: String): Flow<List<TransactionEntity>>
 
