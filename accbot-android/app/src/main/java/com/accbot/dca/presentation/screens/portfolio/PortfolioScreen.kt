@@ -1113,6 +1113,64 @@ internal fun KpiCardContent(
             }
         }
     }
+
+    // Sell-extension trading metrics: realized + net P&L (only when trading enabled)
+    TradingMetricsRows(uiState = uiState, fiatSymbol = fiatSymbol)
+}
+
+@Composable
+private fun TradingMetricsRows(
+    uiState: PortfolioUiState,
+    fiatSymbol: String
+) {
+    if (!uiState.showTradingMetrics) return
+    val realized = uiState.totalRealized ?: BigDecimal.ZERO
+    if (realized.signum() <= 0 && uiState.netPnL == null) return
+
+    Spacer(modifier = Modifier.height(12.dp))
+    HorizontalDivider()
+    Spacer(modifier = Modifier.height(8.dp))
+
+    if (realized.signum() > 0) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = stringResource(R.string.portfolio_realized),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${NumberFormatters.fiat(realized)} $fiatSymbol",
+                fontWeight = FontWeight.SemiBold,
+                color = successColor()
+            )
+        }
+    }
+
+    val net = uiState.netPnL
+    if (net != null) {
+        Spacer(modifier = Modifier.height(4.dp))
+        val isPositive = net.signum() >= 0
+        val pnlColor = if (isPositive) successColor() else MaterialTheme.colorScheme.error
+        val sign = if (isPositive) "+" else ""
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = stringResource(R.string.portfolio_net_pnl),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "$sign${NumberFormatters.fiat(net)} $fiatSymbol",
+                fontWeight = FontWeight.SemiBold,
+                color = pnlColor
+            )
+        }
+    }
 }
 
 @Composable
@@ -1259,6 +1317,9 @@ private fun LandscapeKpiContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        // Sell-extension trading metrics: realized + net P&L (only when trading enabled)
+        TradingMetricsRows(uiState = uiState, fiatSymbol = fiatSymbol)
     }
 }
 

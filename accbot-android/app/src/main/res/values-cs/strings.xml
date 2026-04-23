@@ -333,6 +333,8 @@
     <string name="portfolio_title">Portfolio</string>
     <string name="portfolio_transactions">Transakce</string>
     <string name="portfolio_loading">Načítání portfolia…</string>
+    <string name="portfolio_realized">Realizováno</string>
+    <string name="portfolio_net_pnl">Čistý P&amp;L</string>
 
     <!-- Performance Chart -->
     <string name="chart_all_pairs">Všechny páry</string>

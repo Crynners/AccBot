@@ -22,6 +22,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -79,7 +80,25 @@ data class PortfolioUiState(
     val isLoading: Boolean = true,
     val isChartLoading: Boolean = false,
     val isPriceSyncing: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    /**
+     * True when the global trading master switch is on. Gates display of the
+     * sell-extension summary rows (realized P&L, net P&L) so users without the
+     * feature enabled don't see empty/zero rows.
+     */
+    val showTradingMetrics: Boolean = false,
+    /**
+     * Sum of fiat received from completed/partial SELL orders for the currently
+     * selected fiat. Null when not loaded yet, BigDecimal.ZERO when there are
+     * no realized sells.
+     */
+    val totalRealized: BigDecimal? = null,
+    /**
+     * Net P&L = currentPortfolioValue + totalRealized - totalInvested.
+     * Null when current price is unavailable (matches the existing chart-loading
+     * pattern where ROI fields are also null until prices arrive).
+     */
+    val netPnL: BigDecimal? = null
 )
 
 @HiltViewModel
@@ -145,7 +164,12 @@ class PortfolioViewModel @Inject constructor(
     private fun loadPortfolio() {
         portfolioJob?.cancel()
         portfolioJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            val tradingEnabled = userPreferences.isTradingEnabled()
+            _uiState.update { it.copy(
+                isLoading = true,
+                error = null,
+                showTradingMetrics = tradingEnabled
+            ) }
             try {
                 // Use pre-filtered, sorted query (avoids loading failed/pending into memory)
                 val completed = transactionDao.getCompletedTransactionsOrdered()
@@ -536,7 +560,52 @@ class PortfolioViewModel @Inject constructor(
                 cryptoGroupLines = chartResult.cryptoGroupLines,
                 isChartLoading = false
             ) }
+
+            // Sell-extension: compute realized P&L from SELL transactions and net P&L
+            // (currentValue + realized - invested). Gated by the global trading switch.
+            recomputeTradingMetrics(chartResult)
         }
+    }
+
+    /**
+     * Computes [PortfolioUiState.totalRealized] and [PortfolioUiState.netPnL] for
+     * the currently selected page. Reads SELL transactions from cache instead of
+     * re-querying because they're already in [completedTransactions] (the DAO
+     * pre-filter is BUY-only, so we look at the global `db` here via DAO).
+     */
+    private suspend fun recomputeTradingMetrics(chartResult: ChartComputeResult) {
+        if (!_uiState.value.showTradingMetrics) {
+            _uiState.update { it.copy(totalRealized = null, netPnL = null) }
+            return
+        }
+        val fiat = chartResult.fiat
+        if (fiat == null) {
+            _uiState.update { it.copy(totalRealized = null, netPnL = null) }
+            return
+        }
+
+        val realized = try {
+            // Query SELL totals scoped to fiat. For per-plan pages we filter further
+            // via the page's planId; for aggregate pages we use everything in fiat.
+            val state = _uiState.value
+            val page = state.pages.getOrNull(state.selectedPageIndex)
+            val planId = (page as? PairPage.Plan)?.planId
+
+            if (planId != null) {
+                BigDecimal(transactionDao.getRealizedFiatByPlan(planId))
+            } else {
+                BigDecimal(transactionDao.getRealizedFiatByFiat(fiat))
+            }
+        } catch (_: Exception) {
+            BigDecimal.ZERO
+        }
+
+        val lastPoint = chartResult.data.lastOrNull()
+        val net = if (lastPoint != null) {
+            lastPoint.portfolioValue + realized - lastPoint.totalInvested
+        } else null
+
+        _uiState.update { it.copy(totalRealized = realized, netPnL = net) }
     }
 
     private data class ChartComputeResult(
