@@ -689,7 +689,7 @@ private fun FilterBottomSheet(
                 Button(
                     onClick = {
                         onApplyFilter(
-                            HistoryFilter(
+                            currentFilter.copy(
                                 crypto = selectedCrypto,
                                 exchange = selectedExchange,
                                 status = selectedStatus,
