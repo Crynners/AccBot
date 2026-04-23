@@ -343,7 +343,9 @@ class BackupDataRestorer @Inject constructor(
             createdAt = Instant.ofEpochMilli(createdAt),
             lastExecutedAt = lastExecutedAt?.let { Instant.ofEpochMilli(it) },
             nextExecutionAt = effectiveNext,
-            targetAmount = targetAmount?.let { BigDecimal(it) }
+            targetAmount = targetAmount?.let { BigDecimal(it) },
+            allowSells = allowSells,
+            targetProfitAmount = targetProfitAmount?.let { BigDecimal(it) }
         )
     }
 
@@ -363,7 +365,10 @@ class BackupDataRestorer @Inject constructor(
         exchangeOrderId = exchangeOrderId,
         errorMessage = errorMessage,
         warningMessage = warningMessage,
-        executedAt = Instant.ofEpochMilli(executedAt)
+        executedAt = Instant.ofEpochMilli(executedAt),
+        side = try { com.accbot.dca.domain.model.TransactionSide.valueOf(side) } catch (e: Exception) { com.accbot.dca.domain.model.TransactionSide.BUY },
+        limitPrice = limitPrice?.let { BigDecimal(it) },
+        requestedCryptoAmount = requestedCryptoAmount?.let { BigDecimal(it) }
     )
 
     private fun BackupWithdrawal.toEntity(remappedPlanId: Long, connectionId: Long?) = WithdrawalEntity(

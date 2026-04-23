@@ -23,7 +23,32 @@ fun DcaPlanEntity.toDomain() = DcaPlan(
     lastExecutedAt = lastExecutedAt,
     nextExecutionAt = nextExecutionAt,
     targetAmount = targetAmount,
-    displayOrder = displayOrder
+    displayOrder = displayOrder,
+    allowSells = allowSells,
+    targetProfitAmount = targetProfitAmount
+)
+
+fun DcaPlan.toEntity() = DcaPlanEntity(
+    id = id,
+    exchange = exchange,
+    connectionId = connectionId,
+    name = name,
+    crypto = crypto,
+    fiat = fiat,
+    amount = amount,
+    frequency = frequency,
+    cronExpression = cronExpression,
+    strategy = strategy,
+    isEnabled = isEnabled,
+    withdrawalEnabled = withdrawalEnabled,
+    withdrawalAddress = withdrawalAddress,
+    createdAt = createdAt,
+    lastExecutedAt = lastExecutedAt,
+    nextExecutionAt = nextExecutionAt,
+    targetAmount = targetAmount,
+    displayOrder = displayOrder,
+    allowSells = allowSells,
+    targetProfitAmount = targetProfitAmount
 )
 
 fun TransactionEntity.toDomain() = Transaction(
@@ -42,7 +67,32 @@ fun TransactionEntity.toDomain() = Transaction(
     exchangeOrderId = exchangeOrderId,
     errorMessage = errorMessage,
     warningMessage = warningMessage,
-    executedAt = executedAt
+    executedAt = executedAt,
+    side = side,
+    limitPrice = limitPrice,
+    requestedCryptoAmount = requestedCryptoAmount
+)
+
+fun Transaction.toEntity() = TransactionEntity(
+    id = id,
+    planId = planId,
+    exchange = exchange,
+    connectionId = connectionId,
+    crypto = crypto,
+    fiat = fiat,
+    fiatAmount = fiatAmount,
+    cryptoAmount = cryptoAmount,
+    price = price,
+    fee = fee,
+    feeAsset = feeAsset,
+    status = status,
+    exchangeOrderId = exchangeOrderId,
+    errorMessage = errorMessage,
+    warningMessage = warningMessage,
+    executedAt = executedAt,
+    side = side,
+    limitPrice = limitPrice,
+    requestedCryptoAmount = requestedCryptoAmount
 )
 
 fun NotificationEntity.toDomain() = AppNotification(

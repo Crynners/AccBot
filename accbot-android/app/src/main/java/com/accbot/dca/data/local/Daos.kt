@@ -2,6 +2,7 @@ package com.accbot.dca.data.local
 
 import androidx.room.*
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.model.TransactionStatus
 import kotlinx.coroutines.flow.Flow
 import java.math.BigDecimal
 import java.time.Instant
@@ -274,6 +275,52 @@ interface TransactionDao {
 
     @Query("SELECT * FROM transactions WHERE status = 'PENDING' AND exchangeOrderId IS NOT NULL")
     suspend fun getPendingTransactionsWithOrderId(): List<TransactionEntity>
+
+    @Query("SELECT * FROM transactions WHERE status IN ('PENDING', 'PARTIAL') AND exchangeOrderId IS NOT NULL")
+    suspend fun getResolvablePendingTransactions(): List<TransactionEntity>
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE side = 'SELL' AND status IN ('PENDING', 'PARTIAL')")
+    suspend fun countOpenSells(): Int
+
+    @Query("""
+        SELECT * FROM transactions
+        WHERE planId = :planId
+          AND side = 'SELL'
+          AND status IN ('PENDING', 'PARTIAL')
+        ORDER BY executedAt DESC
+    """)
+    fun observeOpenSellsForPlan(planId: Long): Flow<List<TransactionEntity>>
+
+    @Query("""
+        SELECT * FROM transactions
+        WHERE side = 'SELL' AND status IN ('PENDING', 'PARTIAL')
+        ORDER BY executedAt DESC
+    """)
+    fun observeAllOpenSells(): Flow<List<TransactionEntity>>
+
+    /**
+     * Guarded update for resolving an order. Only updates rows still in PENDING/PARTIAL
+     * state - prevents races with concurrent user cancel (which sets status=FAILED).
+     * Returns number of rows updated (0 = race lost, order state already changed).
+     */
+    @Query("""
+        UPDATE transactions
+        SET status = :newStatus,
+            cryptoAmount = :cryptoAmount,
+            fiatAmount = :fiatAmount,
+            price = :price,
+            fee = :fee
+        WHERE id = :id
+          AND status IN ('PENDING', 'PARTIAL')
+    """)
+    suspend fun updateResolvedTransaction(
+        id: Long,
+        newStatus: TransactionStatus,
+        cryptoAmount: BigDecimal,
+        fiatAmount: BigDecimal,
+        price: BigDecimal,
+        fee: BigDecimal
+    ): Int
 
     @Query("SELECT exchangeOrderId FROM transactions WHERE planId = :planId AND exchangeOrderId IS NOT NULL")
     suspend fun getExchangeOrderIdsByPlan(planId: Long): List<String>

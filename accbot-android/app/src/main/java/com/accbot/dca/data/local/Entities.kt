@@ -9,6 +9,7 @@ import androidx.room.TypeConverters
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.model.WithdrawalStatus
 import java.math.BigDecimal
@@ -18,11 +19,6 @@ import java.time.Instant
  * Notification type for in-app notification history
  */
 enum class NotificationType { PURCHASE, ERROR, LOW_BALANCE, WITHDRAWAL_THRESHOLD, NETWORK_RETRY, MISSED_PURCHASES }
-
-/**
- * Direction of a transaction - BUY for DCA purchases, SELL for user-initiated limit sell orders.
- */
-enum class TransactionSide { BUY, SELL }
 
 /**
  * Room type converters

@@ -130,7 +130,9 @@ class BackupDataCollector @Inject constructor(
         lastExecutedAt = lastExecutedAt?.toEpochMilli(),
         nextExecutionAt = nextExecutionAt?.toEpochMilli(),
         targetAmount = targetAmount?.toPlainString(),
-        connectionId = connectionId
+        connectionId = connectionId,
+        allowSells = allowSells,
+        targetProfitAmount = targetProfitAmount?.toPlainString()
     )
 
     private fun TransactionEntity.toBackup() = BackupTransaction(
@@ -149,7 +151,10 @@ class BackupDataCollector @Inject constructor(
         errorMessage = errorMessage,
         warningMessage = warningMessage,
         executedAt = executedAt.toEpochMilli(),
-        connectionId = connectionId
+        connectionId = connectionId,
+        side = side.name,
+        limitPrice = limitPrice?.toPlainString(),
+        requestedCryptoAmount = requestedCryptoAmount?.toPlainString()
     )
 
     private fun NotificationEntity.toBackup() = BackupNotification(
