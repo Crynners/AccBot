@@ -920,4 +920,28 @@
 
     <!-- Accessibility -->
     <string name="a11y_retry">Retry</string>
+
+    <!-- Settings: Advanced (Sell extension) -->
+    <string name="settings_advanced">ADVANCED</string>
+    <string name="settings_trading_enabled_title">Enable sell orders</string>
+    <string name="settings_trading_enabled_subtitle">Allow selected plans to place limit sell orders and track P&amp;L.</string>
+    <string name="settings_sell_polling_title">Check sell orders in background</string>
+    <string name="settings_sell_polling_subtitle">Periodically check order status. Increases battery usage.</string>
+    <string name="settings_sell_polling_frequency">Frequency</string>
+    <string name="settings_sell_polling_cron_label">Custom schedule (CRON)</string>
+    <string name="settings_sell_polling_cron_hint">e.g. 0 *\/2 * * *</string>
+    <string name="settings_sell_polling_battery_note">Frequent checks increase battery usage and count against exchange API limits.</string>
+
+    <!-- Plan form: Sell extension -->
+    <string name="plan_form_sell_section_title">Sells (optional)</string>
+    <string name="plan_form_allow_sells_title">Enable sells for this plan</string>
+    <string name="plan_form_target_profit_label">Profit target (optional, in %1$s)</string>
+    <string name="plan_form_target_profit_supporting">Plan detail shows a progress bar toward this target.</string>
+    <string name="plan_form_target_profit_error_invalid">Enter a valid number</string>
+    <string name="plan_form_target_profit_error_positive">Target must be positive</string>
+
+    <!-- Edit plan: Disable sells dialog -->
+    <string name="edit_plan_disable_sells_dialog_title">Turn off sells?</string>
+    <string name="edit_plan_disable_sells_dialog_text">You have %1$d open sell order(s). Turning sells off will hide the sell section, but the orders remain on the exchange. You must cancel them manually on the exchange, or by turning sells back on and clicking Cancel.</string>
+    <string name="edit_plan_disable_sells_confirm">Turn off</string>
 </resources>

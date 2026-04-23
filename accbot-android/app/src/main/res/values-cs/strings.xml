@@ -926,4 +926,28 @@
 
     <!-- Accessibility -->
     <string name="a11y_retry">Opakovat</string>
+
+    <!-- Settings: Pokrocile (Rozsireni prodeju) -->
+    <string name="settings_advanced">POKROČILÉ</string>
+    <string name="settings_trading_enabled_title">Povolit prodeje</string>
+    <string name="settings_trading_enabled_subtitle">Umožní u vybraných plánů zadávat limitní prodejní příkazy a sledovat P&amp;L.</string>
+    <string name="settings_sell_polling_title">Kontrolovat sell ordery na pozadí</string>
+    <string name="settings_sell_polling_subtitle">Periodická kontrola stavu orderů. Zvyšuje spotřebu baterie.</string>
+    <string name="settings_sell_polling_frequency">Frekvence</string>
+    <string name="settings_sell_polling_cron_label">Vlastní plán (CRON)</string>
+    <string name="settings_sell_polling_cron_hint">např. 0 *\/2 * * *</string>
+    <string name="settings_sell_polling_battery_note">Časté kontroly zvyšují spotřebu baterie a počítají se do API limitů burzy.</string>
+
+    <!-- Plan formulář: Rozšíření prodejů -->
+    <string name="plan_form_sell_section_title">Prodeje (volitelné)</string>
+    <string name="plan_form_allow_sells_title">Povolit prodeje pro tento plán</string>
+    <string name="plan_form_target_profit_label">Cíl zisku (volitelné, v %1$s)</string>
+    <string name="plan_form_target_profit_supporting">Detail plánu zobrazí progress bar k tomuto cíli.</string>
+    <string name="plan_form_target_profit_error_invalid">Zadej platné číslo</string>
+    <string name="plan_form_target_profit_error_positive">Cíl musí být kladný</string>
+
+    <!-- Edit plán: Dialog vypnutí prodejů -->
+    <string name="edit_plan_disable_sells_dialog_title">Vypnout prodeje?</string>
+    <string name="edit_plan_disable_sells_dialog_text">Máš %1$d otevřených sell orderů. Vypnutím prodejů se skryje sell sekce, ale ordery na burze zůstávají. Musíš je zrušit ručně přes burzu, nebo zapnutím prodejů a kliknutím Cancel.</string>
+    <string name="edit_plan_disable_sells_confirm">Vypnout</string>
 </resources>

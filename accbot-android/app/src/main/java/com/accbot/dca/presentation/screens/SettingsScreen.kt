@@ -41,8 +41,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.accbot.dca.BuildConfig
 import com.accbot.dca.R
 import com.accbot.dca.data.local.AppTheme
+import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.WithdrawalThreshold
+import com.accbot.dca.presentation.components.FrequencyDropdown
 import java.math.BigDecimal
 import com.accbot.dca.presentation.changelog.ChangelogData
 import com.accbot.dca.presentation.components.AccBotTopAppBar
@@ -690,6 +692,102 @@ fun SettingsScreen(
                 )
             }
 
+            // ── ADVANCED (Sell extension) ──────────────────────────
+            item {
+                Text(
+                    text = stringResource(R.string.settings_advanced),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .padding(top = 24.dp, bottom = 8.dp)
+                        .semantics { heading() }
+                )
+            }
+
+            item {
+                TradingToggleCard(
+                    isEnabled = uiState.tradingEnabled,
+                    onToggle = { viewModel.setTradingEnabled(it) }
+                )
+            }
+
+            if (uiState.tradingEnabled) {
+                item {
+                    SellPollingToggleCard(
+                        isEnabled = uiState.periodicSellPollingEnabled,
+                        onToggle = { enabled ->
+                            viewModel.setPeriodicSellPolling(
+                                enabled = enabled,
+                                frequency = uiState.sellPollingFrequency,
+                                cron = uiState.sellPollingCronExpression,
+                                scheduleConfig = null
+                            )
+                        }
+                    )
+                }
+
+                if (uiState.periodicSellPollingEnabled) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.settings_sell_polling_frequency),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                FrequencyDropdown(
+                                    selectedFrequency = uiState.sellPollingFrequency,
+                                    onFrequencySelected = { newFreq ->
+                                        viewModel.setPeriodicSellPolling(
+                                            enabled = true,
+                                            frequency = newFreq,
+                                            cron = null,
+                                            scheduleConfig = null
+                                        )
+                                    }
+                                )
+                                if (uiState.sellPollingFrequency == DcaFrequency.CUSTOM) {
+                                    var cronInput by rememberSaveable {
+                                        mutableStateOf(uiState.sellPollingCronExpression ?: "")
+                                    }
+                                    OutlinedTextField(
+                                        value = cronInput,
+                                        onValueChange = { newValue ->
+                                            cronInput = newValue
+                                            viewModel.setPeriodicSellPolling(
+                                                enabled = true,
+                                                frequency = DcaFrequency.CUSTOM,
+                                                cron = newValue.ifBlank { null },
+                                                scheduleConfig = null
+                                            )
+                                        },
+                                        label = { Text(stringResource(R.string.settings_sell_polling_cron_label)) },
+                                        placeholder = { Text(stringResource(R.string.settings_sell_polling_cron_hint)) },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                Text(
+                                    text = stringResource(R.string.settings_sell_polling_battery_note),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // ── DANGER ZONE (collapsible) ──────────────────────────
             item {
                 Row(
@@ -1107,6 +1205,68 @@ private fun WithdrawalThresholdDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.common_cancel))
             }
+        }
+    )
+}
+
+@Composable
+internal fun TradingToggleCard(
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    val accent = successColor()
+    val haptic = LocalHapticFeedback.current
+    SettingsCardBase(
+        title = stringResource(R.string.settings_trading_enabled_title),
+        subtitle = stringResource(R.string.settings_trading_enabled_subtitle),
+        icon = Icons.AutoMirrored.Filled.TrendingUp,
+        iconTint = if (isEnabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onToggle(!isEnabled)
+        },
+        cardModifier = Modifier.semantics(mergeDescendants = true) { role = Role.Switch },
+        trailing = {
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = accent,
+                    checkedTrackColor = accent.copy(alpha = 0.5f)
+                )
+            )
+        }
+    )
+}
+
+@Composable
+internal fun SellPollingToggleCard(
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    val accent = successColor()
+    val haptic = LocalHapticFeedback.current
+    SettingsCardBase(
+        title = stringResource(R.string.settings_sell_polling_title),
+        subtitle = stringResource(R.string.settings_sell_polling_subtitle),
+        icon = Icons.Default.Sync,
+        iconTint = if (isEnabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onToggle(!isEnabled)
+        },
+        cardModifier = Modifier.semantics(mergeDescendants = true) { role = Role.Switch },
+        trailing = {
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = accent,
+                    checkedTrackColor = accent.copy(alpha = 0.5f)
+                )
+            )
         }
     )
 }
