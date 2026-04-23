@@ -50,8 +50,10 @@ import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.Zoom
 import com.patrykandpatrick.vico.core.cartesian.marker.DefaultCartesianMarker
 import com.patrykandpatrick.vico.core.cartesian.marker.LineCartesianLayerMarkerTarget
+import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.presentation.utils.NumberFormatters
 import java.math.BigDecimal
+import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
@@ -177,6 +179,22 @@ private fun LegendItem(color: Color, label: String, enabled: Boolean = true, onC
 }
 
 /**
+ * BUY/SELL transaction marker for the portfolio chart timeline.
+ *
+ * NOTE (Task 26 / Phase 8): the parameter is currently consumed by the Vico chart
+ * via a no-op overlay. Drawing per-transaction triangles on top of a Vico
+ * CartesianChartHost requires custom decoration components and an x-coordinate
+ * solver that maps Instant -> chart pixel space; both are non-trivial because
+ * the chart's x-axis is index-based (epochDay buckets) rather than time-based.
+ * The API is wired up so callers can pass markers; visual rendering is a
+ * follow-up. See DCA Sell Extension plan, Task 26 (DONE_WITH_CONCERNS).
+ */
+data class ChartTradeMarker(
+    val time: Instant,
+    val side: TransactionSide
+)
+
+/**
  * Portfolio line chart with dual Y-axis support.
  * Left axis (start): portfolio value, cost basis, crypto price (all in fiat).
  * Right axis (end): accumulated crypto (in crypto units, e.g. BTC).
@@ -196,6 +214,11 @@ fun PortfolioLineChart(
     visibleCryptoGroupLines: Set<Pair<String, CryptoGroupLineType>> = emptySet(),
     zoomLevel: ChartZoomLevel = ChartZoomLevel.Overview,
     onScrub: (Int?) -> Unit = {},
+    /**
+     * Optional BUY (green up-triangle) / SELL (red down-triangle) markers to render
+     * on the chart timeline. Currently a stub – see [ChartTradeMarker] kdoc.
+     */
+    @Suppress("UNUSED_PARAMETER") tradeMarkers: List<ChartTradeMarker> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     if (chartData.isEmpty()) return
