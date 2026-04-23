@@ -263,6 +263,9 @@
     <string name="history_side_buy_label">Nákup</string>
     <string name="history_side_sell_label">Prodej</string>
 
+    <!-- Dashboard - open sells -->
+    <string name="dashboard_open_sells_title">%1$s: %2$d otevřených sell orderů</string>
+
     <!-- Add Plan Screen -->
     <string name="add_plan_title">Vytvořit DCA plán</string>
     <string name="add_plan_select_exchange">Vybrat burzu</string>

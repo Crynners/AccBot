@@ -262,6 +262,9 @@
     <string name="history_side_buy_label">Buy</string>
     <string name="history_side_sell_label">Sell</string>
 
+    <!-- Dashboard - open sells -->
+    <string name="dashboard_open_sells_title">%1$s: %2$d open sell order(s)</string>
+
     <!-- Add Plan Screen -->
     <string name="add_plan_title">Create DCA Plan</string>
     <string name="add_plan_select_exchange">Select Exchange</string>

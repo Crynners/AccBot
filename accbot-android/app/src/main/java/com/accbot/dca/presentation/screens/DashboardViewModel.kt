@@ -14,6 +14,7 @@ import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.data.local.WithdrawalThresholdDao
 import com.accbot.dca.data.local.toDomain
+import com.accbot.dca.domain.model.Transaction
 import com.accbot.dca.data.remote.CryptoData
 import com.accbot.dca.data.remote.FearGreedData
 import com.accbot.dca.data.remote.MarketDataService
@@ -110,7 +111,12 @@ data class DashboardUiState(
     val showMarketPulse: Boolean = true,
     val isMarketPulseExpanded: Boolean = true,
     val networkRetryInfo: NetworkRetryInfo = NetworkRetryInfo(),
-    val missedPurchases: List<MissedPurchaseInfo> = emptyList()
+    val missedPurchases: List<MissedPurchaseInfo> = emptyList(),
+    /**
+     * Open SELL orders grouped by plan id. Empty when trading is off or no
+     * pending sells exist; the dashboard renders one card per non-empty group.
+     */
+    val openSellsByPlan: Map<Long, List<Transaction>> = emptyMap()
 )
 
 @HiltViewModel
@@ -152,6 +158,23 @@ class DashboardViewModel @Inject constructor(
 
     init {
         loadData()
+        observeOpenSells()
+    }
+
+    /**
+     * Continuously observe open (PENDING / PARTIAL) SELL orders so the dashboard
+     * "Open sells" cards update reactively when an order fills, the user cancels,
+     * or a new sell wizard submits a fresh order. Only emits when global trading
+     * is enabled - avoids surfacing the cards for users who haven't opted in.
+     */
+    private fun observeOpenSells() {
+        if (!userPreferences.isTradingEnabled()) return
+        viewModelScope.launch {
+            transactionDao.observeAllOpenSells().collect { entities ->
+                val grouped = entities.map { it.toDomain() }.groupBy { it.planId }
+                _uiState.update { it.copy(openSellsByPlan = grouped) }
+            }
+        }
     }
 
     private fun loadData() {

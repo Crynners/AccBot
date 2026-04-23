@@ -65,6 +65,7 @@ import com.accbot.dca.data.remote.CryptoData
 import com.accbot.dca.data.remote.FearGreedData
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
+import com.accbot.dca.domain.model.Transaction
 import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.presentation.components.CryptoIcon
 import com.accbot.dca.presentation.components.EmptyState
@@ -269,6 +270,20 @@ fun DashboardScreen(
                         compact = true
                     )
 
+                    if (uiState.openSellsByPlan.isNotEmpty()) {
+                        uiState.openSellsByPlan.forEach { (planId, sells) ->
+                            val plan = uiState.activePlans.firstOrNull { it.plan.id == planId }?.plan
+                            if (plan != null) {
+                                OpenSellsSummaryCard(
+                                    planName = plan.name.ifBlank { "${plan.crypto}/${plan.fiat}" },
+                                    fiat = plan.fiat,
+                                    sells = sells,
+                                    onClick = { onNavigateToPlanDetails?.invoke(planId) }
+                                )
+                            }
+                        }
+                    }
+
                     if (uiState.showMarketPulse && (uiState.fearGreedData != null || uiState.athDataByCrypto.isNotEmpty())) {
                         MarketPulseCard(
                             fearGreedData = uiState.fearGreedData,
@@ -398,6 +413,21 @@ fun DashboardScreen(
                         // Phase 7+: route to Exchange Management list rather than deep-linking.
                         onImportViaApi = onNavigateToExchangeManagement?.let { nav -> { nav() } }
                     )
+                }
+
+                // Open SELL orders, grouped per plan
+                if (uiState.openSellsByPlan.isNotEmpty()) {
+                    items(uiState.openSellsByPlan.entries.toList(), key = { it.key }) { entry ->
+                        val plan = uiState.activePlans.firstOrNull { it.plan.id == entry.key }?.plan
+                        if (plan != null) {
+                            OpenSellsSummaryCard(
+                                planName = plan.name.ifBlank { "${plan.crypto}/${plan.fiat}" },
+                                fiat = plan.fiat,
+                                sells = entry.value,
+                                onClick = { onNavigateToPlanDetails?.invoke(plan.id) }
+                            )
+                        }
+                    }
                 }
 
                 // Market Pulse
@@ -1888,6 +1918,68 @@ private fun localizedFearGreedClass(value: Int): String {
         value <= 59 -> stringResource(R.string.fg_class_neutral)
         value <= 79 -> stringResource(R.string.fg_class_greed)
         else -> stringResource(R.string.fg_class_extreme_greed)
+    }
+}
+
+/**
+ * Summary card surfacing all open SELL orders for a single plan. Shown on the
+ * dashboard between Holdings and Market Pulse. Tapping deep-links to the plan
+ * detail screen where the user can cancel or inspect each order.
+ */
+@Composable
+internal fun OpenSellsSummaryCard(
+    planName: String,
+    fiat: String,
+    sells: List<Transaction>,
+    onClick: () -> Unit
+) {
+    if (sells.isEmpty()) return
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.dashboard_open_sells_title,
+                        planName,
+                        sells.size
+                    ),
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            // First sell preview (most recent due to ORDER BY executedAt DESC in DAO).
+            sells.firstOrNull()?.let { tx ->
+                Spacer(modifier = Modifier.height(4.dp))
+                val priceText = tx.limitPrice?.let { NumberFormatters.fiat(it) } ?: "-"
+                val amount = tx.requestedCryptoAmount ?: tx.cryptoAmount
+                Text(
+                    text = "${NumberFormatters.crypto(amount)} ${tx.crypto} @ $priceText $fiat",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
