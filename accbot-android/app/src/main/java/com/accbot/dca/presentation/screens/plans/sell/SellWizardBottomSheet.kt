@@ -15,17 +15,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -79,10 +83,7 @@ fun SellWizardBottomSheet(
     ) {
         when (state.step) {
             SellWizardViewModel.Step.INPUT -> SellInputStep(state, viewModel, onDismiss)
-            SellWizardViewModel.Step.CONFIRM -> {
-                // Filled in by Task 25; for now fall back to input so the flow is safe.
-                SellInputStep(state, viewModel, onDismiss)
-            }
+            SellWizardViewModel.Step.CONFIRM -> SellConfirmStep(state, viewModel)
         }
     }
 }
@@ -274,6 +275,125 @@ private fun SellInputStep(
         }
 
         Spacer(Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun SellConfirmStep(
+    state: SellWizardViewModel.UiState,
+    vm: SellWizardViewModel
+) {
+    val amountBD = state.amountInput.toBigDecimalOrNull() ?: BigDecimal.ZERO
+    val priceBD = state.priceInput.toBigDecimalOrNull() ?: BigDecimal.ZERO
+    val proceeds = (amountBD * priceBD).setScale(2, RoundingMode.HALF_UP)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = vm::back) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zpet")
+            }
+            Text(
+                "Potvrdit prodej",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        SummaryRow("Burza:", state.exchangeName)
+        SummaryRow("Plan:", state.planName)
+        SummaryRow("Smer:", "PRODEJ")
+        SummaryRow("Mnozstvi:", "${NumberFormatters.crypto(amountBD)} ${state.crypto}")
+        SummaryRow("Limitni cena:", "${NumberFormatters.fiat(priceBD)} ${state.fiat}")
+        SummaryRow("Ziskate:", "${NumberFormatters.fiat(proceeds)} ${state.fiat}")
+
+        Spacer(Modifier.height(16.dp))
+        WarningBanner(
+            "Tato akce odesle prikaz na ${state.exchangeName} a nelze ji vratit. Prikaz lze pote zrusit, dokud neni castecne nebo cele zfillovan."
+        )
+
+        state.submitError?.let { err ->
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = err,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = vm::back,
+                enabled = !state.submitting,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Zpet")
+            }
+            Button(
+                onClick = { vm.submit() },
+                enabled = !state.submitting,
+                modifier = Modifier.weight(1f)
+            ) {
+                if (state.submitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = LocalContentColor.current
+                    )
+                } else {
+                    Text("Odeslat")
+                }
+            }
+        }
+
+        Spacer(Modifier.height(32.dp))
+    }
+
+    if (state.showTimeoutDialog) {
+        AlertDialog(
+            onDismissRequest = vm::dismissTimeoutDialog,
+            title = { Text("Nelze overit stav prikazu") },
+            text = {
+                Text(
+                    "Spojeni s burzou selhalo nebo timeoutovalo. Prikaz mohl byt odeslan, ale nelze to potvrdit. Zkontroluj otevrene ordery na burze pres web a v pripade potreby zrus duplicitu."
+                )
+            },
+            confirmButton = {
+                Button(onClick = vm::dismissTimeoutDialog) { Text("OK") }
+            }
+        )
+    }
+}
+
+@Composable
+private fun SummaryRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
