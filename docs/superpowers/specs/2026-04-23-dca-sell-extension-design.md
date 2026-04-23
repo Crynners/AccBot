@@ -127,7 +127,7 @@ Progress fill v UI = `cryptoAmount / requestedCryptoAmount`.
 
 `requestedCryptoAmount` zůstává fixní napříč všemi stavy.
 
-### Room migrace v19 → v20
+### Room migrace v20 → v21
 
 ```sql
 ALTER TABLE dca_plans ADD COLUMN allowSells INTEGER NOT NULL DEFAULT 0;
@@ -471,7 +471,7 @@ UPDATE query s `WHERE status IN ('PENDING', 'PARTIAL')` slouží jako optimistic
 ### Integration
 - Coinmate sandbox: place limit sell pod tržní (instant fill), nad tržní (open), partial fill simulation, cancel
 - Binance testnet: stejný matrix
-- Migration v19 → v20 idempotence
+- Migration v20 → v21 idempotence
 - Backup roundtrip s/bez nových polí
 
 ### Manual (před release)
