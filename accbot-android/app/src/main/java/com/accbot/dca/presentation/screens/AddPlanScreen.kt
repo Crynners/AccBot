@@ -320,7 +320,10 @@ fun AddPlanScreen(
                     onWithdrawalAddressChanged = viewModel.planForm::setWithdrawalAddress,
                     onTargetAmountChanged = viewModel.planForm::setTargetAmount,
                     exchange = cred.selectedExchange,
-                    errorMessage = uiState.errorMessage
+                    errorMessage = uiState.errorMessage,
+                    showSellSection = uiState.tradingEnabled,
+                    onAllowSellsChanged = viewModel.planForm::setAllowSells,
+                    onTargetProfitAmountChanged = viewModel.planForm::setTargetProfitAmount
                 )
 
                 // Create Button

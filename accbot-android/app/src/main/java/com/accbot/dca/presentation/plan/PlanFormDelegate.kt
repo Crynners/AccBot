@@ -35,7 +35,11 @@ data class PlanFormState(
     val addressError: String? = null,
     val targetAmount: String = "",
     val minOrderSize: BigDecimal? = null,
-    val monthlyCostEstimate: MonthlyCostEstimate? = null
+    val monthlyCostEstimate: MonthlyCostEstimate? = null,
+    // Sell-extension (opt-in, gated by global tradingEnabled in the hosting screen)
+    val allowSells: Boolean = false,
+    val targetProfitAmount: String = "",
+    val targetProfitAmountError: String? = null
 ) {
     val amountBelowMinimum: Boolean
         get() {
@@ -54,6 +58,7 @@ data class PlanFormState(
             if (amountBelowMinimum) return false
             if (withdrawalEnabled && !isAddressValid) return false
             if (selectedFrequency == DcaFrequency.CUSTOM && !CronUtils.isValidCron(cronExpression)) return false
+            if (allowSells && targetProfitAmountError != null) return false
             return true
         }
 }
@@ -159,6 +164,23 @@ class PlanFormDelegate(
         _state.update { it.copy(targetAmount = value) }
     }
 
+    fun setAllowSells(value: Boolean) {
+        _state.update { it.copy(allowSells = value) }
+    }
+
+    fun setTargetProfitAmount(raw: String) {
+        val trimmed = raw.trim()
+        val error = when {
+            trimmed.isBlank() -> null // empty = no target, valid
+            trimmed.toBigDecimalOrNull() == null -> "Zadej platne cislo"
+            trimmed.toBigDecimal() <= BigDecimal.ZERO -> "Cil musi byt kladny"
+            else -> null
+        }
+        _state.update {
+            it.copy(targetProfitAmount = raw, targetProfitAmountError = error)
+        }
+    }
+
     /** Initialize form defaults from an exchange (used when exchange is selected). */
     fun initFromExchange(exchange: Exchange) {
         currentExchange = exchange
@@ -186,7 +208,9 @@ class PlanFormDelegate(
         strategy: DcaStrategy,
         withdrawalEnabled: Boolean,
         withdrawalAddress: String,
-        targetAmount: String
+        targetAmount: String,
+        allowSells: Boolean = false,
+        targetProfitAmount: String = ""
     ) {
         currentExchange = exchange
         val cronDesc = if (cronExpression.isNotBlank()) CronUtils.describeCron(cronExpression) else null
@@ -202,7 +226,9 @@ class PlanFormDelegate(
                 selectedStrategy = strategy,
                 withdrawalEnabled = withdrawalEnabled,
                 withdrawalAddress = withdrawalAddress,
-                targetAmount = targetAmount
+                targetAmount = targetAmount,
+                allowSells = allowSells,
+                targetProfitAmount = targetProfitAmount
             )
         }
         updateMinOrderSize()

@@ -44,7 +44,9 @@ class CreateDcaPlanUseCase @Inject constructor(
         withdrawalAddress: String? = null,
         targetAmount: BigDecimal? = null,
         connectionId: Long? = null,
-        name: String = ""
+        name: String = "",
+        allowSells: Boolean = false,
+        targetProfitAmount: BigDecimal? = null
     ) {
         val now = Instant.now()
         val nextExecution = if (frequency == DcaFrequency.CUSTOM && cronExpression != null) {
@@ -78,7 +80,9 @@ class CreateDcaPlanUseCase @Inject constructor(
             createdAt = now,
             nextExecutionAt = nextExecution,
             targetAmount = targetAmount,
-            displayOrder = nextDisplayOrder
+            displayOrder = nextDisplayOrder,
+            allowSells = allowSells,
+            targetProfitAmount = targetProfitAmount
         )
 
         dcaPlanDao.insertPlan(plan)
