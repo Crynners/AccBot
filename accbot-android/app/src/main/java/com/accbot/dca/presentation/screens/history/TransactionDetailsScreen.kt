@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
+import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.ErrorState
@@ -37,6 +38,8 @@ import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.DateFormatters
 import com.accbot.dca.presentation.utils.NumberFormatters
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,12 +50,18 @@ fun TransactionDetailsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(transactionId) {
         viewModel.loadTransaction(transactionId)
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.snackbar.collect { msg -> snackbarHostState.showSnackbar(msg) }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             AccBotTopAppBar(
                 title = stringResource(R.string.transaction_details_title),
@@ -184,6 +193,62 @@ fun TransactionDetailsScreen(
                                     label = stringResource(R.string.transaction_details_order_id),
                                     value = transaction.exchangeOrderId,
                                     context = context
+                                )
+                            }
+                        }
+                    }
+
+                    // SELL-specific section (limit price, fill progress, cancel)
+                    if (transaction.side == TransactionSide.SELL) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        SellDetailsCard(transaction = transaction)
+
+                        if (transaction.status == TransactionStatus.PENDING ||
+                            transaction.status == TransactionStatus.PARTIAL
+                        ) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            var showConfirm by remember { mutableStateOf(false) }
+                            Button(
+                                onClick = { showConfirm = true },
+                                enabled = !uiState.isCancelling,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                )
+                            ) {
+                                if (uiState.isCancelling) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onError
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                Text(stringResource(R.string.transaction_details_cancel_order))
+                            }
+
+                            if (showConfirm) {
+                                AlertDialog(
+                                    onDismissRequest = { showConfirm = false },
+                                    title = { Text(stringResource(R.string.transaction_details_cancel_confirm_title)) },
+                                    text = { Text(stringResource(R.string.transaction_details_cancel_confirm_text)) },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            showConfirm = false
+                                            viewModel.cancelOrder(transaction.id)
+                                        }) {
+                                            Text(
+                                                stringResource(R.string.transaction_details_cancel_order),
+                                                color = Error
+                                            )
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showConfirm = false }) {
+                                            Text(stringResource(R.string.common_back))
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -337,6 +402,59 @@ private fun DetailRow(
                 text = value,
                 fontWeight = FontWeight.Medium
             )
+        }
+    }
+}
+
+@Composable
+private fun SellDetailsCard(transaction: com.accbot.dca.domain.model.Transaction) {
+    val requested = transaction.requestedCryptoAmount ?: BigDecimal.ZERO
+    val filled = transaction.cryptoAmount
+    val progressPct = if (requested > BigDecimal.ZERO) {
+        filled.divide(requested, 4, RoundingMode.HALF_UP)
+            .multiply(BigDecimal(100))
+            .toInt()
+    } else 0
+    val showAvgFill = filled.signum() > 0 && transaction.price.signum() > 0
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.transaction_details_sell_section),
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmall
+            )
+
+            DetailRow(
+                icon = Icons.Default.PriceCheck,
+                label = stringResource(R.string.transaction_details_limit_price),
+                value = transaction.limitPrice?.let {
+                    "${NumberFormatters.fiat(it)} ${transaction.fiat}/${transaction.crypto}"
+                } ?: "-"
+            )
+
+            DetailRow(
+                icon = Icons.Default.Done,
+                label = stringResource(R.string.transaction_details_filled),
+                value = "${NumberFormatters.crypto(filled)} / ${NumberFormatters.crypto(requested)} ${transaction.crypto} (${progressPct}%)"
+            )
+
+            if (showAvgFill) {
+                DetailRow(
+                    icon = Icons.AutoMirrored.Filled.TrendingUp,
+                    label = stringResource(R.string.transaction_details_avg_fill_price),
+                    value = "${NumberFormatters.fiat(transaction.price)} ${transaction.fiat}/${transaction.crypto}"
+                )
+            }
         }
     }
 }

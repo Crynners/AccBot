@@ -437,6 +437,13 @@
     <string name="transaction_status_pending">Pending</string>
     <string name="transaction_status_partial">Partially Filled</string>
     <string name="transaction_details_at">at</string>
+    <string name="transaction_details_sell_section">Sell order</string>
+    <string name="transaction_details_limit_price">Limit price</string>
+    <string name="transaction_details_filled">Filled</string>
+    <string name="transaction_details_avg_fill_price">Avg fill price</string>
+    <string name="transaction_details_cancel_order">Cancel order</string>
+    <string name="transaction_details_cancel_confirm_title">Cancel order?</string>
+    <string name="transaction_details_cancel_confirm_text">Are you sure you want to cancel this limit sell order?</string>
 
     <!-- Credentials Input -->
     <string name="credentials_client_id">Client ID</string>

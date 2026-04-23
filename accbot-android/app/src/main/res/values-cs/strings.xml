@@ -438,6 +438,13 @@
     <string name="transaction_status_pending">Čekající</string>
     <string name="transaction_status_partial">Částečně vyplněno</string>
     <string name="transaction_details_at">v</string>
+    <string name="transaction_details_sell_section">Sell order</string>
+    <string name="transaction_details_limit_price">Limitní cena</string>
+    <string name="transaction_details_filled">Vyplněno</string>
+    <string name="transaction_details_avg_fill_price">Průměrná cena plnění</string>
+    <string name="transaction_details_cancel_order">Zrušit order</string>
+    <string name="transaction_details_cancel_confirm_title">Zrušit order?</string>
+    <string name="transaction_details_cancel_confirm_text">Opravdu zrušit limitní prodej?</string>
 
     <!-- Credentials Input -->
     <string name="credentials_client_id">Client ID</string>
