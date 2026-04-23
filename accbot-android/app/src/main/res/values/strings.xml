@@ -255,6 +255,12 @@
     <string name="history_filter_date_to">To</string>
     <string name="history_search">Search transactions…</string>
     <string name="history_filter_date_select">Select date</string>
+    <string name="history_side_all">All</string>
+    <string name="history_side_buys">Buys</string>
+    <string name="history_side_sells">Sells</string>
+    <string name="history_side_pending">Pending</string>
+    <string name="history_side_buy_label">Buy</string>
+    <string name="history_side_sell_label">Sell</string>
 
     <!-- Add Plan Screen -->
     <string name="add_plan_title">Create DCA Plan</string>

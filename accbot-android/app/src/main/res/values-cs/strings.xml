@@ -256,6 +256,12 @@
     <string name="history_filter_date_to">Do</string>
     <string name="history_search">Hledat transakce…</string>
     <string name="history_filter_date_select">Vybrat datum</string>
+    <string name="history_side_all">Vše</string>
+    <string name="history_side_buys">Nákupy</string>
+    <string name="history_side_sells">Prodeje</string>
+    <string name="history_side_pending">Čekající</string>
+    <string name="history_side_buy_label">Nákup</string>
+    <string name="history_side_sell_label">Prodej</string>
 
     <!-- Add Plan Screen -->
     <string name="add_plan_title">Vytvořit DCA plán</string>

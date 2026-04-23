@@ -29,6 +29,7 @@ import androidx.core.content.FileProvider
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.data.local.TransactionEntity
+import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.EmptyState
@@ -230,6 +231,12 @@ fun HistoryScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
+
+            // Side filter chips (Vse / Nakupy / Prodeje / Pending)
+            SideFilterChipsRow(
+                selected = uiState.filter.sideFilter,
+                onSelect = { viewModel.setSideFilter(it) }
+            )
 
             // Active filter chips
             if (hasActiveFilter) {
@@ -703,11 +710,39 @@ private fun FilterBottomSheet(
 }
 
 @Composable
+private fun SideFilterChipsRow(
+    selected: HistorySideFilter,
+    onSelect: (HistorySideFilter) -> Unit
+) {
+    val entries = listOf(
+        HistorySideFilter.ALL to stringResource(R.string.history_side_all),
+        HistorySideFilter.BUYS to stringResource(R.string.history_side_buys),
+        HistorySideFilter.SELLS to stringResource(R.string.history_side_sells),
+        HistorySideFilter.PENDING to stringResource(R.string.history_side_pending)
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        entries.forEach { (side, label) ->
+            FilterChip(
+                selected = selected == side,
+                onClick = { onSelect(side) },
+                label = { Text(label) }
+            )
+        }
+    }
+}
+
+@Composable
 internal fun TransactionCard(
     transaction: TransactionEntity,
     onClick: () -> Unit
 ) {
     val dateFormatter = DateFormatters.transactionDateTime
+    val isSell = transaction.side == TransactionSide.SELL
 
     Card(
         modifier = Modifier
@@ -726,6 +761,16 @@ internal fun TransactionCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Direction badge: green ArrowDownward for BUY, red ArrowUpward for SELL.
+                    Icon(
+                        imageVector = if (isSell) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
+                        contentDescription = stringResource(
+                            if (isSell) R.string.history_side_sell_label else R.string.history_side_buy_label
+                        ),
+                        tint = if (isSell) Error else successColor(),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
                     Icon(
                         imageVector = when (transaction.status) {
                             TransactionStatus.COMPLETED -> Icons.Default.CheckCircle
@@ -784,11 +829,16 @@ internal fun TransactionCard(
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                if (transaction.status == TransactionStatus.COMPLETED) {
+                // Amount signs: BUY = +crypto/-fiat, SELL = -crypto/+fiat.
+                // Only show filled crypto for COMPLETED and PARTIAL (in-flight PENDING has 0).
+                val showCryptoLine = transaction.status == TransactionStatus.COMPLETED ||
+                    (transaction.status == TransactionStatus.PARTIAL && transaction.cryptoAmount.signum() > 0)
+                if (showCryptoLine) {
+                    val cryptoSign = if (isSell) "-" else "+"
                     Text(
-                        text = "+${NumberFormatters.crypto(transaction.cryptoAmount)}",
+                        text = "$cryptoSign${NumberFormatters.crypto(transaction.cryptoAmount)}",
                         fontWeight = FontWeight.SemiBold,
-                        color = successColor()
+                        color = if (isSell) Error else successColor()
                     )
                     Text(
                         text = transaction.crypto,
@@ -799,10 +849,11 @@ internal fun TransactionCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
+                val fiatSign = if (isSell) "+" else "-"
                 Text(
-                    text = "-${NumberFormatters.fiat(transaction.fiatAmount)} ${transaction.fiat}",
+                    text = "$fiatSign${NumberFormatters.fiat(transaction.fiatAmount)} ${transaction.fiat}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isSell) successColor() else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 // Chevron to indicate clickable

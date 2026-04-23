@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.TransactionEntity
+import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.usecase.CsvExportResult
 import com.accbot.dca.domain.usecase.ExportTransactionsToCsvUseCase
@@ -27,13 +28,20 @@ enum class SortOption {
     PRICE_LOWEST
 }
 
+/**
+ * Primary BUY/SELL/PENDING filter chips shown at the top of HistoryScreen.
+ * Applied in memory over the result of the SQL-level HistoryFilter below.
+ */
+enum class HistorySideFilter { ALL, BUYS, SELLS, PENDING }
+
 data class HistoryFilter(
     val crypto: String? = null,
     val exchange: String? = null,
     val status: TransactionStatus? = null,
     val dateFrom: Long? = null,
     val dateTo: Long? = null,
-    val searchQuery: String = ""
+    val searchQuery: String = "",
+    val sideFilter: HistorySideFilter = HistorySideFilter.ALL
 )
 
 /**
@@ -106,7 +114,14 @@ class HistoryViewModel @Inject constructor(
                     NumberFormatters.fiat(tx.fiatAmount), NumberFormatters.crypto(tx.cryptoAmount),
                     tx.exchangeOrderId ?: "", tx.errorMessage ?: ""
                 ).any { it.contains(filter.searchQuery, ignoreCase = true) }
-                matchesDates && matchesSearch
+                val matchesSide = when (filter.sideFilter) {
+                    HistorySideFilter.ALL -> true
+                    HistorySideFilter.BUYS -> tx.side == TransactionSide.BUY
+                    HistorySideFilter.SELLS -> tx.side == TransactionSide.SELL
+                    HistorySideFilter.PENDING -> tx.status == TransactionStatus.PENDING ||
+                        tx.status == TransactionStatus.PARTIAL
+                }
+                matchesDates && matchesSearch && matchesSide
             }
 
             val sorted = when (sortOption) {
@@ -164,8 +179,14 @@ class HistoryViewModel @Inject constructor(
         _filterState.value = filter
     }
 
+    fun setSideFilter(side: HistorySideFilter) {
+        _filterState.value = _filterState.value.copy(sideFilter = side)
+    }
+
     fun clearFilter() {
-        _filterState.value = HistoryFilter()
+        // Reset everything *except* the top-level BUY/SELL/PENDING chip - users
+        // typically want that chip as a persistent mode, not a one-off filter.
+        _filterState.value = HistoryFilter(sideFilter = _filterState.value.sideFilter)
     }
 
     fun setSortOption(option: SortOption) {
