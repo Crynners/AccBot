@@ -26,6 +26,8 @@ class CoinmateApi(
 
     override val exchange = Exchange.COINMATE
 
+    override val supportsLimitSell: Boolean = true
+
     // Coinmate taker fee: 0.35% (same as .NET CoinmateAPI.getTakerFee())
     private val takerFeeRate = BigDecimal("0.0035")
 
@@ -200,6 +202,193 @@ class CoinmateApi(
             }
         }
         return null
+    }
+
+    override suspend fun limitSell(
+        crypto: String,
+        fiat: String,
+        cryptoAmount: BigDecimal,
+        limitPrice: BigDecimal
+    ): DcaResult = withContext(Dispatchers.IO) {
+        try {
+            val pair = "${crypto}_${fiat}"
+            val nonce = System.currentTimeMillis()
+            val signature = createSignature(nonce)
+
+            val formBody = FormBody.Builder()
+                .add("clientId", clientId)
+                .add("publicKey", credentials.apiKey)
+                .add("nonce", nonce.toString())
+                .add("signature", signature)
+                .add("currencyPair", pair)
+                // Coinmate expects the crypto amount (not fiat total) for sellLimit
+                .add("amount", cryptoAmount.setScale(8, RoundingMode.DOWN).toPlainString())
+                .add("price", limitPrice.setScale(2, RoundingMode.HALF_UP).toPlainString())
+                .build()
+
+            val request = Request.Builder()
+                .url("$baseUrl/sellLimit")
+                .post(formBody)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: throw Exception("Empty response")
+
+                if (!response.isSuccessful) {
+                    val isRetryable = response.code in 500..599 || response.code == 429
+                    return@withContext DcaResult.Error("HTTP ${response.code}", retryable = isRetryable)
+                }
+
+                val json = JSONObject(body)
+
+                if (json.optBoolean("error", true)) {
+                    val errorMessage = json.optString("errorMessage", "Unknown error")
+                    return@withContext DcaResult.Error(errorMessage, retryable = false)
+                }
+
+                // sellLimit returns the order ID in "data"
+                val orderId = json.get("data").toString()
+
+                DcaResult.Success(
+                    Transaction(
+                        planId = 0, // caller fills in
+                        connectionId = null, // caller fills in
+                        exchange = Exchange.COINMATE,
+                        crypto = crypto,
+                        fiat = fiat,
+                        fiatAmount = BigDecimal.ZERO,
+                        cryptoAmount = BigDecimal.ZERO,
+                        price = limitPrice,
+                        fee = BigDecimal.ZERO,
+                        feeAsset = "",
+                        status = TransactionStatus.PENDING,
+                        exchangeOrderId = orderId,
+                        executedAt = Instant.now(),
+                        side = TransactionSide.SELL,
+                        limitPrice = limitPrice,
+                        requestedCryptoAmount = cryptoAmount
+                    )
+                )
+            }
+        } catch (e: java.io.IOException) {
+            DcaResult.Error(e.message ?: "Network error", retryable = true)
+        } catch (e: Exception) {
+            DcaResult.Error(e.message ?: "Unknown error", retryable = false)
+        }
+    }
+
+    override suspend fun cancelOrder(
+        orderId: String,
+        crypto: String,
+        fiat: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val nonce = System.currentTimeMillis()
+            val signature = createSignature(nonce)
+
+            val formBody = FormBody.Builder()
+                .add("clientId", clientId)
+                .add("publicKey", credentials.apiKey)
+                .add("nonce", nonce.toString())
+                .add("signature", signature)
+                .add("orderId", orderId)
+                .build()
+
+            val request = Request.Builder()
+                .url("$baseUrl/cancelOrder")
+                .post(formBody)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string()
+                    ?: return@withContext Result.failure(java.io.IOException("Empty response"))
+
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(java.io.IOException("HTTP ${response.code}"))
+                }
+
+                val json = JSONObject(body)
+                if (json.optBoolean("error", true)) {
+                    val errorMessage = json.optString("errorMessage", "Cancel failed")
+                    return@withContext Result.failure(java.io.IOException(errorMessage))
+                }
+
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getOrderStatus(
+        orderId: String,
+        crypto: String,
+        fiat: String
+    ): OrderStatusResult? = withContext(Dispatchers.IO) {
+        try {
+            val nonce = System.currentTimeMillis()
+            val signature = createSignature(nonce)
+
+            val formBody = FormBody.Builder()
+                .add("clientId", clientId)
+                .add("publicKey", credentials.apiKey)
+                .add("nonce", nonce.toString())
+                .add("signature", signature)
+                .add("orderId", orderId)
+                .build()
+
+            val request = Request.Builder()
+                .url("$baseUrl/orderById")
+                .post(formBody)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext null
+                if (!response.isSuccessful) return@withContext null
+
+                val json = JSONObject(body)
+                if (json.optBoolean("error", true)) return@withContext null
+
+                val data = json.optJSONObject("data") ?: return@withContext null
+                val status = data.optString("status", "")
+
+                val originalAmount = BigDecimal(data.optString("originalAmount", "0"))
+                val remainingAmount = BigDecimal(data.optString("remainingAmount", "0"))
+                val avgPriceStr = data.optString("avgPrice", "")
+                val avgPrice = if (avgPriceStr.isNotEmpty()) {
+                    try { BigDecimal(avgPriceStr) } catch (_: Exception) { null }
+                } else null
+
+                val filledAmount = (originalAmount - remainingAmount).max(BigDecimal.ZERO)
+                val filledFiat = if (avgPrice != null && filledAmount > BigDecimal.ZERO) {
+                    filledAmount.multiply(avgPrice).setScale(2, RoundingMode.HALF_UP)
+                } else BigDecimal.ZERO
+
+                val mappedStatus = when (status.uppercase()) {
+                    "FILLED" -> TransactionStatus.COMPLETED
+                    "OPEN" -> if (filledAmount > BigDecimal.ZERO) {
+                        TransactionStatus.PARTIAL
+                    } else TransactionStatus.PENDING
+                    "PARTIALLY_FILLED" -> TransactionStatus.PARTIAL
+                    "CANCELLED", "CANCELED", "EXPIRED" ->
+                        if (filledAmount > BigDecimal.ZERO) TransactionStatus.PARTIAL
+                        else TransactionStatus.FAILED
+                    else -> return@withContext null
+                }
+
+                OrderStatusResult(
+                    status = mappedStatus,
+                    filledCryptoAmount = filledAmount,
+                    filledFiatAmount = filledFiat,
+                    avgFillPrice = if (filledAmount > BigDecimal.ZERO) avgPrice else null,
+                    // Coinmate doesn't return aggregate fee on orderById - caller can fetch from tradeHistory if needed
+                    fee = null,
+                    feeAsset = null
+                )
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     override suspend fun getBalance(currency: String): BigDecimal? = withContext(Dispatchers.IO) {
