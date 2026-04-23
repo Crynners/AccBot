@@ -211,7 +211,11 @@ class KrakenApi(
         val price: BigDecimal
     )
 
-    override suspend fun getOrderStatus(orderId: String): Transaction? = withContext(Dispatchers.IO) {
+    override suspend fun getOrderStatus(
+        orderId: String,
+        crypto: String,
+        fiat: String
+    ): OrderStatusResult? = withContext(Dispatchers.IO) {
         try {
             val (_, _, body) = executePrivateRequest("/0/private/QueryOrders", "txid=$orderId&trades=true")
             val json = JSONObject(body)
@@ -222,34 +226,32 @@ class KrakenApi(
             val order = result.optJSONObject(orderId) ?: return@withContext null
             val status = order.optString("status")
 
-            if (status == "closed") {
-                val volExec = BigDecimal(order.optString("vol_exec", "0"))
-                val cost = BigDecimal(order.optString("cost", "0"))
-                val fee = BigDecimal(order.optString("fee", "0"))
-                val price = if (volExec > BigDecimal.ZERO) {
-                    cost.divide(volExec, 8, RoundingMode.HALF_UP)
-                } else BigDecimal.ZERO
+            val volExec = BigDecimal(order.optString("vol_exec", "0"))
+            val cost = BigDecimal(order.optString("cost", "0"))
+            val fee = BigDecimal(order.optString("fee", "0"))
+            val price = if (volExec > BigDecimal.ZERO) {
+                cost.divide(volExec, 8, RoundingMode.HALF_UP)
+            } else BigDecimal.ZERO
 
-                // Parse pair info from order description
-                val descr = order.optJSONObject("descr")
-                val pair = descr?.optString("pair", "") ?: ""
-
-                Transaction(
-                    planId = 0,
-                    exchange = Exchange.KRAKEN,
-                    crypto = "",
-                    fiat = "",
-                    fiatAmount = cost,
-                    cryptoAmount = volExec,
-                    price = price,
-                    fee = fee,
-                    status = TransactionStatus.COMPLETED,
-                    exchangeOrderId = orderId,
-                    executedAt = Instant.now()
-                )
-            } else {
-                null
+            val mappedStatus = when (status) {
+                "closed" -> TransactionStatus.COMPLETED
+                "open", "pending" -> if (volExec > BigDecimal.ZERO) {
+                    TransactionStatus.PARTIAL
+                } else TransactionStatus.PENDING
+                "canceled", "cancelled", "expired" ->
+                    if (volExec > BigDecimal.ZERO) TransactionStatus.PARTIAL
+                    else TransactionStatus.FAILED
+                else -> return@withContext null
             }
+
+            OrderStatusResult(
+                status = mappedStatus,
+                filledCryptoAmount = volExec,
+                filledFiatAmount = cost,
+                avgFillPrice = if (volExec > BigDecimal.ZERO) price else null,
+                fee = fee,
+                feeAsset = fiat
+            )
         } catch (_: Exception) {
             null
         }
