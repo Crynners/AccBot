@@ -5,12 +5,19 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.hilt.work.HiltWorkerFactory
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.UserPreferences
+import com.accbot.dca.domain.usecase.ResolvePendingTransactionsUseCase
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -30,6 +37,16 @@ class AccBotApplication : Application(), Configuration.Provider {
 
     @Inject
     lateinit var credentialsStore: CredentialsStore
+
+    @Inject
+    lateinit var resolvePendingTransactionsUseCase: ResolvePendingTransactionsUseCase
+
+    /**
+     * App-scope coroutine scope for work that outlives any single ViewModel or
+     * Activity (lifecycle-observer callbacks, one-off startup tasks). SupervisorJob
+     * so a single failure doesn't cancel the whole scope.
+     */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -69,6 +86,22 @@ class AccBotApplication : Application(), Configuration.Provider {
                 Log.e(TAG, "Failed to run CredentialsStore migration", e)
             }
         }
+
+        // Poll for PENDING sell-order resolutions every time the app comes to the
+        // foreground. This gives users near-instant updates when they open the app
+        // after a sell has filled, without waiting for the next SellPollingWorker
+        // tick. Fire-and-forget; the use case is a no-op when there are no open sells.
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) {
+                appScope.launch {
+                    try {
+                        resolvePendingTransactionsUseCase()
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Polling on app start failed", e)
+                    }
+                }
+            }
+        })
     }
 
     companion object {
