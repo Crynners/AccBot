@@ -8,11 +8,14 @@ import androidx.room.withTransaction
 import com.accbot.dca.data.local.*
 import com.accbot.dca.data.remote.MarketDataService
 import com.accbot.dca.domain.model.DcaPlan
+import com.accbot.dca.domain.model.PlanPnL
 import com.accbot.dca.domain.model.Transaction
 import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.usecase.ApiImportProgress
 import com.accbot.dca.domain.usecase.ApiImportResultState
+import com.accbot.dca.domain.usecase.CalculatePlanPnLUseCase
+import com.accbot.dca.domain.usecase.CancelSellOrderUseCase
 import com.accbot.dca.domain.usecase.ImportTradeHistoryUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.presentation.utils.NumberFormatters
@@ -70,20 +73,43 @@ class PlanDetailsViewModel @Inject constructor(
     private val exchangeApiFactory: ExchangeApiFactory,
     private val credentialsStore: CredentialsStore,
     private val userPreferences: UserPreferences,
-    private val importTradeHistoryUseCase: ImportTradeHistoryUseCase
+    private val importTradeHistoryUseCase: ImportTradeHistoryUseCase,
+    private val calculatePlanPnLUseCase: CalculatePlanPnLUseCase,
+    private val cancelSellOrderUseCase: CancelSellOrderUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlanDetailsUiState())
     val uiState: StateFlow<PlanDetailsUiState> = _uiState.asStateFlow()
 
+    private val _planPnL = MutableStateFlow<PlanPnL?>(null)
+    val planPnL: StateFlow<PlanPnL?> = _planPnL.asStateFlow()
+
+    private val _openSells = MutableStateFlow<List<Transaction>>(emptyList())
+    val openSells: StateFlow<List<Transaction>> = _openSells.asStateFlow()
+
+    private val _sellUiVisible = MutableStateFlow(false)
+    val sellUiVisible: StateFlow<Boolean> = _sellUiVisible.asStateFlow()
+
+    private val _snackbar = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val snackbar: SharedFlow<String> = _snackbar.asSharedFlow()
+
     private var planId: Long = 0
     private var transactionCollectionJob: Job? = null
+    private var openSellsJob: Job? = null
     private var priceJob: Job? = null
     private var balanceJob: Job? = null
 
     fun loadPlan(planId: Long) {
         this.planId = planId
         transactionCollectionJob?.cancel()
+        openSellsJob?.cancel()
+
+        // Observe open sells for the plan independently of the main transactions flow.
+        openSellsJob = viewModelScope.launch {
+            transactionDao.observeOpenSellsForPlan(planId).collect { entities ->
+                _openSells.value = entities.map { it.toDomain() }
+            }
+        }
 
         transactionCollectionJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -97,6 +123,9 @@ class PlanDetailsViewModel @Inject constructor(
                 }
 
                 val plan = planEntity.toDomain()
+
+                // Compute sell UI visibility: plan opt-in + master switch + exchange capability.
+                _sellUiVisible.value = computeSellUiVisible(plan)
 
                 // Check how many OTHER plans share the same connection (for import warning)
                 val totalPlansOnConnection = dcaPlanDao.countPlansByConnection(planEntity.connectionId)
@@ -142,6 +171,9 @@ class PlanDetailsViewModel @Inject constructor(
                     priceJob = fetchCurrentPrice(plan, totalCrypto, totalInvested)
                     balanceJob?.cancel()
                     balanceJob = fetchFiatBalance(plan)
+
+                    // Recompute PnL whenever transactions change (uses last known spot price).
+                    recomputePnL(planId, _uiState.value.currentPrice)
                 }
             } catch (e: Exception) {
                 _uiState.update {
@@ -176,9 +208,49 @@ class PlanDetailsViewModel @Inject constructor(
                         isPriceLoading = false
                     ) }
                 }
+                // Refresh PnL with the (possibly new) spot price.
+                recomputePnL(plan.id, price)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to fetch price: ${e.message}")
                 _uiState.update { it.copy(isPriceLoading = false) }
+            }
+        }
+    }
+
+    private suspend fun recomputePnL(planId: Long, spot: BigDecimal?) {
+        try {
+            _planPnL.value = calculatePlanPnLUseCase(planId, spot)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to compute PnL: ${e.message}")
+        }
+    }
+
+    /**
+     * Sell UI is shown only when plan opted in, global trading is enabled, and the
+     * exchange implementation actually supports limit sells.
+     */
+    private suspend fun computeSellUiVisible(plan: DcaPlan): Boolean {
+        if (!plan.allowSells) return false
+        if (!userPreferences.isTradingEnabled()) return false
+        return try {
+            val credentials = credentialsStore.getCredentials(
+                plan.connectionId,
+                userPreferences.isSandboxMode()
+            ) ?: return false
+            exchangeApiFactory.create(credentials).supportsLimitSell
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to check limit-sell support: ${e.message}")
+            false
+        }
+    }
+
+    fun cancelSell(txId: Long) {
+        viewModelScope.launch {
+            val result = cancelSellOrderUseCase(txId)
+            if (result.isFailure) {
+                _snackbar.emit(
+                    "Zruseni orderu selhalo: ${result.exceptionOrNull()?.message ?: "neznama chyba"}"
+                )
             }
         }
     }

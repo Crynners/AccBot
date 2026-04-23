@@ -30,6 +30,9 @@ import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.presentation.components.*
+import com.accbot.dca.presentation.screens.plans.components.OpenSellsList
+import com.accbot.dca.presentation.screens.plans.components.PnLCard
+import com.accbot.dca.presentation.screens.plans.sell.SellWizardBottomSheet
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -50,6 +53,9 @@ fun PlanDetailsScreen(
     viewModel: PlanDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sellUiVisible by viewModel.sellUiVisible.collectAsStateWithLifecycle()
+    val planPnL by viewModel.planPnL.collectAsStateWithLifecycle()
+    val openSells by viewModel.openSells.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
@@ -59,10 +65,22 @@ fun PlanDetailsScreen(
     var showDeleteTransactionsDialog by rememberSaveable { mutableStateOf(false) }
     var deleteTransactionsConfirmText by rememberSaveable { mutableStateOf("") }
     var dangerZoneExpanded by rememberSaveable { mutableStateOf(false) }
+    var sellWizardOpen by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(planId) {
         viewModel.loadPlan(planId)
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.snackbar.collect { msg -> snackbarHostState.showSnackbar(msg) }
+    }
+
+    if (sellWizardOpen) {
+        SellWizardBottomSheet(
+            planId = planId,
+            onDismiss = { sellWizardOpen = false }
+        )
     }
 
     // Delete confirmation dialog
@@ -709,6 +727,47 @@ fun PlanDetailsScreen(
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    // 4.5 Sell section (P&L card, open orders, create-sell button).
+                    // Shown only when plan opted in + global trading enabled + exchange supports it.
+                    if (sellUiVisible) {
+                        planPnL?.let { pnl ->
+                            item {
+                                PnLCard(
+                                    pnl = pnl,
+                                    fiat = plan.fiat,
+                                    crypto = plan.crypto,
+                                    targetAmount = plan.targetProfitAmount
+                                )
+                            }
+                        }
+
+                        if (openSells.isNotEmpty()) {
+                            item {
+                                OpenSellsList(
+                                    openSells = openSells,
+                                    onCancelClick = viewModel::cancelSell
+                                )
+                            }
+                        }
+
+                        item {
+                            val heldCrypto = planPnL?.currentCryptoHeld ?: BigDecimal.ZERO
+                            Button(
+                                onClick = { sellWizardOpen = true },
+                                enabled = heldCrypto > BigDecimal.ZERO,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Sell,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.plan_details_create_sell_order))
                             }
                         }
                     }
