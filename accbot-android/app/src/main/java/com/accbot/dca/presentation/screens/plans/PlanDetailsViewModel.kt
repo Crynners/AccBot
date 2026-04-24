@@ -60,7 +60,13 @@ data class PlanDetailsUiState(
     val showImportDialog: Boolean = false,
     val importSinceMillis: Long? = null,
     /** Number of OTHER plans on the same connection. When > 0, import dialog shows a warning. */
-    val otherPlansOnSameConnection: Int = 0
+    val otherPlansOnSameConnection: Int = 0,
+    /**
+     * When non-null, indicates a plan-delete attempt was blocked because the plan still has
+     * the given number of open sell orders. UI should show a blocking dialog explaining the
+     * user must cancel them first.
+     */
+    val deleteBlockedOpenSells: Int? = null
 )
 
 @HiltViewModel
@@ -326,6 +332,14 @@ class PlanDetailsViewModel @Inject constructor(
     fun deletePlan(onDeleted: () -> Unit) {
         viewModelScope.launch {
             try {
+                // Block delete when the plan still has open sell orders on the exchange.
+                // Without this guard, the user would lose the FK link to the order rows and
+                // any subsequent fill polling would silently fail.
+                val openSellsCount = transactionDao.observeOpenSellsForPlan(planId).first().size
+                if (openSellsCount > 0) {
+                    _uiState.update { it.copy(deleteBlockedOpenSells = openSellsCount) }
+                    return@launch
+                }
                 database.withTransaction {
                     transactionDao.deleteTransactionsByPlanId(planId)
                     dcaPlanDao.deletePlanById(planId)
@@ -336,6 +350,10 @@ class PlanDetailsViewModel @Inject constructor(
                 _uiState.update { it.copy(error = "Failed to delete plan") }
             }
         }
+    }
+
+    fun dismissDeleteBlockedDialog() {
+        _uiState.update { it.copy(deleteBlockedOpenSells = null) }
     }
 
     fun showImportDialog() {

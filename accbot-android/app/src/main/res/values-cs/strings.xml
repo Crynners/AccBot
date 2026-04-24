@@ -323,6 +323,8 @@
     <string name="plan_details_delete_transactions_button">Smazat všechny transakce</string>
     <string name="plan_details_delete_transactions_success">%1$d transakcí smazáno</string>
     <string name="plan_details_create_sell_order">+ Vytvořit prodejní příkaz</string>
+    <string name="plan_details_delete_blocked_title">Nelze smazat plán</string>
+    <string name="plan_details_delete_blocked_text">Tento plán má %1$d otevřených sell orderů. Zruš je nejdřív, než plán smažeš.</string>
 
     <!-- Edit Plan Screen -->
     <string name="edit_plan_title">Upravit plán</string>

@@ -205,6 +205,20 @@ fun PlanDetailsScreen(
         ApiImportResultDialog(result = result, onDismiss = { viewModel.dismissImportResult() })
     }
 
+    // Delete blocked: plan still has open sell orders. User must cancel them first.
+    uiState.deleteBlockedOpenSells?.let { count ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDeleteBlockedDialog() },
+            title = { Text(stringResource(R.string.plan_details_delete_blocked_title)) },
+            text = { Text(stringResource(R.string.plan_details_delete_blocked_text, count)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissDeleteBlockedDialog() }) {
+                    Text(stringResource(R.string.common_done))
+                }
+            }
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {

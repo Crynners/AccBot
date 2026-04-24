@@ -322,6 +322,8 @@
     <string name="plan_details_delete_transactions_button">Delete All Transactions</string>
     <string name="plan_details_delete_transactions_success">%1$d transactions deleted</string>
     <string name="plan_details_create_sell_order">+ Vytvorit prodejni prikaz</string>
+    <string name="plan_details_delete_blocked_title">Cannot delete plan</string>
+    <string name="plan_details_delete_blocked_text">This plan has %1$d open sell order(s). Cancel them first before deleting the plan.</string>
 
     <!-- Edit Plan Screen -->
     <string name="edit_plan_title">Edit Plan</string>
