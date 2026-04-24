@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -56,6 +57,7 @@ fun PlanDetailsScreen(
     val sellUiVisible by viewModel.sellUiVisible.collectAsStateWithLifecycle()
     val planPnL by viewModel.planPnL.collectAsStateWithLifecycle()
     val openSells by viewModel.openSells.collectAsStateWithLifecycle()
+    val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
@@ -260,10 +262,16 @@ fun PlanDetailsScreen(
             uiState.plan != null -> {
                 val plan = uiState.plan!!
 
-                LazyColumn(
+                PullToRefreshBox(
+                    isRefreshing = refreshing,
+                    onRefresh = { viewModel.refresh() },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
+                ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -961,6 +969,7 @@ fun PlanDetailsScreen(
 
                     item { Spacer(modifier = Modifier.height(32.dp)) }
                 }
+                } // PullToRefreshBox
             }
         }
     }

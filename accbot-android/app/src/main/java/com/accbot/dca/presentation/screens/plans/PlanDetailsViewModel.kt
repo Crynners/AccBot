@@ -17,6 +17,7 @@ import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.domain.usecase.CalculatePlanPnLUseCase
 import com.accbot.dca.domain.usecase.CancelSellOrderUseCase
 import com.accbot.dca.domain.usecase.ImportTradeHistoryUseCase
+import com.accbot.dca.domain.usecase.ResolvePendingTransactionsUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.presentation.utils.NumberFormatters
 import com.accbot.dca.R
@@ -81,7 +82,8 @@ class PlanDetailsViewModel @Inject constructor(
     private val userPreferences: UserPreferences,
     private val importTradeHistoryUseCase: ImportTradeHistoryUseCase,
     private val calculatePlanPnLUseCase: CalculatePlanPnLUseCase,
-    private val cancelSellOrderUseCase: CancelSellOrderUseCase
+    private val cancelSellOrderUseCase: CancelSellOrderUseCase,
+    private val resolvePendingTransactionsUseCase: ResolvePendingTransactionsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlanDetailsUiState())
@@ -98,6 +100,9 @@ class PlanDetailsViewModel @Inject constructor(
 
     private val _snackbar = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val snackbar: SharedFlow<String> = _snackbar.asSharedFlow()
+
+    private val _refreshing = MutableStateFlow(false)
+    val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
 
     private var planId: Long = 0
     private var transactionCollectionJob: Job? = null
@@ -247,6 +252,24 @@ class PlanDetailsViewModel @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "Failed to check limit-sell support: ${e.message}")
             false
+        }
+    }
+
+    /**
+     * Pull-to-refresh on plan-detail. Polls the exchange for fill status of any
+     * pending sell (or pending buy) orders for this plan; the underlying Flow
+     * collectors then push the updated rows back to the UI automatically.
+     */
+    fun refresh() {
+        viewModelScope.launch {
+            _refreshing.value = true
+            try {
+                resolvePendingTransactionsUseCase()
+            } catch (e: Exception) {
+                Log.w(TAG, "Pull-to-refresh failed", e)
+            } finally {
+                _refreshing.value = false
+            }
         }
     }
 
