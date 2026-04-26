@@ -1,6 +1,7 @@
 package com.accbot.dca.data.local
 
 import android.util.Log
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -198,6 +199,7 @@ data class DcaPlanEntity(
      * Opt-in per-plan toggle for sell extension. When true (and global trading is enabled),
      * plan-detail shows P&L card, open sell orders list, and sell wizard button.
      */
+    @ColumnInfo(defaultValue = "0")
     val allowSells: Boolean = false,
     /**
      * Optional profit goal (in [fiat]). When set, plan-detail shows progress bar toward this.
@@ -220,7 +222,8 @@ data class DcaPlanEntity(
         Index(value = ["executedAt"]),
         Index(value = ["planId", "status"]),
         Index(value = ["crypto", "fiat", "status"]),
-        Index(value = ["fiat", "status"])
+        Index(value = ["fiat", "status"]),
+        Index(value = ["planId", "side", "status"])
     ]
 )
 @TypeConverters(Converters::class)
@@ -251,6 +254,7 @@ data class TransactionEntity(
     /**
      * BUY for DCA purchases (default), SELL for limit sell orders placed via sell extension.
      */
+    @ColumnInfo(defaultValue = "BUY")
     val side: TransactionSide = TransactionSide.BUY,
     /**
      * Requested limit price for SELL orders; null for market BUYs.

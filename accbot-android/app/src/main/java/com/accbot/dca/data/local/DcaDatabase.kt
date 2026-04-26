@@ -376,14 +376,19 @@ abstract class DcaDatabase : RoomDatabase() {
 
         // Migration from version 20 to 21: Add sell extension fields to dca_plans and transactions.
         // Enables opt-in limit sell orders, P&L tracking, and optional profit targets.
+        //
+        // Defaults: allowSells/side use ColumnInfo defaultValue (must match SQL DEFAULT exactly).
+        // Nullable columns intentionally OMIT `DEFAULT NULL` - Room schema validator treats
+        // nullable-with-no-Kotlin-default as "no SQL default", and explicit DEFAULT NULL
+        // would cause a schema mismatch.
         private val MIGRATION_20_21 = object : Migration(20, 21) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE dca_plans ADD COLUMN allowSells INTEGER NOT NULL DEFAULT 0")
-                database.execSQL("ALTER TABLE dca_plans ADD COLUMN targetProfitAmount TEXT DEFAULT NULL")
+                database.execSQL("ALTER TABLE dca_plans ADD COLUMN targetProfitAmount TEXT")
                 database.execSQL("ALTER TABLE transactions ADD COLUMN side TEXT NOT NULL DEFAULT 'BUY'")
-                database.execSQL("ALTER TABLE transactions ADD COLUMN limitPrice TEXT DEFAULT NULL")
-                database.execSQL("ALTER TABLE transactions ADD COLUMN requestedCryptoAmount TEXT DEFAULT NULL")
-                database.execSQL("CREATE INDEX IF NOT EXISTS idx_tx_plan_side_status ON transactions(planId, side, status)")
+                database.execSQL("ALTER TABLE transactions ADD COLUMN limitPrice TEXT")
+                database.execSQL("ALTER TABLE transactions ADD COLUMN requestedCryptoAmount TEXT")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_planId_side_status ON transactions(planId, side, status)")
             }
         }
 
