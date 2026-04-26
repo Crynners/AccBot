@@ -11,6 +11,9 @@ import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.data.local.UserPreferences
 // TransactionStatus filtering now done in DAO query
 import com.accbot.dca.domain.usecase.CalculateChartDataUseCase
+import com.accbot.dca.domain.usecase.CancelSellOrderUseCase
+import com.accbot.dca.domain.model.Transaction
+import com.accbot.dca.data.local.toDomain
 import com.accbot.dca.domain.usecase.ChartDataPoint
 import com.accbot.dca.domain.usecase.ChartZoomLevel
 import com.accbot.dca.domain.usecase.SyncDailyPricesUseCase
@@ -98,7 +101,13 @@ data class PortfolioUiState(
      * Null when current price is unavailable (matches the existing chart-loading
      * pattern where ROI fields are also null until prices arrive).
      */
-    val netPnL: BigDecimal? = null
+    val netPnL: BigDecimal? = null,
+    /**
+     * True when the currently selected page is a [PairPage.Plan] AND the plan has
+     * `allowSells = true`. Drives visibility of the open-orders list and chart
+     * horizontal lines on the per-plan page.
+     */
+    val currentPlanAllowsSells: Boolean = false
 )
 
 @HiltViewModel
@@ -108,7 +117,8 @@ class PortfolioViewModel @Inject constructor(
     private val dcaPlanDao: DcaPlanDao,
     private val syncDailyPricesUseCase: SyncDailyPricesUseCase,
     private val calculateChartDataUseCase: CalculateChartDataUseCase,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val cancelSellOrderUseCase: CancelSellOrderUseCase
 ) : ViewModel() {
 
     // Consumed once on first loadPortfolio() and then nulled out so a process-death
@@ -126,6 +136,28 @@ class PortfolioViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PortfolioUiState())
     val uiState: StateFlow<PortfolioUiState> = _uiState.asStateFlow()
+
+    /**
+     * Stream of open (PENDING / PARTIAL) sell-order transactions for the currently
+     * selected per-plan page. Empty when the page is Aggregate, the plan has
+     * allowSells=false, or no open sells exist. Drives both the chart's horizontal
+     * limit-price lines (Task B) and the collapsible open-orders list (Task C).
+     */
+    private val _openSells = MutableStateFlow<List<Transaction>>(emptyList())
+    val openSells: StateFlow<List<Transaction>> = _openSells.asStateFlow()
+
+    /**
+     * Convenience derived flow exposing only the sorted limit prices for the
+     * chart's horizontal lines.
+     */
+    val openSellLimitPrices: StateFlow<List<BigDecimal>> = openSells
+        .map { txs -> txs.mapNotNull { it.limitPrice } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _snackbar = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val snackbar: SharedFlow<String> = _snackbar.asSharedFlow()
+
+    private var openSellsJob: Job? = null
 
     private var completedTransactions: List<TransactionEntity> = emptyList()
     /**
@@ -227,6 +259,7 @@ class PortfolioViewModel @Inject constructor(
                 }
 
                 updateNavigationState()
+                refreshOpenSellsForCurrentPage()
                 syncPricesAndLoadChart()
                 lastLoadedAt = System.currentTimeMillis()
             } catch (e: CancellationException) {
@@ -276,6 +309,7 @@ class PortfolioViewModel @Inject constructor(
                     )
                 }
                 updateNavigationState()
+                refreshOpenSellsForCurrentPage()
                 lastTransactionsFetchedAt = System.currentTimeMillis()
             } catch (e: CancellationException) {
                 throw e
@@ -412,6 +446,50 @@ class PortfolioViewModel @Inject constructor(
         }
         updateNavigationState()
         loadChartData()
+        refreshOpenSellsForCurrentPage()
+    }
+
+    /**
+     * (Re)subscribe to the open-sells Flow for the currently selected page.
+     * Cancels any prior subscription so we never have two collectors competing
+     * to push into [_openSells]. Aggregate pages and plans without `allowSells`
+     * yield an empty list.
+     */
+    private fun refreshOpenSellsForCurrentPage() {
+        openSellsJob?.cancel()
+        val page = _uiState.value.pages.getOrNull(_uiState.value.selectedPageIndex)
+        if (page !is PairPage.Plan) {
+            _openSells.value = emptyList()
+            _uiState.update { it.copy(currentPlanAllowsSells = false) }
+            return
+        }
+        val planEntity = cachedDbPlans.firstOrNull { it.id == page.planId }
+        val allowSells = planEntity?.allowSells == true
+        _uiState.update { it.copy(currentPlanAllowsSells = allowSells) }
+        if (!allowSells) {
+            _openSells.value = emptyList()
+            return
+        }
+        openSellsJob = viewModelScope.launch {
+            transactionDao.observeOpenSellsForPlan(page.planId).collect { entities ->
+                _openSells.value = entities.map { it.toDomain() }
+            }
+        }
+    }
+
+    /**
+     * Cancel an open limit-sell order for the currently visible plan. On failure
+     * a localized message is pushed to [snackbar] for the screen to display.
+     */
+    fun cancelSell(txId: Long) {
+        viewModelScope.launch {
+            val result = cancelSellOrderUseCase(txId)
+            if (result.isFailure) {
+                _snackbar.emit(
+                    "Zruseni orderu selhalo: ${result.exceptionOrNull()?.message ?: "neznama chyba"}"
+                )
+            }
+        }
     }
 
     fun toggleDenomination() {

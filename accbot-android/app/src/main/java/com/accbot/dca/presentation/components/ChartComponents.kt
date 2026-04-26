@@ -59,6 +59,8 @@ import java.time.format.DateTimeFormatter
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberShowOnPress
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
+import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.core.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
 
@@ -219,6 +221,13 @@ fun PortfolioLineChart(
      * on the chart timeline. Currently a stub – see [ChartTradeMarker] kdoc.
      */
     @Suppress("UNUSED_PARAMETER") tradeMarkers: List<ChartTradeMarker> = emptyList(),
+    /**
+     * Limit prices of currently open (PENDING / PARTIAL) sell orders for the
+     * displayed plan. Each value yields a horizontal line on the left (fiat) axis
+     * to give the user a visual reference for where their orders will fill.
+     * Empty for aggregate pages or plans with sells disabled.
+     */
+    openSellLimitPrices: List<BigDecimal> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     if (chartData.isEmpty()) return
@@ -488,6 +497,24 @@ fun PortfolioLineChart(
         if (isEmpty()) add(hiddenLine)
     }
 
+    // Open-sell limit-price horizontal lines (per plan, on the left/fiat axis).
+    // Each value renders a thin red line so the user can visually compare their
+    // pending sell targets against the current portfolio value / crypto price.
+    val sellLineColor = MaterialTheme.colorScheme.error
+    val sellLineComponent = rememberLineComponent(
+        fill = fill(sellLineColor),
+        thickness = 1.dp
+    )
+    val sellDecorations = remember(openSellLimitPrices, sellLineComponent) {
+        openSellLimitPrices.map { price ->
+            val v = price.toDouble()
+            HorizontalLine(
+                y = { v },
+                line = sellLineComponent
+            )
+        }
+    }
+
     // Tap-to-inspect marker – scrub fires onScrub to update KPI cards, no tooltip text
     val indicatorComponent = rememberShapeComponent(
         fill = fill(chartAccentColor),
@@ -582,7 +609,8 @@ fun PortfolioLineChart(
                     }
                 ),
                 marker = marker,
-                markerController = CartesianMarkerController.rememberShowOnPress()
+                markerController = CartesianMarkerController.rememberShowOnPress(),
+                decorations = sellDecorations
             ),
             modelProducer = modelProducer,
             scrollState = rememberVicoScrollState(scrollEnabled = false),

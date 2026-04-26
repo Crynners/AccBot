@@ -68,8 +68,16 @@ fun PortfolioScreen(
     viewModel: PortfolioViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val openSellLimitPrices by viewModel.openSellLimitPrices.collectAsStateWithLifecycle()
+    val openSells by viewModel.openSells.collectAsStateWithLifecycle()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    // Snackbar host for cancel-order failures
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.snackbar.collect { msg -> snackbarHostState.showSnackbar(msg) }
+    }
 
     // Refresh portfolio data when returning to screen (e.g. after transaction import)
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -146,6 +154,9 @@ fun PortfolioScreen(
                             visibleCryptoGroupLines = uiState.visibleCryptoGroupLines,
                             zoomLevel = uiState.zoomLevel,
                             onScrub = { idx -> scrubbedIndex = idx ?: -1 },
+                            // Show open-sell limit lines only on per-plan pages with sells enabled
+                            openSellLimitPrices = if (uiState.currentPlanAllowsSells &&
+                                uiState.denominationMode == DenominationMode.FIAT) openSellLimitPrices else emptyList(),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
@@ -284,7 +295,8 @@ fun PortfolioScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         when {
             uiState.isLoading -> {
@@ -313,6 +325,9 @@ fun PortfolioScreen(
             else -> {
                 PortfolioContent(
                     uiState = uiState,
+                    openSellLimitPrices = openSellLimitPrices,
+                    openSells = openSells,
+                    onCancelSell = viewModel::cancelSell,
                     onDrillDownYear = { viewModel.drillDownToYear(it) },
                     onDrillDownMonth = { year, month -> viewModel.drillDownToMonth(year, month) },
                     onZoomOut = { viewModel.zoomOut() },
@@ -336,6 +351,9 @@ fun PortfolioScreen(
 @Composable
 internal fun PortfolioContent(
     uiState: PortfolioUiState,
+    openSellLimitPrices: List<BigDecimal> = emptyList(),
+    openSells: List<com.accbot.dca.domain.model.Transaction> = emptyList(),
+    onCancelSell: (Long) -> Unit = {},
     onDrillDownYear: (Int) -> Unit,
     onDrillDownMonth: (Int, Int) -> Unit,
     onZoomOut: () -> Unit,
@@ -583,6 +601,9 @@ internal fun PortfolioContent(
                     visibleCryptoGroupLines = uiState.visibleCryptoGroupLines,
                     zoomLevel = uiState.zoomLevel,
                     onScrub = { idx -> scrubbedIndex = idx ?: -1 },
+                    // Show open-sell limit lines only on per-plan pages with sells enabled
+                    openSellLimitPrices = if (uiState.currentPlanAllowsSells &&
+                        uiState.denominationMode == DenominationMode.FIAT) openSellLimitPrices else emptyList(),
                     modifier = Modifier.fillMaxWidth()
                 )
             } else if (chartData.size == 1) {
