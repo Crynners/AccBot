@@ -39,7 +39,7 @@
 
     <!-- Navigation -->
     <string name="nav_dashboard">Dashboard</string>
-    <string name="nav_portfolio">Portfolio</string>
+    <string name="nav_portfolio">Positions</string>
     <string name="nav_notifications">Notifications</string>
     <string name="nav_settings">Settings</string>
 
@@ -333,10 +333,10 @@
     <string name="edit_plan_save">Save Changes</string>
     <string name="edit_plan_enter_wallet">Enter your %1$s wallet address</string>
 
-    <!-- Portfolio Screen -->
-    <string name="portfolio_title">Portfolio</string>
+    <!-- Positions Screen (internally Portfolio) -->
+    <string name="portfolio_title">Positions</string>
     <string name="portfolio_transactions">Transactions</string>
-    <string name="portfolio_loading">Loading portfolio…</string>
+    <string name="portfolio_loading">Loading positions…</string>
     <string name="portfolio_realized">Realized</string>
     <string name="portfolio_net_pnl">Net P&amp;L</string>
 

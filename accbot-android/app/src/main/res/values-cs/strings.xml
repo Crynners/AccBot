@@ -37,7 +37,7 @@
 
     <!-- Navigation -->
     <string name="nav_dashboard">Přehled</string>
-    <string name="nav_portfolio">Portfolio</string>
+    <string name="nav_portfolio">Pozice</string>
     <string name="nav_notifications">Oznámení</string>
     <string name="nav_settings">Nastavení</string>
 
@@ -334,10 +334,10 @@
     <string name="edit_plan_save">Uložit změny</string>
     <string name="edit_plan_enter_wallet">Zadejte adresu vaší %1$s peněženky</string>
 
-    <!-- Portfolio Screen -->
-    <string name="portfolio_title">Portfolio</string>
+    <!-- Pozice (Positions) Screen (internally Portfolio) -->
+    <string name="portfolio_title">Pozice</string>
     <string name="portfolio_transactions">Transakce</string>
-    <string name="portfolio_loading">Načítání portfolia…</string>
+    <string name="portfolio_loading">Načítání pozic…</string>
     <string name="portfolio_realized">Realizováno</string>
     <string name="portfolio_net_pnl">Čistý P&amp;L</string>
 
