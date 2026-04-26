@@ -156,7 +156,8 @@ fun PortfolioScreen(
                             onScrub = { idx -> scrubbedIndex = idx ?: -1 },
                             // Show open-sell limit lines only on per-plan pages with sells enabled
                             openSellLimitPrices = if (uiState.currentPlanAllowsSells &&
-                                uiState.denominationMode == DenominationMode.FIAT) openSellLimitPrices else emptyList(),
+                                uiState.denominationMode == DenominationMode.FIAT &&
+                                uiState.limitLinesVisible) openSellLimitPrices else emptyList(),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
@@ -192,7 +193,9 @@ fun PortfolioScreen(
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 LimitOrderLegendItem(
-                                    label = stringResource(R.string.chart_legend_limit_sell)
+                                    label = stringResource(R.string.chart_legend_limit_sell),
+                                    enabled = uiState.limitLinesVisible,
+                                    onClick = { viewModel.toggleLimitLinesVisibility() }
                                 )
                             }
                         }
@@ -352,6 +355,7 @@ fun PortfolioScreen(
                     onTogglePlanLineVisibility = { id, type -> viewModel.togglePlanLineVisibility(id, type) },
                     onToggleCryptoGroupLineVisibility = { crypto, type -> viewModel.toggleCryptoGroupLineVisibility(crypto, type) },
                     onToggleAdvancedLegend = { viewModel.toggleAdvancedLegendExpanded() },
+                    onToggleLimitLinesVisibility = { viewModel.toggleLimitLinesVisibility() },
                     onRefresh = { viewModel.syncPricesAndLoadChart() },
                     onChartTouching = onChartTouching,
                     modifier = Modifier.padding(paddingValues)
@@ -378,6 +382,7 @@ internal fun PortfolioContent(
     onTogglePlanLineVisibility: (Long, PlanLineType) -> Unit,
     onToggleCryptoGroupLineVisibility: (String, CryptoGroupLineType) -> Unit,
     onToggleAdvancedLegend: () -> Unit,
+    onToggleLimitLinesVisibility: () -> Unit = {},
     onRefresh: () -> Unit,
     onChartTouching: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
@@ -617,7 +622,8 @@ internal fun PortfolioContent(
                     onScrub = { idx -> scrubbedIndex = idx ?: -1 },
                     // Show open-sell limit lines only on per-plan pages with sells enabled
                     openSellLimitPrices = if (uiState.currentPlanAllowsSells &&
-                        uiState.denominationMode == DenominationMode.FIAT) openSellLimitPrices else emptyList(),
+                        uiState.denominationMode == DenominationMode.FIAT &&
+                        uiState.limitLinesVisible) openSellLimitPrices else emptyList(),
                     modifier = Modifier.fillMaxWidth()
                 )
             } else if (chartData.size == 1) {
@@ -673,7 +679,9 @@ internal fun PortfolioContent(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         LimitOrderLegendItem(
-                            label = stringResource(R.string.chart_legend_limit_sell)
+                            label = stringResource(R.string.chart_legend_limit_sell),
+                            enabled = uiState.limitLinesVisible,
+                            onClick = onToggleLimitLinesVisibility
                         )
                     }
                 }

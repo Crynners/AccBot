@@ -170,11 +170,16 @@ fun InteractiveChartLegend(
 fun LimitOrderLegendItem(
     label: String,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit = {},
 ) {
-    val color = MaterialTheme.colorScheme.error
+    val baseColor = MaterialTheme.colorScheme.error
+    val swatchColor = if (enabled) baseColor else baseColor.copy(alpha = 0.3f)
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.padding(4.dp)
+        modifier = modifier
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(4.dp)
     ) {
         // Mini dashed line: 3 short segments to evoke the chart's dash pattern.
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -183,7 +188,7 @@ fun LimitOrderLegendItem(
                 Box(
                     Modifier
                         .size(width = 4.dp, height = 2.dp)
-                        .background(color)
+                        .background(swatchColor)
                 )
             }
         }
@@ -191,7 +196,9 @@ fun LimitOrderLegendItem(
         Text(
             label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+            textDecoration = if (enabled) null else TextDecoration.LineThrough
         )
     }
 }

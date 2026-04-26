@@ -74,6 +74,7 @@ data class PortfolioUiState(
     val currentPairFiat: String? = null,
     val totalTransactions: Int = 0,
     val visibleSeries: Set<Int> = setOf(0, 1),
+    val limitLinesVisible: Boolean = true,
     val scrubbedIndex: Int? = null,
     val planLines: List<PlanLineInfo> = emptyList(),
     val visiblePlanLines: Set<Pair<Long, PlanLineType>> = emptySet(),
@@ -512,6 +513,10 @@ class PortfolioViewModel @Inject constructor(
             val toggled = if (seriesIndex in current) current - seriesIndex else current + seriesIndex
             state.copy(visibleSeries = toggled)
         }
+    }
+
+    fun toggleLimitLinesVisibility() {
+        _uiState.update { state -> state.copy(limitLinesVisible = !state.limitLinesVisible) }
     }
 
     fun togglePlanLineVisibility(planId: Long, type: PlanLineType) {
