@@ -652,6 +652,16 @@ internal fun PortfolioContent(
             }
         }
 
+        // Open sell-orders collapsible section (only on per-plan pages with sells enabled)
+        if (uiState.currentPlanAllowsSells && openSells.isNotEmpty()) {
+            item(key = "portfolio-open-sells-section") {
+                com.accbot.dca.presentation.screens.portfolio.components.OpenSellsCollapsibleSection(
+                    openSells = openSells,
+                    onCancelClick = onCancelSell
+                )
+            }
+        }
+
         // Zoom header (back arrow + prev/next navigation)
         item {
             Crossfade(targetState = uiState.zoomLevel, label = "zoom") { zoom ->

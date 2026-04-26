@@ -72,8 +72,13 @@ fun OpenSellsList(
     }
 }
 
+/**
+ * Single row used by [OpenSellsList]. Exposed as `internal` so other screens
+ * (e.g. the Pozice tab's collapsible section) can render the same row layout
+ * with its built-in cancel-confirmation dialog without re-implementing it.
+ */
 @Composable
-private fun OpenSellRow(
+internal fun OpenSellRow(
     tx: Transaction,
     onCancelClick: (Long) -> Unit
 ) {

@@ -339,6 +339,7 @@
     <string name="portfolio_loading">Loading positions…</string>
     <string name="portfolio_realized">Realized</string>
     <string name="portfolio_net_pnl">Net P&amp;L</string>
+    <string name="portfolio_open_sells_section_title">Open sell orders (%1$d)</string>
 
     <!-- Performance Chart -->
     <string name="chart_all_pairs">All Pairs</string>
