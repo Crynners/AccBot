@@ -375,6 +375,7 @@
     <string name="chart_accumulated_crypto">Akum. %1$s</string>
     <string name="chart_avg_buy_price">Prům. nákupní cena</string>
     <string name="chart_explore">Prozkoumat historii:</string>
+    <string name="chart_legend_limit_sell">Limitní prodej</string>
 
     <!-- Exchange Management Screen -->
     <string name="exchanges_title">Burzy</string>

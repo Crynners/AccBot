@@ -374,6 +374,7 @@
     <string name="chart_accumulated_crypto">Accum. %1$s</string>
     <string name="chart_avg_buy_price">Avg Buy Price</string>
     <string name="chart_explore">Explore history:</string>
+    <string name="chart_legend_limit_sell">Limit sell</string>
 
     <!-- Exchange Management Screen -->
     <string name="exchanges_title">Exchanges</string>

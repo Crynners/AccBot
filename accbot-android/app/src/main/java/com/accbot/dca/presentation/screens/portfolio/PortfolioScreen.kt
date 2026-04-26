@@ -182,6 +182,20 @@ fun PortfolioScreen(
                                 onToggleAdvanced = { viewModel.toggleAdvancedLegendExpanded() }
                             )
                         }
+                        // Limit-sell legend entry (landscape)
+                        if (uiState.currentPlanAllowsSells &&
+                            uiState.denominationMode == DenominationMode.FIAT &&
+                            openSellLimitPrices.isNotEmpty()
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                LimitOrderLegendItem(
+                                    label = stringResource(R.string.chart_legend_limit_sell)
+                                )
+                            }
+                        }
 
                         // Zoom header + drill-down chips
                         Column(
@@ -648,6 +662,20 @@ internal fun PortfolioContent(
                         isAdvancedExpanded = uiState.isAdvancedLegendExpanded,
                         onToggleAdvanced = onToggleAdvancedLegend
                     )
+                }
+                // Limit-sell legend entry: shown only when matching dashed lines render on the chart
+                if (uiState.currentPlanAllowsSells &&
+                    uiState.denominationMode == DenominationMode.FIAT &&
+                    openSellLimitPrices.isNotEmpty()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        LimitOrderLegendItem(
+                            label = stringResource(R.string.chart_legend_limit_sell)
+                        )
+                    }
                 }
             }
         }

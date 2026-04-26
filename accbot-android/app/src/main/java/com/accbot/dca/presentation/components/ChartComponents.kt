@@ -60,9 +60,13 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineCom
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberShowOnPress
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.core.cartesian.marker.CartesianMarkerController
+import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
+import com.patrykandpatrick.vico.core.common.shape.DashedShape
+import com.patrykandpatrick.vico.core.common.shape.Shape
 
 private val chartAccentColor = Primary
 private val costBasisColor = Color(0xFF888888)
@@ -152,6 +156,43 @@ fun InteractiveChartLegend(
                 }
             }
         }
+    }
+}
+
+/**
+ * Static (non-interactive) legend entry describing the dashed red horizontal lines
+ * that mark open sell-order limit prices on the per-plan chart. Shown only when
+ * the chart actually renders such lines (i.e. plan allows sells, FIAT mode, and
+ * at least one open sell exists). Mirrors the dashed look used on the chart with
+ * a tiny dashed mini-line as the colour swatch.
+ */
+@Composable
+fun LimitOrderLegendItem(
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    val color = MaterialTheme.colorScheme.error
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.padding(4.dp)
+    ) {
+        // Mini dashed line: 3 short segments to evoke the chart's dash pattern.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            repeat(3) { i ->
+                if (i > 0) Spacer(Modifier.width(2.dp))
+                Box(
+                    Modifier
+                        .size(width = 4.dp, height = 2.dp)
+                        .background(color)
+                )
+            }
+        }
+        Spacer(Modifier.width(6.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -498,12 +539,21 @@ fun PortfolioLineChart(
     }
 
     // Open-sell limit-price horizontal lines (per plan, on the left/fiat axis).
-    // Each value renders a thin red line so the user can visually compare their
-    // pending sell targets against the current portfolio value / crypto price.
+    // Each value renders a thin dashed red line so the user can visually compare
+    // their pending sell targets against the current portfolio value / crypto price.
     val sellLineColor = MaterialTheme.colorScheme.error
+    val dashedSellShape = remember {
+        DashedShape(
+            shape = Shape.Rectangle,
+            dashLengthDp = 6f,
+            gapLengthDp = 4f,
+            fitStrategy = DashedShape.FitStrategy.Resize
+        )
+    }
     val sellLineComponent = rememberLineComponent(
         fill = fill(sellLineColor),
-        thickness = 1.dp
+        thickness = 1.5.dp,
+        shape = dashedSellShape
     )
     val sellDecorations = remember(openSellLimitPrices, sellLineComponent) {
         openSellLimitPrices.map { price ->
@@ -512,6 +562,24 @@ fun PortfolioLineChart(
                 y = { v },
                 line = sellLineComponent
             )
+        }
+    }
+
+    // Y-axis range provider: when there are open-sell limit lines, expand the
+    // auto-calculated Y range (left/fiat axis) so all limit prices remain visible
+    // even when they sit far above/below the actual portfolio/price series.
+    val leftRangeProvider = remember(openSellLimitPrices) {
+        if (openSellLimitPrices.isEmpty()) {
+            CartesianLayerRangeProvider.auto()
+        } else {
+            object : CartesianLayerRangeProvider {
+                private val limitMax = openSellLimitPrices.maxOf { it.toDouble() }
+                private val limitMin = openSellLimitPrices.minOf { it.toDouble() }
+                override fun getMaxY(minY: Double, maxY: Double, extraStore: ExtraStore): Double =
+                    maxOf(maxY, limitMax * 1.05)
+                override fun getMinY(minY: Double, maxY: Double, extraStore: ExtraStore): Double =
+                    minOf(minY, limitMin * 0.95)
+            }
         }
     }
 
@@ -576,7 +644,8 @@ fun PortfolioLineChart(
         CartesianChartHost(
             chart = rememberCartesianChart(
                 rememberLineCartesianLayer(
-                    lineProvider = LineCartesianLayer.LineProvider.series(leftLines)
+                    lineProvider = LineCartesianLayer.LineProvider.series(leftLines),
+                    rangeProvider = leftRangeProvider
                 ),
                 rememberLineCartesianLayer(
                     lineProvider = LineCartesianLayer.LineProvider.series(rightLines),
