@@ -417,7 +417,7 @@ fun DashboardScreen(
 
                 // Open SELL orders, grouped per plan
                 if (uiState.openSellsByPlan.isNotEmpty()) {
-                    items(uiState.openSellsByPlan.entries.toList(), key = { it.key }) { entry ->
+                    items(uiState.openSellsByPlan.entries.toList(), key = { "open-sells-${it.key}" }) { entry ->
                         val plan = uiState.activePlans.firstOrNull { it.plan.id == entry.key }?.plan
                         if (plan != null) {
                             OpenSellsSummaryCard(
