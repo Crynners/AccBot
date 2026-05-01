@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -90,6 +91,21 @@ fun PortfolioScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+
+    // Sell wizard bottom sheet
+    var sellWizardPlanId by rememberSaveable { mutableStateOf<Long?>(null) }
+    sellWizardPlanId?.let { planId ->
+        com.accbot.dca.presentation.screens.plans.sell.SellWizardBottomSheet(
+            planId = planId,
+            onDismiss = { sellWizardPlanId = null }
+        )
+    }
+
+    val currentPage = uiState.pages.getOrNull(uiState.selectedPageIndex)
+    val currentPlanId = (currentPage as? PairPage.Plan)?.planId
+    val onCreateSellOrder: (() -> Unit)? = if (currentPlanId != null && uiState.currentPlanAllowsSells) {
+        { sellWizardPlanId = currentPlanId }
+    } else null
 
     // Landscape: two-pane layout – chart left, controls right
     if (isLandscape) {
@@ -356,6 +372,7 @@ fun PortfolioScreen(
                     onToggleCryptoGroupLineVisibility = { crypto, type -> viewModel.toggleCryptoGroupLineVisibility(crypto, type) },
                     onToggleAdvancedLegend = { viewModel.toggleAdvancedLegendExpanded() },
                     onToggleLimitLinesVisibility = { viewModel.toggleLimitLinesVisibility() },
+                    onCreateSellOrder = onCreateSellOrder,
                     onRefresh = { viewModel.syncPricesAndLoadChart() },
                     onChartTouching = onChartTouching,
                     modifier = Modifier.padding(paddingValues)
@@ -383,6 +400,7 @@ internal fun PortfolioContent(
     onToggleCryptoGroupLineVisibility: (String, CryptoGroupLineType) -> Unit,
     onToggleAdvancedLegend: () -> Unit,
     onToggleLimitLinesVisibility: () -> Unit = {},
+    onCreateSellOrder: (() -> Unit)? = null,
     onRefresh: () -> Unit,
     onChartTouching: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
@@ -688,13 +706,33 @@ internal fun PortfolioContent(
             }
         }
 
-        // Open sell-orders collapsible section (only on per-plan pages with sells enabled)
-        if (uiState.currentPlanAllowsSells && openSells.isNotEmpty()) {
-            item(key = "portfolio-open-sells-section") {
-                com.accbot.dca.presentation.screens.portfolio.components.OpenSellsCollapsibleSection(
-                    openSells = openSells,
-                    onCancelClick = onCancelSell
-                )
+        // Open sell-orders section + new order button (only on per-plan pages with sells enabled)
+        if (uiState.currentPlanAllowsSells) {
+            if (openSells.isNotEmpty()) {
+                item(key = "portfolio-open-sells-section") {
+                    com.accbot.dca.presentation.screens.portfolio.components.OpenSellsCollapsibleSection(
+                        openSells = openSells,
+                        onCancelClick = onCancelSell
+                    )
+                }
+            }
+            if (onCreateSellOrder != null) {
+                item(key = "portfolio-new-sell-order") {
+                    OutlinedButton(
+                        onClick = onCreateSellOrder,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.portfolio_new_sell_order))
+                    }
+                }
             }
         }
 

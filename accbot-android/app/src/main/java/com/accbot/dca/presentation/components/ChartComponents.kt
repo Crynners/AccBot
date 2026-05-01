@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -648,50 +649,52 @@ fun PortfolioLineChart(
                 }
             }
     ) {
-        CartesianChartHost(
-            chart = rememberCartesianChart(
-                rememberLineCartesianLayer(
-                    lineProvider = LineCartesianLayer.LineProvider.series(leftLines),
-                    rangeProvider = leftRangeProvider
-                ),
-                rememberLineCartesianLayer(
-                    lineProvider = LineCartesianLayer.LineProvider.series(rightLines),
-                    verticalAxisPosition = Axis.Position.Vertical.End
-                ),
-                startAxis = VerticalAxis.rememberStart(
-                    label = axisLabelComponent,
-                    title = unitSuffix,
-                    titleComponent = axisTitleComponent,
-                    itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
-                    valueFormatter = { _, value, _ ->
-                        val bd = BigDecimal.valueOf(value)
-                        when {
-                            value >= 1 -> NumberFormatters.compactFiat(bd)
-                            else -> NumberFormatters.cryptoCompact(bd)
+        key(openSellLimitPrices) {
+            CartesianChartHost(
+                chart = rememberCartesianChart(
+                    rememberLineCartesianLayer(
+                        lineProvider = LineCartesianLayer.LineProvider.series(leftLines),
+                        rangeProvider = leftRangeProvider
+                    ),
+                    rememberLineCartesianLayer(
+                        lineProvider = LineCartesianLayer.LineProvider.series(rightLines),
+                        verticalAxisPosition = Axis.Position.Vertical.End
+                    ),
+                    startAxis = VerticalAxis.rememberStart(
+                        label = axisLabelComponent,
+                        title = unitSuffix,
+                        titleComponent = axisTitleComponent,
+                        itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
+                        valueFormatter = { _, value, _ ->
+                            val bd = BigDecimal.valueOf(value)
+                            when {
+                                value >= 1 -> NumberFormatters.compactFiat(bd)
+                                else -> NumberFormatters.cryptoCompact(bd)
+                            }
                         }
-                    }
+                    ),
+                    endAxis = if (hasRightAxis) endAxisComponent else null,
+                    bottomAxis = HorizontalAxis.rememberBottom(
+                        label = axisLabelComponent,
+                        valueFormatter = { _, value, _ ->
+                            val index = value.toInt().coerceIn(0, xLabels.size - 1)
+                            xLabels.getOrElse(index) { "" }
+                        },
+                        itemPlacer = remember(chartData.size, xAxisSpacing) {
+                            HorizontalAxis.ItemPlacer.aligned(
+                                spacing = { xAxisSpacing }
+                            )
+                        }
+                    ),
+                    marker = marker,
+                    markerController = CartesianMarkerController.rememberShowOnPress(),
+                    decorations = sellDecorations
                 ),
-                endAxis = if (hasRightAxis) endAxisComponent else null,
-                bottomAxis = HorizontalAxis.rememberBottom(
-                    label = axisLabelComponent,
-                    valueFormatter = { _, value, _ ->
-                        val index = value.toInt().coerceIn(0, xLabels.size - 1)
-                        xLabels.getOrElse(index) { "" }
-                    },
-                    itemPlacer = remember(chartData.size, xAxisSpacing) {
-                        HorizontalAxis.ItemPlacer.aligned(
-                            spacing = { xAxisSpacing }
-                        )
-                    }
-                ),
-                marker = marker,
-                markerController = CartesianMarkerController.rememberShowOnPress(),
-                decorations = sellDecorations
-            ),
-            modelProducer = modelProducer,
-            scrollState = rememberVicoScrollState(scrollEnabled = false),
-            zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = remember { Zoom.Content }),
-            modifier = Modifier.fillMaxSize()
-        )
+                modelProducer = modelProducer,
+                scrollState = rememberVicoScrollState(scrollEnabled = false),
+                zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = remember { Zoom.Content }),
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 }

@@ -270,20 +270,6 @@ fun DashboardScreen(
                         compact = true
                     )
 
-                    if (uiState.openSellsByPlan.isNotEmpty()) {
-                        uiState.openSellsByPlan.forEach { (planId, sells) ->
-                            val plan = uiState.activePlans.firstOrNull { it.plan.id == planId }?.plan
-                            if (plan != null) {
-                                OpenSellsSummaryCard(
-                                    planName = plan.name.ifBlank { "${plan.crypto}/${plan.fiat}" },
-                                    fiat = plan.fiat,
-                                    sells = sells,
-                                    onClick = { onNavigateToPlanDetails?.invoke(planId) }
-                                )
-                            }
-                        }
-                    }
-
                     if (uiState.showMarketPulse && (uiState.fearGreedData != null || uiState.athDataByCrypto.isNotEmpty())) {
                         MarketPulseCard(
                             fearGreedData = uiState.fearGreedData,
@@ -340,6 +326,7 @@ fun DashboardScreen(
                                 onToggle = { viewModel.togglePlan(planId) },
                                 onClick = { onNavigateToPlanDetails?.invoke(planId) },
                                 currentTime = currentTime,
+                                openSellCount = uiState.openSellsByPlan[planId]?.size ?: 0,
                                 isDragging = landscapeDragState.isDragging(planId),
                                 dragOffset = if (landscapeDragState.isDragging(planId)) landscapeDragState.dragOffset else 0f,
                                 onDragStart = { heightPx -> landscapeDragState.startDrag(planId, heightPx) },
@@ -415,21 +402,6 @@ fun DashboardScreen(
                     )
                 }
 
-                // Open SELL orders, grouped per plan
-                if (uiState.openSellsByPlan.isNotEmpty()) {
-                    items(uiState.openSellsByPlan.entries.toList(), key = { "open-sells-${it.key}" }) { entry ->
-                        val plan = uiState.activePlans.firstOrNull { it.plan.id == entry.key }?.plan
-                        if (plan != null) {
-                            OpenSellsSummaryCard(
-                                planName = plan.name.ifBlank { "${plan.crypto}/${plan.fiat}" },
-                                fiat = plan.fiat,
-                                sells = entry.value,
-                                onClick = { onNavigateToPlanDetails?.invoke(plan.id) }
-                            )
-                        }
-                    }
-                }
-
                 // Market Pulse
                 if (uiState.showMarketPulse && (uiState.fearGreedData != null || uiState.athDataByCrypto.isNotEmpty())) {
                     item {
@@ -474,6 +446,7 @@ fun DashboardScreen(
                             onToggle = { viewModel.togglePlan(planId) },
                             onClick = { onNavigateToPlanDetails?.invoke(planId) },
                             currentTime = currentTime,
+                            openSellCount = uiState.openSellsByPlan[planId]?.size ?: 0,
                             isDragging = portraitDragState.isDragging(planId),
                             dragOffset = if (portraitDragState.isDragging(planId)) portraitDragState.dragOffset else 0f,
                             onDragStart = { heightPx -> portraitDragState.startDrag(planId, heightPx) },
@@ -1067,6 +1040,7 @@ internal fun DcaPlanCard(
     onToggle: () -> Unit,
     onClick: (() -> Unit)? = null,
     currentTime: Long = System.currentTimeMillis(),
+    openSellCount: Int = 0,
     isDragging: Boolean = false,
     dragOffset: Float = 0f,
     onDragStart: ((heightPx: Int) -> Unit)? = null,
@@ -1346,6 +1320,28 @@ internal fun DcaPlanCard(
                             color = goalColor,
                             fontWeight = FontWeight.Medium
                         )
+                    }
+                    if (openSellCount > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TrendingDown,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = stringResource(
+                                    R.string.dashboard_plan_open_sells,
+                                    openSellCount
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }
@@ -1918,68 +1914,6 @@ private fun localizedFearGreedClass(value: Int): String {
         value <= 59 -> stringResource(R.string.fg_class_neutral)
         value <= 79 -> stringResource(R.string.fg_class_greed)
         else -> stringResource(R.string.fg_class_extreme_greed)
-    }
-}
-
-/**
- * Summary card surfacing all open SELL orders for a single plan. Shown on the
- * dashboard between Holdings and Market Pulse. Tapping deep-links to the plan
- * detail screen where the user can cancel or inspect each order.
- */
-@Composable
-internal fun OpenSellsSummaryCard(
-    planName: String,
-    fiat: String,
-    sells: List<Transaction>,
-    onClick: () -> Unit
-) {
-    if (sells.isEmpty()) return
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = stringResource(
-                        R.string.dashboard_open_sells_title,
-                        planName,
-                        sells.size
-                    ),
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.titleSmall
-                )
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            // First sell preview (most recent due to ORDER BY executedAt DESC in DAO).
-            sells.firstOrNull()?.let { tx ->
-                Spacer(modifier = Modifier.height(4.dp))
-                val priceText = tx.limitPrice?.let { NumberFormatters.fiat(it) } ?: "-"
-                val amount = tx.requestedCryptoAmount ?: tx.cryptoAmount
-                Text(
-                    text = "${NumberFormatters.crypto(amount)} ${tx.crypto} @ $priceText $fiat",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
     }
 }
 

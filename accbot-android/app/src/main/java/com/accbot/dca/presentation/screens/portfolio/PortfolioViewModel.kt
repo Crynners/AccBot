@@ -74,7 +74,7 @@ data class PortfolioUiState(
     val currentPairFiat: String? = null,
     val totalTransactions: Int = 0,
     val visibleSeries: Set<Int> = setOf(0, 1),
-    val limitLinesVisible: Boolean = true,
+    val limitLinesVisible: Boolean = false,
     val scrubbedIndex: Int? = null,
     val planLines: List<PlanLineInfo> = emptyList(),
     val visiblePlanLines: Set<Pair<Long, PlanLineType>> = emptySet(),

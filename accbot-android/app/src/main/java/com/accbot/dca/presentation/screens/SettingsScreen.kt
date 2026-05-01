@@ -44,7 +44,9 @@ import com.accbot.dca.data.local.AppTheme
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.WithdrawalThreshold
+import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.presentation.components.FrequencyDropdown
+import com.accbot.dca.presentation.components.ScheduleBuilder
 import java.math.BigDecimal
 import com.accbot.dca.presentation.changelog.ChangelogData
 import com.accbot.dca.presentation.components.AccBotTopAppBar
@@ -713,8 +715,10 @@ fun SettingsScreen(
 
             if (uiState.tradingEnabled) {
                 item {
-                    SellPollingToggleCard(
+                    SellPollingCard(
                         isEnabled = uiState.periodicSellPollingEnabled,
+                        frequency = uiState.sellPollingFrequency,
+                        cronExpression = uiState.sellPollingCronExpression,
                         onToggle = { enabled ->
                             viewModel.setPeriodicSellPolling(
                                 enabled = enabled,
@@ -722,69 +726,24 @@ fun SettingsScreen(
                                 cron = uiState.sellPollingCronExpression,
                                 scheduleConfig = null
                             )
+                        },
+                        onFrequencySelected = { newFreq ->
+                            viewModel.setPeriodicSellPolling(
+                                enabled = true,
+                                frequency = newFreq,
+                                cron = null,
+                                scheduleConfig = null
+                            )
+                        },
+                        onCronExpressionChange = { newCron ->
+                            viewModel.setPeriodicSellPolling(
+                                enabled = true,
+                                frequency = DcaFrequency.CUSTOM,
+                                cron = newCron.ifBlank { null },
+                                scheduleConfig = null
+                            )
                         }
                     )
-                }
-
-                if (uiState.periodicSellPollingEnabled) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.settings_sell_polling_frequency),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                FrequencyDropdown(
-                                    selectedFrequency = uiState.sellPollingFrequency,
-                                    onFrequencySelected = { newFreq ->
-                                        viewModel.setPeriodicSellPolling(
-                                            enabled = true,
-                                            frequency = newFreq,
-                                            cron = null,
-                                            scheduleConfig = null
-                                        )
-                                    }
-                                )
-                                if (uiState.sellPollingFrequency == DcaFrequency.CUSTOM) {
-                                    var cronInput by rememberSaveable {
-                                        mutableStateOf(uiState.sellPollingCronExpression ?: "")
-                                    }
-                                    OutlinedTextField(
-                                        value = cronInput,
-                                        onValueChange = { newValue ->
-                                            cronInput = newValue
-                                            viewModel.setPeriodicSellPolling(
-                                                enabled = true,
-                                                frequency = DcaFrequency.CUSTOM,
-                                                cron = newValue.ifBlank { null },
-                                                scheduleConfig = null
-                                            )
-                                        },
-                                        label = { Text(stringResource(R.string.settings_sell_polling_cron_label)) },
-                                        placeholder = { Text(stringResource(R.string.settings_sell_polling_cron_hint)) },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                                Text(
-                                    text = stringResource(R.string.settings_sell_polling_battery_note),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
                 }
             }
 
@@ -1241,34 +1200,98 @@ internal fun TradingToggleCard(
 }
 
 @Composable
-internal fun SellPollingToggleCard(
+internal fun SellPollingCard(
     isEnabled: Boolean,
-    onToggle: (Boolean) -> Unit
+    frequency: DcaFrequency,
+    cronExpression: String?,
+    onToggle: (Boolean) -> Unit,
+    onFrequencySelected: (DcaFrequency) -> Unit,
+    onCronExpressionChange: (String) -> Unit
 ) {
     val accent = successColor()
     val haptic = LocalHapticFeedback.current
-    SettingsCardBase(
-        title = stringResource(R.string.settings_sell_polling_title),
-        subtitle = stringResource(R.string.settings_sell_polling_subtitle),
-        icon = Icons.Default.Sync,
-        iconTint = if (isEnabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-        onClick = {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            onToggle(!isEnabled)
-        },
-        cardModifier = Modifier.semantics(mergeDescendants = true) { role = Role.Switch },
-        trailing = {
-            Switch(
-                checked = isEnabled,
-                onCheckedChange = null,
-                modifier = Modifier.clearAndSetSemantics {},
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = accent,
-                    checkedTrackColor = accent.copy(alpha = 0.5f)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(role = Role.Switch) {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onToggle(!isEnabled)
+                    }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Sync,
+                    contentDescription = null,
+                    tint = if (isEnabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
                 )
-            )
+                Spacer(Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.settings_sell_polling_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_sell_polling_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = isEnabled,
+                    onCheckedChange = null,
+                    modifier = Modifier.clearAndSetSemantics {},
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = accent,
+                        checkedTrackColor = accent.copy(alpha = 0.5f)
+                    )
+                )
+            }
+            AnimatedVisibility(visible = isEnabled) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    HorizontalDivider()
+                    Text(
+                        text = stringResource(R.string.settings_sell_polling_frequency),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    FrequencyDropdown(
+                        selectedFrequency = frequency,
+                        onFrequencySelected = onFrequencySelected
+                    )
+                    if (frequency == DcaFrequency.CUSTOM) {
+                        val cronExpr = cronExpression ?: ""
+                        val cronDesc = CronUtils.describeCron(cronExpr)
+                        ScheduleBuilder(
+                            cronExpression = cronExpr,
+                            cronDescription = cronDesc,
+                            cronError = null,
+                            onCronExpressionChange = onCronExpressionChange
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.settings_sell_polling_battery_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
-    )
+    }
 }
 
 @Composable
