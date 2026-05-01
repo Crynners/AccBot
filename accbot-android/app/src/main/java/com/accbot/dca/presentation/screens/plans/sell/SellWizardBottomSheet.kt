@@ -40,11 +40,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.accbot.dca.R
 import com.accbot.dca.domain.usecase.SellValidation
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -103,11 +105,11 @@ private fun SellInputStep(
         // Header
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "Zavrit")
+                Icon(Icons.Default.Close, contentDescription = null)
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Limit sell ${state.crypto}/${state.fiat}",
+                    text = stringResource(R.string.sell_wizard_title, state.crypto, state.fiat),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -123,21 +125,21 @@ private fun SellInputStep(
 
         // Info block
         InfoRow(
-            "Aktualni cena:",
+            stringResource(R.string.sell_wizard_spot_price),
             state.spotPrice?.let { "${NumberFormatters.fiat(it)} ${state.fiat}" } ?: "-"
         )
         InfoRow(
-            "Prum. nakup:",
+            stringResource(R.string.sell_wizard_avg_buy),
             state.avgBuyPrice?.let { "${NumberFormatters.fiat(it)} ${state.fiat}" } ?: "-"
         )
         InfoRow(
-            "K dispozici:",
+            stringResource(R.string.sell_wizard_available),
             "${NumberFormatters.crypto(state.availableToSell)} ${state.crypto}"
         )
 
         Spacer(Modifier.height(16.dp))
         Text(
-            "Mnozstvi",
+            stringResource(R.string.sell_wizard_amount),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold
         )
@@ -160,7 +162,8 @@ private fun SellInputStep(
             modifier = Modifier.padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            listOf(25 to "25%", 50 to "50%", 75 to "75%", 100 to "Vse").forEach { (pct, label) ->
+            val allLabel = stringResource(R.string.sell_wizard_amount_all)
+            listOf(25 to "25%", 50 to "50%", 75 to "75%", 100 to allLabel).forEach { (pct, label) ->
                 AssistChip(
                     onClick = { vm.setAmountPct(pct) },
                     label = { Text(label) }
@@ -170,7 +173,7 @@ private fun SellInputStep(
 
         Spacer(Modifier.height(16.dp))
         Text(
-            "Limitni cena",
+            stringResource(R.string.sell_wizard_limit_price),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold
         )
@@ -195,7 +198,7 @@ private fun SellInputStep(
         ) {
             AssistChip(
                 onClick = vm::setPriceSpot,
-                label = { Text("Trzni") },
+                label = { Text(stringResource(R.string.sell_wizard_chip_spot)) },
                 enabled = state.spotPrice != null
             )
             AssistChip(
@@ -217,7 +220,7 @@ private fun SellInputStep(
 
         Spacer(Modifier.height(16.dp))
         Text(
-            "Souhrn",
+            stringResource(R.string.sell_wizard_summary),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold
         )
@@ -225,7 +228,7 @@ private fun SellInputStep(
         val amountBD = state.amountInput.toBigDecimalOrNull() ?: BigDecimal.ZERO
         val priceBD = state.priceInput.toBigDecimalOrNull() ?: BigDecimal.ZERO
         val proceeds = (amountBD * priceBD).setScale(2, RoundingMode.HALF_UP)
-        InfoRow("Ziskate:", "${NumberFormatters.fiat(proceeds)} ${state.fiat}")
+        InfoRow(stringResource(R.string.sell_wizard_proceeds), "${NumberFormatters.fiat(proceeds)} ${state.fiat}")
         state.avgBuyPrice?.let { avg ->
             val profit = ((priceBD - avg) * amountBD).setScale(2, RoundingMode.HALF_UP)
             val profitPct = if (avg > BigDecimal.ZERO) {
@@ -235,7 +238,7 @@ private fun SellInputStep(
             } else BigDecimal.ZERO
             val sign = if (profit >= BigDecimal.ZERO) "+" else ""
             InfoRow(
-                label = "Zisk vs prum:",
+                label = stringResource(R.string.sell_wizard_profit_vs_avg),
                 value = "$sign${NumberFormatters.fiat(profit)} ${state.fiat} ($sign${profitPct.toPlainString()}%)",
                 color = when {
                     profit > BigDecimal.ZERO -> successColor()
@@ -256,10 +259,10 @@ private fun SellInputStep(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
                 is SellValidation.InstantFillInfo -> InfoBanner(
-                    "Prodej probehne okamzite. Limitni cena je pod aktualni trzni (${NumberFormatters.fiat(v.spot)} ${state.fiat}). Prikaz se zfilluje ihned za nejvyssi nabidku na burze (obvykle blizko trzni ceny minus spread). Neni to chyba."
+                    stringResource(R.string.sell_wizard_instant_fill_warning, NumberFormatters.fiat(v.spot), state.fiat)
                 )
                 is SellValidation.FarFromMarketWarning -> WarningBanner(
-                    "Cena je vysoko nad trhem - prodej se nemusi zfillovat dlouho."
+                    stringResource(R.string.sell_wizard_far_from_market_warning)
                 )
                 is SellValidation.Ok -> { /* no-op */ }
             }
@@ -271,7 +274,7 @@ private fun SellInputStep(
             enabled = state.canProceed,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Pokracovat")
+            Text(stringResource(R.string.sell_wizard_proceed))
         }
 
         Spacer(Modifier.height(32.dp))
@@ -295,10 +298,10 @@ private fun SellConfirmStep(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = vm::back) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zpet")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
             }
             Text(
-                "Potvrdit prodej",
+                stringResource(R.string.sell_wizard_confirm_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -306,16 +309,16 @@ private fun SellConfirmStep(
 
         Spacer(Modifier.height(12.dp))
 
-        SummaryRow("Burza:", state.exchangeName)
-        SummaryRow("Plan:", state.planName)
-        SummaryRow("Smer:", "PRODEJ")
-        SummaryRow("Mnozstvi:", "${NumberFormatters.crypto(amountBD)} ${state.crypto}")
-        SummaryRow("Limitni cena:", "${NumberFormatters.fiat(priceBD)} ${state.fiat}")
-        SummaryRow("Ziskate:", "${NumberFormatters.fiat(proceeds)} ${state.fiat}")
+        SummaryRow(stringResource(R.string.sell_wizard_confirm_exchange), state.exchangeName)
+        SummaryRow(stringResource(R.string.sell_wizard_confirm_plan), state.planName)
+        SummaryRow(stringResource(R.string.sell_wizard_confirm_side), stringResource(R.string.sell_wizard_confirm_side_sell))
+        SummaryRow(stringResource(R.string.sell_wizard_confirm_amount), "${NumberFormatters.crypto(amountBD)} ${state.crypto}")
+        SummaryRow(stringResource(R.string.sell_wizard_confirm_limit_price), "${NumberFormatters.fiat(priceBD)} ${state.fiat}")
+        SummaryRow(stringResource(R.string.sell_wizard_confirm_proceeds), "${NumberFormatters.fiat(proceeds)} ${state.fiat}")
 
         Spacer(Modifier.height(16.dp))
         WarningBanner(
-            "Tato akce odesle prikaz na ${state.exchangeName} a nelze ji vratit. Prikaz lze pote zrusit, dokud neni castecne nebo cele zfillovan."
+            stringResource(R.string.sell_wizard_confirm_warning, state.exchangeName)
         )
 
         state.submitError?.let { err ->
@@ -338,7 +341,7 @@ private fun SellConfirmStep(
                 enabled = !state.submitting,
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Zpet")
+                Text(stringResource(R.string.sell_wizard_back))
             }
             Button(
                 onClick = { vm.submit() },
@@ -352,7 +355,7 @@ private fun SellConfirmStep(
                         color = LocalContentColor.current
                     )
                 } else {
-                    Text("Odeslat")
+                    Text(stringResource(R.string.sell_wizard_submit))
                 }
             }
         }
@@ -363,11 +366,9 @@ private fun SellConfirmStep(
     if (state.showTimeoutDialog) {
         AlertDialog(
             onDismissRequest = vm::dismissTimeoutDialog,
-            title = { Text("Nelze overit stav prikazu") },
+            title = { Text(stringResource(R.string.sell_wizard_timeout_title)) },
             text = {
-                Text(
-                    "Spojeni s burzou selhalo nebo timeoutovalo. Prikaz mohl byt odeslan, ale nelze to potvrdit. Zkontroluj otevrene ordery na burze pres web a v pripade potreby zrus duplicitu."
-                )
+                Text(stringResource(R.string.sell_wizard_timeout_text))
             },
             confirmButton = {
                 Button(onClick = vm::dismissTimeoutDialog) { Text("OK") }

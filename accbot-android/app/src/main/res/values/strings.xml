@@ -264,6 +264,7 @@
 
     <!-- Dashboard - open sells -->
     <string name="dashboard_open_sells_title">%1$s: %2$d open sell order(s)</string>
+    <string name="dashboard_plan_open_sells">%1$d open sell order(s)</string>
 
     <!-- Add Plan Screen -->
     <string name="add_plan_title">Create DCA Plan</string>
@@ -321,7 +322,7 @@
     <string name="plan_details_delete_transactions_hint">Type %1$d to confirm</string>
     <string name="plan_details_delete_transactions_button">Delete All Transactions</string>
     <string name="plan_details_delete_transactions_success">%1$d transactions deleted</string>
-    <string name="plan_details_create_sell_order">+ Vytvorit prodejni prikaz</string>
+    <string name="plan_details_create_sell_order">+ Create sell order</string>
     <string name="plan_details_delete_blocked_title">Cannot delete plan</string>
     <string name="plan_details_delete_blocked_text">This plan has %1$d open sell order(s). Cancel them first before deleting the plan.</string>
 
@@ -340,6 +341,7 @@
     <string name="portfolio_realized">Realized</string>
     <string name="portfolio_net_pnl">Net P&amp;L</string>
     <string name="portfolio_open_sells_section_title">Open sell orders (%1$d)</string>
+    <string name="portfolio_new_sell_order">New sell order</string>
 
     <!-- Performance Chart -->
     <string name="chart_all_pairs">All Pairs</string>
@@ -967,4 +969,33 @@
     <string name="edit_plan_disable_sells_dialog_title">Turn off sells?</string>
     <string name="edit_plan_disable_sells_dialog_text">You have %1$d open sell order(s). Turning sells off will hide the sell section, but the orders remain on the exchange. You must cancel them manually on the exchange, or by turning sells back on and clicking Cancel.</string>
     <string name="edit_plan_disable_sells_confirm">Turn off</string>
+
+    <!-- Sell Wizard -->
+    <string name="sell_wizard_title">Limit sell %1$s/%2$s</string>
+    <string name="sell_wizard_spot_price">Current price:</string>
+    <string name="sell_wizard_avg_buy">Avg buy price:</string>
+    <string name="sell_wizard_available">Available:</string>
+    <string name="sell_wizard_amount">Amount</string>
+    <string name="sell_wizard_amount_all">All</string>
+    <string name="sell_wizard_limit_price">Limit price</string>
+    <string name="sell_wizard_chip_spot">Market</string>
+    <string name="sell_wizard_summary">Summary</string>
+    <string name="sell_wizard_proceeds">Proceeds:</string>
+    <string name="sell_wizard_profit_vs_avg">Profit vs avg:</string>
+    <string name="sell_wizard_instant_fill_warning">The sell will execute immediately. The limit price is below the current market price (%1$s %2$s). The order will fill at the highest bid on the exchange (usually close to market price minus spread). This is not an error.</string>
+    <string name="sell_wizard_far_from_market_warning">The price is far above market - the order may take a long time to fill.</string>
+    <string name="sell_wizard_proceed">Continue</string>
+    <string name="sell_wizard_confirm_title">Confirm sell</string>
+    <string name="sell_wizard_confirm_exchange">Exchange:</string>
+    <string name="sell_wizard_confirm_plan">Plan:</string>
+    <string name="sell_wizard_confirm_side">Side:</string>
+    <string name="sell_wizard_confirm_side_sell">SELL</string>
+    <string name="sell_wizard_confirm_amount">Amount:</string>
+    <string name="sell_wizard_confirm_limit_price">Limit price:</string>
+    <string name="sell_wizard_confirm_proceeds">Proceeds:</string>
+    <string name="sell_wizard_confirm_warning">This action will submit an order to %1$s and cannot be undone. The order can be cancelled later, as long as it has not been partially or fully filled.</string>
+    <string name="sell_wizard_back">Back</string>
+    <string name="sell_wizard_submit">Submit</string>
+    <string name="sell_wizard_timeout_title">Cannot verify order status</string>
+    <string name="sell_wizard_timeout_text">Connection to the exchange failed or timed out. The order may have been submitted, but cannot be confirmed. Check open orders on the exchange via web and cancel any duplicates if needed.</string>
 </resources>
