@@ -19,6 +19,7 @@ import com.accbot.dca.domain.usecase.PlaceLimitSellUseCase
 import com.accbot.dca.domain.usecase.SellValidation
 import com.accbot.dca.domain.usecase.ValidateSellOrderUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
+import com.accbot.dca.exchange.MinOrderSizeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,7 +52,8 @@ class SellWizardViewModel @Inject constructor(
     private val database: DcaDatabase,
     private val credentialsStore: CredentialsStore,
     private val exchangeApiFactory: ExchangeApiFactory,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val minOrderSizeRepository: MinOrderSizeRepository
 ) : ViewModel() {
 
     enum class Step { INPUT, CONFIRM }
@@ -75,7 +77,8 @@ class SellWizardViewModel @Inject constructor(
         val avgBuyPriceInput: String = "",
         /** True when [avgBuyPriceInput] differs from auto - drives the reset chip. */
         val avgBuyPriceManual: Boolean = false,
-        val minOrderSize: BigDecimal = BigDecimal("0.00001"),
+        /** Minimum order size **in fiat** (e.g. 50 CZK on Coinmate). */
+        val minOrderFiat: BigDecimal = BigDecimal.ZERO,
         val amountInput: String = "",
         val priceInput: String = "",
         val netInput: String = "",
@@ -165,10 +168,11 @@ class SellWizardViewModel @Inject constructor(
             val held = pnl?.currentCryptoHeld ?: inventory.available
             val realizedSoFar = pnl?.realizedPnL ?: BigDecimal.ZERO
 
-            val minOrder = when (plan.exchange) {
-                Exchange.BINANCE ->
-                    Exchange.binanceLotStepSize[plan.crypto]?.let(::BigDecimal) ?: BigDecimal("0.00001")
-                else -> BigDecimal("0.00001")
+            val minOrderFiat = try {
+                minOrderSizeRepository.getMinOrderSize(plan.exchange, plan.crypto, plan.fiat)
+            } catch (e: Exception) {
+                Log.w(TAG, "min order fetch failed: ${e.message}")
+                BigDecimal.ZERO
             }
 
             _uiState.update {
@@ -184,7 +188,7 @@ class SellWizardViewModel @Inject constructor(
                     avgBuyPriceAuto = inventory.weightedAvgPrice,
                     avgBuyPriceInput = inventory.weightedAvgPrice?.setScale(2, RoundingMode.HALF_UP)?.toPlainString() ?: "",
                     avgBuyPriceManual = false,
-                    minOrderSize = minOrder,
+                    minOrderFiat = minOrderFiat,
                     feeRate = feeRate,
                     targetProfitAmount = plan.targetProfitAmount,
                     realizedPnLSoFar = realizedSoFar,
@@ -389,9 +393,9 @@ class SellWizardViewModel @Inject constructor(
         }
 
         val preview = LadderGenerator.generate(total, from, to, count, st.ladderAmountMode)
-        val minPerOrder = preview.minOf { it.cryptoAmount }
-        val hardError = if (minPerOrder < st.minOrderSize) {
-            "Velikost orderu ${minPerOrder} je pod minimem ${st.minOrderSize}"
+        val minOrderFiatValue = preview.minOf { it.cryptoAmount * it.limitPrice }
+        val hardError = if (st.minOrderFiat > BigDecimal.ZERO && minOrderFiatValue < st.minOrderFiat) {
+            "Hodnota nejmenšího orderu (${minOrderFiatValue.setScale(2, RoundingMode.HALF_UP)} ${st.fiat}) je pod minimem ${st.minOrderFiat} ${st.fiat}"
         } else null
 
         _uiState.update { it.copy(ladderPreview = preview, ladderHardError = hardError) }
@@ -494,7 +498,7 @@ class SellWizardViewModel @Inject constructor(
         viewModelScope.launch {
             val validations = try {
                 validateSellOrderUseCase(
-                    state.planId, amount, price, state.minOrderSize, state.spotPrice,
+                    state.planId, amount, price, state.minOrderFiat, state.spotPrice,
                     state.avgBuyPrice, state.feeRate
                 )
             } catch (e: Exception) {

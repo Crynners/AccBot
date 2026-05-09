@@ -46,7 +46,8 @@ class ValidateSellOrderUseCase @Inject constructor(
         planId: Long,
         cryptoAmount: BigDecimal,
         limitPrice: BigDecimal,
-        minOrderSize: BigDecimal,
+        /** Minimum order size **in fiat** (Coinmate ~50 CZK, Binance NOTIONAL filter, etc.). */
+        minOrderFiat: BigDecimal,
         currentSpot: BigDecimal?,
         avgBuyPrice: BigDecimal? = null,
         feeRate: BigDecimal = BigDecimal.ZERO
@@ -61,8 +62,11 @@ class ValidateSellOrderUseCase @Inject constructor(
             result += SellValidation.HardError("Limitní cena musí být větší než 0", SellValidation.Field.PRICE)
             return result
         }
-        if (cryptoAmount < minOrderSize) {
-            result += SellValidation.HardError("Minimální order je $minOrderSize", SellValidation.Field.AMOUNT)
+        if (minOrderFiat > BigDecimal.ZERO && cryptoAmount * limitPrice < minOrderFiat) {
+            result += SellValidation.HardError(
+                "Minimální hodnota orderu je $minOrderFiat (zvyš množství nebo cenu)",
+                SellValidation.Field.AMOUNT
+            )
         }
 
         val tx = database.transactionDao().getTransactionsByPlanSync(planId)
