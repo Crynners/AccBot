@@ -486,9 +486,24 @@ private fun SellConfirmStep(
         SummaryRow(stringResource(R.string.sell_wizard_confirm_exchange), state.exchangeName)
         SummaryRow(stringResource(R.string.sell_wizard_confirm_plan), state.planName)
         SummaryRow(stringResource(R.string.sell_wizard_confirm_side), stringResource(R.string.sell_wizard_confirm_side_sell))
-        SummaryRow(stringResource(R.string.sell_wizard_confirm_amount), "${NumberFormatters.crypto(amountBD)} ${state.crypto}")
-        SummaryRow(stringResource(R.string.sell_wizard_confirm_limit_price), "${NumberFormatters.fiat(priceBD)} ${state.fiat}")
-        SummaryRow(stringResource(R.string.sell_wizard_confirm_proceeds), "${NumberFormatters.fiat(proceeds)} ${state.fiat}")
+        if (state.ladderEnabled) {
+            SummaryRow(
+                stringResource(R.string.sell_wizard_ladder_count),
+                "${state.ladderPreview.size}"
+            )
+            SummaryRow(stringResource(R.string.sell_wizard_confirm_amount), "${NumberFormatters.crypto(amountBD)} ${state.crypto}")
+            Spacer(Modifier.height(8.dp))
+            LadderPreviewTable(
+                preview = state.ladderPreview,
+                avg = state.avgBuyPrice,
+                feeRate = state.feeRate,
+                fiat = state.fiat
+            )
+        } else {
+            SummaryRow(stringResource(R.string.sell_wizard_confirm_amount), "${NumberFormatters.crypto(amountBD)} ${state.crypto}")
+            SummaryRow(stringResource(R.string.sell_wizard_confirm_limit_price), "${NumberFormatters.fiat(priceBD)} ${state.fiat}")
+            SummaryRow(stringResource(R.string.sell_wizard_confirm_proceeds), "${NumberFormatters.fiat(proceeds)} ${state.fiat}")
+        }
 
         Spacer(Modifier.height(16.dp))
         WarningBanner(
@@ -705,41 +720,56 @@ private fun LadderControls(state: SellWizardViewModel.UiState, vm: SellWizardVie
 
     if (state.ladderPreview.isNotEmpty()) {
         Spacer(Modifier.height(12.dp))
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Text("#", modifier = Modifier.weight(0.4f), style = MaterialTheme.typography.labelSmall)
-                Text(stringResource(R.string.sell_wizard_amount), modifier = Modifier.weight(1.4f), style = MaterialTheme.typography.labelSmall)
-                Text(stringResource(R.string.sell_wizard_limit_price), modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.labelSmall)
-                Text("Profit", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall)
-                Text("Net", modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.labelSmall)
-            }
-            androidx.compose.material3.HorizontalDivider()
-            var totalNet = BigDecimal.ZERO
-            state.ladderPreview.forEachIndexed { i, o ->
-                val gross = o.cryptoAmount * o.limitPrice
-                val net = gross * (BigDecimal.ONE - state.feeRate)
-                val profitPctText = if (avg != null && avg > BigDecimal.ZERO) {
-                    val pct = (o.limitPrice - avg).divide(avg, 4, RoundingMode.HALF_UP)
-                        .multiply(BigDecimal(100)).setScale(1, RoundingMode.HALF_UP)
-                    "${if (pct.signum() >= 0) "+" else ""}${pct.toPlainString()}%"
-                } else "-"
-                totalNet += if (avg != null) net - o.cryptoAmount * avg else net
-                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                    Text("${i + 1}", modifier = Modifier.weight(0.4f), style = MaterialTheme.typography.bodySmall)
-                    Text(NumberFormatters.crypto(o.cryptoAmount), modifier = Modifier.weight(1.4f), style = MaterialTheme.typography.bodySmall)
-                    Text(NumberFormatters.fiat(o.limitPrice), modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.bodySmall)
-                    Text(profitPctText, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                    Text(NumberFormatters.fiat(net.setScale(2, RoundingMode.HALF_UP)), modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.bodySmall)
-                }
-            }
-            androidx.compose.material3.HorizontalDivider()
-            Text(
-                "${stringResource(R.string.sell_wizard_ladder_preview_total)}: ${NumberFormatters.fiat(totalNet.setScale(2, RoundingMode.HALF_UP))} ${state.fiat}",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 4.dp)
-            )
+        LadderPreviewTable(
+            preview = state.ladderPreview,
+            avg = avg,
+            feeRate = state.feeRate,
+            fiat = state.fiat
+        )
+    }
+}
+
+@Composable
+private fun LadderPreviewTable(
+    preview: List<com.accbot.dca.domain.usecase.LadderOrder>,
+    avg: BigDecimal?,
+    feeRate: BigDecimal,
+    fiat: String
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text("#", modifier = Modifier.weight(0.4f), style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.sell_wizard_amount), modifier = Modifier.weight(1.4f), style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.sell_wizard_limit_price), modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.labelSmall)
+            Text("Profit", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall)
+            Text("Net", modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.labelSmall)
         }
+        androidx.compose.material3.HorizontalDivider()
+        var totalNet = BigDecimal.ZERO
+        preview.forEachIndexed { i, o ->
+            val gross = o.cryptoAmount * o.limitPrice
+            val net = gross * (BigDecimal.ONE - feeRate)
+            val profitPctText = if (avg != null && avg > BigDecimal.ZERO) {
+                val pct = (o.limitPrice - avg).divide(avg, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal(100)).setScale(1, RoundingMode.HALF_UP)
+                "${if (pct.signum() >= 0) "+" else ""}${pct.toPlainString()}%"
+            } else "-"
+            totalNet += if (avg != null) net - o.cryptoAmount * avg else net
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                Text("${i + 1}", modifier = Modifier.weight(0.4f), style = MaterialTheme.typography.bodySmall)
+                Text(NumberFormatters.crypto(o.cryptoAmount), modifier = Modifier.weight(1.4f), style = MaterialTheme.typography.bodySmall)
+                Text(NumberFormatters.fiat(o.limitPrice), modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.bodySmall)
+                Text(profitPctText, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                Text(NumberFormatters.fiat(net.setScale(2, RoundingMode.HALF_UP)), modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        androidx.compose.material3.HorizontalDivider()
+        Text(
+            "${stringResource(R.string.sell_wizard_ladder_preview_total)}: ${NumberFormatters.fiat(totalNet.setScale(2, RoundingMode.HALF_UP))} $fiat",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(top = 4.dp)
+        )
     }
 }
 
