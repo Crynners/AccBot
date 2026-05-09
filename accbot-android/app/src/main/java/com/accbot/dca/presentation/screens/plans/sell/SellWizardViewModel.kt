@@ -355,7 +355,7 @@ class SellWizardViewModel @Inject constructor(
             LadderRangeMode.PROFIT_PCT -> {
                 if (avg == null) {
                     _uiState.update {
-                        it.copy(ladderPreview = emptyList(), ladderHardError = "Pro profit % musi byt avg buy price")
+                        it.copy(ladderPreview = emptyList(), ladderHardError = "Pro profit % musí být zadaná průměrná nákupní cena")
                     }
                     return
                 }
@@ -372,26 +372,26 @@ class SellWizardViewModel @Inject constructor(
             return
         }
         if (total <= BigDecimal.ZERO) {
-            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Mnozstvi > 0") }
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Množství musí být větší než 0") }
             return
         }
         if (count < 2) {
-            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Pocet >= 2") }
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Počet orderů musí být alespoň 2") }
             return
         }
         if (to <= from || from <= BigDecimal.ZERO) {
-            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Do > Od, oba > 0") }
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Do musí být větší než Od (oba kladné)") }
             return
         }
         if (total > st.availableToSell) {
-            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Nemas tolik k dispozici") }
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Nemáš tolik k dispozici") }
             return
         }
 
         val preview = LadderGenerator.generate(total, from, to, count, st.ladderAmountMode)
         val minPerOrder = preview.minOf { it.cryptoAmount }
         val hardError = if (minPerOrder < st.minOrderSize) {
-            "Order ${minPerOrder} < min ${st.minOrderSize}"
+            "Velikost orderu ${minPerOrder} je pod minimem ${st.minOrderSize}"
         } else null
 
         _uiState.update { it.copy(ladderPreview = preview, ladderHardError = hardError) }
@@ -468,7 +468,7 @@ class SellWizardViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             submitting = false,
-                            submitError = result.exceptionOrNull()?.message ?: "Neznama chyba"
+                            submitError = result.exceptionOrNull()?.message ?: "Neznámá chyba"
                         )
                     }
             }

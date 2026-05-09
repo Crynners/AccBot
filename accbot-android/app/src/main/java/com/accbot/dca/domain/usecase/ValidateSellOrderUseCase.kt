@@ -12,8 +12,11 @@ import javax.inject.Inject
  * [Ok] is only emitted when the list would otherwise be empty.
  */
 sealed class SellValidation {
+    /** Field this validation result attaches to (lets UI render it under the right input). */
+    enum class Field { AMOUNT, PRICE, NET, GENERIC }
+
     object Ok : SellValidation()
-    data class HardError(val message: String) : SellValidation()
+    data class HardError(val message: String, val field: Field = Field.GENERIC) : SellValidation()
     data class InstantFillInfo(val spot: BigDecimal) : SellValidation()
     data class FarFromMarketWarning(val spot: BigDecimal) : SellValidation()
     /**
@@ -51,15 +54,15 @@ class ValidateSellOrderUseCase @Inject constructor(
         val result = mutableListOf<SellValidation>()
 
         if (cryptoAmount <= BigDecimal.ZERO) {
-            result += SellValidation.HardError("Mnozstvi musi byt vetsi nez 0")
+            result += SellValidation.HardError("Množství musí být větší než 0", SellValidation.Field.AMOUNT)
             return result
         }
         if (limitPrice <= BigDecimal.ZERO) {
-            result += SellValidation.HardError("Limitni cena musi byt vetsi nez 0")
+            result += SellValidation.HardError("Limitní cena musí být větší než 0", SellValidation.Field.PRICE)
             return result
         }
         if (cryptoAmount < minOrderSize) {
-            result += SellValidation.HardError("Minimalni order je $minOrderSize")
+            result += SellValidation.HardError("Minimální order je $minOrderSize", SellValidation.Field.AMOUNT)
         }
 
         val tx = database.transactionDao().getTransactionsByPlanSync(planId)
@@ -87,7 +90,8 @@ class ValidateSellOrderUseCase @Inject constructor(
         val available = held - openSellsRequested
         if (cryptoAmount > available) {
             result += SellValidation.HardError(
-                "Nemas tolik k dispozici (k dispozici $available)"
+                "Nemáš tolik k dispozici (k dispozici $available)",
+                SellValidation.Field.AMOUNT
             )
         }
 

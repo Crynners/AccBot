@@ -228,6 +228,14 @@ private fun SellInputStep(
             singleLine = true
         )
 
+        // Field-specific errors: shown as supportingText under the matching field.
+        val amountError = state.validations.filterIsInstance<SellValidation.HardError>()
+            .firstOrNull { it.field == SellValidation.Field.AMOUNT }
+        val priceError = state.validations.filterIsInstance<SellValidation.HardError>()
+            .firstOrNull { it.field == SellValidation.Field.PRICE }
+        val netError = state.validations.filterIsInstance<SellValidation.HardError>()
+            .firstOrNull { it.field == SellValidation.Field.NET }
+
         Spacer(Modifier.height(16.dp))
         Text(
             stringResource(R.string.sell_wizard_amount),
@@ -238,6 +246,10 @@ private fun SellInputStep(
         OutlinedTextField(
             value = state.amountInput,
             onValueChange = vm::setAmount,
+            isError = amountError != null,
+            supportingText = amountError?.let {
+                { Text(it.message, color = MaterialTheme.colorScheme.error) }
+            },
             trailingIcon = {
                 Text(
                     text = state.crypto,
@@ -293,6 +305,10 @@ private fun SellInputStep(
             value = state.priceInput,
             onValueChange = vm::setPrice,
             visualTransformation = ThousandSeparator,
+            isError = priceError != null,
+            supportingText = priceError?.let {
+                { Text(it.message, color = MaterialTheme.colorScheme.error) }
+            },
             trailingIcon = {
                 Text(
                     text = state.fiat,
@@ -342,6 +358,10 @@ private fun SellInputStep(
             value = state.netInput,
             onValueChange = vm::setNetFiat,
             visualTransformation = ThousandSeparator,
+            isError = netError != null,
+            supportingText = netError?.let {
+                { Text(it.message, color = MaterialTheme.colorScheme.error) }
+            },
             trailingIcon = {
                 Text(
                     text = state.fiat,
@@ -445,16 +465,19 @@ private fun SellInputStep(
             }
         }
 
-        // Validations
+        // Validations: field-tagged hard errors render under their field; only generic
+        // ones and warnings end up in this list.
         Spacer(Modifier.height(8.dp))
         state.validations.forEach { v ->
             when (v) {
-                is SellValidation.HardError -> Text(
-                    text = v.message,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
+                is SellValidation.HardError -> if (v.field == SellValidation.Field.GENERIC) {
+                    Text(
+                        text = v.message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
                 is SellValidation.InstantFillInfo -> InfoBanner(
                     stringResource(R.string.sell_wizard_instant_fill_warning, NumberFormatters.fiat(v.spot), state.fiat)
                 )
