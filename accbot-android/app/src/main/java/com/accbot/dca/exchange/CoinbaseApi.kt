@@ -260,7 +260,10 @@ class CoinbaseApi(
                         TransactionStatus.PARTIAL
                     } else TransactionStatus.PENDING
                     "PARTIALLY_FILLED" -> TransactionStatus.PARTIAL
-                    "CANCELLED", "CANCEL_QUEUED", "EXPIRED", "FAILED", "REJECTED" ->
+                    "CANCELLED", "CANCEL_QUEUED", "EXPIRED" ->
+                        if (filledSize > BigDecimal.ZERO) TransactionStatus.PARTIAL
+                        else TransactionStatus.CANCELLED
+                    "FAILED", "REJECTED" ->
                         if (filledSize > BigDecimal.ZERO) TransactionStatus.PARTIAL
                         else TransactionStatus.FAILED
                     else -> return@withContext null

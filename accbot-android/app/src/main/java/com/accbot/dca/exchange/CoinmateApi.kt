@@ -374,7 +374,7 @@ class CoinmateApi(
                     "PARTIALLY_FILLED" -> TransactionStatus.PARTIAL
                     "CANCELLED", "CANCELED", "EXPIRED" ->
                         if (filledAmount > BigDecimal.ZERO) TransactionStatus.PARTIAL
-                        else TransactionStatus.FAILED
+                        else TransactionStatus.CANCELLED
                     else -> return@withContext null
                 }
 

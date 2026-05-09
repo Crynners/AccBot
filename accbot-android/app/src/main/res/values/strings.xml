@@ -445,6 +445,7 @@
     <string name="transaction_details_copied">Copied to clipboard</string>
     <string name="transaction_status_completed">Completed</string>
     <string name="transaction_status_failed">Failed</string>
+    <string name="transaction_status_cancelled">Cancelled</string>
     <string name="transaction_status_pending">Pending</string>
     <string name="transaction_status_partial">Partially Filled</string>
     <string name="transaction_details_at">at</string>
@@ -1012,7 +1013,7 @@
     <string name="sell_wizard_loss_below_buy">Selling below buy price: %1$s %2$s loss</string>
     <string name="sell_wizard_loss_after_fee">After fee, this is a loss: %1$s %2$s</string>
     <string name="sell_wizard_inventory_deficit">Inventory mismatch (%1$s missing) - enter avg buy price manually</string>
-    <string name="sell_wizard_ladder_enable">Create multiple sell orders (ladder)</string>
+    <string name="sell_wizard_ladder_enable">Split into multiple orders</string>
     <string name="sell_wizard_ladder_from">From</string>
     <string name="sell_wizard_ladder_to">To</string>
     <string name="sell_wizard_ladder_count">Number of orders</string>
@@ -1023,4 +1024,15 @@
     <string name="sell_wizard_ladder_preview_total">Total at full fill</string>
     <string name="sell_wizard_ladder_outcome_all">All %1$d orders placed</string>
     <string name="sell_wizard_ladder_outcome_partial">Placed %1$d of %2$d. Stopped: %3$s</string>
+    <string name="sell_wizard_ladder_dialog_title">Result</string>
+    <string name="open_sells_title">Open sell orders (%1$d)</string>
+    <string name="open_sells_status_partial">Partial: %1$s %% (%2$s / %3$s)</string>
+    <string name="open_sells_status_pending">Waiting for fill</string>
+    <string name="open_sells_cancel_action">Cancel order</string>
+    <string name="open_sells_cancel_confirm_title">Cancel order?</string>
+    <string name="open_sells_cancel_confirm_text">Cancel limit sell %1$s %2$s @ %3$s %4$s?</string>
+    <string name="open_sells_cancel_back">Back</string>
+    <string name="open_sells_cancel_all">Cancel all</string>
+    <string name="open_sells_cancel_all_confirm_title">Cancel all orders?</string>
+    <string name="open_sells_cancel_all_confirm_text">Cancel all %1$d open sell orders? This cannot be undone.</string>
 </resources>

@@ -24,10 +24,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.accbot.dca.R
 import com.accbot.dca.domain.model.Transaction
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.presentation.ui.theme.Error
@@ -37,15 +39,19 @@ import java.math.RoundingMode
 
 /**
  * Card listing all open (PENDING / PARTIAL) sell orders for a plan with per-row
- * cancel action. Hidden entirely when there are no open sells.
+ * cancel action and a "Cancel all" header button. Hidden entirely when there are no
+ * open sells.
  */
 @Composable
 fun OpenSellsList(
     openSells: List<Transaction>,
     onCancelClick: (Long) -> Unit,
+    onCancelAllClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     if (openSells.isEmpty()) return
+
+    var showCancelAllConfirm by remember { mutableStateOf(false) }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -58,17 +64,54 @@ fun OpenSellsList(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(
-                text = "Otevrene sell ordery (${openSells.size})",
-                fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.semantics { heading() }
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.open_sells_title, openSells.size),
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.semantics { heading() }
+                )
+                if (onCancelAllClick != null && openSells.size > 1) {
+                    TextButton(onClick = { showCancelAllConfirm = true }) {
+                        Text(
+                            stringResource(R.string.open_sells_cancel_all),
+                            color = Error
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(8.dp))
             openSells.forEach { tx ->
                 OpenSellRow(tx = tx, onCancelClick = onCancelClick)
             }
         }
+    }
+
+    if (showCancelAllConfirm && onCancelAllClick != null) {
+        AlertDialog(
+            onDismissRequest = { showCancelAllConfirm = false },
+            title = { Text(stringResource(R.string.open_sells_cancel_all_confirm_title)) },
+            text = {
+                Text(stringResource(R.string.open_sells_cancel_all_confirm_text, openSells.size))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showCancelAllConfirm = false
+                    onCancelAllClick()
+                }) {
+                    Text(stringResource(R.string.open_sells_cancel_all), color = Error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelAllConfirm = false }) {
+                    Text(stringResource(R.string.open_sells_cancel_back))
+                }
+            }
+        )
     }
 }
 
@@ -107,13 +150,18 @@ internal fun OpenSellRow(
             )
             if (tx.status == TransactionStatus.PARTIAL) {
                 Text(
-                    text = "Castecne: $progressPct% (${NumberFormatters.crypto(filled)} / ${NumberFormatters.crypto(requested)})",
+                    text = stringResource(
+                        R.string.open_sells_status_partial,
+                        progressPct.toString(),
+                        NumberFormatters.crypto(filled),
+                        NumberFormatters.crypto(requested)
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.tertiary
                 )
             } else {
                 Text(
-                    text = "Ceka na vyplneni",
+                    text = stringResource(R.string.open_sells_status_pending),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -122,7 +170,7 @@ internal fun OpenSellRow(
         IconButton(onClick = { showConfirm = true }) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Zrusit order",
+                contentDescription = stringResource(R.string.open_sells_cancel_action),
                 tint = Error
             )
         }
@@ -132,10 +180,16 @@ internal fun OpenSellRow(
         val priceText = tx.limitPrice?.let { NumberFormatters.fiat(it) } ?: "-"
         AlertDialog(
             onDismissRequest = { showConfirm = false },
-            title = { Text("Zrusit order?") },
+            title = { Text(stringResource(R.string.open_sells_cancel_confirm_title)) },
             text = {
                 Text(
-                    "Opravdu zrusit limitni prodej ${NumberFormatters.crypto(requested)} ${tx.crypto} @ $priceText ${tx.fiat}?"
+                    stringResource(
+                        R.string.open_sells_cancel_confirm_text,
+                        NumberFormatters.crypto(requested),
+                        tx.crypto,
+                        priceText,
+                        tx.fiat
+                    )
                 )
             },
             confirmButton = {
@@ -143,12 +197,12 @@ internal fun OpenSellRow(
                     showConfirm = false
                     onCancelClick(tx.id)
                 }) {
-                    Text("Zrusit order", color = Error)
+                    Text(stringResource(R.string.open_sells_cancel_action), color = Error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showConfirm = false }) {
-                    Text("Zpet")
+                    Text(stringResource(R.string.open_sells_cancel_back))
                 }
             }
         )

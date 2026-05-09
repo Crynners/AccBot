@@ -777,6 +777,7 @@ internal fun TransactionCard(
                             TransactionStatus.FAILED -> Icons.Default.Error
                             TransactionStatus.PENDING -> Icons.Default.Schedule
                             TransactionStatus.PARTIAL -> Icons.Default.Warning
+                            TransactionStatus.CANCELLED -> Icons.Default.Cancel
                         },
                         contentDescription = null,
                         tint = when (transaction.status) {

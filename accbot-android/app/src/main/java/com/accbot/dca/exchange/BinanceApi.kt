@@ -360,7 +360,10 @@ class BinanceApi(
                         TransactionStatus.PARTIAL
                     } else TransactionStatus.PENDING
                     "PARTIALLY_FILLED" -> TransactionStatus.PARTIAL
-                    "CANCELED", "CANCELLED", "EXPIRED", "REJECTED", "PENDING_CANCEL" ->
+                    "CANCELED", "CANCELLED", "EXPIRED", "PENDING_CANCEL" ->
+                        if (executedQty > BigDecimal.ZERO) TransactionStatus.PARTIAL
+                        else TransactionStatus.CANCELLED
+                    "REJECTED" ->
                         if (executedQty > BigDecimal.ZERO) TransactionStatus.PARTIAL
                         else TransactionStatus.FAILED
                     else -> return@withContext null

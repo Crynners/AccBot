@@ -242,6 +242,11 @@ fun getTransactionStatusStyle(status: TransactionStatus): TransactionStatusStyle
             color = WarningOrange,
             label = stringResource(R.string.transaction_status_partial)
         )
+        TransactionStatus.CANCELLED -> TransactionStatusStyle(
+            icon = Icons.Default.Cancel,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            label = stringResource(R.string.transaction_status_cancelled)
+        )
     }
 }
 

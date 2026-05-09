@@ -237,7 +237,11 @@ enum class TransactionStatus {
     PENDING,
     COMPLETED,
     FAILED,
-    PARTIAL
+    PARTIAL,
+    /** User or exchange-side cancellation with no fills. Distinct from FAILED (which
+     * means the exchange rejected the order outright). PARTIAL covers cancellation
+     * after some fills happened. */
+    CANCELLED
 }
 
 /**

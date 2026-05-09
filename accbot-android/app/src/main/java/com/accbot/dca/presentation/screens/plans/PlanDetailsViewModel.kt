@@ -278,9 +278,33 @@ class PlanDetailsViewModel @Inject constructor(
             val result = cancelSellOrderUseCase(txId)
             if (result.isFailure) {
                 _snackbar.emit(
-                    "Zruseni orderu selhalo: ${result.exceptionOrNull()?.message ?: "neznama chyba"}"
+                    "Zrušení příkazu selhalo: ${result.exceptionOrNull()?.message ?: "neznámá chyba"}"
                 )
             }
+        }
+    }
+
+    /**
+     * Cancel every open (PENDING/PARTIAL) sell order on the current plan. Iterates
+     * sequentially to avoid hammering the exchange. Reports a single aggregate snackbar
+     * (success count / failure count) once done.
+     */
+    fun cancelAllOpenSells() {
+        viewModelScope.launch {
+            val open = _openSells.value
+            if (open.isEmpty()) return@launch
+            var ok = 0
+            var failed = 0
+            for (tx in open) {
+                val r = cancelSellOrderUseCase(tx.id)
+                if (r.isSuccess) ok++ else failed++
+            }
+            val msg = when {
+                failed == 0 -> "Zrušeno $ok příkazů"
+                ok == 0 -> "Zrušení selhalo u všech ${open.size} příkazů"
+                else -> "Zrušeno $ok z ${open.size} příkazů ($failed selhalo)"
+            }
+            _snackbar.emit(msg)
         }
     }
 

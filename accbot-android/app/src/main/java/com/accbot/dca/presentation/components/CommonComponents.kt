@@ -296,6 +296,7 @@ fun TransactionStatusIcon(status: TransactionStatus) {
         TransactionStatus.FAILED -> Icons.Default.Error to Error
         TransactionStatus.PENDING -> Icons.Default.Schedule to accentCol
         TransactionStatus.PARTIAL -> Icons.Default.RemoveCircle to Color(0xFFFFA500)
+        TransactionStatus.CANCELLED -> Icons.Default.Cancel to MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     Box(

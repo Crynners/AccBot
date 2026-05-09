@@ -110,7 +110,7 @@ fun SellWizardBottomSheet(
     state.ladderOutcome?.let { outcome ->
         AlertDialog(
             onDismissRequest = viewModel::consumeLadderOutcome,
-            title = { Text(stringResource(R.string.sell_wizard_ladder_enable)) },
+            title = { Text(stringResource(R.string.sell_wizard_ladder_dialog_title)) },
             text = {
                 Text(
                     if (outcome.reason == null) {

@@ -344,6 +344,7 @@ private fun StatusHeader(status: TransactionStatus) {
         TransactionStatus.FAILED -> Triple(Icons.Default.Error, Error, stringResource(R.string.transaction_status_failed))
         TransactionStatus.PENDING -> Triple(Icons.Default.Schedule, accentCol, stringResource(R.string.transaction_status_pending))
         TransactionStatus.PARTIAL -> Triple(Icons.Default.RemoveCircle, Color(0xFFFFA500), stringResource(R.string.transaction_status_partial))
+        TransactionStatus.CANCELLED -> Triple(Icons.Default.Cancel, MaterialTheme.colorScheme.onSurfaceVariant, stringResource(R.string.transaction_status_cancelled))
     }
 
     Row(

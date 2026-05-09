@@ -771,7 +771,8 @@ fun PlanDetailsScreen(
                             item {
                                 OpenSellsList(
                                     openSells = openSells,
-                                    onCancelClick = viewModel::cancelSell
+                                    onCancelClick = viewModel::cancelSell,
+                                    onCancelAllClick = viewModel::cancelAllOpenSells
                                 )
                             }
                         }

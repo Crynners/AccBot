@@ -13,7 +13,7 @@ import javax.inject.Inject
  *
  * On exchange-cancel success locally marks the transaction as:
  *  - PARTIAL if some fills already happened (cryptoAmount > 0)
- *  - FAILED otherwise
+ *  - CANCELLED otherwise
  *
  * On exchange-cancel failure, tries to re-resolve the order status so the UI reflects
  * the true state (the order may have filled between the user pressing cancel and the
@@ -42,7 +42,7 @@ class CancelSellOrderUseCase @Inject constructor(
 
         return if (cancelResult.isSuccess) {
             val newStatus = if (tx.cryptoAmount > BigDecimal.ZERO)
-                TransactionStatus.PARTIAL else TransactionStatus.FAILED
+                TransactionStatus.PARTIAL else TransactionStatus.CANCELLED
             database.transactionDao().updateResolvedTransaction(
                 id = txId,
                 newStatus = newStatus,
