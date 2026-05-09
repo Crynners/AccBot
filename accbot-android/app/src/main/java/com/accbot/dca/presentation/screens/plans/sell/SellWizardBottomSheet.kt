@@ -240,7 +240,7 @@ private fun SellInputStep(
             listOf(25 to "25 %", 50 to "50 %", 75 to "75 %", 100 to allLabel).forEach { (pct, label) ->
                 AssistChip(
                     onClick = { vm.setAmountPct(pct) },
-                    label = { Text(label) }
+                    label = { Text(label, maxLines = 1, softWrap = false) }
                 )
             }
         }
@@ -287,27 +287,22 @@ private fun SellInputStep(
         ) {
             AssistChip(
                 onClick = vm::setPriceSpot,
-                label = { Text(stringResource(R.string.sell_wizard_chip_spot)) },
+                label = { Text(stringResource(R.string.sell_wizard_chip_spot), maxLines = 1, softWrap = false) },
                 enabled = state.spotPrice != null
             )
             AssistChip(
-                onClick = vm::setPriceBreakeven,
-                label = { Text(stringResource(R.string.sell_wizard_chip_breakeven)) },
-                enabled = state.avgBuyPrice != null
-            )
-            AssistChip(
                 onClick = { vm.setPriceAvgPlus(10) },
-                label = { Text("+10 %") },
+                label = { Text("+10 %", maxLines = 1, softWrap = false) },
                 enabled = state.avgBuyPrice != null
             )
             AssistChip(
                 onClick = { vm.setPriceAvgPlus(25) },
-                label = { Text("+25 %") },
+                label = { Text("+25 %", maxLines = 1, softWrap = false) },
                 enabled = state.avgBuyPrice != null
             )
             AssistChip(
                 onClick = { vm.setPriceAvgPlus(50) },
-                label = { Text("+50 %") },
+                label = { Text("+50 %", maxLines = 1, softWrap = false) },
                 enabled = state.avgBuyPrice != null
             )
         }
@@ -347,7 +342,7 @@ private fun SellInputStep(
             listOf(0.10 to "+10 %", 0.20 to "+20 %", 0.50 to "+50 %", 1.00 to "+100 %").forEach { (factor, label) ->
                 AssistChip(
                     onClick = { vm.applyNetProfitPreset(factor) },
-                    label = { Text(label) },
+                    label = { Text(label, maxLines = 1, softWrap = false) },
                     enabled = state.avgBuyPrice != null && state.amountInput.toBigDecimalOrNull() != null
                 )
             }
