@@ -81,6 +81,7 @@ fun SellWizardBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
         modifier = Modifier.fillMaxHeight(0.95f)
     ) {
         when (state.step) {
@@ -236,7 +237,7 @@ private fun SellInputStep(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             val allLabel = stringResource(R.string.sell_wizard_amount_all)
-            listOf(25 to "25%", 50 to "50%", 75 to "75%", 100 to allLabel).forEach { (pct, label) ->
+            listOf(25 to "25 %", 50 to "50 %", 75 to "75 %", 100 to allLabel).forEach { (pct, label) ->
                 AssistChip(
                     onClick = { vm.setAmountPct(pct) },
                     label = { Text(label) }
@@ -291,22 +292,22 @@ private fun SellInputStep(
             )
             AssistChip(
                 onClick = vm::setPriceBreakeven,
-                label = { Text("Breakeven") },
+                label = { Text(stringResource(R.string.sell_wizard_chip_breakeven)) },
                 enabled = state.avgBuyPrice != null
             )
             AssistChip(
                 onClick = { vm.setPriceAvgPlus(10) },
-                label = { Text("+10%") },
+                label = { Text("+10 %") },
                 enabled = state.avgBuyPrice != null
             )
             AssistChip(
                 onClick = { vm.setPriceAvgPlus(25) },
-                label = { Text("+25%") },
+                label = { Text("+25 %") },
                 enabled = state.avgBuyPrice != null
             )
             AssistChip(
                 onClick = { vm.setPriceAvgPlus(50) },
-                label = { Text("+50%") },
+                label = { Text("+50 %") },
                 enabled = state.avgBuyPrice != null
             )
         }
@@ -343,7 +344,7 @@ private fun SellInputStep(
             modifier = Modifier.padding(top = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            listOf(0.10 to "+10%", 0.20 to "+20%", 0.50 to "+50%", 1.00 to "+100%").forEach { (factor, label) ->
+            listOf(0.10 to "+10 %", 0.20 to "+20 %", 0.50 to "+50 %", 1.00 to "+100 %").forEach { (factor, label) ->
                 AssistChip(
                     onClick = { vm.applyNetProfitPreset(factor) },
                     label = { Text(label) },
@@ -372,7 +373,7 @@ private fun SellInputStep(
         if (state.feeRate > BigDecimal.ZERO && proceeds > BigDecimal.ZERO) {
             InfoRow(
                 stringResource(R.string.sell_wizard_summary_fee),
-                "-${NumberFormatters.fiat(feeAmount)} ${state.fiat} (${state.feeRate.multiply(BigDecimal(100)).setScale(2, RoundingMode.HALF_UP).toPlainString()}%)"
+                "-${NumberFormatters.fiat(feeAmount)} ${state.fiat} (${state.feeRate.multiply(BigDecimal(100)).setScale(2, RoundingMode.HALF_UP).toPlainString()} %)"
             )
         }
         state.avgBuyPrice?.let { avg ->
@@ -386,7 +387,7 @@ private fun SellInputStep(
             val sign = if (netProfit >= BigDecimal.ZERO) "+" else ""
             InfoRow(
                 label = stringResource(R.string.sell_wizard_summary_net_profit),
-                value = "$sign${NumberFormatters.fiat(netProfit)} ${state.fiat} ($sign${netProfitPct.toPlainString()}%)",
+                value = "$sign${NumberFormatters.fiat(netProfit)} ${state.fiat} ($sign${netProfitPct.toPlainString()} %)",
                 color = when {
                     netProfit > BigDecimal.ZERO -> successColor()
                     netProfit < BigDecimal.ZERO -> Error
@@ -400,7 +401,7 @@ private fun SellInputStep(
                 val pct = (totalProgress.toDouble() / target.toDouble()).coerceAtLeast(0.0)
                 InfoRow(
                     stringResource(R.string.sell_wizard_summary_target_progress),
-                    "${NumberFormatters.fiat(totalProgress)} / ${NumberFormatters.fiat(target)} ${state.fiat} (${"%.0f".format(pct * 100)}%)"
+                    "${NumberFormatters.fiat(totalProgress)} / ${NumberFormatters.fiat(target)} ${state.fiat} (${"%.0f".format(pct * 100)} %)"
                 )
             }
         }
@@ -752,7 +753,7 @@ private fun LadderPreviewTable(
             val profitPctText = if (avg != null && avg > BigDecimal.ZERO) {
                 val pct = (o.limitPrice - avg).divide(avg, 4, RoundingMode.HALF_UP)
                     .multiply(BigDecimal(100)).setScale(1, RoundingMode.HALF_UP)
-                "${if (pct.signum() >= 0) "+" else ""}${pct.toPlainString()}%"
+                "${if (pct.signum() >= 0) "+" else ""}${pct.toPlainString()} %"
             } else "-"
             totalNet += if (avg != null) net - o.cryptoAmount * avg else net
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {

@@ -981,8 +981,9 @@
     <string name="sell_wizard_spot_price">Aktuální cena:</string>
     <string name="sell_wizard_avg_buy">Průměrný nákup:</string>
     <string name="sell_wizard_available">K dispozici:</string>
-    <string name="sell_wizard_amount">Množství</string>
+    <string name="sell_wizard_amount">Množství k prodeji</string>
     <string name="sell_wizard_amount_all">Vše</string>
+    <string name="sell_wizard_chip_breakeven">Bez ztráty</string>
     <string name="sell_wizard_limit_price">Limitní cena</string>
     <string name="sell_wizard_chip_spot">Tržní</string>
     <string name="sell_wizard_summary">Souhrn</string>
