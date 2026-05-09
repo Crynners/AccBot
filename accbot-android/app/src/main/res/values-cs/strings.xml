@@ -1004,4 +1004,17 @@
     <string name="sell_wizard_submit">Odeslat</string>
     <string name="sell_wizard_timeout_title">Nelze ověřit stav příkazu</string>
     <string name="sell_wizard_timeout_text">Spojení s burzou selhalo nebo vypršelo. Příkaz mohl být odeslán, ale nelze to potvrdit. Zkontroluj otevřené příkazy na burze přes web a v případě potřeby zruš duplicitu.</string>
+    <string name="sell_wizard_avg_buy_helper_auto">Spočítáno z plánu</string>
+    <string name="sell_wizard_avg_buy_helper_manual">Zadáno ručně</string>
+    <string name="sell_wizard_avg_buy_helper_required">Zatím žádné nákupy (nebo vše prodáno) - zadej ručně</string>
+    <string name="sell_wizard_avg_buy_reset">Spočítat z plánu</string>
+    <string name="sell_wizard_net_fiat">Čistý výnos (po fee)</string>
+    <string name="sell_wizard_net_preset_label">Zisk z této transakce:</string>
+    <string name="sell_wizard_summary_fee">Odhad fee</string>
+    <string name="sell_wizard_summary_net_profit">Čistý zisk (po fee)</string>
+    <string name="sell_wizard_summary_remaining_after">Po tomto prodeji</string>
+    <string name="sell_wizard_summary_target_progress">Postup k cíli plánu</string>
+    <string name="sell_wizard_loss_below_buy">Prodáváš pod nákupní cenou: ztráta %1$s %2$s</string>
+    <string name="sell_wizard_loss_after_fee">Po fee jdeš do ztráty: %1$s %2$s</string>
+    <string name="sell_wizard_inventory_deficit">Inventář nesedí (chybí %1$s) - zadej průměrnou nákupní cenu ručně</string>
 </resources>

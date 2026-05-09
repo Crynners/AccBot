@@ -998,4 +998,17 @@
     <string name="sell_wizard_submit">Submit</string>
     <string name="sell_wizard_timeout_title">Cannot verify order status</string>
     <string name="sell_wizard_timeout_text">Connection to the exchange failed or timed out. The order may have been submitted, but cannot be confirmed. Check open orders on the exchange via web and cancel any duplicates if needed.</string>
+    <string name="sell_wizard_avg_buy_helper_auto">Auto-calculated from this plan</string>
+    <string name="sell_wizard_avg_buy_helper_manual">Manually entered</string>
+    <string name="sell_wizard_avg_buy_helper_required">No buys yet (or all sold) - enter manually</string>
+    <string name="sell_wizard_avg_buy_reset">Calc from plan</string>
+    <string name="sell_wizard_net_fiat">Net proceeds (after fee)</string>
+    <string name="sell_wizard_net_preset_label">Profit on this transaction:</string>
+    <string name="sell_wizard_summary_fee">Estimated fee</string>
+    <string name="sell_wizard_summary_net_profit">Net profit (after fee)</string>
+    <string name="sell_wizard_summary_remaining_after">After this sell</string>
+    <string name="sell_wizard_summary_target_progress">Plan target progress</string>
+    <string name="sell_wizard_loss_below_buy">Selling below buy price: %1$s %2$s loss</string>
+    <string name="sell_wizard_loss_after_fee">After fee, this is a loss: %1$s %2$s</string>
+    <string name="sell_wizard_inventory_deficit">Inventory mismatch (%1$s missing) - enter avg buy price manually</string>
 </resources>

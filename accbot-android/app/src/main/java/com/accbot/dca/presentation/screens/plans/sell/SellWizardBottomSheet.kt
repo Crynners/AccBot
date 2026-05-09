@@ -123,18 +123,69 @@ private fun SellInputStep(
 
         Spacer(Modifier.height(12.dp))
 
-        // Info block
+        // Info block (read-only context)
         InfoRow(
             stringResource(R.string.sell_wizard_spot_price),
             state.spotPrice?.let { "${NumberFormatters.fiat(it)} ${state.fiat}" } ?: "-"
         )
         InfoRow(
-            stringResource(R.string.sell_wizard_avg_buy),
-            state.avgBuyPrice?.let { "${NumberFormatters.fiat(it)} ${state.fiat}" } ?: "-"
-        )
-        InfoRow(
             stringResource(R.string.sell_wizard_available),
             "${NumberFormatters.crypto(state.availableToSell)} ${state.crypto}"
+        )
+
+        if (state.inventoryDeficit > BigDecimal.ZERO) {
+            Spacer(Modifier.height(4.dp))
+            WarningBanner(
+                stringResource(
+                    R.string.sell_wizard_inventory_deficit,
+                    "${NumberFormatters.crypto(state.inventoryDeficit)} ${state.crypto}"
+                )
+            )
+        }
+
+        // Editable avg buy price
+        Spacer(Modifier.height(12.dp))
+        Text(
+            stringResource(R.string.sell_wizard_avg_buy),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(4.dp))
+        OutlinedTextField(
+            value = state.avgBuyPriceInput,
+            onValueChange = vm::setAvgBuyPrice,
+            trailingIcon = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (state.avgBuyPriceManual && state.avgBuyPriceAuto != null) {
+                        AssistChip(
+                            onClick = vm::resetAvgBuyPrice,
+                            label = { Text(stringResource(R.string.sell_wizard_avg_buy_reset)) },
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    }
+                    Text(
+                        text = state.fiat,
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            supportingText = {
+                Text(
+                    stringResource(
+                        when {
+                            state.avgBuyPriceAuto == null && state.avgBuyPriceInput.isBlank() ->
+                                R.string.sell_wizard_avg_buy_helper_required
+                            state.avgBuyPriceManual ->
+                                R.string.sell_wizard_avg_buy_helper_manual
+                            else -> R.string.sell_wizard_avg_buy_helper_auto
+                        }
+                    )
+                )
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
         Spacer(Modifier.height(16.dp))
@@ -216,6 +267,52 @@ private fun SellInputStep(
                 label = { Text("+25%") },
                 enabled = state.avgBuyPrice != null
             )
+            AssistChip(
+                onClick = { vm.setPriceAvgPlus(50) },
+                label = { Text("+50%") },
+                enabled = state.avgBuyPrice != null
+            )
+        }
+
+        // Net fiat field (3rd of the calculator triple)
+        Spacer(Modifier.height(16.dp))
+        Text(
+            stringResource(R.string.sell_wizard_net_fiat),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(4.dp))
+        OutlinedTextField(
+            value = state.netInput,
+            onValueChange = vm::setNetFiat,
+            trailingIcon = {
+                Text(
+                    text = state.fiat,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        Text(
+            stringResource(R.string.sell_wizard_net_preset_label),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+        Row(
+            modifier = Modifier.padding(top = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(0.10 to "+10%", 0.20 to "+20%", 0.50 to "+50%", 1.00 to "+100%").forEach { (factor, label) ->
+                AssistChip(
+                    onClick = { vm.applyNetProfitPreset(factor) },
+                    label = { Text(label) },
+                    enabled = state.avgBuyPrice != null && state.amountInput.toBigDecimalOrNull() != null
+                )
+            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -228,23 +325,61 @@ private fun SellInputStep(
         val amountBD = state.amountInput.toBigDecimalOrNull() ?: BigDecimal.ZERO
         val priceBD = state.priceInput.toBigDecimalOrNull() ?: BigDecimal.ZERO
         val proceeds = (amountBD * priceBD).setScale(2, RoundingMode.HALF_UP)
-        InfoRow(stringResource(R.string.sell_wizard_proceeds), "${NumberFormatters.fiat(proceeds)} ${state.fiat}")
+        val feeAmount = (proceeds * state.feeRate).setScale(2, RoundingMode.HALF_UP)
+        val netProceeds = (proceeds - feeAmount).setScale(2, RoundingMode.HALF_UP)
+        InfoRow(
+            stringResource(R.string.sell_wizard_proceeds),
+            "${NumberFormatters.fiat(proceeds)} ${state.fiat}"
+        )
+        if (state.feeRate > BigDecimal.ZERO && proceeds > BigDecimal.ZERO) {
+            InfoRow(
+                stringResource(R.string.sell_wizard_summary_fee),
+                "-${NumberFormatters.fiat(feeAmount)} ${state.fiat} (${state.feeRate.multiply(BigDecimal(100)).setScale(2, RoundingMode.HALF_UP).toPlainString()}%)"
+            )
+        }
         state.avgBuyPrice?.let { avg ->
-            val profit = ((priceBD - avg) * amountBD).setScale(2, RoundingMode.HALF_UP)
-            val profitPct = if (avg > BigDecimal.ZERO) {
-                (priceBD - avg).divide(avg, 4, RoundingMode.HALF_UP)
+            val costBasis = amountBD * avg
+            val netProfit = (netProceeds - costBasis).setScale(2, RoundingMode.HALF_UP)
+            val netProfitPct = if (costBasis > BigDecimal.ZERO) {
+                netProfit.divide(costBasis, 4, RoundingMode.HALF_UP)
                     .multiply(BigDecimal(100))
                     .setScale(1, RoundingMode.HALF_UP)
             } else BigDecimal.ZERO
-            val sign = if (profit >= BigDecimal.ZERO) "+" else ""
+            val sign = if (netProfit >= BigDecimal.ZERO) "+" else ""
             InfoRow(
-                label = stringResource(R.string.sell_wizard_profit_vs_avg),
-                value = "$sign${NumberFormatters.fiat(profit)} ${state.fiat} ($sign${profitPct.toPlainString()}%)",
+                label = stringResource(R.string.sell_wizard_summary_net_profit),
+                value = "$sign${NumberFormatters.fiat(netProfit)} ${state.fiat} ($sign${netProfitPct.toPlainString()}%)",
                 color = when {
-                    profit > BigDecimal.ZERO -> successColor()
-                    profit < BigDecimal.ZERO -> Error
+                    netProfit > BigDecimal.ZERO -> successColor()
+                    netProfit < BigDecimal.ZERO -> Error
                     else -> null
                 }
+            )
+
+            // Target progress
+            state.targetProfitAmount?.takeIf { it > BigDecimal.ZERO }?.let { target ->
+                val totalProgress = state.realizedPnLSoFar + netProfit
+                val pct = (totalProgress.toDouble() / target.toDouble()).coerceAtLeast(0.0)
+                InfoRow(
+                    stringResource(R.string.sell_wizard_summary_target_progress),
+                    "${NumberFormatters.fiat(totalProgress)} / ${NumberFormatters.fiat(target)} ${state.fiat} (${"%.0f".format(pct * 100)}%)"
+                )
+            }
+        }
+
+        // Loss banner from validations
+        state.validations.filterIsInstance<SellValidation.LossWarning>().firstOrNull()?.let { loss ->
+            Spacer(Modifier.height(8.dp))
+            val isPriceBelowAvg = state.priceInput.toBigDecimalOrNull()?.let { p ->
+                state.avgBuyPrice?.let { avg -> p < avg }
+            } ?: false
+            LossBanner(
+                stringResource(
+                    if (isPriceBelowAvg) R.string.sell_wizard_loss_below_buy
+                    else R.string.sell_wizard_loss_after_fee,
+                    NumberFormatters.fiat(loss.lossFiat),
+                    state.fiat
+                )
             )
         }
 
@@ -446,6 +581,32 @@ internal fun InfoBanner(text: String) {
                 text = text,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+
+@Composable
+internal fun LossBanner(text: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer
             )
         }
     }
