@@ -571,7 +571,28 @@ class CoinmateApi(
 
     override suspend fun validateCredentials(): Boolean = withContext(Dispatchers.IO) {
         try {
-            getBalance("BTC") != null
+            val nonce = System.currentTimeMillis()
+            val signature = createSignature(nonce)
+
+            val formBody = FormBody.Builder()
+                .add("clientId", clientId)
+                .add("publicKey", credentials.apiKey)
+                .add("nonce", nonce.toString())
+                .add("signature", signature)
+                .build()
+
+            val request = Request.Builder()
+                .url("$baseUrl/balances")
+                .post(formBody)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@use false
+                val json = JSONObject(body)
+                // Valid credentials = server accepted the signed request and returned a data object.
+                // Don't probe a specific currency - new accounts may not have it yet.
+                !json.optBoolean("error", true) && json.opt("data") is JSONObject
+            }
         } catch (e: Exception) {
             false
         }
