@@ -121,6 +121,13 @@ interface ExchangeApi {
     val supportsLimitSell: Boolean get() = false
 
     /**
+     * Estimated taker fee rate (e.g. 0.0035 = 0.35%) for decision support in the sell wizard.
+     * Approximate; actual user fee may be lower with VIP tier or fee discounts (e.g. BNB on
+     * Binance). Default 0.002 used for exchanges where the actual rate is unknown.
+     */
+    val estimatedTakerFeeRate: BigDecimal get() = BigDecimal("0.002")
+
+    /**
      * Get trade history for a currency pair.
      * Not all exchanges support this - default throws UnsupportedOperationException.
      * @param crypto Cryptocurrency symbol (e.g., "BTC")

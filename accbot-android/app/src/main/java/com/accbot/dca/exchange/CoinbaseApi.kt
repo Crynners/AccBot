@@ -31,6 +31,8 @@ class CoinbaseApi(
 
     override val exchange = Exchange.COINBASE
 
+    override val estimatedTakerFeeRate: BigDecimal = BigDecimal("0.0040")
+
     private val baseUrl = ExchangeConfig.getBaseUrl(Exchange.COINBASE, isSandbox)
 
     private val jsonMediaType = "application/json".toMediaType()

@@ -24,6 +24,8 @@ class KrakenApi(
 ) : ExchangeApi {
     override val exchange = Exchange.KRAKEN
 
+    override val estimatedTakerFeeRate: BigDecimal = BigDecimal("0.0026")
+
     private val baseUrl = ExchangeConfig.getBaseUrl(Exchange.KRAKEN, isSandbox)
 
     private val formMediaType = "application/x-www-form-urlencoded".toMediaType()
@@ -434,6 +436,8 @@ class KuCoinApi(
     private val client: OkHttpClient
 ) : ExchangeApi {
     override val exchange = Exchange.KUCOIN
+
+    override val estimatedTakerFeeRate: BigDecimal = BigDecimal("0.001")
 
     private val baseUrl = ExchangeConfig.getBaseUrl(Exchange.KUCOIN, isSandbox)
 

@@ -31,6 +31,8 @@ class BinanceApi(
 
     override val supportsLimitSell: Boolean = true
 
+    override val estimatedTakerFeeRate: BigDecimal = BigDecimal("0.001")
+
     private val baseUrl = ExchangeConfig.getBaseUrl(Exchange.BINANCE, isSandbox)
 
     /** Offset in ms: serverTime - localTime. Add to System.currentTimeMillis() to get server time. */

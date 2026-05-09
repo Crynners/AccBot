@@ -31,6 +31,8 @@ class CoinmateApi(
     // Coinmate taker fee: 0.35% (same as .NET CoinmateAPI.getTakerFee())
     private val takerFeeRate = BigDecimal("0.0035")
 
+    override val estimatedTakerFeeRate: BigDecimal = takerFeeRate
+
     private val baseUrl = ExchangeConfig.getBaseUrl(Exchange.COINMATE, isSandbox)
 
     private val clientId: String = credentials.clientId
