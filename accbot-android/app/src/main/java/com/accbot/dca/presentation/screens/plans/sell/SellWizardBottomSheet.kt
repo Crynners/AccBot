@@ -264,6 +264,7 @@ private fun SellInputStep(
                 is SellValidation.FarFromMarketWarning -> WarningBanner(
                     stringResource(R.string.sell_wizard_far_from_market_warning)
                 )
+                is SellValidation.LossWarning -> { /* shown via LossBanner in summary section */ }
                 is SellValidation.Ok -> { /* no-op */ }
             }
         }

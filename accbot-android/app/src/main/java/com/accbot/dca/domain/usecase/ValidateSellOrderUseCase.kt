@@ -16,6 +16,13 @@ sealed class SellValidation {
     data class HardError(val message: String) : SellValidation()
     data class InstantFillInfo(val spot: BigDecimal) : SellValidation()
     data class FarFromMarketWarning(val spot: BigDecimal) : SellValidation()
+    /**
+     * Net profit after exchange fee would be negative for this order. Triggered both when
+     * the limit price is below avg buy and when the price is just above avg buy but fee
+     * pushes the result into negative territory. Caller (UI) shows a warning banner;
+     * the wizard still allows the user to proceed - the user makes the final decision.
+     */
+    data class LossWarning(val lossFiat: BigDecimal, val lossPct: Double) : SellValidation()
 }
 
 /**
@@ -37,7 +44,9 @@ class ValidateSellOrderUseCase @Inject constructor(
         cryptoAmount: BigDecimal,
         limitPrice: BigDecimal,
         minOrderSize: BigDecimal,
-        currentSpot: BigDecimal?
+        currentSpot: BigDecimal?,
+        avgBuyPrice: BigDecimal? = null,
+        feeRate: BigDecimal = BigDecimal.ZERO
     ): List<SellValidation> {
         val result = mutableListOf<SellValidation>()
 
@@ -91,7 +100,35 @@ class ValidateSellOrderUseCase @Inject constructor(
             }
         }
 
+        checkLoss(cryptoAmount, limitPrice, avgBuyPrice, feeRate)?.let { result += it }
+
         if (result.isEmpty()) result += SellValidation.Ok
         return result
+    }
+
+    companion object {
+        /**
+         * Pure helper: returns LossWarning when the net-of-fee profit would be negative.
+         * Triggers also when [limitPrice] is just above [avgBuyPrice] but fee pushes the
+         * result negative. Returns null when [avgBuyPrice] is unknown.
+         */
+        internal fun checkLoss(
+            cryptoAmount: BigDecimal,
+            limitPrice: BigDecimal,
+            avgBuyPrice: BigDecimal?,
+            feeRate: BigDecimal
+        ): SellValidation.LossWarning? {
+            if (avgBuyPrice == null || avgBuyPrice <= BigDecimal.ZERO) return null
+            if (cryptoAmount <= BigDecimal.ZERO || limitPrice <= BigDecimal.ZERO) return null
+            val grossFiat = cryptoAmount * limitPrice
+            val netFiat = grossFiat * (BigDecimal.ONE - feeRate)
+            val costBasis = cryptoAmount * avgBuyPrice
+            val netProfit = netFiat - costBasis
+            if (netProfit >= BigDecimal.ZERO) return null
+            val lossPct = if (costBasis > BigDecimal.ZERO) {
+                netProfit.toDouble() / costBasis.toDouble()
+            } else 0.0
+            return SellValidation.LossWarning(lossFiat = netProfit.negate(), lossPct = -lossPct)
+        }
     }
 }
