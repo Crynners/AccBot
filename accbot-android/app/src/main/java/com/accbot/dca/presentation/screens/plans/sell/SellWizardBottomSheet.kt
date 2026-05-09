@@ -1,14 +1,18 @@
 package com.accbot.dca.presentation.screens.plans.sell
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,18 +26,17 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,8 +45,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.accbot.dca.R
@@ -76,17 +85,24 @@ fun SellWizardBottomSheet(
         }
     }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
+    Dialog(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.fillMaxHeight(0.95f)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = false
+        )
     ) {
-        when (state.step) {
-            SellWizardViewModel.Step.INPUT -> SellInputStep(state, viewModel, onDismiss)
-            SellWizardViewModel.Step.CONFIRM -> SellConfirmStep(state, viewModel)
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Box(modifier = Modifier.statusBarsPadding()) {
+                when (state.step) {
+                    SellWizardViewModel.Step.INPUT -> SellInputStep(state, viewModel, onDismiss)
+                    SellWizardViewModel.Step.CONFIRM -> SellConfirmStep(state, viewModel)
+                }
+            }
         }
     }
 
@@ -177,6 +193,7 @@ private fun SellInputStep(
         OutlinedTextField(
             value = state.avgBuyPriceInput,
             onValueChange = vm::setAvgBuyPrice,
+            visualTransformation = ThousandSeparator,
             trailingIcon = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (state.avgBuyPriceManual && state.avgBuyPriceAuto != null) {
@@ -247,8 +264,13 @@ private fun SellInputStep(
 
         // Ladder mode toggle
         Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            androidx.compose.material3.Checkbox(
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { vm.setLadderEnabled(!state.ladderEnabled) }
+        ) {
+            Checkbox(
                 checked = state.ladderEnabled,
                 onCheckedChange = vm::setLadderEnabled
             )
@@ -270,6 +292,7 @@ private fun SellInputStep(
         OutlinedTextField(
             value = state.priceInput,
             onValueChange = vm::setPrice,
+            visualTransformation = ThousandSeparator,
             trailingIcon = {
                 Text(
                     text = state.fiat,
@@ -318,6 +341,7 @@ private fun SellInputStep(
         OutlinedTextField(
             value = state.netInput,
             onValueChange = vm::setNetFiat,
+            visualTransformation = ThousandSeparator,
             trailingIcon = {
                 Text(
                     text = state.fiat,
@@ -660,11 +684,14 @@ private fun LadderControls(state: SellWizardViewModel.UiState, vm: SellWizardVie
 
     // From / To
     Spacer(Modifier.height(8.dp))
+    val rangeTransform = if (state.ladderRangeMode == SellWizardViewModel.LadderRangeMode.PRICE)
+        ThousandSeparator else VisualTransformation.None
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
             value = state.ladderFromInput,
             onValueChange = vm::setLadderFrom,
             label = { Text(stringResource(R.string.sell_wizard_ladder_from)) },
+            visualTransformation = rangeTransform,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.weight(1f),
             singleLine = true
@@ -673,6 +700,7 @@ private fun LadderControls(state: SellWizardViewModel.UiState, vm: SellWizardVie
             value = state.ladderToInput,
             onValueChange = vm::setLadderTo,
             label = { Text(stringResource(R.string.sell_wizard_ladder_to)) },
+            visualTransformation = rangeTransform,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.weight(1f),
             singleLine = true
@@ -767,6 +795,49 @@ private fun LadderPreviewTable(
             modifier = Modifier.padding(top = 4.dp)
         )
     }
+}
+
+/**
+ * Inserts a thin space (' ') as a thousand separator in the integer part of a numeric
+ * input. The decimal part (after '.' or ',') is left as-is. The user keeps typing raw
+ * digits; only the visual presentation is grouped.
+ */
+private val ThousandSeparator: VisualTransformation = VisualTransformation { text ->
+    val raw = text.text
+    if (raw.isEmpty()) return@VisualTransformation TransformedText(text, OffsetMapping.Identity)
+    val transformed = formatThousands(raw)
+    TransformedText(
+        AnnotatedString(transformed),
+        object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                if (offset <= 0) return 0
+                val capped = offset.coerceAtMost(raw.length)
+                return formatThousands(raw.substring(0, capped)).length
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 0) return 0
+                if (offset >= transformed.length) return raw.length
+                var seen = 0
+                var orig = 0
+                for (ch in transformed) {
+                    if (seen >= offset) break
+                    seen++
+                    if (ch != ' ') orig++
+                }
+                return orig.coerceAtMost(raw.length)
+            }
+        }
+    )
+}
+
+private fun formatThousands(s: String): String {
+    val dotIdx = s.indexOfAny(charArrayOf('.', ','))
+    val intPart = if (dotIdx >= 0) s.substring(0, dotIdx) else s
+    val rest = if (dotIdx >= 0) s.substring(dotIdx) else ""
+    val grouped = if (intPart.length <= 3) intPart
+                  else intPart.reversed().chunked(3).joinToString(" ").reversed()
+    return grouped + rest
 }
 
 @Composable
