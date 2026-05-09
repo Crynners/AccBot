@@ -300,7 +300,7 @@ private fun SellInputStep(
         Text(
             stringResource(R.string.sell_wizard_limit_price),
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(4.dp))
         OutlinedTextField(
@@ -348,7 +348,9 @@ private fun SellInputStep(
             )
         }
 
-        // Net fiat field (3rd of the calculator triple)
+        } // end if !ladderEnabled (Limit price section only)
+
+        // Net fiat field - editable in single mode, read-only display of ladder total in ladder mode.
         Spacer(Modifier.height(16.dp))
         Text(
             stringResource(R.string.sell_wizard_net_fiat),
@@ -356,12 +358,18 @@ private fun SellInputStep(
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(4.dp))
+        val ladderTotalNetText = if (state.ladderEnabled && state.ladderPreview.isNotEmpty()) {
+            state.ladderPreview.fold(BigDecimal.ZERO) { acc, o ->
+                acc + (o.cryptoAmount * o.limitPrice * (BigDecimal.ONE - state.feeRate))
+            }.setScale(2, RoundingMode.HALF_UP).toPlainString()
+        } else null
         OutlinedTextField(
-            value = state.netInput,
-            onValueChange = vm::setNetFiat,
+            value = ladderTotalNetText ?: state.netInput,
+            onValueChange = if (state.ladderEnabled) { _ -> } else vm::setNetFiat,
+            readOnly = state.ladderEnabled,
             visualTransformation = ThousandSeparator,
-            isError = netError != null,
-            supportingText = netError?.let {
+            isError = !state.ladderEnabled && netError != null,
+            supportingText = netError?.takeIf { !state.ladderEnabled }?.let {
                 { Text(it.message, color = MaterialTheme.colorScheme.error) }
             },
             trailingIcon = {
@@ -375,25 +383,26 @@ private fun SellInputStep(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
-        Text(
-            stringResource(R.string.sell_wizard_net_preset_label),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-        Row(
-            modifier = Modifier.padding(top = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf(0.10 to "+10 %", 0.20 to "+20 %", 0.50 to "+50 %", 1.00 to "+100 %").forEach { (factor, label) ->
-                AssistChip(
-                    onClick = { vm.applyNetProfitPreset(factor) },
-                    label = { Text(label, maxLines = 1, softWrap = false) },
-                    enabled = state.avgBuyPrice != null && state.amountInput.toBigDecimalOrNull() != null
-                )
+        if (!state.ladderEnabled) {
+            Text(
+                stringResource(R.string.sell_wizard_net_preset_label),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            Row(
+                modifier = Modifier.padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(0.10 to "+10 %", 0.20 to "+20 %", 0.50 to "+50 %", 1.00 to "+100 %").forEach { (factor, label) ->
+                    AssistChip(
+                        onClick = { vm.applyNetProfitPreset(factor) },
+                        label = { Text(label, maxLines = 1, softWrap = false) },
+                        enabled = state.avgBuyPrice != null && state.amountInput.toBigDecimalOrNull() != null
+                    )
+                }
             }
         }
-        } // end if !ladderEnabled
 
         val amountBD = state.amountInput.toBigDecimalOrNull() ?: BigDecimal.ZERO
         val priceBD = state.priceInput.toBigDecimalOrNull() ?: BigDecimal.ZERO

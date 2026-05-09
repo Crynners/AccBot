@@ -319,7 +319,30 @@ class SellWizardViewModel @Inject constructor(
     }
 
     fun setLadderRangeMode(mode: LadderRangeMode) {
-        _uiState.update { it.copy(ladderRangeMode = mode, ladderFromInput = "", ladderToInput = "") }
+        _uiState.update { st ->
+            if (st.ladderRangeMode == mode) return@update st
+            val avg = st.avgBuyPrice
+            val convert: (String) -> String = { input ->
+                val v = input.toBigDecimalOrNull()
+                if (v == null || avg == null || avg <= BigDecimal.ZERO) ""
+                else when (mode) {
+                    // PROFIT_PCT -> PRICE: price = avg * (1 + pct/100)
+                    LadderRangeMode.PRICE ->
+                        (avg * (BigDecimal.ONE + v.divide(BigDecimal(100), 8, RoundingMode.HALF_UP)))
+                            .setScale(2, RoundingMode.HALF_UP).toPlainString()
+                    // PRICE -> PROFIT_PCT: pct = (price - avg) / avg * 100
+                    LadderRangeMode.PROFIT_PCT ->
+                        (v - avg).divide(avg, 6, RoundingMode.HALF_UP)
+                            .multiply(BigDecimal(100))
+                            .setScale(2, RoundingMode.HALF_UP).toPlainString()
+                }
+            }
+            st.copy(
+                ladderRangeMode = mode,
+                ladderFromInput = convert(st.ladderFromInput),
+                ladderToInput = convert(st.ladderToInput)
+            )
+        }
         recomputeLadderPreview()
     }
 
