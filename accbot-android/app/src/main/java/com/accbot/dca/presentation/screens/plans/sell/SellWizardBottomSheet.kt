@@ -373,72 +373,76 @@ private fun SellInputStep(
         }
         } // end if !ladderEnabled
 
-        Spacer(Modifier.height(16.dp))
-        Text(
-            stringResource(R.string.sell_wizard_summary),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(Modifier.height(4.dp))
         val amountBD = state.amountInput.toBigDecimalOrNull() ?: BigDecimal.ZERO
         val priceBD = state.priceInput.toBigDecimalOrNull() ?: BigDecimal.ZERO
         val proceeds = (amountBD * priceBD).setScale(2, RoundingMode.HALF_UP)
         val feeAmount = (proceeds * state.feeRate).setScale(2, RoundingMode.HALF_UP)
         val netProceeds = (proceeds - feeAmount).setScale(2, RoundingMode.HALF_UP)
-        InfoRow(
-            stringResource(R.string.sell_wizard_proceeds),
-            "${NumberFormatters.fiat(proceeds)} ${state.fiat}"
-        )
-        if (state.feeRate > BigDecimal.ZERO && proceeds > BigDecimal.ZERO) {
-            InfoRow(
-                stringResource(R.string.sell_wizard_summary_fee),
-                "-${NumberFormatters.fiat(feeAmount)} ${state.fiat} (${state.feeRate.multiply(BigDecimal(100)).setScale(2, RoundingMode.HALF_UP).toPlainString()} %)"
-            )
-        }
-        state.avgBuyPrice?.let { avg ->
-            val costBasis = amountBD * avg
-            val netProfit = (netProceeds - costBasis).setScale(2, RoundingMode.HALF_UP)
-            val netProfitPct = if (costBasis > BigDecimal.ZERO) {
-                netProfit.divide(costBasis, 4, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal(100))
-                    .setScale(1, RoundingMode.HALF_UP)
-            } else BigDecimal.ZERO
-            val sign = if (netProfit >= BigDecimal.ZERO) "+" else ""
-            InfoRow(
-                label = stringResource(R.string.sell_wizard_summary_net_profit),
-                value = "$sign${NumberFormatters.fiat(netProfit)} ${state.fiat} ($sign${netProfitPct.toPlainString()} %)",
-                color = when {
-                    netProfit > BigDecimal.ZERO -> successColor()
-                    netProfit < BigDecimal.ZERO -> Error
-                    else -> null
-                }
-            )
 
-            // Target progress
-            state.targetProfitAmount?.takeIf { it > BigDecimal.ZERO }?.let { target ->
-                val totalProgress = state.realizedPnLSoFar + netProfit
-                val pct = (totalProgress.toDouble() / target.toDouble()).coerceAtLeast(0.0)
+        if (!state.ladderEnabled && proceeds > BigDecimal.ZERO) {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                stringResource(R.string.sell_wizard_summary),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(4.dp))
+            InfoRow(
+                stringResource(R.string.sell_wizard_proceeds),
+                "${NumberFormatters.fiat(proceeds)} ${state.fiat}"
+            )
+            if (state.feeRate > BigDecimal.ZERO) {
                 InfoRow(
-                    stringResource(R.string.sell_wizard_summary_target_progress),
-                    "${NumberFormatters.fiat(totalProgress)} / ${NumberFormatters.fiat(target)} ${state.fiat} (${"%.0f".format(pct * 100)} %)"
+                    stringResource(R.string.sell_wizard_summary_fee),
+                    "-${NumberFormatters.fiat(feeAmount)} ${state.fiat} (${state.feeRate.multiply(BigDecimal(100)).setScale(2, RoundingMode.HALF_UP).toPlainString()} %)"
                 )
+            }
+            state.avgBuyPrice?.let { avg ->
+                val costBasis = amountBD * avg
+                val netProfit = (netProceeds - costBasis).setScale(2, RoundingMode.HALF_UP)
+                val netProfitPct = if (costBasis > BigDecimal.ZERO) {
+                    netProfit.divide(costBasis, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal(100))
+                        .setScale(1, RoundingMode.HALF_UP)
+                } else BigDecimal.ZERO
+                val sign = if (netProfit >= BigDecimal.ZERO) "+" else ""
+                InfoRow(
+                    label = stringResource(R.string.sell_wizard_summary_net_profit),
+                    value = "$sign${NumberFormatters.fiat(netProfit)} ${state.fiat} ($sign${netProfitPct.toPlainString()} %)",
+                    color = when {
+                        netProfit > BigDecimal.ZERO -> successColor()
+                        netProfit < BigDecimal.ZERO -> Error
+                        else -> null
+                    }
+                )
+
+                state.targetProfitAmount?.takeIf { it > BigDecimal.ZERO }?.let { target ->
+                    val totalProgress = state.realizedPnLSoFar + netProfit
+                    val pct = (totalProgress.toDouble() / target.toDouble()).coerceAtLeast(0.0)
+                    InfoRow(
+                        stringResource(R.string.sell_wizard_summary_target_progress),
+                        "${NumberFormatters.fiat(totalProgress)} / ${NumberFormatters.fiat(target)} ${state.fiat} (${"%.0f".format(pct * 100)} %)"
+                    )
+                }
             }
         }
 
-        // Loss banner from validations
-        state.validations.filterIsInstance<SellValidation.LossWarning>().firstOrNull()?.let { loss ->
-            Spacer(Modifier.height(8.dp))
-            val isPriceBelowAvg = state.priceInput.toBigDecimalOrNull()?.let { p ->
-                state.avgBuyPrice?.let { avg -> p < avg }
-            } ?: false
-            LossBanner(
-                stringResource(
-                    if (isPriceBelowAvg) R.string.sell_wizard_loss_below_buy
-                    else R.string.sell_wizard_loss_after_fee,
-                    NumberFormatters.fiat(loss.lossFiat),
-                    state.fiat
+        // Loss banner from validations (single mode only - ladder has aggregate via preview)
+        if (!state.ladderEnabled) {
+            state.validations.filterIsInstance<SellValidation.LossWarning>().firstOrNull()?.let { loss ->
+                Spacer(Modifier.height(8.dp))
+                val isPriceBelowAvg = state.priceInput.toBigDecimalOrNull()?.let { p ->
+                    state.avgBuyPrice?.let { avg -> p < avg }
+                } ?: false
+                LossBanner(
+                    stringResource(
+                        if (isPriceBelowAvg) R.string.sell_wizard_loss_below_buy
+                        else R.string.sell_wizard_loss_after_fee,
+                        NumberFormatters.fiat(loss.lossFiat),
+                        state.fiat
+                    )
                 )
-            )
+            }
         }
 
         // Validations
