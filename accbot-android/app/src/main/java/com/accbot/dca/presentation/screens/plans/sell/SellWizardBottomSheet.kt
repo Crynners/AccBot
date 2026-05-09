@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -138,6 +139,7 @@ private fun SellInputStep(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .imePadding()
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -514,6 +516,7 @@ private fun SellConfirmStep(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .imePadding()
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -714,12 +717,14 @@ private fun LadderControls(state: SellWizardViewModel.UiState, vm: SellWizardVie
     Spacer(Modifier.height(8.dp))
     val rangeTransform = if (state.ladderRangeMode == SellWizardViewModel.LadderRangeMode.PRICE)
         ThousandSeparator else VisualTransformation.None
+    val rangeError = state.ladderHardError != null
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
             value = state.ladderFromInput,
             onValueChange = vm::setLadderFrom,
             label = { Text(stringResource(R.string.sell_wizard_ladder_from)) },
             visualTransformation = rangeTransform,
+            isError = rangeError,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.weight(1f),
             singleLine = true
@@ -729,9 +734,18 @@ private fun LadderControls(state: SellWizardViewModel.UiState, vm: SellWizardVie
             onValueChange = vm::setLadderTo,
             label = { Text(stringResource(R.string.sell_wizard_ladder_to)) },
             visualTransformation = rangeTransform,
+            isError = rangeError,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.weight(1f),
             singleLine = true
+        )
+    }
+    state.ladderHardError?.let { err ->
+        Text(
+            err,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(top = 4.dp, start = 16.dp)
         )
     }
 
@@ -764,11 +778,6 @@ private fun LadderControls(state: SellWizardViewModel.UiState, vm: SellWizardVie
                 } else androidx.compose.material3.AssistChipDefaults.assistChipColors()
             )
         }
-    }
-
-    state.ladderHardError?.let { err ->
-        Spacer(Modifier.height(8.dp))
-        Text(err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
     }
 
     if (state.ladderPreview.isNotEmpty()) {
