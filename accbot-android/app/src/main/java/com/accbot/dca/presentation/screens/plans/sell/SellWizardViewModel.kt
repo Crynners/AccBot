@@ -7,8 +7,10 @@ import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.model.RemainingInventory
 import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.model.TransactionStatus
+import com.accbot.dca.domain.usecase.CalculatePlanCostBasisUseCase
 import com.accbot.dca.domain.usecase.CalculatePlanPnLUseCase
 import com.accbot.dca.domain.usecase.PlaceLimitSellUseCase
 import com.accbot.dca.domain.usecase.SellValidation
@@ -28,17 +30,20 @@ import javax.inject.Inject
 /**
  * State + actions for the two-step limit-sell wizard (input -> confirm -> submit).
  *
- * Lifecycle: the hosting bottom-sheet calls [init] once per open, then [setAmount] /
- * [setPrice] / [proceedToConfirm] / [submit] based on user actions. On successful submit
- * [UiState.dismissRequested] flips true; the sheet consumes via [consumeDismiss] and
- * closes. On timeout [UiState.showTimeoutDialog] is set so the user is warned to check
- * the exchange manually for duplicate orders.
+ * Cost basis: the avg buy price prefilled in the UI is computed via timestamp-aware
+ * cheapest-first ([CalculatePlanCostBasisUseCase]). Manual override is supported via
+ * [setAvgBuyPrice]; [resetAvgBuyPrice] returns to auto.
+ *
+ * Three-field calculator: [setAmount], [setPrice], [setNetFiat] each record the field as
+ * "most recently edited"; [SellCalculatorMath.recompute] fills the third field when the
+ * other two are set.
  */
 @HiltViewModel
 class SellWizardViewModel @Inject constructor(
     private val validateSellOrderUseCase: ValidateSellOrderUseCase,
     private val placeLimitSellUseCase: PlaceLimitSellUseCase,
     private val calculatePlanPnLUseCase: CalculatePlanPnLUseCase,
+    private val calculatePlanCostBasisUseCase: CalculatePlanCostBasisUseCase,
     private val database: DcaDatabase,
     private val credentialsStore: CredentialsStore,
     private val exchangeApiFactory: ExchangeApiFactory,
@@ -54,13 +59,23 @@ class SellWizardViewModel @Inject constructor(
         val crypto: String = "",
         val fiat: String = "",
         val held: BigDecimal = BigDecimal.ZERO,
-        /** held crypto minus crypto already reserved by other open sells (unfilled). */
         val availableToSell: BigDecimal = BigDecimal.ZERO,
         val spotPrice: BigDecimal? = null,
-        val avgBuyPrice: BigDecimal? = null,
+        /** Auto-computed avg buy price from cheapest-first; null when no buys remain. */
+        val avgBuyPriceAuto: BigDecimal? = null,
+        /** User-entered text for avg; empty string means "use auto". */
+        val avgBuyPriceInput: String = "",
+        /** True when [avgBuyPriceInput] differs from auto - drives the reset chip. */
+        val avgBuyPriceManual: Boolean = false,
         val minOrderSize: BigDecimal = BigDecimal("0.00001"),
         val amountInput: String = "",
         val priceInput: String = "",
+        val netInput: String = "",
+        val lastTwoEdited: List<SellCalculatorMath.Field> = emptyList(),
+        val feeRate: BigDecimal = BigDecimal.ZERO,
+        val targetProfitAmount: BigDecimal? = null,
+        val realizedPnLSoFar: BigDecimal = BigDecimal.ZERO,
+        val inventoryDeficit: BigDecimal = BigDecimal.ZERO,
         val validations: List<SellValidation> = emptyList(),
         val step: Step = Step.INPUT,
         val initializing: Boolean = true,
@@ -69,7 +84,10 @@ class SellWizardViewModel @Inject constructor(
         val showTimeoutDialog: Boolean = false,
         val dismissRequested: Boolean = false
     ) {
-        /** Proceed button enabled when no hard errors + both numeric inputs parse. */
+        /** Effective avg buy: parsed manual input takes precedence, else auto. */
+        val avgBuyPrice: BigDecimal?
+            get() = if (avgBuyPriceManual) avgBuyPriceInput.toBigDecimalOrNull() else avgBuyPriceAuto
+
         val canProceed: Boolean
             get() = validations.none { it is SellValidation.HardError } &&
                 amountInput.isNotBlank() && priceInput.isNotBlank() &&
@@ -82,11 +100,6 @@ class SellWizardViewModel @Inject constructor(
 
     private var initialized = false
 
-    /**
-     * Load plan state, compute held crypto, available-to-sell (minus reservations from
-     * open sells), avg buy price and a best-effort spot price. Idempotent across
-     * recompositions thanks to [initialized].
-     */
     fun init(planId: Long) {
         if (initialized) return
         initialized = true
@@ -97,7 +110,6 @@ class SellWizardViewModel @Inject constructor(
                 return@launch
             }
 
-            // Best-effort spot price via exchange API; null means UI shows "-".
             val credentials = try {
                 credentialsStore.getCredentials(plan.connectionId, userPreferences.isSandboxMode())
             } catch (e: Exception) {
@@ -113,6 +125,14 @@ class SellWizardViewModel @Inject constructor(
                     null
                 }
             }
+            val feeRate = api?.estimatedTakerFeeRate ?: BigDecimal.ZERO
+
+            val inventory: RemainingInventory = try {
+                calculatePlanCostBasisUseCase(planId)
+            } catch (e: Exception) {
+                Log.w(TAG, "cost basis calc failed: ${e.message}")
+                RemainingInventory(BigDecimal.ZERO, null, emptyList(), BigDecimal.ZERO)
+            }
 
             val pnl = try {
                 calculatePlanPnLUseCase(planId, spot)
@@ -120,20 +140,8 @@ class SellWizardViewModel @Inject constructor(
                 Log.w(TAG, "PnL calc failed: ${e.message}")
                 null
             }
-            val held = pnl?.currentCryptoHeld ?: BigDecimal.ZERO
-            val avgBuy = pnl?.avgBuyPrice
-
-            // Crypto reserved by other open sells (requested - filled) - prevents the
-            // user from submitting a sell that, together with existing open sells,
-            // exceeds what they actually hold.
-            val openSells = database.transactionDao().getTransactionsByPlanSync(planId)
-                .filter {
-                    it.side == TransactionSide.SELL &&
-                        it.status in setOf(TransactionStatus.PENDING, TransactionStatus.PARTIAL)
-                }
-            val reserved = openSells.fold(BigDecimal.ZERO) { acc, tx ->
-                acc + ((tx.requestedCryptoAmount ?: BigDecimal.ZERO) - tx.cryptoAmount)
-            }
+            val held = pnl?.currentCryptoHeld ?: inventory.available
+            val realizedSoFar = pnl?.realizedPnL ?: BigDecimal.ZERO
 
             val minOrder = when (plan.exchange) {
                 Exchange.BINANCE ->
@@ -149,10 +157,16 @@ class SellWizardViewModel @Inject constructor(
                     crypto = plan.crypto,
                     fiat = plan.fiat,
                     held = held,
-                    availableToSell = (held - reserved).max(BigDecimal.ZERO),
+                    availableToSell = inventory.available,
                     spotPrice = spot,
-                    avgBuyPrice = avgBuy,
+                    avgBuyPriceAuto = inventory.weightedAvgPrice,
+                    avgBuyPriceInput = inventory.weightedAvgPrice?.setScale(2, RoundingMode.HALF_UP)?.toPlainString() ?: "",
+                    avgBuyPriceManual = false,
                     minOrderSize = minOrder,
+                    feeRate = feeRate,
+                    targetProfitAmount = plan.targetProfitAmount,
+                    realizedPnLSoFar = realizedSoFar,
+                    inventoryDeficit = inventory.deficit,
                     initializing = false
                 )
             }
@@ -161,8 +175,7 @@ class SellWizardViewModel @Inject constructor(
     }
 
     fun setAmount(value: String) {
-        _uiState.update { it.copy(amountInput = value) }
-        revalidate()
+        updateCalculatorField(SellCalculatorMath.Field.AMOUNT, value)
     }
 
     fun setAmountPct(pct: Int) {
@@ -173,8 +186,11 @@ class SellWizardViewModel @Inject constructor(
     }
 
     fun setPrice(value: String) {
-        _uiState.update { it.copy(priceInput = value) }
-        revalidate()
+        updateCalculatorField(SellCalculatorMath.Field.PRICE, value)
+    }
+
+    fun setNetFiat(value: String) {
+        updateCalculatorField(SellCalculatorMath.Field.NET, value)
     }
 
     fun setPriceSpot() {
@@ -197,6 +213,75 @@ class SellWizardViewModel @Inject constructor(
         }
     }
 
+    fun setPriceSpotPlus(pct: Int) {
+        _uiState.value.spotPrice?.let { spot ->
+            val multiplier = BigDecimal.ONE +
+                BigDecimal(pct).divide(BigDecimal(100), 4, RoundingMode.HALF_UP)
+            setPrice((spot * multiplier).setScale(2, RoundingMode.HALF_UP).toPlainString())
+        }
+    }
+
+    /** Apply a profit-target preset to the net field: N = A * avg * (1 + profitPct). */
+    fun applyNetProfitPreset(profitPct: Double) {
+        val st = _uiState.value
+        val a = st.amountInput.toBigDecimalOrNull() ?: return
+        val avg = st.avgBuyPrice ?: return
+        if (a <= BigDecimal.ZERO || avg <= BigDecimal.ZERO) return
+        val target = a * avg * (BigDecimal.ONE + BigDecimal(profitPct))
+        setNetFiat(target.setScale(2, RoundingMode.HALF_UP).toPlainString())
+    }
+
+    fun setAvgBuyPrice(value: String) {
+        _uiState.update { st ->
+            val parsed = value.toBigDecimalOrNull()
+            val isManual = parsed != null && parsed.compareTo(st.avgBuyPriceAuto ?: BigDecimal("-1")) != 0
+            st.copy(avgBuyPriceInput = value, avgBuyPriceManual = isManual)
+        }
+        revalidate()
+    }
+
+    fun resetAvgBuyPrice() {
+        _uiState.update { st ->
+            st.copy(
+                avgBuyPriceInput = st.avgBuyPriceAuto?.setScale(2, RoundingMode.HALF_UP)?.toPlainString() ?: "",
+                avgBuyPriceManual = false
+            )
+        }
+        revalidate()
+    }
+
+    private fun updateCalculatorField(field: SellCalculatorMath.Field, text: String) {
+        _uiState.update { st ->
+            val newLastTwo = (listOf(field) + st.lastTwoEdited.filter { it != field }).take(2)
+            val current = mapOf(
+                SellCalculatorMath.Field.AMOUNT to st.amountInput,
+                SellCalculatorMath.Field.PRICE to st.priceInput,
+                SellCalculatorMath.Field.NET to st.netInput
+            ).toMutableMap()
+            current[field] = text
+            val a = current[SellCalculatorMath.Field.AMOUNT]?.toBigDecimalOrNull()
+            val p = current[SellCalculatorMath.Field.PRICE]?.toBigDecimalOrNull()
+            val n = current[SellCalculatorMath.Field.NET]?.toBigDecimalOrNull()
+            val (newA, newP, newN) = SellCalculatorMath.recompute(a, p, n, st.feeRate, newLastTwo)
+
+            // Only overwrite the field that wasn't directly edited; the user-typed text stays as-is
+            val nextAmount = if (field == SellCalculatorMath.Field.AMOUNT) text
+                             else newA?.stripTrailingZeros()?.toPlainString() ?: st.amountInput
+            val nextPrice = if (field == SellCalculatorMath.Field.PRICE) text
+                            else newP?.toPlainString() ?: st.priceInput
+            val nextNet = if (field == SellCalculatorMath.Field.NET) text
+                          else newN?.toPlainString() ?: st.netInput
+
+            st.copy(
+                amountInput = nextAmount,
+                priceInput = nextPrice,
+                netInput = nextNet,
+                lastTwoEdited = newLastTwo
+            )
+        }
+        revalidate()
+    }
+
     fun proceedToConfirm() {
         _uiState.update { it.copy(step = Step.CONFIRM, submitError = null) }
     }
@@ -205,10 +290,6 @@ class SellWizardViewModel @Inject constructor(
         _uiState.update { it.copy(step = Step.INPUT, submitError = null) }
     }
 
-    /**
-     * Place the limit sell order. On timeout we show a warning dialog (order may be
-     * placed but we couldn't confirm). On success the sheet is asked to dismiss.
-     */
     fun submit() {
         val state = _uiState.value
         val amount = state.amountInput.toBigDecimalOrNull() ?: return
@@ -256,7 +337,8 @@ class SellWizardViewModel @Inject constructor(
         viewModelScope.launch {
             val validations = try {
                 validateSellOrderUseCase(
-                    state.planId, amount, price, state.minOrderSize, state.spotPrice
+                    state.planId, amount, price, state.minOrderSize, state.spotPrice,
+                    state.avgBuyPrice, state.feeRate
                 )
             } catch (e: Exception) {
                 Log.w(TAG, "validate failed: ${e.message}")
