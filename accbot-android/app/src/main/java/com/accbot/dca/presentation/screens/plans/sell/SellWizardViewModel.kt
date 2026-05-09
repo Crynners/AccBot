@@ -366,7 +366,46 @@ class SellWizardViewModel @Inject constructor(
         recomputeLadderPreview()
     }
 
-    private fun recomputeLadderPreview() {
+    /**
+     * Ladder-mode third-field calculator: user enters target net total, we adjust the
+     * upper bound (`to`) to hit it given the current amount + from. Linear distribution
+     * with equal-crypto: `total_net = amount * (from+to)/2 * (1-feeRate)`, so
+     * `to = 2*net/(amount*(1-feeRate)) - from`.
+     */
+    fun setLadderNetTarget(value: String) {
+        _uiState.update { it.copy(netInput = value) }
+        val targetNet = value.toBigDecimalOrNull() ?: return
+        val st = _uiState.value
+        val amount = st.amountInput.toBigDecimalOrNull() ?: return
+        if (amount <= BigDecimal.ZERO || targetNet <= BigDecimal.ZERO) return
+        val factor = BigDecimal.ONE - st.feeRate
+        if (factor <= BigDecimal.ZERO) return
+        val avg = st.avgBuyPrice
+        val fromRaw = st.ladderFromInput.toBigDecimalOrNull() ?: return
+        val fromPrice = when (st.ladderRangeMode) {
+            LadderRangeMode.PRICE -> fromRaw
+            LadderRangeMode.PROFIT_PCT -> {
+                if (avg == null || avg <= BigDecimal.ZERO) return
+                avg * (BigDecimal.ONE + fromRaw.divide(BigDecimal(100), 8, RoundingMode.HALF_UP))
+            }
+        }
+        if (fromPrice <= BigDecimal.ZERO) return
+        val toPrice = (BigDecimal(2) * targetNet).divide(amount * factor, 8, RoundingMode.HALF_UP) - fromPrice
+        if (toPrice <= fromPrice) return
+        val toDisplay = when (st.ladderRangeMode) {
+            LadderRangeMode.PRICE -> toPrice.setScale(2, RoundingMode.HALF_UP).toPlainString()
+            LadderRangeMode.PROFIT_PCT -> {
+                if (avg == null || avg <= BigDecimal.ZERO) return
+                (toPrice - avg).divide(avg, 6, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal(100))
+                    .setScale(2, RoundingMode.HALF_UP).toPlainString()
+            }
+        }
+        _uiState.update { it.copy(ladderToInput = toDisplay) }
+        recomputeLadderPreview(syncNetFromTotal = false)
+    }
+
+    private fun recomputeLadderPreview(syncNetFromTotal: Boolean = true) {
         val st = _uiState.value
         if (!st.ladderEnabled) {
             _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = null) }
@@ -421,7 +460,17 @@ class SellWizardViewModel @Inject constructor(
             "Hodnota nejmenšího orderu (${minOrderFiatValue.setScale(2, RoundingMode.HALF_UP)} ${st.fiat}) je pod minimem ${st.minOrderFiat} ${st.fiat}"
         } else null
 
-        _uiState.update { it.copy(ladderPreview = preview, ladderHardError = hardError) }
+        val totalNet = preview.fold(BigDecimal.ZERO) { acc, o ->
+            acc + o.cryptoAmount * o.limitPrice * (BigDecimal.ONE - st.feeRate)
+        }.setScale(2, RoundingMode.HALF_UP)
+
+        _uiState.update {
+            it.copy(
+                ladderPreview = preview,
+                ladderHardError = hardError,
+                netInput = if (syncNetFromTotal) totalNet.toPlainString() else it.netInput
+            )
+        }
     }
 
     fun submitLadder() {

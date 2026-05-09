@@ -245,12 +245,22 @@ private fun SellInputStep(
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(4.dp))
+        val amountAsBd = state.amountInput.toBigDecimalOrNull()
+        val amountPct = amountAsBd?.let { a ->
+            if (state.availableToSell > BigDecimal.ZERO) {
+                a.divide(state.availableToSell, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal(100)).setScale(1, RoundingMode.HALF_UP)
+            } else null
+        }
         OutlinedTextField(
             value = state.amountInput,
             onValueChange = vm::setAmount,
             isError = amountError != null,
-            supportingText = amountError?.let {
-                { Text(it.message, color = MaterialTheme.colorScheme.error) }
+            supportingText = {
+                when {
+                    amountError != null -> Text(amountError.message, color = MaterialTheme.colorScheme.error)
+                    amountPct != null -> Text("= ${amountPct.toPlainString()} % z dostupných")
+                }
             },
             trailingIcon = {
                 Text(
@@ -358,15 +368,9 @@ private fun SellInputStep(
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(4.dp))
-        val ladderTotalNetText = if (state.ladderEnabled && state.ladderPreview.isNotEmpty()) {
-            state.ladderPreview.fold(BigDecimal.ZERO) { acc, o ->
-                acc + (o.cryptoAmount * o.limitPrice * (BigDecimal.ONE - state.feeRate))
-            }.setScale(2, RoundingMode.HALF_UP).toPlainString()
-        } else null
         OutlinedTextField(
-            value = ladderTotalNetText ?: state.netInput,
-            onValueChange = if (state.ladderEnabled) { _ -> } else vm::setNetFiat,
-            readOnly = state.ladderEnabled,
+            value = state.netInput,
+            onValueChange = if (state.ladderEnabled) vm::setLadderNetTarget else vm::setNetFiat,
             visualTransformation = ThousandSeparator,
             isError = !state.ladderEnabled && netError != null,
             supportingText = netError?.takeIf { !state.ladderEnabled }?.let {
