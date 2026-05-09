@@ -679,7 +679,8 @@ private fun LadderControls(state: SellWizardViewModel.UiState, vm: SellWizardVie
                 label = { Text(label) },
                 colors = if (state.ladderRangeMode == mode) {
                     androidx.compose.material3.AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 } else androidx.compose.material3.AssistChipDefaults.assistChipColors()
             )
@@ -734,7 +735,8 @@ private fun LadderControls(state: SellWizardViewModel.UiState, vm: SellWizardVie
                 label = { Text(label) },
                 colors = if (state.ladderAmountMode == mode) {
                     androidx.compose.material3.AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 } else androidx.compose.material3.AssistChipDefaults.assistChipColors()
             )
