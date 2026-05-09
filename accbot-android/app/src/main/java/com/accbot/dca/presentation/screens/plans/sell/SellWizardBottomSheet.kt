@@ -88,6 +88,28 @@ fun SellWizardBottomSheet(
             SellWizardViewModel.Step.CONFIRM -> SellConfirmStep(state, viewModel)
         }
     }
+
+    state.ladderOutcome?.let { outcome ->
+        AlertDialog(
+            onDismissRequest = viewModel::consumeLadderOutcome,
+            title = { Text(stringResource(R.string.sell_wizard_ladder_enable)) },
+            text = {
+                Text(
+                    if (outcome.reason == null) {
+                        stringResource(R.string.sell_wizard_ladder_outcome_all, outcome.placed)
+                    } else {
+                        stringResource(
+                            R.string.sell_wizard_ladder_outcome_partial,
+                            outcome.placed, outcome.total, outcome.reason
+                        )
+                    }
+                )
+            },
+            confirmButton = {
+                Button(onClick = viewModel::consumeLadderOutcome) { Text("OK") }
+            }
+        )
+    }
 }
 
 @Composable
@@ -222,6 +244,21 @@ private fun SellInputStep(
             }
         }
 
+        // Ladder mode toggle
+        Spacer(Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.Checkbox(
+                checked = state.ladderEnabled,
+                onCheckedChange = vm::setLadderEnabled
+            )
+            Text(stringResource(R.string.sell_wizard_ladder_enable))
+        }
+
+        if (state.ladderEnabled) {
+            LadderControls(state = state, vm = vm)
+        }
+
+        if (!state.ladderEnabled) {
         Spacer(Modifier.height(16.dp))
         Text(
             stringResource(R.string.sell_wizard_limit_price),
@@ -314,6 +351,7 @@ private fun SellInputStep(
                 )
             }
         }
+        } // end if !ladderEnabled
 
         Spacer(Modifier.height(16.dp))
         Text(
@@ -581,6 +619,125 @@ internal fun InfoBanner(text: String) {
                 text = text,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+
+@Composable
+private fun LadderControls(state: SellWizardViewModel.UiState, vm: SellWizardViewModel) {
+    val avg = state.avgBuyPrice
+    Spacer(Modifier.height(12.dp))
+
+    // Range mode toggle
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(
+            SellWizardViewModel.LadderRangeMode.PROFIT_PCT to stringResource(R.string.sell_wizard_ladder_range_profit),
+            SellWizardViewModel.LadderRangeMode.PRICE to stringResource(R.string.sell_wizard_ladder_range_price)
+        ).forEach { (mode, label) ->
+            AssistChip(
+                onClick = { vm.setLadderRangeMode(mode) },
+                label = { Text(label) },
+                colors = if (state.ladderRangeMode == mode) {
+                    androidx.compose.material3.AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                } else androidx.compose.material3.AssistChipDefaults.assistChipColors()
+            )
+        }
+    }
+
+    // From / To
+    Spacer(Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = state.ladderFromInput,
+            onValueChange = vm::setLadderFrom,
+            label = { Text(stringResource(R.string.sell_wizard_ladder_from)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.weight(1f),
+            singleLine = true
+        )
+        OutlinedTextField(
+            value = state.ladderToInput,
+            onValueChange = vm::setLadderTo,
+            label = { Text(stringResource(R.string.sell_wizard_ladder_to)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.weight(1f),
+            singleLine = true
+        )
+    }
+
+    // Count
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = state.ladderCountInput,
+        onValueChange = vm::setLadderCount,
+        label = { Text(stringResource(R.string.sell_wizard_ladder_count)) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+
+    // Amount mode toggle
+    Spacer(Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(
+            LadderGenerator.AmountMode.EQUAL_CRYPTO to stringResource(R.string.sell_wizard_ladder_amount_equal_crypto),
+            LadderGenerator.AmountMode.EQUAL_FIAT to stringResource(R.string.sell_wizard_ladder_amount_equal_fiat)
+        ).forEach { (mode, label) ->
+            AssistChip(
+                onClick = { vm.setLadderAmountMode(mode) },
+                label = { Text(label) },
+                colors = if (state.ladderAmountMode == mode) {
+                    androidx.compose.material3.AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                } else androidx.compose.material3.AssistChipDefaults.assistChipColors()
+            )
+        }
+    }
+
+    state.ladderHardError?.let { err ->
+        Spacer(Modifier.height(8.dp))
+        Text(err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+    }
+
+    if (state.ladderPreview.isNotEmpty()) {
+        Spacer(Modifier.height(12.dp))
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text("#", modifier = Modifier.weight(0.4f), style = MaterialTheme.typography.labelSmall)
+                Text(stringResource(R.string.sell_wizard_amount), modifier = Modifier.weight(1.4f), style = MaterialTheme.typography.labelSmall)
+                Text(stringResource(R.string.sell_wizard_limit_price), modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.labelSmall)
+                Text("Profit", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall)
+                Text("Net", modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.labelSmall)
+            }
+            androidx.compose.material3.HorizontalDivider()
+            var totalNet = BigDecimal.ZERO
+            state.ladderPreview.forEachIndexed { i, o ->
+                val gross = o.cryptoAmount * o.limitPrice
+                val net = gross * (BigDecimal.ONE - state.feeRate)
+                val profitPctText = if (avg != null && avg > BigDecimal.ZERO) {
+                    val pct = (o.limitPrice - avg).divide(avg, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal(100)).setScale(1, RoundingMode.HALF_UP)
+                    "${if (pct.signum() >= 0) "+" else ""}${pct.toPlainString()}%"
+                } else "-"
+                totalNet += if (avg != null) net - o.cryptoAmount * avg else net
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                    Text("${i + 1}", modifier = Modifier.weight(0.4f), style = MaterialTheme.typography.bodySmall)
+                    Text(NumberFormatters.crypto(o.cryptoAmount), modifier = Modifier.weight(1.4f), style = MaterialTheme.typography.bodySmall)
+                    Text(NumberFormatters.fiat(o.limitPrice), modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.bodySmall)
+                    Text(profitPctText, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                    Text(NumberFormatters.fiat(net.setScale(2, RoundingMode.HALF_UP)), modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            androidx.compose.material3.HorizontalDivider()
+            Text(
+                "${stringResource(R.string.sell_wizard_ladder_preview_total)}: ${NumberFormatters.fiat(totalNet.setScale(2, RoundingMode.HALF_UP))} ${state.fiat}",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }

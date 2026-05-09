@@ -1017,4 +1017,15 @@
     <string name="sell_wizard_loss_below_buy">Prodáváš pod nákupní cenou: ztráta %1$s %2$s</string>
     <string name="sell_wizard_loss_after_fee">Po fee jdeš do ztráty: %1$s %2$s</string>
     <string name="sell_wizard_inventory_deficit">Inventář nesedí (chybí %1$s) - zadej průměrnou nákupní cenu ručně</string>
+    <string name="sell_wizard_ladder_enable">Vytvořit více sell orderů (ladder)</string>
+    <string name="sell_wizard_ladder_from">Od</string>
+    <string name="sell_wizard_ladder_to">Do</string>
+    <string name="sell_wizard_ladder_count">Počet orderů</string>
+    <string name="sell_wizard_ladder_range_price">Cena</string>
+    <string name="sell_wizard_ladder_range_profit">Profit %</string>
+    <string name="sell_wizard_ladder_amount_equal_crypto">Stejné množství</string>
+    <string name="sell_wizard_ladder_amount_equal_fiat">Stejný výnos</string>
+    <string name="sell_wizard_ladder_preview_total">Celkem při plném fillu</string>
+    <string name="sell_wizard_ladder_outcome_all">Vytvořeno všech %1$d orderů</string>
+    <string name="sell_wizard_ladder_outcome_partial">Vytvořeno %1$d z %2$d. Zastaveno: %3$s</string>
 </resources>

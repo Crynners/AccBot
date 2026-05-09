@@ -1011,4 +1011,15 @@
     <string name="sell_wizard_loss_below_buy">Selling below buy price: %1$s %2$s loss</string>
     <string name="sell_wizard_loss_after_fee">After fee, this is a loss: %1$s %2$s</string>
     <string name="sell_wizard_inventory_deficit">Inventory mismatch (%1$s missing) - enter avg buy price manually</string>
+    <string name="sell_wizard_ladder_enable">Create multiple sell orders (ladder)</string>
+    <string name="sell_wizard_ladder_from">From</string>
+    <string name="sell_wizard_ladder_to">To</string>
+    <string name="sell_wizard_ladder_count">Number of orders</string>
+    <string name="sell_wizard_ladder_range_price">Price</string>
+    <string name="sell_wizard_ladder_range_profit">Profit %</string>
+    <string name="sell_wizard_ladder_amount_equal_crypto">Equal crypto</string>
+    <string name="sell_wizard_ladder_amount_equal_fiat">Equal fiat</string>
+    <string name="sell_wizard_ladder_preview_total">Total at full fill</string>
+    <string name="sell_wizard_ladder_outcome_all">All %1$d orders placed</string>
+    <string name="sell_wizard_ladder_outcome_partial">Placed %1$d of %2$d. Stopped: %3$s</string>
 </resources>

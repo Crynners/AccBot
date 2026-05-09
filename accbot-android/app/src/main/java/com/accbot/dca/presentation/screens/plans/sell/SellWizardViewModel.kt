@@ -12,6 +12,9 @@ import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.usecase.CalculatePlanCostBasisUseCase
 import com.accbot.dca.domain.usecase.CalculatePlanPnLUseCase
+import com.accbot.dca.domain.usecase.LadderOrder
+import com.accbot.dca.domain.usecase.LadderResult
+import com.accbot.dca.domain.usecase.PlaceLadderSellUseCase
 import com.accbot.dca.domain.usecase.PlaceLimitSellUseCase
 import com.accbot.dca.domain.usecase.SellValidation
 import com.accbot.dca.domain.usecase.ValidateSellOrderUseCase
@@ -42,6 +45,7 @@ import javax.inject.Inject
 class SellWizardViewModel @Inject constructor(
     private val validateSellOrderUseCase: ValidateSellOrderUseCase,
     private val placeLimitSellUseCase: PlaceLimitSellUseCase,
+    private val placeLadderSellUseCase: PlaceLadderSellUseCase,
     private val calculatePlanPnLUseCase: CalculatePlanPnLUseCase,
     private val calculatePlanCostBasisUseCase: CalculatePlanCostBasisUseCase,
     private val database: DcaDatabase,
@@ -51,6 +55,10 @@ class SellWizardViewModel @Inject constructor(
 ) : ViewModel() {
 
     enum class Step { INPUT, CONFIRM }
+    enum class LadderRangeMode { PRICE, PROFIT_PCT }
+
+    /** Snapshot of partial ladder result so the UI can present a dialog after submit. */
+    data class LadderSubmitOutcome(val placed: Int, val total: Int, val reason: String?)
 
     data class UiState(
         val planId: Long = 0,
@@ -77,6 +85,15 @@ class SellWizardViewModel @Inject constructor(
         val realizedPnLSoFar: BigDecimal = BigDecimal.ZERO,
         val inventoryDeficit: BigDecimal = BigDecimal.ZERO,
         val validations: List<SellValidation> = emptyList(),
+        val ladderEnabled: Boolean = false,
+        val ladderRangeMode: LadderRangeMode = LadderRangeMode.PROFIT_PCT,
+        val ladderFromInput: String = "",
+        val ladderToInput: String = "",
+        val ladderCountInput: String = "5",
+        val ladderAmountMode: LadderGenerator.AmountMode = LadderGenerator.AmountMode.EQUAL_CRYPTO,
+        val ladderPreview: List<LadderOrder> = emptyList(),
+        val ladderHardError: String? = null,
+        val ladderOutcome: LadderSubmitOutcome? = null,
         val step: Step = Step.INPUT,
         val initializing: Boolean = true,
         val submitting: Boolean = false,
@@ -89,10 +106,15 @@ class SellWizardViewModel @Inject constructor(
             get() = if (avgBuyPriceManual) avgBuyPriceInput.toBigDecimalOrNull() else avgBuyPriceAuto
 
         val canProceed: Boolean
-            get() = validations.none { it is SellValidation.HardError } &&
-                amountInput.isNotBlank() && priceInput.isNotBlank() &&
-                amountInput.toBigDecimalOrNull() != null &&
-                priceInput.toBigDecimalOrNull() != null
+            get() = if (ladderEnabled) {
+                ladderHardError == null && ladderPreview.size >= 2 &&
+                    amountInput.toBigDecimalOrNull() != null
+            } else {
+                validations.none { it is SellValidation.HardError } &&
+                    amountInput.isNotBlank() && priceInput.isNotBlank() &&
+                    amountInput.toBigDecimalOrNull() != null &&
+                    priceInput.toBigDecimalOrNull() != null
+            }
     }
 
     private val _uiState = MutableStateFlow(UiState())
@@ -238,6 +260,7 @@ class SellWizardViewModel @Inject constructor(
             st.copy(avgBuyPriceInput = value, avgBuyPriceManual = isManual)
         }
         revalidate()
+        recomputeLadderPreview()
     }
 
     fun resetAvgBuyPrice() {
@@ -248,6 +271,7 @@ class SellWizardViewModel @Inject constructor(
             )
         }
         revalidate()
+        recomputeLadderPreview()
     }
 
     private fun updateCalculatorField(field: SellCalculatorMath.Field, text: String) {
@@ -280,6 +304,135 @@ class SellWizardViewModel @Inject constructor(
             )
         }
         revalidate()
+        if (field == SellCalculatorMath.Field.AMOUNT) recomputeLadderPreview()
+    }
+
+    // --- Ladder handlers ---
+
+    fun setLadderEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(ladderEnabled = enabled, ladderOutcome = null) }
+        recomputeLadderPreview()
+    }
+
+    fun setLadderRangeMode(mode: LadderRangeMode) {
+        _uiState.update { it.copy(ladderRangeMode = mode, ladderFromInput = "", ladderToInput = "") }
+        recomputeLadderPreview()
+    }
+
+    fun setLadderFrom(value: String) {
+        _uiState.update { it.copy(ladderFromInput = value) }
+        recomputeLadderPreview()
+    }
+
+    fun setLadderTo(value: String) {
+        _uiState.update { it.copy(ladderToInput = value) }
+        recomputeLadderPreview()
+    }
+
+    fun setLadderCount(value: String) {
+        _uiState.update { it.copy(ladderCountInput = value) }
+        recomputeLadderPreview()
+    }
+
+    fun setLadderAmountMode(mode: LadderGenerator.AmountMode) {
+        _uiState.update { it.copy(ladderAmountMode = mode) }
+        recomputeLadderPreview()
+    }
+
+    private fun recomputeLadderPreview() {
+        val st = _uiState.value
+        if (!st.ladderEnabled) {
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = null) }
+            return
+        }
+        val total = st.amountInput.toBigDecimalOrNull()
+        val count = st.ladderCountInput.toIntOrNull()
+        val avg = st.avgBuyPrice
+        val (from, to) = when (st.ladderRangeMode) {
+            LadderRangeMode.PRICE -> {
+                st.ladderFromInput.toBigDecimalOrNull() to st.ladderToInput.toBigDecimalOrNull()
+            }
+            LadderRangeMode.PROFIT_PCT -> {
+                if (avg == null) {
+                    _uiState.update {
+                        it.copy(ladderPreview = emptyList(), ladderHardError = "Pro profit % musi byt avg buy price")
+                    }
+                    return
+                }
+                val fPct = st.ladderFromInput.toBigDecimalOrNull()
+                val tPct = st.ladderToInput.toBigDecimalOrNull()
+                val f = fPct?.let { avg * (BigDecimal.ONE + it.divide(BigDecimal(100), 8, RoundingMode.HALF_UP)) }
+                val t = tPct?.let { avg * (BigDecimal.ONE + it.divide(BigDecimal(100), 8, RoundingMode.HALF_UP)) }
+                f to t
+            }
+        }
+
+        if (total == null || count == null || from == null || to == null) {
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = null) }
+            return
+        }
+        if (total <= BigDecimal.ZERO) {
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Mnozstvi > 0") }
+            return
+        }
+        if (count < 2) {
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Pocet >= 2") }
+            return
+        }
+        if (to <= from || from <= BigDecimal.ZERO) {
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Do > Od, oba > 0") }
+            return
+        }
+        if (total > st.availableToSell) {
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Nemas tolik k dispozici") }
+            return
+        }
+
+        val preview = LadderGenerator.generate(total, from, to, count, st.ladderAmountMode)
+        val minPerOrder = preview.minOf { it.cryptoAmount }
+        val hardError = if (minPerOrder < st.minOrderSize) {
+            "Order ${minPerOrder} < min ${st.minOrderSize}"
+        } else null
+
+        _uiState.update { it.copy(ladderPreview = preview, ladderHardError = hardError) }
+    }
+
+    fun submitLadder() {
+        val st = _uiState.value
+        if (!st.ladderEnabled || st.ladderPreview.size < 2) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(submitting = true, submitError = null, ladderOutcome = null) }
+            val result = withTimeoutOrNull(30_000L) {
+                placeLadderSellUseCase(st.planId, st.ladderPreview)
+            }
+            when (result) {
+                null -> _uiState.update { it.copy(submitting = false, showTimeoutDialog = true) }
+                is LadderResult.AllPlaced -> _uiState.update {
+                    it.copy(
+                        submitting = false,
+                        ladderOutcome = LadderSubmitOutcome(
+                            placed = result.placedTxIds.size,
+                            total = result.placedTxIds.size,
+                            reason = null
+                        )
+                    )
+                }
+                is LadderResult.PartialFailure -> _uiState.update {
+                    it.copy(
+                        submitting = false,
+                        ladderOutcome = LadderSubmitOutcome(
+                            placed = result.placedTxIds.size,
+                            total = result.totalCount,
+                            reason = result.reason
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    fun consumeLadderOutcome() {
+        _uiState.update { it.copy(ladderOutcome = null, dismissRequested = true) }
     }
 
     fun proceedToConfirm() {
@@ -292,6 +445,10 @@ class SellWizardViewModel @Inject constructor(
 
     fun submit() {
         val state = _uiState.value
+        if (state.ladderEnabled) {
+            submitLadder()
+            return
+        }
         val amount = state.amountInput.toBigDecimalOrNull() ?: return
         val price = state.priceInput.toBigDecimalOrNull() ?: return
 
