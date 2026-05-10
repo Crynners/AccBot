@@ -1025,6 +1025,8 @@
     <string name="sell_wizard_ladder_outcome_all">All %1$d orders placed</string>
     <string name="sell_wizard_ladder_outcome_partial">Placed %1$d of %2$d. Stopped: %3$s</string>
     <string name="sell_wizard_ladder_dialog_title">Result</string>
+    <string name="sell_wizard_ladder_table_profit">Profit</string>
+    <string name="sell_wizard_ladder_table_net">Net</string>
     <string name="open_sells_title">Open sell orders (%1$d)</string>
     <string name="open_sells_status_partial">Partial: %1$s %% (%2$s / %3$s)</string>
     <string name="open_sells_status_pending">Waiting for fill</string>

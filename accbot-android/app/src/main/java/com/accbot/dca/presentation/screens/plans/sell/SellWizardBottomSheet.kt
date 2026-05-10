@@ -816,8 +816,8 @@ private fun LadderPreviewTable(
             Text("#", modifier = Modifier.weight(0.4f), style = MaterialTheme.typography.labelSmall)
             Text(stringResource(R.string.sell_wizard_amount), modifier = Modifier.weight(1.4f), style = MaterialTheme.typography.labelSmall)
             Text(stringResource(R.string.sell_wizard_limit_price), modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.labelSmall)
-            Text("Profit", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall)
-            Text("Net", modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.sell_wizard_ladder_table_profit), modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.sell_wizard_ladder_table_net), modifier = Modifier.weight(1.6f), style = MaterialTheme.typography.labelSmall)
         }
         androidx.compose.material3.HorizontalDivider()
         var totalNet = BigDecimal.ZERO

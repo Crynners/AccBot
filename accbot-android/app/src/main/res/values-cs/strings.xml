@@ -1031,6 +1031,8 @@
     <string name="sell_wizard_ladder_outcome_all">Vytvořeno všech %1$d příkazů</string>
     <string name="sell_wizard_ladder_outcome_partial">Vytvořeno %1$d z %2$d příkazů. Zastaveno: %3$s</string>
     <string name="sell_wizard_ladder_dialog_title">Výsledek</string>
+    <string name="sell_wizard_ladder_table_profit">Zisk</string>
+    <string name="sell_wizard_ladder_table_net">Výnos</string>
     <string name="open_sells_title">Otevřené prodejní příkazy (%1$d)</string>
     <string name="open_sells_status_partial">Částečně: %1$s %% (%2$s / %3$s)</string>
     <string name="open_sells_status_pending">Čeká na vyplnění</string>
