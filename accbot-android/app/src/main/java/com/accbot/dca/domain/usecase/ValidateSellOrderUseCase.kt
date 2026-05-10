@@ -9,13 +9,12 @@ import javax.inject.Inject
 /**
  * Validation outcome for a prospective sell order. Multiple items may be returned
  * (e.g. InstantFillInfo and no hard error), so callers should render each item.
- * [Ok] is only emitted when the list would otherwise be empty.
+ * An empty list means "valid".
  */
 sealed class SellValidation {
     /** Field this validation result attaches to (lets UI render it under the right input). */
     enum class Field { AMOUNT, PRICE, NET, GENERIC }
 
-    object Ok : SellValidation()
     data class HardError(val message: String, val field: Field = Field.GENERIC) : SellValidation()
     data class InstantFillInfo(val spot: BigDecimal) : SellValidation()
     data class FarFromMarketWarning(val spot: BigDecimal) : SellValidation()
@@ -25,7 +24,7 @@ sealed class SellValidation {
      * pushes the result into negative territory. Caller (UI) shows a warning banner;
      * the wizard still allows the user to proceed - the user makes the final decision.
      */
-    data class LossWarning(val lossFiat: BigDecimal, val lossPct: Double) : SellValidation()
+    data class LossWarning(val lossFiat: BigDecimal, val lossPct: BigDecimal) : SellValidation()
 }
 
 /**
@@ -110,7 +109,6 @@ class ValidateSellOrderUseCase @Inject constructor(
 
         checkLoss(cryptoAmount, limitPrice, avgBuyPrice, feeRate)?.let { result += it }
 
-        if (result.isEmpty()) result += SellValidation.Ok
         return result
     }
 
@@ -133,10 +131,11 @@ class ValidateSellOrderUseCase @Inject constructor(
             val costBasis = cryptoAmount * avgBuyPrice
             val netProfit = netFiat - costBasis
             if (netProfit >= BigDecimal.ZERO) return null
+            val lossFiat = netProfit.negate()
             val lossPct = if (costBasis > BigDecimal.ZERO) {
-                netProfit.toDouble() / costBasis.toDouble()
-            } else 0.0
-            return SellValidation.LossWarning(lossFiat = netProfit.negate(), lossPct = -lossPct)
+                lossFiat.divide(costBasis, 4, java.math.RoundingMode.HALF_UP)
+            } else BigDecimal.ZERO
+            return SellValidation.LossWarning(lossFiat = lossFiat, lossPct = lossPct)
         }
     }
 }

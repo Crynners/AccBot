@@ -984,12 +984,10 @@
     <string name="sell_wizard_available">K dispozici:</string>
     <string name="sell_wizard_amount">Množství k prodeji</string>
     <string name="sell_wizard_amount_all">Vše</string>
-    <string name="sell_wizard_chip_breakeven">Bez ztráty</string>
     <string name="sell_wizard_limit_price">Limitní cena</string>
     <string name="sell_wizard_chip_spot">Tržní</string>
     <string name="sell_wizard_summary">Souhrn</string>
     <string name="sell_wizard_proceeds">Získáte:</string>
-    <string name="sell_wizard_profit_vs_avg">Zisk vs průměr:</string>
     <string name="sell_wizard_instant_fill_warning">Prodej proběhne okamžitě. Limitní cena je pod aktuální tržní (%1$s %2$s). Příkaz se vyplní ihned za nejvyšší nabídku na burze (obvykle blízko tržní ceny minus spread). Není to chyba.</string>
     <string name="sell_wizard_far_from_market_warning">Cena je vysoko nad trhem - prodej se nemusí vyplnit dlouho.</string>
     <string name="sell_wizard_proceed">Pokračovat</string>

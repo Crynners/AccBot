@@ -18,6 +18,21 @@ object LadderGenerator {
 
     enum class AmountMode { EQUAL_CRYPTO, EQUAL_FIAT }
 
+    /** `pct = (price - avg) / avg * 100`. Returns null when avg is missing or zero. */
+    fun priceToProfitPct(price: BigDecimal, avg: BigDecimal?): BigDecimal? {
+        if (avg == null || avg <= BigDecimal.ZERO) return null
+        return (price - avg).divide(avg, 6, RoundingMode.HALF_UP)
+            .multiply(BigDecimal(100))
+            .setScale(2, RoundingMode.HALF_UP)
+    }
+
+    /** `price = avg * (1 + pct/100)`. Returns null when avg is missing or zero. */
+    fun profitPctToPrice(pct: BigDecimal, avg: BigDecimal?): BigDecimal? {
+        if (avg == null || avg <= BigDecimal.ZERO) return null
+        return (avg * (BigDecimal.ONE + pct.divide(BigDecimal(100), 8, RoundingMode.HALF_UP)))
+            .setScale(2, RoundingMode.HALF_UP)
+    }
+
     fun generate(
         totalAmount: BigDecimal,
         from: BigDecimal,
@@ -38,9 +53,9 @@ object LadderGenerator {
         return when (mode) {
             AmountMode.EQUAL_CRYPTO -> {
                 val per = totalAmount.divide(n, 8, RoundingMode.DOWN)
-                val drobky = totalAmount - per * n
+                val remainder = totalAmount - per * n
                 prices.mapIndexed { i, p ->
-                    val a = if (i == count - 1) per + drobky else per
+                    val a = if (i == count - 1) per + remainder else per
                     LadderOrder(a, p)
                 }
             }

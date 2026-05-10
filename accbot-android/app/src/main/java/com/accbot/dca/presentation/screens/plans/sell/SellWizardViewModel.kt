@@ -6,10 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.UserPreferences
-import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.RemainingInventory
-import com.accbot.dca.domain.model.TransactionSide
-import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.usecase.CalculatePlanCostBasisUseCase
 import com.accbot.dca.domain.usecase.CalculatePlanPnLUseCase
 import com.accbot.dca.domain.usecase.LadderOrder
@@ -21,6 +18,7 @@ import com.accbot.dca.domain.usecase.ValidateSellOrderUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.exchange.MinOrderSizeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -124,6 +122,7 @@ class SellWizardViewModel @Inject constructor(
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     private var initialized = false
+    private var validationJob: Job? = null
 
     fun init(planId: Long) {
         if (initialized) return
@@ -144,7 +143,7 @@ class SellWizardViewModel @Inject constructor(
             val api = credentials?.let { exchangeApiFactory.create(it) }
             val spot = api?.let {
                 try {
-                    withTimeoutOrNull(10_000) { it.getCurrentPrice(plan.crypto, plan.fiat) }
+                    withTimeoutOrNull(INIT_TIMEOUT_MS) { it.getCurrentPrice(plan.crypto, plan.fiat) }
                 } catch (e: Exception) {
                     Log.w(TAG, "getCurrentPrice failed: ${e.message}")
                     null
@@ -225,25 +224,11 @@ class SellWizardViewModel @Inject constructor(
         }
     }
 
-    fun setPriceBreakeven() {
-        _uiState.value.avgBuyPrice?.let {
-            setPrice(it.setScale(2, RoundingMode.HALF_UP).toPlainString())
-        }
-    }
-
     fun setPriceAvgPlus(pct: Int) {
         _uiState.value.avgBuyPrice?.let { avg ->
             val multiplier = BigDecimal.ONE +
                 BigDecimal(pct).divide(BigDecimal(100), 4, RoundingMode.HALF_UP)
             setPrice((avg * multiplier).setScale(2, RoundingMode.HALF_UP).toPlainString())
-        }
-    }
-
-    fun setPriceSpotPlus(pct: Int) {
-        _uiState.value.spotPrice?.let { spot ->
-            val multiplier = BigDecimal.ONE +
-                BigDecimal(pct).divide(BigDecimal(100), 4, RoundingMode.HALF_UP)
-            setPrice((spot * multiplier).setScale(2, RoundingMode.HALF_UP).toPlainString())
         }
     }
 
@@ -260,7 +245,11 @@ class SellWizardViewModel @Inject constructor(
     fun setAvgBuyPrice(value: String) {
         _uiState.update { st ->
             val parsed = value.toBigDecimalOrNull()
-            val isManual = parsed != null && parsed.compareTo(st.avgBuyPriceAuto ?: BigDecimal("-1")) != 0
+            // Compare against the same 2dp display rounding the user sees - avoids
+            // flagging "manual" on the very first prefill that came from auto.
+            val autoDisplay = st.avgBuyPriceAuto?.setScale(2, RoundingMode.HALF_UP)
+            val isManual = parsed != null &&
+                (autoDisplay == null || parsed.compareTo(autoDisplay) != 0)
             st.copy(avgBuyPriceInput = value, avgBuyPriceManual = isManual)
         }
         revalidate()
@@ -316,10 +305,8 @@ class SellWizardViewModel @Inject constructor(
     fun setLadderEnabled(enabled: Boolean) {
         _uiState.update { st ->
             if (enabled) {
-                // Single -> Ladder: use the single limit price as the midpoint of the
-                // new range and spread +-10 % around it. Default count (5) gives orders
-                // at 0.90, 0.95, 1.00, 1.05, 1.10 x price -> middle order matches the
-                // single price the user had already set.
+                // Single -> Ladder: spread +-10 % around the single price so the middle
+                // order matches what the user had already set.
                 val price = st.priceInput.toBigDecimalOrNull()
                 val avg = st.avgBuyPrice
                 val (fromInput, toInput) = if (price != null && price > BigDecimal.ZERO) {
@@ -330,12 +317,10 @@ class SellWizardViewModel @Inject constructor(
                             fromPrice.setScale(2, RoundingMode.HALF_UP).toPlainString() to
                                 toPrice.setScale(2, RoundingMode.HALF_UP).toPlainString()
                         LadderRangeMode.PROFIT_PCT -> {
-                            if (avg != null && avg > BigDecimal.ZERO) {
-                                val fromPct = (fromPrice - avg).divide(avg, 6, RoundingMode.HALF_UP)
-                                    .multiply(BigDecimal(100)).setScale(2, RoundingMode.HALF_UP).toPlainString()
-                                val toPct = (toPrice - avg).divide(avg, 6, RoundingMode.HALF_UP)
-                                    .multiply(BigDecimal(100)).setScale(2, RoundingMode.HALF_UP).toPlainString()
-                                fromPct to toPct
+                            val fromPct = LadderGenerator.priceToProfitPct(fromPrice, avg)
+                            val toPct = LadderGenerator.priceToProfitPct(toPrice, avg)
+                            if (fromPct != null && toPct != null) {
+                                fromPct.toPlainString() to toPct.toPlainString()
                             } else st.ladderFromInput to st.ladderToInput
                         }
                     }
@@ -381,18 +366,13 @@ class SellWizardViewModel @Inject constructor(
             val avg = st.avgBuyPrice
             val convert: (String) -> String = { input ->
                 val v = input.toBigDecimalOrNull()
-                if (v == null || avg == null || avg <= BigDecimal.ZERO) ""
-                else when (mode) {
-                    // PROFIT_PCT -> PRICE: price = avg * (1 + pct/100)
-                    LadderRangeMode.PRICE ->
-                        (avg * (BigDecimal.ONE + v.divide(BigDecimal(100), 8, RoundingMode.HALF_UP)))
-                            .setScale(2, RoundingMode.HALF_UP).toPlainString()
-                    // PRICE -> PROFIT_PCT: pct = (price - avg) / avg * 100
-                    LadderRangeMode.PROFIT_PCT ->
-                        (v - avg).divide(avg, 6, RoundingMode.HALF_UP)
-                            .multiply(BigDecimal(100))
-                            .setScale(2, RoundingMode.HALF_UP).toPlainString()
+                val converted = v?.let {
+                    when (mode) {
+                        LadderRangeMode.PRICE -> LadderGenerator.profitPctToPrice(it, avg)
+                        LadderRangeMode.PROFIT_PCT -> LadderGenerator.priceToProfitPct(it, avg)
+                    }
                 }
+                converted?.toPlainString() ?: ""
             }
             st.copy(
                 ladderRangeMode = mode,
@@ -441,22 +421,15 @@ class SellWizardViewModel @Inject constructor(
         val fromRaw = st.ladderFromInput.toBigDecimalOrNull() ?: return
         val fromPrice = when (st.ladderRangeMode) {
             LadderRangeMode.PRICE -> fromRaw
-            LadderRangeMode.PROFIT_PCT -> {
-                if (avg == null || avg <= BigDecimal.ZERO) return
-                avg * (BigDecimal.ONE + fromRaw.divide(BigDecimal(100), 8, RoundingMode.HALF_UP))
-            }
+            LadderRangeMode.PROFIT_PCT -> LadderGenerator.profitPctToPrice(fromRaw, avg) ?: return
         }
         if (fromPrice <= BigDecimal.ZERO) return
         val toPrice = (BigDecimal(2) * targetNet).divide(amount * factor, 8, RoundingMode.HALF_UP) - fromPrice
         if (toPrice <= fromPrice) return
         val toDisplay = when (st.ladderRangeMode) {
             LadderRangeMode.PRICE -> toPrice.setScale(2, RoundingMode.HALF_UP).toPlainString()
-            LadderRangeMode.PROFIT_PCT -> {
-                if (avg == null || avg <= BigDecimal.ZERO) return
-                (toPrice - avg).divide(avg, 6, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal(100))
-                    .setScale(2, RoundingMode.HALF_UP).toPlainString()
-            }
+            LadderRangeMode.PROFIT_PCT ->
+                LadderGenerator.priceToProfitPct(toPrice, avg)?.toPlainString() ?: return
         }
         _uiState.update { it.copy(ladderToInput = toDisplay) }
         recomputeLadderPreview(syncNetFromTotal = false)
@@ -484,8 +457,8 @@ class SellWizardViewModel @Inject constructor(
                 }
                 val fPct = st.ladderFromInput.toBigDecimalOrNull()
                 val tPct = st.ladderToInput.toBigDecimalOrNull()
-                val f = fPct?.let { avg * (BigDecimal.ONE + it.divide(BigDecimal(100), 8, RoundingMode.HALF_UP)) }
-                val t = tPct?.let { avg * (BigDecimal.ONE + it.divide(BigDecimal(100), 8, RoundingMode.HALF_UP)) }
+                val f = fPct?.let { LadderGenerator.profitPctToPrice(it, avg) }
+                val t = tPct?.let { LadderGenerator.profitPctToPrice(it, avg) }
                 f to t
             }
         }
@@ -535,7 +508,7 @@ class SellWizardViewModel @Inject constructor(
         if (!st.ladderEnabled || st.ladderPreview.size < 2) return
         viewModelScope.launch {
             _uiState.update { it.copy(submitting = true, submitError = null, ladderOutcome = null) }
-            val result = withTimeoutOrNull(30_000L) {
+            val result = withTimeoutOrNull(SUBMIT_LADDER_TIMEOUT_MS) {
                 placeLadderSellUseCase(st.planId, st.ladderPreview)
             }
             when (result) {
@@ -588,7 +561,7 @@ class SellWizardViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(submitting = true, submitError = null) }
 
-            val result = withTimeoutOrNull(15_000L) {
+            val result = withTimeoutOrNull(SUBMIT_SINGLE_TIMEOUT_MS) {
                 placeLimitSellUseCase(state.planId, amount, price)
             }
 
@@ -620,11 +593,14 @@ class SellWizardViewModel @Inject constructor(
         val state = _uiState.value
         val amount = state.amountInput.toBigDecimalOrNull()
         val price = state.priceInput.toBigDecimalOrNull()
+        validationJob?.cancel()
         if (amount == null || price == null) {
             _uiState.update { it.copy(validations = emptyList()) }
             return
         }
-        viewModelScope.launch {
+        // Cancel any in-flight validation so a slower earlier coroutine can't overwrite
+        // newer results - keystrokes fire revalidate() rapidly and we must keep the latest win.
+        validationJob = viewModelScope.launch {
             val validations = try {
                 validateSellOrderUseCase(
                     state.planId, amount, price, state.minOrderFiat, state.spotPrice,
@@ -640,5 +616,8 @@ class SellWizardViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "SellWizardViewModel"
+        private const val INIT_TIMEOUT_MS = 10_000L
+        private const val SUBMIT_SINGLE_TIMEOUT_MS = 15_000L
+        private const val SUBMIT_LADDER_TIMEOUT_MS = 30_000L
     }
 }

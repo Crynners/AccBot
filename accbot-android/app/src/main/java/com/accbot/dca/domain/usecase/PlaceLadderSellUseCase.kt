@@ -1,5 +1,6 @@
 package com.accbot.dca.domain.usecase
 
+import android.util.Log
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.UserPreferences
@@ -62,7 +63,15 @@ class PlaceLadderSellUseCase @Inject constructor(
             }
         }
 
-        try { resolvePendingTransactionsUseCase() } catch (_: Exception) {}
+        try {
+            resolvePendingTransactionsUseCase()
+        } catch (e: Exception) {
+            Log.w(TAG, "resolvePending after ladder failed: ${e.message}")
+        }
         return LadderResult.AllPlaced(placed)
+    }
+
+    companion object {
+        private const val TAG = "PlaceLadderSellUseCase"
     }
 }

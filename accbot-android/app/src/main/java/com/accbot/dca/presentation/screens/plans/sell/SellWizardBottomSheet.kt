@@ -500,7 +500,6 @@ private fun SellInputStep(
                     stringResource(R.string.sell_wizard_far_from_market_warning)
                 )
                 is SellValidation.LossWarning -> { /* shown via LossBanner in summary section */ }
-                is SellValidation.Ok -> { /* no-op */ }
             }
         }
 
@@ -829,7 +828,7 @@ private fun LadderPreviewTable(
                     .multiply(BigDecimal(100)).setScale(1, RoundingMode.HALF_UP)
                 "${if (pct.signum() >= 0) "+" else ""}${pct.toPlainString()} %"
             } else "-"
-            totalNet += if (avg != null) net - o.cryptoAmount * avg else net
+            totalNet += net
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                 Text("${i + 1}", modifier = Modifier.weight(0.4f), style = MaterialTheme.typography.bodySmall)
                 Text(NumberFormatters.crypto(o.cryptoAmount), modifier = Modifier.weight(1.4f), style = MaterialTheme.typography.bodySmall)

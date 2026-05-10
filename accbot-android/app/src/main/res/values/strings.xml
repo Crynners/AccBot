@@ -978,12 +978,10 @@
     <string name="sell_wizard_available">Available:</string>
     <string name="sell_wizard_amount">Amount to sell</string>
     <string name="sell_wizard_amount_all">All</string>
-    <string name="sell_wizard_chip_breakeven">Breakeven</string>
     <string name="sell_wizard_limit_price">Limit price</string>
     <string name="sell_wizard_chip_spot">Market</string>
     <string name="sell_wizard_summary">Summary</string>
     <string name="sell_wizard_proceeds">Proceeds:</string>
-    <string name="sell_wizard_profit_vs_avg">Profit vs avg:</string>
     <string name="sell_wizard_instant_fill_warning">The sell will execute immediately. The limit price is below the current market price (%1$s %2$s). The order will fill at the highest bid on the exchange (usually close to market price minus spread). This is not an error.</string>
     <string name="sell_wizard_far_from_market_warning">The price is far above market - the order may take a long time to fill.</string>
     <string name="sell_wizard_proceed">Continue</string>
