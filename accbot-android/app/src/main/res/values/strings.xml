@@ -1035,4 +1035,16 @@
     <string name="open_sells_cancel_all">Cancel all</string>
     <string name="open_sells_cancel_all_confirm_title">Cancel all orders?</string>
     <string name="open_sells_cancel_all_confirm_text">Cancel all %1$d open sell orders? This cannot be undone.</string>
+    <string name="sell_validation_amount_must_be_positive">Amount must be greater than 0</string>
+    <string name="sell_validation_price_must_be_positive">Limit price must be greater than 0</string>
+    <string name="sell_validation_min_order_too_low">Minimum order value is %1$s (raise amount or price)</string>
+    <string name="sell_validation_insufficient_inventory">Not enough available (available %1$s)</string>
+    <string name="sell_wizard_ladder_error_avg_required">Profit %% requires the average buy price to be set</string>
+    <string name="sell_wizard_ladder_error_amount_positive">Amount must be greater than 0</string>
+    <string name="sell_wizard_ladder_error_count_min2">Order count must be at least 2</string>
+    <string name="sell_wizard_ladder_error_to_must_exceed_from">To must be greater than From (both positive)</string>
+    <string name="sell_wizard_ladder_error_insufficient">Not enough available</string>
+    <string name="sell_wizard_ladder_error_below_min">Smallest order (%1$s %2$s) is below the minimum %3$s %2$s</string>
+    <string name="sell_wizard_amount_pct_hint">= %1$s %% of available</string>
+    <string name="sell_wizard_submit_error_unknown">Unknown error</string>
 </resources>

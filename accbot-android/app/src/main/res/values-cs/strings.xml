@@ -1041,4 +1041,16 @@
     <string name="open_sells_cancel_all">Zrušit vše</string>
     <string name="open_sells_cancel_all_confirm_title">Zrušit všechny příkazy?</string>
     <string name="open_sells_cancel_all_confirm_text">Opravdu zrušit všechny otevřené prodejní příkazy (%1$d)? Akci nelze vrátit.</string>
+    <string name="sell_validation_amount_must_be_positive">Množství musí být větší než 0</string>
+    <string name="sell_validation_price_must_be_positive">Limitní cena musí být větší než 0</string>
+    <string name="sell_validation_min_order_too_low">Minimální hodnota orderu je %1$s (zvyš množství nebo cenu)</string>
+    <string name="sell_validation_insufficient_inventory">Nemáš tolik k dispozici (k dispozici %1$s)</string>
+    <string name="sell_wizard_ladder_error_avg_required">Pro profit %% musí být zadaná průměrná nákupní cena</string>
+    <string name="sell_wizard_ladder_error_amount_positive">Množství musí být větší než 0</string>
+    <string name="sell_wizard_ladder_error_count_min2">Počet orderů musí být alespoň 2</string>
+    <string name="sell_wizard_ladder_error_to_must_exceed_from">Do musí být větší než Od (oba kladné)</string>
+    <string name="sell_wizard_ladder_error_insufficient">Nemáš tolik k dispozici</string>
+    <string name="sell_wizard_ladder_error_below_min">Hodnota nejmenšího orderu (%1$s %2$s) je pod minimem %3$s %2$s</string>
+    <string name="sell_wizard_amount_pct_hint">= %1$s %% z dostupných</string>
+    <string name="sell_wizard_submit_error_unknown">Neznámá chyba</string>
 </resources>

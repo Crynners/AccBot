@@ -64,10 +64,40 @@ import com.accbot.dca.presentation.utils.NumberFormatters
 import java.math.BigDecimal
 import java.math.RoundingMode
 
+@Composable
+private fun SellValidation.HardError.localizedText(): String = when (this) {
+    SellValidation.HardError.AmountMustBePositive ->
+        stringResource(R.string.sell_validation_amount_must_be_positive)
+    SellValidation.HardError.PriceMustBePositive ->
+        stringResource(R.string.sell_validation_price_must_be_positive)
+    is SellValidation.HardError.MinOrderTooLow ->
+        stringResource(R.string.sell_validation_min_order_too_low, NumberFormatters.fiat(minOrderFiat))
+    is SellValidation.HardError.InsufficientInventory ->
+        stringResource(R.string.sell_validation_insufficient_inventory, NumberFormatters.crypto(available))
+}
+
+@Composable
+private fun LadderError.localizedText(): String = when (this) {
+    LadderError.AvgRequired ->
+        stringResource(R.string.sell_wizard_ladder_error_avg_required)
+    LadderError.AmountMustBePositive ->
+        stringResource(R.string.sell_wizard_ladder_error_amount_positive)
+    LadderError.CountMin2 ->
+        stringResource(R.string.sell_wizard_ladder_error_count_min2)
+    LadderError.ToMustExceedFrom ->
+        stringResource(R.string.sell_wizard_ladder_error_to_must_exceed_from)
+    LadderError.Insufficient ->
+        stringResource(R.string.sell_wizard_ladder_error_insufficient)
+    is LadderError.BelowMin -> stringResource(
+        R.string.sell_wizard_ladder_error_below_min,
+        NumberFormatters.fiat(smallest), fiat, NumberFormatters.fiat(min)
+    )
+}
+
 /**
  * Two-step bottom sheet for placing a limit sell order:
  *  1. INPUT - amount + price with quick-set chips, live validations and summary
- *  2. CONFIRM - read-only summary + warning + submit (added in Task 25)
+ *  2. CONFIRM - read-only summary + warning + submit
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -258,8 +288,8 @@ private fun SellInputStep(
             isError = amountError != null,
             supportingText = {
                 when {
-                    amountError != null -> Text(amountError.message, color = MaterialTheme.colorScheme.error)
-                    amountPct != null -> Text("= ${amountPct.toPlainString()} % z dostupných")
+                    amountError != null -> Text(amountError.localizedText(), color = MaterialTheme.colorScheme.error)
+                    amountPct != null -> Text(stringResource(R.string.sell_wizard_amount_pct_hint, amountPct.toPlainString()))
                 }
             },
             trailingIcon = {
@@ -318,8 +348,8 @@ private fun SellInputStep(
             onValueChange = vm::setPrice,
             visualTransformation = ThousandSeparator,
             isError = priceError != null,
-            supportingText = priceError?.let {
-                { Text(it.message, color = MaterialTheme.colorScheme.error) }
+            supportingText = priceError?.let { err ->
+                { Text(err.localizedText(), color = MaterialTheme.colorScheme.error) }
             },
             trailingIcon = {
                 Text(
@@ -373,8 +403,8 @@ private fun SellInputStep(
             onValueChange = if (state.ladderEnabled) vm::setLadderNetTarget else vm::setNetFiat,
             visualTransformation = ThousandSeparator,
             isError = !state.ladderEnabled && netError != null,
-            supportingText = netError?.takeIf { !state.ladderEnabled }?.let {
-                { Text(it.message, color = MaterialTheme.colorScheme.error) }
+            supportingText = netError?.takeIf { !state.ladderEnabled }?.let { err ->
+                { Text(err.localizedText(), color = MaterialTheme.colorScheme.error) }
             },
             trailingIcon = {
                 Text(
@@ -487,7 +517,7 @@ private fun SellInputStep(
             when (v) {
                 is SellValidation.HardError -> if (v.field == SellValidation.Field.GENERIC) {
                     Text(
-                        text = v.message,
+                        text = v.localizedText(),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(vertical = 4.dp)
@@ -712,15 +742,10 @@ private fun LadderControls(state: SellWizardViewModel.UiState, vm: SellWizardVie
             SellWizardViewModel.LadderRangeMode.PROFIT_PCT to stringResource(R.string.sell_wizard_ladder_range_profit),
             SellWizardViewModel.LadderRangeMode.PRICE to stringResource(R.string.sell_wizard_ladder_range_price)
         ).forEach { (mode, label) ->
-            AssistChip(
-                onClick = { vm.setLadderRangeMode(mode) },
-                label = { Text(label) },
-                colors = if (state.ladderRangeMode == mode) {
-                    androidx.compose.material3.AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                } else androidx.compose.material3.AssistChipDefaults.assistChipColors()
+            com.accbot.dca.presentation.components.SelectableChip(
+                text = label,
+                selected = state.ladderRangeMode == mode,
+                onClick = { vm.setLadderRangeMode(mode) }
             )
         }
     }
@@ -754,7 +779,7 @@ private fun LadderControls(state: SellWizardViewModel.UiState, vm: SellWizardVie
     }
     state.ladderHardError?.let { err ->
         Text(
-            err,
+            err.localizedText(),
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(top = 4.dp, start = 16.dp)
@@ -779,15 +804,10 @@ private fun LadderControls(state: SellWizardViewModel.UiState, vm: SellWizardVie
             LadderGenerator.AmountMode.EQUAL_CRYPTO to stringResource(R.string.sell_wizard_ladder_amount_equal_crypto),
             LadderGenerator.AmountMode.EQUAL_FIAT to stringResource(R.string.sell_wizard_ladder_amount_equal_fiat)
         ).forEach { (mode, label) ->
-            AssistChip(
-                onClick = { vm.setLadderAmountMode(mode) },
-                label = { Text(label) },
-                colors = if (state.ladderAmountMode == mode) {
-                    androidx.compose.material3.AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                } else androidx.compose.material3.AssistChipDefaults.assistChipColors()
+            com.accbot.dca.presentation.components.SelectableChip(
+                text = label,
+                selected = state.ladderAmountMode == mode,
+                onClick = { vm.setLadderAmountMode(mode) }
             )
         }
     }
@@ -848,21 +868,22 @@ private fun LadderPreviewTable(
 }
 
 /**
- * Inserts a thin space (' ') as a thousand separator in the integer part of a numeric
- * input. The decimal part (after '.' or ',') is left as-is. The user keeps typing raw
- * digits; only the visual presentation is grouped.
+ * Locale-aware thousand-separator visual transformation. The user keeps typing raw digits
+ * (with '.' or ',' for decimal); only the visual presentation is grouped using the active
+ * locale's grouping separator (e.g. CS uses non-breaking space, EN uses ',').
  */
 private val ThousandSeparator: VisualTransformation = VisualTransformation { text ->
     val raw = text.text
     if (raw.isEmpty()) return@VisualTransformation TransformedText(text, OffsetMapping.Identity)
-    val transformed = formatThousands(raw)
+    val groupChar = java.text.DecimalFormatSymbols.getInstance(java.util.Locale.getDefault()).groupingSeparator
+    val transformed = formatThousands(raw, groupChar)
     TransformedText(
         AnnotatedString(transformed),
         object : OffsetMapping {
             override fun originalToTransformed(offset: Int): Int {
                 if (offset <= 0) return 0
                 val capped = offset.coerceAtMost(raw.length)
-                return formatThousands(raw.substring(0, capped)).length
+                return formatThousands(raw.substring(0, capped), groupChar).length
             }
 
             override fun transformedToOriginal(offset: Int): Int {
@@ -873,7 +894,7 @@ private val ThousandSeparator: VisualTransformation = VisualTransformation { tex
                 for (ch in transformed) {
                     if (seen >= offset) break
                     seen++
-                    if (ch != ' ') orig++
+                    if (ch != groupChar) orig++
                 }
                 return orig.coerceAtMost(raw.length)
             }
@@ -881,12 +902,12 @@ private val ThousandSeparator: VisualTransformation = VisualTransformation { tex
     )
 }
 
-private fun formatThousands(s: String): String {
+private fun formatThousands(s: String, groupChar: Char): String {
     val dotIdx = s.indexOfAny(charArrayOf('.', ','))
     val intPart = if (dotIdx >= 0) s.substring(0, dotIdx) else s
     val rest = if (dotIdx >= 0) s.substring(dotIdx) else ""
     val grouped = if (intPart.length <= 3) intPart
-                  else intPart.reversed().chunked(3).joinToString(" ").reversed()
+                  else intPart.reversed().chunked(3).joinToString(groupChar.toString()).reversed()
     return grouped + rest
 }
 

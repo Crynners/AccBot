@@ -1,8 +1,10 @@
 package com.accbot.dca.presentation.screens.plans.sell
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.accbot.dca.R
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.UserPreferences
@@ -17,7 +19,9 @@ import com.accbot.dca.domain.usecase.SellValidation
 import com.accbot.dca.domain.usecase.ValidateSellOrderUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.exchange.MinOrderSizeRepository
+import com.accbot.dca.presentation.utils.NumberFormatters
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +32,16 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
 import java.math.RoundingMode
 import javax.inject.Inject
+
+/** Locale-free ladder validation error; UI resolves to a string resource. */
+sealed class LadderError {
+    object AvgRequired : LadderError()
+    object AmountMustBePositive : LadderError()
+    object CountMin2 : LadderError()
+    object ToMustExceedFrom : LadderError()
+    object Insufficient : LadderError()
+    data class BelowMin(val smallest: BigDecimal, val min: BigDecimal, val fiat: String) : LadderError()
+}
 
 /**
  * State + actions for the two-step limit-sell wizard (input -> confirm -> submit).
@@ -42,6 +56,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class SellWizardViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val validateSellOrderUseCase: ValidateSellOrderUseCase,
     private val placeLimitSellUseCase: PlaceLimitSellUseCase,
     private val placeLadderSellUseCase: PlaceLadderSellUseCase,
@@ -93,7 +108,7 @@ class SellWizardViewModel @Inject constructor(
         val ladderCountInput: String = "5",
         val ladderAmountMode: LadderGenerator.AmountMode = LadderGenerator.AmountMode.EQUAL_CRYPTO,
         val ladderPreview: List<LadderOrder> = emptyList(),
-        val ladderHardError: String? = null,
+        val ladderHardError: LadderError? = null,
         val ladderOutcome: LadderSubmitOutcome? = null,
         val step: Step = Step.INPUT,
         val initializing: Boolean = true,
@@ -451,7 +466,7 @@ class SellWizardViewModel @Inject constructor(
             LadderRangeMode.PROFIT_PCT -> {
                 if (avg == null) {
                     _uiState.update {
-                        it.copy(ladderPreview = emptyList(), ladderHardError = "Pro profit % musí být zadaná průměrná nákupní cena")
+                        it.copy(ladderPreview = emptyList(), ladderHardError = LadderError.AvgRequired)
                     }
                     return
                 }
@@ -468,26 +483,30 @@ class SellWizardViewModel @Inject constructor(
             return
         }
         if (total <= BigDecimal.ZERO) {
-            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Množství musí být větší než 0") }
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = LadderError.AmountMustBePositive) }
             return
         }
         if (count < 2) {
-            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Počet orderů musí být alespoň 2") }
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = LadderError.CountMin2) }
             return
         }
         if (to <= from || from <= BigDecimal.ZERO) {
-            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Do musí být větší než Od (oba kladné)") }
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = LadderError.ToMustExceedFrom) }
             return
         }
         if (total > st.availableToSell) {
-            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = "Nemáš tolik k dispozici") }
+            _uiState.update { it.copy(ladderPreview = emptyList(), ladderHardError = LadderError.Insufficient) }
             return
         }
 
         val preview = LadderGenerator.generate(total, from, to, count, st.ladderAmountMode)
         val minOrderFiatValue = preview.minOf { it.cryptoAmount * it.limitPrice }
-        val hardError = if (st.minOrderFiat > BigDecimal.ZERO && minOrderFiatValue < st.minOrderFiat) {
-            "Hodnota nejmenšího orderu (${minOrderFiatValue.setScale(2, RoundingMode.HALF_UP)} ${st.fiat}) je pod minimem ${st.minOrderFiat} ${st.fiat}"
+        val hardError: LadderError? = if (st.minOrderFiat > BigDecimal.ZERO && minOrderFiatValue < st.minOrderFiat) {
+            LadderError.BelowMin(
+                smallest = minOrderFiatValue.setScale(2, RoundingMode.HALF_UP),
+                min = st.minOrderFiat,
+                fiat = st.fiat
+            )
         } else null
 
         val totalNet = preview.fold(BigDecimal.ZERO) { acc, o ->
@@ -574,7 +593,8 @@ class SellWizardViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             submitting = false,
-                            submitError = result.exceptionOrNull()?.message ?: "Neznámá chyba"
+                            submitError = result.exceptionOrNull()?.message
+                                ?: context.getString(R.string.sell_wizard_submit_error_unknown)
                         )
                     }
             }

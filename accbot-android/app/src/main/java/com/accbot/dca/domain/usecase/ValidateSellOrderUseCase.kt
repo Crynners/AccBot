@@ -1,8 +1,5 @@
 package com.accbot.dca.domain.usecase
 
-import com.accbot.dca.data.local.DcaDatabase
-import com.accbot.dca.domain.model.TransactionSide
-import com.accbot.dca.domain.model.TransactionStatus
 import java.math.BigDecimal
 import javax.inject.Inject
 
@@ -10,12 +7,20 @@ import javax.inject.Inject
  * Validation outcome for a prospective sell order. Multiple items may be returned
  * (e.g. InstantFillInfo and no hard error), so callers should render each item.
  * An empty list means "valid".
+ *
+ * Hard errors are locale-free: each subtype maps to a string resource the UI resolves.
  */
 sealed class SellValidation {
     /** Field this validation result attaches to (lets UI render it under the right input). */
     enum class Field { AMOUNT, PRICE, NET, GENERIC }
 
-    data class HardError(val message: String, val field: Field = Field.GENERIC) : SellValidation()
+    sealed class HardError(val field: Field) : SellValidation() {
+        object AmountMustBePositive : HardError(Field.AMOUNT)
+        object PriceMustBePositive : HardError(Field.PRICE)
+        data class MinOrderTooLow(val minOrderFiat: BigDecimal) : HardError(Field.AMOUNT)
+        data class InsufficientInventory(val available: BigDecimal) : HardError(Field.AMOUNT)
+    }
+
     data class InstantFillInfo(val spot: BigDecimal) : SellValidation()
     data class FarFromMarketWarning(val spot: BigDecimal) : SellValidation()
     /**
@@ -39,7 +44,7 @@ sealed class SellValidation {
  *  - limitPrice > 3x spot -> FarFromMarketWarning (typo protection)
  */
 class ValidateSellOrderUseCase @Inject constructor(
-    private val database: DcaDatabase
+    private val calculatePlanCostBasisUseCase: CalculatePlanCostBasisUseCase
 ) {
     suspend operator fun invoke(
         planId: Long,
@@ -54,48 +59,22 @@ class ValidateSellOrderUseCase @Inject constructor(
         val result = mutableListOf<SellValidation>()
 
         if (cryptoAmount <= BigDecimal.ZERO) {
-            result += SellValidation.HardError("Množství musí být větší než 0", SellValidation.Field.AMOUNT)
+            result += SellValidation.HardError.AmountMustBePositive
             return result
         }
         if (limitPrice <= BigDecimal.ZERO) {
-            result += SellValidation.HardError("Limitní cena musí být větší než 0", SellValidation.Field.PRICE)
+            result += SellValidation.HardError.PriceMustBePositive
             return result
         }
         if (minOrderFiat > BigDecimal.ZERO && cryptoAmount * limitPrice < minOrderFiat) {
-            result += SellValidation.HardError(
-                "Minimální hodnota orderu je $minOrderFiat (zvyš množství nebo cenu)",
-                SellValidation.Field.AMOUNT
-            )
+            result += SellValidation.HardError.MinOrderTooLow(minOrderFiat)
         }
 
-        val tx = database.transactionDao().getTransactionsByPlanSync(planId)
-        val completedOrPartial = tx.filter {
-            it.status == TransactionStatus.COMPLETED || it.status == TransactionStatus.PARTIAL
-        }
-        val heldBought = completedOrPartial
-            .filter { it.side == TransactionSide.BUY }
-            .fold(BigDecimal.ZERO) { acc, t -> acc + t.cryptoAmount }
-        val heldSold = completedOrPartial
-            .filter { it.side == TransactionSide.SELL }
-            .fold(BigDecimal.ZERO) { acc, t -> acc + t.cryptoAmount }
-        val held = heldBought - heldSold
-
-        // Unfilled crypto reserved by other open sells (PENDING or PARTIAL).
-        val openSellsRequested = tx
-            .filter {
-                it.side == TransactionSide.SELL &&
-                    it.status in setOf(TransactionStatus.PENDING, TransactionStatus.PARTIAL)
-            }
-            .fold(BigDecimal.ZERO) { acc, t ->
-                acc + ((t.requestedCryptoAmount ?: BigDecimal.ZERO) - t.cryptoAmount)
-            }
-
-        val available = held - openSellsRequested
+        // Single source of truth for "available to sell" - the cost basis use case already
+        // accounts for filled buys, filled sells, and full reservation of PENDING/PARTIAL sells.
+        val available = calculatePlanCostBasisUseCase(planId).available
         if (cryptoAmount > available) {
-            result += SellValidation.HardError(
-                "Nemáš tolik k dispozici (k dispozici $available)",
-                SellValidation.Field.AMOUNT
-            )
+            result += SellValidation.HardError.InsufficientInventory(available)
         }
 
         if (currentSpot != null) {
