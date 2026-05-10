@@ -314,8 +314,65 @@ class SellWizardViewModel @Inject constructor(
     // --- Ladder handlers ---
 
     fun setLadderEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(ladderEnabled = enabled, ladderOutcome = null) }
-        recomputeLadderPreview()
+        _uiState.update { st ->
+            if (enabled) {
+                // Single -> Ladder: use the single limit price as the midpoint of the
+                // new range and spread +-10 % around it. Default count (5) gives orders
+                // at 0.90, 0.95, 1.00, 1.05, 1.10 x price -> middle order matches the
+                // single price the user had already set.
+                val price = st.priceInput.toBigDecimalOrNull()
+                val avg = st.avgBuyPrice
+                val (fromInput, toInput) = if (price != null && price > BigDecimal.ZERO) {
+                    val fromPrice = price * BigDecimal("0.90")
+                    val toPrice = price * BigDecimal("1.10")
+                    when (st.ladderRangeMode) {
+                        LadderRangeMode.PRICE ->
+                            fromPrice.setScale(2, RoundingMode.HALF_UP).toPlainString() to
+                                toPrice.setScale(2, RoundingMode.HALF_UP).toPlainString()
+                        LadderRangeMode.PROFIT_PCT -> {
+                            if (avg != null && avg > BigDecimal.ZERO) {
+                                val fromPct = (fromPrice - avg).divide(avg, 6, RoundingMode.HALF_UP)
+                                    .multiply(BigDecimal(100)).setScale(2, RoundingMode.HALF_UP).toPlainString()
+                                val toPct = (toPrice - avg).divide(avg, 6, RoundingMode.HALF_UP)
+                                    .multiply(BigDecimal(100)).setScale(2, RoundingMode.HALF_UP).toPlainString()
+                                fromPct to toPct
+                            } else st.ladderFromInput to st.ladderToInput
+                        }
+                    }
+                } else st.ladderFromInput to st.ladderToInput
+                st.copy(
+                    ladderEnabled = true,
+                    ladderOutcome = null,
+                    ladderFromInput = fromInput,
+                    ladderToInput = toInput
+                )
+            } else {
+                // Ladder -> Single: derive a single price that yields the same total net
+                // for the same crypto amount: net = amount * price * (1 - fee), so
+                // price = net / (amount * (1 - fee)). Net comes from current ladder total
+                // (already in netInput, kept in sync by recomputeLadderPreview).
+                val amount = st.amountInput.toBigDecimalOrNull()
+                val total = st.netInput.toBigDecimalOrNull()
+                val factor = BigDecimal.ONE - st.feeRate
+                val newPrice = if (amount != null && total != null &&
+                    amount > BigDecimal.ZERO && factor > BigDecimal.ZERO
+                ) {
+                    total.divide(amount * factor, 2, RoundingMode.HALF_UP).toPlainString()
+                } else st.priceInput
+                st.copy(
+                    ladderEnabled = false,
+                    ladderOutcome = null,
+                    priceInput = newPrice,
+                    ladderPreview = emptyList(),
+                    ladderHardError = null
+                )
+            }
+        }
+        if (_uiState.value.ladderEnabled) {
+            recomputeLadderPreview()
+        } else {
+            revalidate()
+        }
     }
 
     fun setLadderRangeMode(mode: LadderRangeMode) {
