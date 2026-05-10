@@ -174,6 +174,8 @@ fun PortfolioScreen(
                             openSellLimitPrices = if (uiState.currentPlanAllowsSells &&
                                 uiState.denominationMode == DenominationMode.FIAT &&
                                 uiState.limitLinesVisible) openSellLimitPrices else emptyList(),
+                            tradeMarkers = if (uiState.denominationMode == DenominationMode.FIAT)
+                                uiState.tradeMarkers else emptyList(),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)

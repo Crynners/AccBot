@@ -1047,4 +1047,6 @@
     <string name="sell_wizard_ladder_error_below_min">Smallest order (%1$s %2$s) is below the minimum %3$s %2$s</string>
     <string name="sell_wizard_amount_pct_hint">= %1$s %% of available</string>
     <string name="sell_wizard_submit_error_unknown">Unknown error</string>
+    <string name="notification_sell_filled_title">Sell filled ✓</string>
+    <string name="notification_sell_filled_text">Sold %1$s %2$s for %3$s %4$s @&#160;%5$s %4$s</string>
 </resources>

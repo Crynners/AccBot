@@ -400,6 +400,56 @@ class NotificationService @Inject constructor(
     }
 
     /**
+     * Show notification when a limit sell order is filled (PENDING/PARTIAL -> COMPLETED).
+     * Uses a unique ID per transaction so multiple ladder fills are all visible.
+     */
+    suspend fun showSellFilledNotification(
+        crypto: String,
+        cryptoAmount: BigDecimal,
+        fiatAmount: BigDecimal,
+        fiat: String,
+        price: BigDecimal,
+        transactionId: Long = 0,
+        planId: Long = 0,
+        exchange: Exchange? = null,
+        connectionId: Long? = null
+    ) {
+        val args = NotificationTemplateArgs.SellFilled(
+            cryptoAmount = cryptoAmount.toPlainString(),
+            crypto = crypto,
+            fiatAmount = fiatAmount.toPlainString(),
+            fiat = fiat,
+            price = price.toPlainString()
+        )
+        val (title, text) = NotificationRenderer.render(context, args)
+        val label = connectionLabel(connectionId, exchange)
+        val displayedTitle = if (!label.isNullOrBlank() && label != exchange?.displayName) {
+            "$label · $title"
+        } else title
+
+        // Use transaction ID as the unique key so per-tier ladder fills don't collapse.
+        val keyForId = if (transactionId > 0) transactionId else planId
+        val sysNotifId = notificationIdForPlan(NOTIFICATION_ID_SELL_FILLED, keyForId)
+        persistAndShow(
+            sysNotifId = sysNotifId,
+            channel = CHANNEL_PURCHASE,
+            title = displayedTitle,
+            text = text,
+            entity = NotificationEntity(
+                type = NotificationType.SELL_FILLED,
+                title = displayedTitle,
+                message = text,
+                planId = planId.takeIf { it > 0 },
+                crypto = crypto,
+                exchange = exchange,
+                connectionId = connectionId,
+                systemNotificationId = sysNotifId,
+                templateArgs = args.toJson()
+            )
+        )
+    }
+
+    /**
      * Cancel a specific system notification by its ID.
      */
     fun cancelNotification(systemNotificationId: Int) {
@@ -466,6 +516,7 @@ class NotificationService @Inject constructor(
         private const val NOTIFICATION_ID_WITHDRAWAL_THRESHOLD = 40_000
         private const val NOTIFICATION_ID_NETWORK_RETRY = 50_000
         private const val NOTIFICATION_ID_MISSED_PURCHASES = 60_000
+        private const val NOTIFICATION_ID_SELL_FILLED = 70_000
 
         const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
 

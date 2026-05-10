@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallMade
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -281,6 +282,7 @@ private fun NotificationTypeIcon(type: NotificationType) {
         NotificationType.WITHDRAWAL_THRESHOLD -> Icons.AutoMirrored.Filled.CallMade to Warning
         NotificationType.NETWORK_RETRY -> Icons.Default.WifiOff to Error
         NotificationType.MISSED_PURCHASES -> Icons.Default.EventBusy to Warning
+        NotificationType.SELL_FILLED -> Icons.AutoMirrored.Filled.TrendingUp to successCol
     }
 
     Box(

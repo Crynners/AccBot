@@ -405,6 +405,19 @@ interface TransactionDao {
     """)
     suspend fun getCompletedTransactionsOrdered(exchange: String? = null): List<TransactionEntity>
 
+    /**
+     * Completed SELL transactions, ordered by execution. Used to draw chart timeline
+     * markers; kept separate from [getCompletedTransactionsOrdered] so the BUY-only
+     * invariant of the chart series pipeline isn't disturbed.
+     */
+    @Query("""
+        SELECT * FROM transactions
+        WHERE status = 'COMPLETED' AND side = 'SELL'
+        AND (:exchange IS NULL OR exchange = :exchange)
+        ORDER BY executedAt ASC
+    """)
+    suspend fun getCompletedSellsOrdered(exchange: String? = null): List<TransactionEntity>
+
     @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE exchange = :exchange AND crypto = :crypto AND status = 'COMPLETED' AND side = 'BUY'")
     suspend fun getTotalCryptoByExchangeAndCrypto(exchange: String, crypto: String): String
 

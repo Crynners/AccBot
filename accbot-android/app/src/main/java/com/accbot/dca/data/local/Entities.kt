@@ -19,7 +19,7 @@ import java.time.Instant
 /**
  * Notification type for in-app notification history
  */
-enum class NotificationType { PURCHASE, ERROR, LOW_BALANCE, WITHDRAWAL_THRESHOLD, NETWORK_RETRY, MISSED_PURCHASES }
+enum class NotificationType { PURCHASE, ERROR, LOW_BALANCE, WITHDRAWAL_THRESHOLD, NETWORK_RETRY, MISSED_PURCHASES, SELL_FILLED }
 
 /**
  * Room type converters

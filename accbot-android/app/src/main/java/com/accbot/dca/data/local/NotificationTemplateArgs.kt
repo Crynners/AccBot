@@ -177,6 +177,24 @@ sealed class NotificationTemplateArgs {
         }.toString()
     }
 
+    /** Limit sell order filled (PENDING/PARTIAL -> COMPLETED). */
+    data class SellFilled(
+        val cryptoAmount: String,
+        val crypto: String,
+        val fiatAmount: String,
+        val fiat: String,
+        val price: String
+    ) : NotificationTemplateArgs() {
+        override fun toJson(): String = JSONObject().apply {
+            put(KEY_TYPE, TYPE_SELL_FILLED)
+            put("cryptoAmount", cryptoAmount)
+            put("crypto", crypto)
+            put("fiatAmount", fiatAmount)
+            put("fiat", fiat)
+            put("price", price)
+        }.toString()
+    }
+
     companion object {
         private const val KEY_TYPE = "type"
         private const val TYPE_PURCHASE = "purchase"
@@ -189,6 +207,7 @@ sealed class NotificationTemplateArgs {
         private const val TYPE_NETWORK_RETRY = "network_retry"
         private const val TYPE_MISSED_PURCHASES = "missed_purchases"
         private const val TYPE_MISSING_CREDENTIALS = "missing_credentials"
+        private const val TYPE_SELL_FILLED = "sell_filled"
 
         fun fromJson(json: String): NotificationTemplateArgs? = try {
             val obj = JSONObject(json)
@@ -252,6 +271,13 @@ sealed class NotificationTemplateArgs {
                     crypto = obj.getString("crypto"),
                     exchangeName = obj.getString("exchangeName"),
                     connectionName = obj.optString("connectionName", "")
+                )
+                TYPE_SELL_FILLED -> SellFilled(
+                    cryptoAmount = obj.getString("cryptoAmount"),
+                    crypto = obj.getString("crypto"),
+                    fiatAmount = obj.getString("fiatAmount"),
+                    fiat = obj.getString("fiat"),
+                    price = obj.getString("price")
                 )
                 else -> null
             }

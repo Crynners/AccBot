@@ -4,7 +4,10 @@ import android.util.Log
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.UserPreferences
+import com.accbot.dca.domain.model.TransactionSide
+import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.exchange.ExchangeApiFactory
+import com.accbot.dca.service.NotificationService
 import javax.inject.Inject
 
 /**
@@ -17,12 +20,15 @@ import javax.inject.Inject
  *
  * Uses the guarded [TransactionDao.updateResolvedTransaction] UPDATE so a concurrent
  * user cancel (which sets status=FAILED) is never clobbered.
+ *
+ * Fires a system notification for each SELL that transitions to COMPLETED in this run.
  */
 class ResolvePendingTransactionsUseCase @Inject constructor(
     private val database: DcaDatabase,
     private val credentialsStore: CredentialsStore,
     private val exchangeApiFactory: ExchangeApiFactory,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val notificationService: NotificationService
 ) {
     suspend operator fun invoke(): Int {
         val pendingTransactions = database.transactionDao().getResolvablePendingTransactions()
@@ -44,15 +50,35 @@ class ResolvePendingTransactionsUseCase @Inject constructor(
 
                 val result = api.getOrderStatus(orderId, tx.crypto, tx.fiat) ?: continue
 
+                val newPrice = result.avgFillPrice ?: tx.price
                 val rows = database.transactionDao().updateResolvedTransaction(
                     id = tx.id,
                     newStatus = result.status,
                     cryptoAmount = result.filledCryptoAmount,
                     fiatAmount = result.filledFiatAmount,
-                    price = result.avgFillPrice ?: tx.price,
+                    price = newPrice,
                     fee = result.fee ?: tx.fee
                 )
-                if (rows > 0) resolvedCount++
+                if (rows > 0) {
+                    resolvedCount++
+                    if (tx.side == TransactionSide.SELL && result.status == TransactionStatus.COMPLETED) {
+                        try {
+                            notificationService.showSellFilledNotification(
+                                crypto = tx.crypto,
+                                cryptoAmount = result.filledCryptoAmount,
+                                fiatAmount = result.filledFiatAmount,
+                                fiat = tx.fiat,
+                                price = newPrice,
+                                transactionId = tx.id,
+                                planId = tx.planId ?: 0,
+                                exchange = tx.exchange,
+                                connectionId = tx.connectionId
+                            )
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Sell-filled notification failed for tx ${tx.id}", e)
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to resolve pending transaction ${tx.id}", e)
             }
