@@ -44,6 +44,22 @@ sealed class LadderError {
 }
 
 /**
+ * Derived single-order summary: gross proceeds, fees, net, optional profit vs avg buy
+ * and amount-as-pct-of-available. Computed in the VM so the UI stays dumb.
+ */
+data class SellSummary(
+    val proceeds: BigDecimal,
+    val feeAmount: BigDecimal,
+    val netProceeds: BigDecimal,
+    val costBasis: BigDecimal?,
+    val netProfit: BigDecimal?,
+    val netProfitPct: BigDecimal?,
+    val amountPct: BigDecimal?,
+    val totalProgress: BigDecimal?,
+    val targetProgressPct: Int?
+)
+
+/**
  * State + actions for the two-step limit-sell wizard (input -> confirm -> submit).
  *
  * Cost basis: the avg buy price prefilled in the UI is computed via timestamp-aware
@@ -130,6 +146,46 @@ class SellWizardViewModel @Inject constructor(
                     amountInput.isNotBlank() && priceInput.isNotBlank() &&
                     amountInput.toBigDecimalOrNull() != null &&
                     priceInput.toBigDecimalOrNull() != null
+            }
+
+        /**
+         * Single-order summary derived from amount/price/avg/fee. null when amount or
+         * price is missing/zero - the UI hides the summary card in that case.
+         */
+        val summary: SellSummary?
+            get() {
+                val a = amountInput.toBigDecimalOrNull() ?: return null
+                val p = priceInput.toBigDecimalOrNull() ?: return null
+                if (a <= BigDecimal.ZERO || p <= BigDecimal.ZERO) return null
+                val proceeds = (a * p).setScale(2, RoundingMode.HALF_UP)
+                val feeAmount = (proceeds * feeRate).setScale(2, RoundingMode.HALF_UP)
+                val netProceeds = (proceeds - feeAmount).setScale(2, RoundingMode.HALF_UP)
+                val avg = avgBuyPrice
+                val costBasis = avg?.let { a * it }
+                val netProfit = costBasis?.let { (netProceeds - it).setScale(2, RoundingMode.HALF_UP) }
+                val netProfitPct = if (costBasis != null && netProfit != null && costBasis > BigDecimal.ZERO) {
+                    netProfit.divide(costBasis, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal(100))
+                        .setScale(1, RoundingMode.HALF_UP)
+                } else null
+                val amountPct = if (availableToSell > BigDecimal.ZERO) {
+                    a.divide(availableToSell, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal(100))
+                        .setScale(1, RoundingMode.HALF_UP)
+                } else null
+                val totalProgress = netProfit?.let { realizedPnLSoFar + it }
+                val targetProgressPct = if (totalProgress != null &&
+                    targetProfitAmount != null && targetProfitAmount > BigDecimal.ZERO
+                ) {
+                    val raw = totalProgress.divide(targetProfitAmount, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal(100))
+                    raw.toInt().coerceAtLeast(0)
+                } else null
+                return SellSummary(
+                    proceeds, feeAmount, netProceeds,
+                    costBasis, netProfit, netProfitPct,
+                    amountPct, totalProgress, targetProgressPct
+                )
             }
     }
 

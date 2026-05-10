@@ -166,6 +166,13 @@ private fun SellInputStep(
     vm: SellWizardViewModel,
     onDismiss: () -> Unit
 ) {
+    val amountError = state.validations.filterIsInstance<SellValidation.HardError>()
+        .firstOrNull { it.field == SellValidation.Field.AMOUNT }
+    val priceError = state.validations.filterIsInstance<SellValidation.HardError>()
+        .firstOrNull { it.field == SellValidation.Field.PRICE }
+    val netError = state.validations.filterIsInstance<SellValidation.HardError>()
+        .firstOrNull { it.field == SellValidation.Field.NET }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -173,366 +180,29 @@ private fun SellInputStep(
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        // Header
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = null)
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.sell_wizard_title, state.crypto, state.fiat),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = state.exchangeName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
+        SellWizardHeader(state, onDismiss)
         Spacer(Modifier.height(12.dp))
-
-        // Info block (read-only context)
-        InfoRow(
-            stringResource(R.string.sell_wizard_spot_price),
-            state.spotPrice?.let { "${NumberFormatters.fiat(it)} ${state.fiat}" } ?: "-"
-        )
-        InfoRow(
-            stringResource(R.string.sell_wizard_available),
-            "${NumberFormatters.crypto(state.availableToSell)} ${state.crypto}"
-        )
-
-        if (state.inventoryDeficit > BigDecimal.ZERO) {
-            Spacer(Modifier.height(4.dp))
-            WarningBanner(
-                stringResource(
-                    R.string.sell_wizard_inventory_deficit,
-                    "${NumberFormatters.crypto(state.inventoryDeficit)} ${state.crypto}"
-                )
-            )
-        }
-
-        // Editable avg buy price
+        SellInfoBlock(state)
         Spacer(Modifier.height(12.dp))
-        Text(
-            stringResource(R.string.sell_wizard_avg_buy),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(Modifier.height(4.dp))
-        OutlinedTextField(
-            value = state.avgBuyPriceInput,
-            onValueChange = vm::setAvgBuyPrice,
-            visualTransformation = ThousandSeparator,
-            trailingIcon = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (state.avgBuyPriceManual && state.avgBuyPriceAuto != null) {
-                        AssistChip(
-                            onClick = vm::resetAvgBuyPrice,
-                            label = { Text(stringResource(R.string.sell_wizard_avg_buy_reset)) },
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                    }
-                    Text(
-                        text = state.fiat,
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            supportingText = {
-                Text(
-                    stringResource(
-                        when {
-                            state.avgBuyPriceAuto == null && state.avgBuyPriceInput.isBlank() ->
-                                R.string.sell_wizard_avg_buy_helper_required
-                            state.avgBuyPriceManual ->
-                                R.string.sell_wizard_avg_buy_helper_manual
-                            else -> R.string.sell_wizard_avg_buy_helper_auto
-                        }
-                    )
-                )
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        // Field-specific errors: shown as supportingText under the matching field.
-        val amountError = state.validations.filterIsInstance<SellValidation.HardError>()
-            .firstOrNull { it.field == SellValidation.Field.AMOUNT }
-        val priceError = state.validations.filterIsInstance<SellValidation.HardError>()
-            .firstOrNull { it.field == SellValidation.Field.PRICE }
-        val netError = state.validations.filterIsInstance<SellValidation.HardError>()
-            .firstOrNull { it.field == SellValidation.Field.NET }
-
+        AvgBuyField(state, vm)
         Spacer(Modifier.height(16.dp))
-        Text(
-            stringResource(R.string.sell_wizard_amount),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(Modifier.height(4.dp))
-        val amountAsBd = state.amountInput.toBigDecimalOrNull()
-        val amountPct = amountAsBd?.let { a ->
-            if (state.availableToSell > BigDecimal.ZERO) {
-                a.divide(state.availableToSell, 4, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal(100)).setScale(1, RoundingMode.HALF_UP)
-            } else null
-        }
-        OutlinedTextField(
-            value = state.amountInput,
-            onValueChange = vm::setAmount,
-            isError = amountError != null,
-            supportingText = {
-                when {
-                    amountError != null -> Text(amountError.localizedText(), color = MaterialTheme.colorScheme.error)
-                    amountPct != null -> Text(stringResource(R.string.sell_wizard_amount_pct_hint, amountPct.toPlainString()))
-                }
-            },
-            trailingIcon = {
-                Text(
-                    text = state.crypto,
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        Row(
-            modifier = Modifier.padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            val allLabel = stringResource(R.string.sell_wizard_amount_all)
-            listOf(25 to "25 %", 50 to "50 %", 75 to "75 %", 100 to allLabel).forEach { (pct, label) ->
-                AssistChip(
-                    onClick = { vm.setAmountPct(pct) },
-                    label = { Text(label, maxLines = 1, softWrap = false) }
-                )
-            }
-        }
-
-        // Ladder mode toggle
+        AmountField(state, vm, amountError)
         Spacer(Modifier.height(12.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { vm.setLadderEnabled(!state.ladderEnabled) }
-        ) {
-            Checkbox(
-                checked = state.ladderEnabled,
-                onCheckedChange = vm::setLadderEnabled
-            )
-            Text(stringResource(R.string.sell_wizard_ladder_enable))
-        }
-
+        LadderModeRow(state, vm)
         if (state.ladderEnabled) {
             LadderControls(state = state, vm = vm)
-        }
-
-        if (!state.ladderEnabled) {
-        Spacer(Modifier.height(16.dp))
-        Text(
-            stringResource(R.string.sell_wizard_limit_price),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(4.dp))
-        OutlinedTextField(
-            value = state.priceInput,
-            onValueChange = vm::setPrice,
-            visualTransformation = ThousandSeparator,
-            isError = priceError != null,
-            supportingText = priceError?.let { err ->
-                { Text(err.localizedText(), color = MaterialTheme.colorScheme.error) }
-            },
-            trailingIcon = {
-                Text(
-                    text = state.fiat,
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        Row(
-            modifier = Modifier.padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            AssistChip(
-                onClick = vm::setPriceSpot,
-                label = { Text(stringResource(R.string.sell_wizard_chip_spot), maxLines = 1, softWrap = false) },
-                enabled = state.spotPrice != null
-            )
-            AssistChip(
-                onClick = { vm.setPriceAvgPlus(10) },
-                label = { Text("+10 %", maxLines = 1, softWrap = false) },
-                enabled = state.avgBuyPrice != null
-            )
-            AssistChip(
-                onClick = { vm.setPriceAvgPlus(25) },
-                label = { Text("+25 %", maxLines = 1, softWrap = false) },
-                enabled = state.avgBuyPrice != null
-            )
-            AssistChip(
-                onClick = { vm.setPriceAvgPlus(50) },
-                label = { Text("+50 %", maxLines = 1, softWrap = false) },
-                enabled = state.avgBuyPrice != null
-            )
-        }
-
-        } // end if !ladderEnabled (Limit price section only)
-
-        // Net fiat field - editable in single mode, read-only display of ladder total in ladder mode.
-        Spacer(Modifier.height(16.dp))
-        Text(
-            stringResource(R.string.sell_wizard_net_fiat),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(Modifier.height(4.dp))
-        OutlinedTextField(
-            value = state.netInput,
-            onValueChange = if (state.ladderEnabled) vm::setLadderNetTarget else vm::setNetFiat,
-            visualTransformation = ThousandSeparator,
-            isError = !state.ladderEnabled && netError != null,
-            supportingText = netError?.takeIf { !state.ladderEnabled }?.let { err ->
-                { Text(err.localizedText(), color = MaterialTheme.colorScheme.error) }
-            },
-            trailingIcon = {
-                Text(
-                    text = state.fiat,
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        if (!state.ladderEnabled) {
-            Text(
-                stringResource(R.string.sell_wizard_net_preset_label),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-            Row(
-                modifier = Modifier.padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(0.10 to "+10 %", 0.20 to "+20 %", 0.50 to "+50 %", 1.00 to "+100 %").forEach { (factor, label) ->
-                    AssistChip(
-                        onClick = { vm.applyNetProfitPreset(factor) },
-                        label = { Text(label, maxLines = 1, softWrap = false) },
-                        enabled = state.avgBuyPrice != null && state.amountInput.toBigDecimalOrNull() != null
-                    )
-                }
-            }
-        }
-
-        val amountBD = state.amountInput.toBigDecimalOrNull() ?: BigDecimal.ZERO
-        val priceBD = state.priceInput.toBigDecimalOrNull() ?: BigDecimal.ZERO
-        val proceeds = (amountBD * priceBD).setScale(2, RoundingMode.HALF_UP)
-        val feeAmount = (proceeds * state.feeRate).setScale(2, RoundingMode.HALF_UP)
-        val netProceeds = (proceeds - feeAmount).setScale(2, RoundingMode.HALF_UP)
-
-        if (!state.ladderEnabled && proceeds > BigDecimal.ZERO) {
+        } else {
             Spacer(Modifier.height(16.dp))
-            Text(
-                stringResource(R.string.sell_wizard_summary),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(Modifier.height(4.dp))
-            InfoRow(
-                stringResource(R.string.sell_wizard_proceeds),
-                "${NumberFormatters.fiat(proceeds)} ${state.fiat}"
-            )
-            if (state.feeRate > BigDecimal.ZERO) {
-                InfoRow(
-                    stringResource(R.string.sell_wizard_summary_fee),
-                    "-${NumberFormatters.fiat(feeAmount)} ${state.fiat} (${state.feeRate.multiply(BigDecimal(100)).setScale(2, RoundingMode.HALF_UP).toPlainString()} %)"
-                )
-            }
-            state.avgBuyPrice?.let { avg ->
-                val costBasis = amountBD * avg
-                val netProfit = (netProceeds - costBasis).setScale(2, RoundingMode.HALF_UP)
-                val netProfitPct = if (costBasis > BigDecimal.ZERO) {
-                    netProfit.divide(costBasis, 4, RoundingMode.HALF_UP)
-                        .multiply(BigDecimal(100))
-                        .setScale(1, RoundingMode.HALF_UP)
-                } else BigDecimal.ZERO
-                val sign = if (netProfit >= BigDecimal.ZERO) "+" else ""
-                InfoRow(
-                    label = stringResource(R.string.sell_wizard_summary_net_profit),
-                    value = "$sign${NumberFormatters.fiat(netProfit)} ${state.fiat} ($sign${netProfitPct.toPlainString()} %)",
-                    color = when {
-                        netProfit > BigDecimal.ZERO -> successColor()
-                        netProfit < BigDecimal.ZERO -> Error
-                        else -> null
-                    }
-                )
-
-                state.targetProfitAmount?.takeIf { it > BigDecimal.ZERO }?.let { target ->
-                    val totalProgress = state.realizedPnLSoFar + netProfit
-                    val pct = (totalProgress.toDouble() / target.toDouble()).coerceAtLeast(0.0)
-                    InfoRow(
-                        stringResource(R.string.sell_wizard_summary_target_progress),
-                        "${NumberFormatters.fiat(totalProgress)} / ${NumberFormatters.fiat(target)} ${state.fiat} (${"%.0f".format(pct * 100)} %)"
-                    )
-                }
-            }
+            PriceField(state, vm, priceError)
         }
-
-        // Loss banner from validations (single mode only - ladder has aggregate via preview)
+        Spacer(Modifier.height(16.dp))
+        NetField(state, vm, netError)
         if (!state.ladderEnabled) {
-            state.validations.filterIsInstance<SellValidation.LossWarning>().firstOrNull()?.let { loss ->
-                Spacer(Modifier.height(8.dp))
-                val isPriceBelowAvg = state.priceInput.toBigDecimalOrNull()?.let { p ->
-                    state.avgBuyPrice?.let { avg -> p < avg }
-                } ?: false
-                LossBanner(
-                    stringResource(
-                        if (isPriceBelowAvg) R.string.sell_wizard_loss_below_buy
-                        else R.string.sell_wizard_loss_after_fee,
-                        NumberFormatters.fiat(loss.lossFiat),
-                        state.fiat
-                    )
-                )
-            }
+            OrderSummary(state)
+            LossBannerSection(state)
         }
-
-        // Validations: field-tagged hard errors render under their field; only generic
-        // ones and warnings end up in this list.
         Spacer(Modifier.height(8.dp))
-        state.validations.forEach { v ->
-            when (v) {
-                is SellValidation.HardError -> if (v.field == SellValidation.Field.GENERIC) {
-                    Text(
-                        text = v.localizedText(),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                }
-                is SellValidation.InstantFillInfo -> InfoBanner(
-                    stringResource(R.string.sell_wizard_instant_fill_warning, NumberFormatters.fiat(v.spot), state.fiat)
-                )
-                is SellValidation.FarFromMarketWarning -> WarningBanner(
-                    stringResource(R.string.sell_wizard_far_from_market_warning)
-                )
-                is SellValidation.LossWarning -> { /* shown via LossBanner in summary section */ }
-            }
-        }
-
+        ValidationsList(state)
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = vm::proceedToConfirm,
@@ -541,8 +211,351 @@ private fun SellInputStep(
         ) {
             Text(stringResource(R.string.sell_wizard_proceed))
         }
-
         Spacer(Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun SellWizardHeader(state: SellWizardViewModel.UiState, onDismiss: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onDismiss) {
+            Icon(Icons.Default.Close, contentDescription = null)
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.sell_wizard_title, state.crypto, state.fiat),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = state.exchangeName,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun SellInfoBlock(state: SellWizardViewModel.UiState) {
+    InfoRow(
+        stringResource(R.string.sell_wizard_spot_price),
+        state.spotPrice?.let { "${NumberFormatters.fiat(it)} ${state.fiat}" } ?: "-"
+    )
+    InfoRow(
+        stringResource(R.string.sell_wizard_available),
+        "${NumberFormatters.crypto(state.availableToSell)} ${state.crypto}"
+    )
+    if (state.inventoryDeficit > BigDecimal.ZERO) {
+        Spacer(Modifier.height(4.dp))
+        WarningBanner(
+            stringResource(
+                R.string.sell_wizard_inventory_deficit,
+                "${NumberFormatters.crypto(state.inventoryDeficit)} ${state.crypto}"
+            )
+        )
+    }
+}
+
+@Composable
+private fun AvgBuyField(state: SellWizardViewModel.UiState, vm: SellWizardViewModel) {
+    Text(
+        stringResource(R.string.sell_wizard_avg_buy),
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold
+    )
+    Spacer(Modifier.height(4.dp))
+    OutlinedTextField(
+        value = state.avgBuyPriceInput,
+        onValueChange = vm::setAvgBuyPrice,
+        visualTransformation = ThousandSeparator,
+        trailingIcon = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (state.avgBuyPriceManual && state.avgBuyPriceAuto != null) {
+                    AssistChip(
+                        onClick = vm::resetAvgBuyPrice,
+                        label = { Text(stringResource(R.string.sell_wizard_avg_buy_reset)) },
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
+                Text(
+                    text = state.fiat,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        supportingText = {
+            Text(
+                stringResource(
+                    when {
+                        state.avgBuyPriceAuto == null && state.avgBuyPriceInput.isBlank() ->
+                            R.string.sell_wizard_avg_buy_helper_required
+                        state.avgBuyPriceManual ->
+                            R.string.sell_wizard_avg_buy_helper_manual
+                        else -> R.string.sell_wizard_avg_buy_helper_auto
+                    }
+                )
+            )
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+}
+
+@Composable
+private fun AmountField(
+    state: SellWizardViewModel.UiState,
+    vm: SellWizardViewModel,
+    amountError: SellValidation.HardError?
+) {
+    Text(
+        stringResource(R.string.sell_wizard_amount),
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold
+    )
+    Spacer(Modifier.height(4.dp))
+    OutlinedTextField(
+        value = state.amountInput,
+        onValueChange = vm::setAmount,
+        isError = amountError != null,
+        supportingText = {
+            val pctText = state.summary?.amountPct
+            when {
+                amountError != null -> Text(amountError.localizedText(), color = MaterialTheme.colorScheme.error)
+                pctText != null -> Text(stringResource(R.string.sell_wizard_amount_pct_hint, pctText.toPlainString()))
+            }
+        },
+        trailingIcon = {
+            Text(
+                text = state.crypto,
+                modifier = Modifier.padding(horizontal = 12.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+    Row(
+        modifier = Modifier.padding(top = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        val allLabel = stringResource(R.string.sell_wizard_amount_all)
+        listOf(25 to "25 %", 50 to "50 %", 75 to "75 %", 100 to allLabel).forEach { (pct, label) ->
+            AssistChip(
+                onClick = { vm.setAmountPct(pct) },
+                label = { Text(label, maxLines = 1, softWrap = false) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun LadderModeRow(state: SellWizardViewModel.UiState, vm: SellWizardViewModel) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { vm.setLadderEnabled(!state.ladderEnabled) }
+    ) {
+        Checkbox(
+            checked = state.ladderEnabled,
+            onCheckedChange = vm::setLadderEnabled
+        )
+        Text(stringResource(R.string.sell_wizard_ladder_enable))
+    }
+}
+
+@Composable
+private fun PriceField(
+    state: SellWizardViewModel.UiState,
+    vm: SellWizardViewModel,
+    priceError: SellValidation.HardError?
+) {
+    Text(
+        stringResource(R.string.sell_wizard_limit_price),
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Spacer(Modifier.height(4.dp))
+    OutlinedTextField(
+        value = state.priceInput,
+        onValueChange = vm::setPrice,
+        visualTransformation = ThousandSeparator,
+        isError = priceError != null,
+        supportingText = priceError?.let { err ->
+            { Text(err.localizedText(), color = MaterialTheme.colorScheme.error) }
+        },
+        trailingIcon = {
+            Text(
+                text = state.fiat,
+                modifier = Modifier.padding(horizontal = 12.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+    Row(
+        modifier = Modifier.padding(top = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        AssistChip(
+            onClick = vm::setPriceSpot,
+            label = { Text(stringResource(R.string.sell_wizard_chip_spot), maxLines = 1, softWrap = false) },
+            enabled = state.spotPrice != null
+        )
+        listOf(10, 25, 50).forEach { pct ->
+            AssistChip(
+                onClick = { vm.setPriceAvgPlus(pct) },
+                label = { Text("+$pct %", maxLines = 1, softWrap = false) },
+                enabled = state.avgBuyPrice != null
+            )
+        }
+    }
+}
+
+@Composable
+private fun NetField(
+    state: SellWizardViewModel.UiState,
+    vm: SellWizardViewModel,
+    netError: SellValidation.HardError?
+) {
+    Text(
+        stringResource(R.string.sell_wizard_net_fiat),
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold
+    )
+    Spacer(Modifier.height(4.dp))
+    OutlinedTextField(
+        value = state.netInput,
+        onValueChange = if (state.ladderEnabled) vm::setLadderNetTarget else vm::setNetFiat,
+        visualTransformation = ThousandSeparator,
+        isError = !state.ladderEnabled && netError != null,
+        supportingText = netError?.takeIf { !state.ladderEnabled }?.let { err ->
+            { Text(err.localizedText(), color = MaterialTheme.colorScheme.error) }
+        },
+        trailingIcon = {
+            Text(
+                text = state.fiat,
+                modifier = Modifier.padding(horizontal = 12.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+    if (!state.ladderEnabled) {
+        Text(
+            stringResource(R.string.sell_wizard_net_preset_label),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+        Row(
+            modifier = Modifier.padding(top = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val presetEnabled = state.avgBuyPrice != null && state.amountInput.toBigDecimalOrNull() != null
+            listOf(0.10 to "+10 %", 0.20 to "+20 %", 0.50 to "+50 %", 1.00 to "+100 %").forEach { (factor, label) ->
+                AssistChip(
+                    onClick = { vm.applyNetProfitPreset(factor) },
+                    label = { Text(label, maxLines = 1, softWrap = false) },
+                    enabled = presetEnabled
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OrderSummary(state: SellWizardViewModel.UiState) {
+    val s = state.summary ?: return
+    Spacer(Modifier.height(16.dp))
+    Text(
+        stringResource(R.string.sell_wizard_summary),
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold
+    )
+    Spacer(Modifier.height(4.dp))
+    InfoRow(
+        stringResource(R.string.sell_wizard_proceeds),
+        "${NumberFormatters.fiat(s.proceeds)} ${state.fiat}"
+    )
+    if (state.feeRate > BigDecimal.ZERO) {
+        val feePct = state.feeRate.multiply(BigDecimal(100))
+            .setScale(2, RoundingMode.HALF_UP).toPlainString()
+        InfoRow(
+            stringResource(R.string.sell_wizard_summary_fee),
+            "-${NumberFormatters.fiat(s.feeAmount)} ${state.fiat} ($feePct %)"
+        )
+    }
+    if (s.netProfit != null && s.netProfitPct != null) {
+        val sign = if (s.netProfit >= BigDecimal.ZERO) "+" else ""
+        InfoRow(
+            label = stringResource(R.string.sell_wizard_summary_net_profit),
+            value = "$sign${NumberFormatters.fiat(s.netProfit)} ${state.fiat} ($sign${s.netProfitPct.toPlainString()} %)",
+            color = when {
+                s.netProfit > BigDecimal.ZERO -> successColor()
+                s.netProfit < BigDecimal.ZERO -> Error
+                else -> null
+            }
+        )
+        val target = state.targetProfitAmount
+        if (target != null && target > BigDecimal.ZERO && s.totalProgress != null && s.targetProgressPct != null) {
+            InfoRow(
+                stringResource(R.string.sell_wizard_summary_target_progress),
+                "${NumberFormatters.fiat(s.totalProgress)} / ${NumberFormatters.fiat(target)} ${state.fiat} (${s.targetProgressPct} %)"
+            )
+        }
+    }
+}
+
+@Composable
+private fun LossBannerSection(state: SellWizardViewModel.UiState) {
+    val loss = state.validations.filterIsInstance<SellValidation.LossWarning>().firstOrNull() ?: return
+    Spacer(Modifier.height(8.dp))
+    val isPriceBelowAvg = state.priceInput.toBigDecimalOrNull()?.let { p ->
+        state.avgBuyPrice?.let { avg -> p < avg }
+    } ?: false
+    LossBanner(
+        stringResource(
+            if (isPriceBelowAvg) R.string.sell_wizard_loss_below_buy
+            else R.string.sell_wizard_loss_after_fee,
+            NumberFormatters.fiat(loss.lossFiat),
+            state.fiat
+        )
+    )
+}
+
+/**
+ * Generic-tagged hard errors render here; field-tagged errors live under their input.
+ * LossWarning is rendered by [LossBannerSection], not in the generic list.
+ */
+@Composable
+private fun ValidationsList(state: SellWizardViewModel.UiState) {
+    state.validations.forEach { v ->
+        when (v) {
+            is SellValidation.HardError -> if (v.field == SellValidation.Field.GENERIC) {
+                Text(
+                    text = v.localizedText(),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+            is SellValidation.InstantFillInfo -> InfoBanner(
+                stringResource(R.string.sell_wizard_instant_fill_warning, NumberFormatters.fiat(v.spot), state.fiat)
+            )
+            is SellValidation.FarFromMarketWarning -> WarningBanner(
+                stringResource(R.string.sell_wizard_far_from_market_warning)
+            )
+            is SellValidation.LossWarning -> { /* shown via LossBanner in summary section */ }
+        }
     }
 }
 
