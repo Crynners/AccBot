@@ -58,6 +58,12 @@ class PlaceLadderSellUseCase @Inject constructor(
                     placed += id
                 }
                 is DcaResult.Error -> {
+                    // NOTE (orphan-order caveat): like market buys, limitSell is not idempotent.
+                    // A retryable error means the order MIGHT have been placed server-side even
+                    // though we got no orderId back. We deliberately do NOT auto-retry here, so
+                    // there is no runaway, but a blind user retry could create a duplicate sell.
+                    // Full idempotency needs a per-exchange "list open orders" reconciliation
+                    // (no such API yet) - tracked as a follow-up.
                     return LadderResult.PartialFailure(placed, idx, orders.size, result.message)
                 }
             }

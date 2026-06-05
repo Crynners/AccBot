@@ -129,6 +129,11 @@ object AppModule {
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+            // Hard ceiling on a whole call (connect + write + read). Without this, each
+            // individual request only times out per-phase, so a slow exchange call can hang
+            // well past the worker's own timeout - the window in which an order gets placed
+            // server-side but the client sees a "timeout" and (pre-fix) retried it.
+            .callTimeout(40, TimeUnit.SECONDS)
             .build()
     }
 
