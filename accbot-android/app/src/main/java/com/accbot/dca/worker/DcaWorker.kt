@@ -250,9 +250,12 @@ class DcaWorker @AssistedInject constructor(
                 var reconcileUncertain = false
 
                 attemptLoop@ for (attempt in 1..maxAttempts) {
-                    val attemptResult = withTimeoutOrNull(30_000L) {
+                    // Kept strictly ABOVE OkHttp's callTimeout (30s) so this coroutine
+                    // timeout only fires after OkHttp has already aborted the request -
+                    // reconciliation must never run while the order POST is still in flight.
+                    val attemptResult = withTimeoutOrNull(45_000L) {
                         api.marketBuy(plan.crypto, plan.fiat, purchaseAmount)
-                    } ?: DcaResult.Error("API call timed out after 30s", retryable = true)
+                    } ?: DcaResult.Error("API call timed out after 45s", retryable = true)
 
                     if (attemptResult is DcaResult.Success) {
                         finalResult = attemptResult

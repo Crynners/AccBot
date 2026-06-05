@@ -97,7 +97,9 @@ class ImportTradeHistoryUseCase @Inject constructor(
             // dedup (which keys on (orderId, connectionId)). Use the suspend DAO variant -
             // the flow runs on the caller's (main) thread and a blocking Room query there
             // throws "cannot access database on the main thread".
-            val connectionId = dcaPlanDao.getPlanById(planId)?.connectionId
+            // Mirror MIGRATION_21_22: only attribute a real connection (> 0); leave null
+            // for plans without one, so fresh imports and the backfill stay consistent.
+            val connectionId = dcaPlanDao.getPlanById(planId)?.connectionId?.takeIf { it > 0 }
 
             // Map to TransactionEntity and batch insert
             val entities = newTrades.map { trade ->

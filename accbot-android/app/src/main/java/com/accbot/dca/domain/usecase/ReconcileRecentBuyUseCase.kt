@@ -34,9 +34,18 @@ class ReconcileRecentBuyUseCase(
         since: Instant,
         expectedFiat: BigDecimal?
     ): ReconcileResult {
-        val alreadyRecorded = transactionDao.getExchangeOrderIdsByPlan(plan.id).toSet()
+        // Dedup against the whole connection, not just this plan: two plans on the same
+        // account+pair must not both claim the same order.
+        val alreadyRecorded = (
+            if (plan.connectionId > 0) transactionDao.getExchangeOrderIdsByConnection(plan.connectionId)
+            else transactionDao.getExchangeOrderIdsByPlan(plan.id)
+        ).toSet()
 
-        // The fill may not appear in trade history instantly, so look twice with a short
+        // Allow a small slack before `since`: the exchange stamps fills with its own clock,
+        // which can be a few seconds behind the device that captured attemptStart.
+        val cutoff = since.minusSeconds(LOOKBACK_BUFFER_SECONDS)
+
+        // The fill may not appear in trade history instantly, so look a few times with a
         // settlement pause (mirrors CoinmateApi.getTradeDetailsByOrderId). A query that
         // throws means we genuinely don't know - return Unknown so the caller stays
         // conservative and never retries on uncertainty.
@@ -47,17 +56,20 @@ class ReconcileRecentBuyUseCase(
                 api.getTradeHistory(
                     crypto = plan.crypto,
                     fiat = plan.fiat,
-                    sinceTimestamp = since.minusSeconds(LOOKBACK_BUFFER_SECONDS),
+                    sinceTimestamp = cutoff,
                     limit = PAGE_LIMIT
                 )
             } catch (_: Exception) {
                 return ReconcileResult.Unknown
             }
 
+            // A single market buy can fill across multiple trade rows, so aggregate by
+            // orderId before matching the amount - otherwise each partial looks too small.
             val match = page.trades
-                .filter { it.side == "BUY" }
-                .filter { !it.timestamp.isBefore(since) }
-                .filter { it.orderId.isNotEmpty() && it.orderId !in alreadyRecorded }
+                .filter { it.side == "BUY" && it.orderId.isNotEmpty() && it.orderId !in alreadyRecorded }
+                .groupBy { it.orderId }
+                .map { (orderId, fills) -> aggregateOrder(orderId, fills) }
+                .filter { !it.timestamp.isBefore(cutoff) }
                 .filter { expectedFiat == null || withinTolerance(it.fiatAmount, expectedFiat) }
                 .maxByOrNull { it.timestamp }
 
@@ -67,6 +79,31 @@ class ReconcileRecentBuyUseCase(
         return ReconcileResult.NotFound
     }
 
+    /** Collapse all fills of one order into a single trade with summed amounts. */
+    private fun aggregateOrder(orderId: String, fills: List<HistoricalTrade>): HistoricalTrade {
+        val totalCrypto = fills.fold(BigDecimal.ZERO) { acc, f -> acc + f.cryptoAmount }
+        val totalFiat = fills.fold(BigDecimal.ZERO) { acc, f -> acc + f.fiatAmount }
+        val totalFee = fills.fold(BigDecimal.ZERO) { acc, f -> acc + f.fee }
+        val price = if (totalCrypto.signum() > 0) {
+            totalFiat.divide(totalCrypto, 2, java.math.RoundingMode.HALF_UP)
+        } else {
+            fills.first().price
+        }
+        val ref = fills.first()
+        return HistoricalTrade(
+            orderId = orderId,
+            timestamp = fills.maxOf { it.timestamp },
+            crypto = ref.crypto,
+            fiat = ref.fiat,
+            cryptoAmount = totalCrypto,
+            fiatAmount = totalFiat,
+            price = price,
+            fee = totalFee,
+            feeAsset = ref.feeAsset,
+            side = "BUY"
+        )
+    }
+
     private fun withinTolerance(actual: BigDecimal, expected: BigDecimal): Boolean {
         if (expected.signum() == 0) return true
         val ratio = actual.toDouble() / expected.toDouble()
@@ -74,8 +111,8 @@ class ReconcileRecentBuyUseCase(
     }
 
     private companion object {
-        const val SETTLEMENT_ATTEMPTS = 2
-        const val SETTLEMENT_DELAY_MS = 1_000L
+        const val SETTLEMENT_ATTEMPTS = 3
+        const val SETTLEMENT_DELAY_MS = 2_000L
         const val LOOKBACK_BUFFER_SECONDS = 5L
         const val PAGE_LIMIT = 50
         const val AMOUNT_TOLERANCE = 0.30

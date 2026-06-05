@@ -176,7 +176,7 @@ class HistoryViewModel @Inject constructor(
             val cryptosDeferred = async { transactionDao.getDistinctCryptos() }
             val exchangesDeferred = async { transactionDao.getDistinctExchanges() }
             val plansDeferred = async {
-                dcaPlanDao.getAllPlansOnce().map { plan ->
+                dcaPlanDao.getAllPlansOnceOrdered().map { plan ->
                     HistoryPlanOption(
                         id = plan.id,
                         label = plan.name.ifBlank { "${plan.crypto}/${plan.fiat}" }

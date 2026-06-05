@@ -131,9 +131,11 @@ object AppModule {
             .writeTimeout(30, TimeUnit.SECONDS)
             // Hard ceiling on a whole call (connect + write + read). Without this, each
             // individual request only times out per-phase, so a slow exchange call can hang
-            // well past the worker's own timeout - the window in which an order gets placed
-            // server-side but the client sees a "timeout" and (pre-fix) retried it.
-            .callTimeout(40, TimeUnit.SECONDS)
+            // well past the worker's own timeout. Kept strictly BELOW the worker's
+            // withTimeoutOrNull around marketBuy so OkHttp aborts the in-flight request
+            // first - the worker must never start reconciliation while the order POST is
+            // still on the wire (that would risk a false "not found" and a duplicate buy).
+            .callTimeout(30, TimeUnit.SECONDS)
             .build()
     }
 

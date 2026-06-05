@@ -341,6 +341,13 @@ interface TransactionDao {
     suspend fun getExchangeOrderIdsByPlan(planId: Long): List<String>
 
     /**
+     * All recorded exchange order IDs for a connection. Used by buy reconciliation to avoid
+     * re-recording an order that another plan on the same account already captured.
+     */
+    @Query("SELECT exchangeOrderId FROM transactions WHERE connectionId = :connectionId AND exchangeOrderId IS NOT NULL")
+    suspend fun getExchangeOrderIdsByConnection(connectionId: Long): List<String>
+
+    /**
      * Number of completed BUY transactions for a plan executed at or after [since].
      * Used by the runaway circuit breaker - counts real spend, including buys recovered
      * via reconciliation, so it reflects what actually hit the exchange.

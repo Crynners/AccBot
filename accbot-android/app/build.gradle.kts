@@ -90,6 +90,12 @@ android {
 
 }
 
+// Export Room schemas so future migrations can be tested against real prior versions
+// with MigrationTestHelper. (Schemas land in app/schemas/.)
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     // Core Android
     implementation("androidx.appcompat:appcompat:1.7.0")

@@ -120,4 +120,59 @@ class ReconcileRecentBuyUseCaseTest {
 
         assertEquals(ReconcileResult.NotFound, result)
     }
+
+    @Test
+    fun `aggregates partial fills of one order before matching the amount`() = runTest {
+        // One market buy filled across two rows of 25 each = 50 total.
+        val api = FakeExchangeApi(tradeHistoryHandler = { _, _, _, _ ->
+            TradeHistoryPage(
+                listOf(
+                    buyTrade("split", since.plusSeconds(5), fiat = BigDecimal("25")),
+                    buyTrade("split", since.plusSeconds(7), fiat = BigDecimal("25"))
+                ),
+                hasMore = false
+            )
+        })
+
+        val result = useCase(api, plan(), since, expectedFiat = BigDecimal("50"))
+
+        assertTrue(result is ReconcileResult.Found)
+        val trade = (result as ReconcileResult.Found).trade
+        assertEquals("split", trade.orderId)
+        assertEquals(0, trade.fiatAmount.compareTo(BigDecimal("50")))
+    }
+
+    @Test
+    fun `tolerates exchange clock skew within the lookback buffer`() = runTest {
+        // Order stamped slightly before attemptStart (device clock ahead of exchange).
+        val api = FakeExchangeApi(tradeHistoryHandler = { _, _, _, _ ->
+            TradeHistoryPage(listOf(buyTrade("skew", since.minusSeconds(2))), hasMore = false)
+        })
+
+        val result = useCase(api, plan(), since, expectedFiat = BigDecimal("50"))
+
+        assertTrue(result is ReconcileResult.Found)
+    }
+
+    @Test
+    fun `excludes orders already recorded under another plan on the same connection`() = runTest {
+        val p = plan() // connectionId 6
+        // Another plan on the SAME connection already recorded this order.
+        db.transactionDao().insertTransaction(
+            TransactionEntity(
+                planId = 99, exchange = Exchange.COINMATE, connectionId = 6,
+                crypto = "BTC", fiat = "CZK", fiatAmount = BigDecimal("50"),
+                cryptoAmount = BigDecimal("0.00003"), price = BigDecimal("1500000"),
+                fee = BigDecimal("0.17"), status = TransactionStatus.COMPLETED,
+                exchangeOrderId = "shared", executedAt = since.plusSeconds(10)
+            )
+        )
+        val api = FakeExchangeApi(tradeHistoryHandler = { _, _, _, _ ->
+            TradeHistoryPage(listOf(buyTrade("shared", since.plusSeconds(10))), hasMore = false)
+        })
+
+        val result = useCase(api, p, since, expectedFiat = BigDecimal("50"))
+
+        assertEquals(ReconcileResult.NotFound, result)
+    }
 }
