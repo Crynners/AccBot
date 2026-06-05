@@ -116,6 +116,9 @@ interface DcaPlanDao {
     @Query("UPDATE dca_plans SET networkRetryCount = 0, nextNetworkRetryAt = NULL, originalScheduledAt = NULL WHERE id = :planId")
     suspend fun resetNetworkRetry(planId: Long)
 
+    @Query("UPDATE dca_plans SET networkRetryCount = 0, nextNetworkRetryAt = NULL, originalScheduledAt = NULL WHERE id = :planId")
+    fun resetNetworkRetrySync(planId: Long)
+
     @Query("UPDATE dca_plans SET missedPurchaseCount = :count WHERE id = :planId")
     suspend fun setMissedPurchaseCount(planId: Long, count: Int)
 
@@ -234,12 +237,14 @@ interface TransactionDao {
         WHERE (:crypto IS NULL OR crypto = :crypto)
         AND (:exchange IS NULL OR exchange = :exchange)
         AND (:status IS NULL OR status = :status)
+        AND (:planId IS NULL OR planId = :planId)
         ORDER BY executedAt DESC
     """)
     fun getFilteredTransactions(
         crypto: String?,
         exchange: String?,
-        status: String?
+        status: String?,
+        planId: Long?
     ): Flow<List<TransactionEntity>>
 
     @Query("SELECT * FROM transactions ORDER BY executedAt DESC LIMIT :limit")
@@ -334,6 +339,14 @@ interface TransactionDao {
 
     @Query("SELECT exchangeOrderId FROM transactions WHERE planId = :planId AND exchangeOrderId IS NOT NULL")
     suspend fun getExchangeOrderIdsByPlan(planId: Long): List<String>
+
+    /**
+     * Number of completed BUY transactions for a plan executed at or after [since].
+     * Used by the runaway circuit breaker - counts real spend, including buys recovered
+     * via reconciliation, so it reflects what actually hit the exchange.
+     */
+    @Query("SELECT COUNT(*) FROM transactions WHERE planId = :planId AND side = 'BUY' AND status = 'COMPLETED' AND executedAt >= :since")
+    fun countCompletedBuysSinceSync(planId: Long, since: Instant): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransaction(transaction: TransactionEntity): Long

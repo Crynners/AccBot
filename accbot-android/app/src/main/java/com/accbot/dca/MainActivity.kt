@@ -433,7 +433,7 @@ fun AccBotApp(
                     navController.navigate(Screen.EditPlan.createRoute(planId))
                 },
                 onNavigateToHistory = { crypto, fiat ->
-                    navController.navigate(Screen.History.createRoute(crypto, fiat))
+                    navController.navigate(Screen.History.createRoute(crypto, fiat, planId))
                 },
                 onNavigateToTransactionDetails = { transactionId ->
                     navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
@@ -503,7 +503,8 @@ fun AccBotApp(
             route = Screen.History.route,
             arguments = listOf(
                 navArgument("crypto") { type = NavType.StringType; nullable = true; defaultValue = null },
-                navArgument("fiat") { type = NavType.StringType; nullable = true; defaultValue = null }
+                navArgument("fiat") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("planId") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
         ) {
             HistoryScreen(

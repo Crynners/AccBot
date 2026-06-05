@@ -232,6 +232,7 @@
     <string name="history_clear_all">Clear all</string>
     <string name="history_filter_title">Filter Transactions</string>
     <string name="history_filter_crypto">Cryptocurrency</string>
+    <string name="history_filter_plan">Plan</string>
     <string name="history_filter_exchange">Exchange</string>
     <string name="history_filter_status">Status</string>
     <string name="history_transactions_count">%1$d transaction(s)</string>
@@ -610,6 +611,7 @@
     <string name="notification_dca_failed">DCA Failed</string>
     <string name="notification_dca_failed_text">Failed to buy %1$s: %2$s</string>
     <string name="notification_dca_error">DCA Error</string>
+    <string name="notification_runaway_disabled">Plan paused: an unusually high number of purchases was detected. Check your account and re-enable once resolved.</string>
     <string name="notification_low_balance_title">Low balance on %1$s</string>
     <string name="notification_low_balance_text">%1$s of %2$s remaining for DCA</string>
     <string name="notification_low_balance_less_1_day">&lt; 1 day</string>

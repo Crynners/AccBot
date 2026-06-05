@@ -233,6 +233,7 @@
     <string name="history_clear_all">Vymazat vše</string>
     <string name="history_filter_title">Filtrovat transakce</string>
     <string name="history_filter_crypto">Kryptoměna</string>
+    <string name="history_filter_plan">Plán</string>
     <string name="history_filter_exchange">Burza</string>
     <string name="history_filter_status">Stav</string>
     <string name="history_transactions_count">%1$d transakcí</string>
@@ -611,6 +612,7 @@
     <string name="notification_dca_failed">DCA selhalo</string>
     <string name="notification_dca_failed_text">Nepodařilo se nakoupit %1$s: %2$s</string>
     <string name="notification_dca_error">DCA chyba</string>
+    <string name="notification_runaway_disabled">Plán pozastaven: zjištěno neobvykle mnoho nákupů. Zkontroluj účet a po vyřešení plán znovu zapni.</string>
     <string name="notification_low_balance_title">Nízký zůstatek na %1$s</string>
     <string name="notification_low_balance_text">%1$s %2$s zbývá pro DCA</string>
     <string name="notification_low_balance_less_1_day">&lt; 1 den</string>

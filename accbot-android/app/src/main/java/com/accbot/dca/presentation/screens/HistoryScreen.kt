@@ -102,6 +102,7 @@ fun HistoryScreen(
             currentFilter = uiState.filter,
             availableCryptos = uiState.availableCryptos,
             availableExchanges = uiState.availableExchanges,
+            availablePlans = uiState.availablePlans,
             onApplyFilter = { filter ->
                 viewModel.setFilter(filter)
                 viewModel.hideFilterSheet()
@@ -141,6 +142,7 @@ fun HistoryScreen(
     val hasActiveFilter = uiState.filter.crypto != null ||
             uiState.filter.exchange != null ||
             uiState.filter.status != null ||
+            uiState.filter.planId != null ||
             uiState.filter.dateFrom != null ||
             uiState.filter.dateTo != null
     var showSearchBar by rememberSaveable { mutableStateOf(false) }
@@ -242,6 +244,7 @@ fun HistoryScreen(
             if (hasActiveFilter) {
                 ActiveFilterChips(
                     filter = uiState.filter,
+                    availablePlans = uiState.availablePlans,
                     onUpdateFilter = { viewModel.setFilter(it) },
                     onClearFilter = { viewModel.clearFilter() }
                 )
@@ -340,6 +343,7 @@ private fun SortDropdownMenu(
 @Composable
 private fun ActiveFilterChips(
     filter: HistoryFilter,
+    availablePlans: List<HistoryPlanOption>,
     onUpdateFilter: (HistoryFilter) -> Unit,
     onClearFilter: () -> Unit
 ) {
@@ -351,6 +355,20 @@ private fun ActiveFilterChips(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        filter.planId?.let { planId ->
+            item {
+                val label = availablePlans.firstOrNull { it.id == planId }?.label
+                    ?: stringResource(R.string.history_filter_plan)
+                SelectableChip(
+                    text = label,
+                    selected = true,
+                    onClick = { onUpdateFilter(filter.copy(planId = null)) },
+                    trailingIcon = {
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.common_remove), modifier = Modifier.size(16.dp))
+                    }
+                )
+            }
+        }
         filter.crypto?.let { crypto ->
             item {
                 SelectableChip(
@@ -479,6 +497,7 @@ private fun FilterBottomSheet(
     currentFilter: HistoryFilter,
     availableCryptos: List<String>,
     availableExchanges: List<String>,
+    availablePlans: List<HistoryPlanOption>,
     onApplyFilter: (HistoryFilter) -> Unit,
     onClearFilter: () -> Unit,
     onDismiss: () -> Unit
@@ -486,6 +505,7 @@ private fun FilterBottomSheet(
     var selectedCrypto by rememberSaveable { mutableStateOf(currentFilter.crypto) }
     var selectedExchange by rememberSaveable { mutableStateOf(currentFilter.exchange) }
     var selectedStatus by rememberSaveable { mutableStateOf(currentFilter.status) }
+    var selectedPlanId by rememberSaveable { mutableStateOf(currentFilter.planId) }
     var selectedDateFrom by rememberSaveable { mutableStateOf(currentFilter.dateFrom) }
     var selectedDateTo by rememberSaveable { mutableStateOf(currentFilter.dateTo) }
     var showDateFromPicker by rememberSaveable { mutableStateOf(false) }
@@ -577,6 +597,33 @@ private fun FilterBottomSheet(
                             text = crypto,
                             selected = selectedCrypto == crypto,
                             onClick = { selectedCrypto = crypto }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Plan filter
+            if (availablePlans.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.history_filter_plan),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        SelectableChip(
+                            text = stringResource(R.string.common_all),
+                            selected = selectedPlanId == null,
+                            onClick = { selectedPlanId = null }
+                        )
+                    }
+                    items(availablePlans, key = { it.id }) { plan ->
+                        SelectableChip(
+                            text = plan.label,
+                            selected = selectedPlanId == plan.id,
+                            onClick = { selectedPlanId = plan.id }
                         )
                     }
                 }
@@ -693,6 +740,7 @@ private fun FilterBottomSheet(
                                 crypto = selectedCrypto,
                                 exchange = selectedExchange,
                                 status = selectedStatus,
+                                planId = selectedPlanId,
                                 dateFrom = selectedDateFrom,
                                 dateTo = selectedDateTo
                             )
