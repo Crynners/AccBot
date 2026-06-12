@@ -697,10 +697,10 @@ class DashboardViewModel @Inject constructor(
                 missedPurchases = it.missedPurchases.filter { m -> m.planId != planId }
             )
         }
-        viewModelScope.launch {
-            dcaPlanDao.resetMissedPurchaseCount(planId)
-            DcaWorker.runMissedPurchases(application, planId, count)
-        }
+        // missedPurchaseCount is NOT reset here - the worker consumes it as a persisted
+        // checkpoint (one decrement per completed catch-up buy), so a worker replayed
+        // after process death resumes instead of re-buying from the start.
+        DcaWorker.runMissedPurchases(application, planId, count)
     }
 
     fun dismissMissedPurchases(planId: Long) {

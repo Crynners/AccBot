@@ -125,6 +125,9 @@ interface DcaPlanDao {
     @Query("UPDATE dca_plans SET missedPurchaseCount = 0 WHERE id = :planId")
     suspend fun resetMissedPurchaseCount(planId: Long)
 
+    @Query("UPDATE dca_plans SET missedPurchaseCount = MAX(missedPurchaseCount - 1, 0) WHERE id = :planId")
+    suspend fun decrementMissedPurchaseCount(planId: Long)
+
     @Query("UPDATE dca_plans SET name = :name WHERE id = :planId")
     suspend fun renamePlan(planId: Long, name: String)
 

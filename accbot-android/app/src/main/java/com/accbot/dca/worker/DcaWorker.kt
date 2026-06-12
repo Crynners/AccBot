@@ -66,8 +66,19 @@ class DcaWorker @AssistedInject constructor(
             Log.w(TAG, "Failed to resolve pending transactions", e)
         }
 
+        // Catch-up progress is persisted in missedPurchaseCount so that a replayed worker
+        // (process death mid-loop -> WorkManager re-runs the whole request) resumes where
+        // it left off instead of re-buying already-covered slots from iteration 1.
+        val isCatchUp = forceRun && forcePlanId > 0 && repeatCount > 1
+        val totalIterations = if (isCatchUp) {
+            val remaining = database.dcaPlanDao().getPlanById(forcePlanId)?.missedPurchaseCount ?: 0
+            minOf(repeatCount, remaining)
+        } else {
+            repeatCount
+        }
+
         try {
-            for (iteration in 1..repeatCount) {
+            for (iteration in 1..totalIterations) {
             if (iteration > 1) {
                 Log.d(TAG, "Repeat iteration $iteration/$repeatCount")
                 kotlinx.coroutines.delay(3_000L) // brief pause between missed purchases
@@ -202,25 +213,27 @@ class DcaWorker @AssistedInject constructor(
                 // Circuit breaker: if this plan has already bought far more than its schedule
                 // allows in the last 24h, something is wrong - auto-disable instead of continuing
                 // to spend. Counts reconciled buys too, so it reflects real exchange spend.
-                // Skipped for forceRun (user-initiated catch-up is intentional).
-                if (!forceRun) {
-                    val buysLast24h = database.transactionDao()
-                        .countCompletedBuysSinceSync(plan.id, now.minus(Duration.ofHours(24)))
-                    val expectedPerDay = BuySafetyPolicy.expectedBuysPerDay(effectiveIntervalMinutes(plan))
-                    if (BuySafetyPolicy.isRunaway(buysLast24h, expectedPerDay)) {
-                        Log.e(TAG, "Plan ${plan.id} runaway detected ($buysLast24h buys/24h, expected ~$expectedPerDay) - auto-disabling")
-                        database.dcaPlanDao().setEnabled(plan.id, false)
-                        notificationService.showErrorNotification(
-                            planId = plan.id,
-                            exchange = plan.exchange,
-                            connectionId = plan.connectionId,
-                            templateArgs = NotificationTemplateArgs.Error(
-                                crypto = plan.crypto,
-                                errorMessage = context.getString(R.string.notification_runaway_disabled)
-                            )
+                // Forced runs (run-now / catch-up) are user-initiated and may legitimately
+                // exceed the schedule, so they get a wider allowance (+repeatCount) instead
+                // of bypassing the breaker - a replayed or duplicated force run must still
+                // be bounded.
+                val buysLast24h = database.transactionDao()
+                    .countCompletedBuysSinceSync(plan.id, now.minus(Duration.ofHours(24)))
+                val expectedPerDay = BuySafetyPolicy.expectedBuysPerDay(effectiveIntervalMinutes(plan))
+                val allowedPerDay = if (forceRun) expectedPerDay + repeatCount else expectedPerDay
+                if (BuySafetyPolicy.isRunaway(buysLast24h, allowedPerDay)) {
+                    Log.e(TAG, "Plan ${plan.id} runaway detected ($buysLast24h buys/24h, allowed ~$allowedPerDay) - auto-disabling")
+                    database.dcaPlanDao().setEnabled(plan.id, false)
+                    notificationService.showErrorNotification(
+                        planId = plan.id,
+                        exchange = plan.exchange,
+                        connectionId = plan.connectionId,
+                        templateArgs = NotificationTemplateArgs.Error(
+                            crypto = plan.crypto,
+                            errorMessage = context.getString(R.string.notification_runaway_disabled)
                         )
-                        continue
-                    }
+                    )
+                    continue
                 }
 
                 // Atomically claim the plan to prevent double-purchase from concurrent workers.
@@ -508,6 +521,12 @@ class DcaWorker @AssistedInject constructor(
                     }
                 }
             }
+
+            // Consume one persisted catch-up slot per finished iteration (see isCatchUp
+            // above) so a replayed worker continues instead of starting over.
+            if (isCatchUp) {
+                database.dcaPlanDao().decrementMissedPurchaseCount(forcePlanId)
+            }
             } // repeat loop
 
             // Re-arm alarm for next execution (self-perpetuating chain)
@@ -525,7 +544,11 @@ class DcaWorker @AssistedInject constructor(
             notificationService.showErrorNotification(context.getString(R.string.notification_dca_error), e.message ?: "Unknown error")
             // Still try to re-arm alarm even on error
             try { DcaAlarmScheduler.scheduleNextAlarm(context) } catch (_: Exception) {}
-            return Result.retry()
+            // Forced runs bypass the per-plan claim and due-time guards, so an automatic
+            // WorkManager retry could re-buy plans that already bought in this run. They
+            // are user-initiated - fail instead; the user sees the error notification
+            // and can trigger the run again.
+            return if (forceRun) Result.failure() else Result.retry()
         }
     }
 
@@ -615,6 +638,14 @@ class DcaWorker @AssistedInject constructor(
         const val WORK_NAME = "dca_periodic_work"
 
         /**
+         * Single unique-work queue for ALL user-initiated (forceRun) executions.
+         * Forced runs bypass the per-plan claim, so they must never run concurrently -
+         * APPEND_OR_REPLACE serializes them one after another (and replaces a failed
+         * chain instead of blocking future runs).
+         */
+        private const val FORCE_WORK_NAME = "dca_force_work"
+
+        /**
          * Plan IDs we've already shown a "missing credentials" notification for in
          * this process lifetime. Prevents spamming the notification tray on every
          * alarm tick (~hourly) for a plan whose credentials will stay missing until
@@ -672,7 +703,7 @@ class DcaWorker @AssistedInject constructor(
                 .build()
 
             WorkManager.getInstance(context)
-                .enqueue(oneTimeWorkRequest)
+                .enqueueUniqueWork(FORCE_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, oneTimeWorkRequest)
 
             Log.d(TAG, "DCA one-time work enqueued (forceRun=true)")
         }
@@ -696,7 +727,7 @@ class DcaWorker @AssistedInject constructor(
                 .build()
 
             WorkManager.getInstance(context)
-                .enqueue(oneTimeWorkRequest)
+                .enqueueUniqueWork(FORCE_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, oneTimeWorkRequest)
 
             Log.d(TAG, "DCA one-time work enqueued for plan $planId (forceRun=true)")
         }
@@ -721,7 +752,7 @@ class DcaWorker @AssistedInject constructor(
                 .build()
 
             WorkManager.getInstance(context)
-                .enqueue(oneTimeWorkRequest)
+                .enqueueUniqueWork(FORCE_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, oneTimeWorkRequest)
 
             Log.d(TAG, "Missed purchases enqueued for plan $planId (count=$count)")
         }
@@ -749,7 +780,10 @@ class DcaWorker @AssistedInject constructor(
                 .build()
 
             WorkManager.getInstance(context)
-                .enqueueUniqueWork(ALARM_WORK_NAME, ExistingWorkPolicy.REPLACE, oneTimeWorkRequest)
+                // KEEP, never REPLACE: a re-fired alarm must not cancel a worker that may
+                // be mid-buy - REPLACE could abort it after the order POST was sent,
+                // leaving a real order unrecorded (invisible to the runaway breaker).
+                .enqueueUniqueWork(ALARM_WORK_NAME, ExistingWorkPolicy.KEEP, oneTimeWorkRequest)
 
             Log.d(TAG, "DCA alarm-triggered work enqueued (unique=$ALARM_WORK_NAME)")
         }

@@ -136,6 +136,13 @@ object AppModule {
             // first - the worker must never start reconciliation while the order POST is
             // still on the wire (that would risk a false "not found" and a duplicate buy).
             .callTimeout(30, TimeUnit.SECONDS)
+            // OkHttp's default (true) silently re-sends a request - including a POST -
+            // when a pooled connection turns out to be stale or a route fails. For a
+            // non-idempotent order POST that is a duplicate-buy vector BELOW the app's
+            // reconcile logic (the worker never sees the first attempt). Disabled:
+            // such failures surface as IOException -> retryable -> the worker
+            // reconciles against the exchange before ever re-issuing the buy.
+            .retryOnConnectionFailure(false)
             .build()
     }
 
