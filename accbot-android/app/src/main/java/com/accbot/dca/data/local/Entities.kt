@@ -1,6 +1,7 @@
 package com.accbot.dca.data.local
 
 import android.util.Log
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -9,6 +10,7 @@ import androidx.room.TypeConverters
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.model.WithdrawalStatus
 import java.math.BigDecimal
@@ -17,7 +19,7 @@ import java.time.Instant
 /**
  * Notification type for in-app notification history
  */
-enum class NotificationType { PURCHASE, ERROR, LOW_BALANCE, WITHDRAWAL_THRESHOLD, NETWORK_RETRY, MISSED_PURCHASES }
+enum class NotificationType { PURCHASE, ERROR, LOW_BALANCE, WITHDRAWAL_THRESHOLD, NETWORK_RETRY, MISSED_PURCHASES, SELL_FILLED }
 
 /**
  * Room type converters
@@ -98,6 +100,17 @@ class Converters {
     } catch (e: IllegalArgumentException) {
         Log.w(TAG, "Unknown NotificationType '$value', falling back to ERROR")
         NotificationType.ERROR
+    }
+
+    @TypeConverter
+    fun fromTransactionSide(value: TransactionSide): String = value.name
+
+    @TypeConverter
+    fun toTransactionSide(value: String): TransactionSide = try {
+        TransactionSide.valueOf(value)
+    } catch (e: IllegalArgumentException) {
+        Log.w(TAG, "Unknown TransactionSide '$value', falling back to BUY")
+        TransactionSide.BUY
     }
 }
 
@@ -181,7 +194,18 @@ data class DcaPlanEntity(
     val originalScheduledAt: Instant? = null,
     val missedPurchaseCount: Int = 0,
     /** Order for Dashboard display. Lower values shown first. */
-    val displayOrder: Int = 0
+    val displayOrder: Int = 0,
+    /**
+     * Opt-in per-plan toggle for sell extension. When true (and global trading is enabled),
+     * plan-detail shows P&L card, open sell orders list, and sell wizard button.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val allowSells: Boolean = false,
+    /**
+     * Optional profit goal (in [fiat]). When set, plan-detail shows progress bar toward this.
+     * Null when user didn't specify a target.
+     */
+    val targetProfitAmount: BigDecimal? = null
 )
 
 /**
@@ -198,7 +222,8 @@ data class DcaPlanEntity(
         Index(value = ["executedAt"]),
         Index(value = ["planId", "status"]),
         Index(value = ["crypto", "fiat", "status"]),
-        Index(value = ["fiat", "status"])
+        Index(value = ["fiat", "status"]),
+        Index(value = ["planId", "side", "status"])
     ]
 )
 @TypeConverters(Converters::class)
@@ -225,7 +250,21 @@ data class TransactionEntity(
     val exchangeOrderId: String? = null,
     val errorMessage: String? = null,
     val warningMessage: String? = null,
-    val executedAt: Instant = Instant.now()
+    val executedAt: Instant = Instant.now(),
+    /**
+     * BUY for DCA purchases (default), SELL for limit sell orders placed via sell extension.
+     */
+    @ColumnInfo(defaultValue = "BUY")
+    val side: TransactionSide = TransactionSide.BUY,
+    /**
+     * Requested limit price for SELL orders; null for market BUYs.
+     */
+    val limitPrice: BigDecimal? = null,
+    /**
+     * Original requested crypto amount for SELL orders (fixed across lifecycle).
+     * [cryptoAmount] tracks filled amount (progresses 0 -> requested). Null for BUYs.
+     */
+    val requestedCryptoAmount: BigDecimal? = null
 )
 
 /**

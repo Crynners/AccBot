@@ -146,6 +146,19 @@ object NotificationRenderer {
                 )
                 title to message
             }
+
+            is NotificationTemplateArgs.SellFilled -> {
+                val title = context.getString(R.string.notification_sell_filled_title)
+                val message = context.getString(
+                    R.string.notification_sell_filled_text,
+                    NumberFormatters.crypto(BigDecimal(args.cryptoAmount)),
+                    args.crypto,
+                    NumberFormatters.fiat(BigDecimal(args.fiatAmount)),
+                    args.fiat,
+                    NumberFormatters.fiat(BigDecimal(args.price))
+                )
+                title to message
+            }
         }
     }
 

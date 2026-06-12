@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.DcaPlanEntity
+import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.Exchange
@@ -38,6 +39,14 @@ data class EditPlanUiState(
     // Change tracking
     val hasChanges: Boolean = false,
 
+    // Global trading master switch (snapshot at VM construction). Gates whether
+    // the Sells section is visible in the plan form.
+    val tradingEnabled: Boolean = false,
+
+    // If non-null, the user tried to turn allowSells off but has that many open
+    // sell orders - UI should show a confirmation dialog.
+    val showDisableSellsDialog: Int? = null,
+
     // Action state
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
@@ -52,6 +61,7 @@ data class EditPlanUiState(
 class EditPlanViewModel @Inject constructor(
     private val application: Application,
     private val dcaPlanDao: DcaPlanDao,
+    private val transactionDao: TransactionDao,
     private val userPreferences: UserPreferences,
     calculateMonthlyCost: CalculateMonthlyCostUseCase,
     minOrderSizeRepository: MinOrderSizeRepository
@@ -59,7 +69,9 @@ class EditPlanViewModel @Inject constructor(
 
     val planForm = PlanFormDelegate(calculateMonthlyCost, minOrderSizeRepository, viewModelScope)
 
-    private val _localState = MutableStateFlow(EditPlanUiState())
+    private val _localState = MutableStateFlow(
+        EditPlanUiState(tradingEnabled = userPreferences.isTradingEnabled())
+    )
 
     private val _originalFormState = MutableStateFlow<PlanFormState?>(null)
 
@@ -76,12 +88,53 @@ class EditPlanViewModel @Inject constructor(
                 || form.withdrawalEnabled != original.withdrawalEnabled
                 || form.withdrawalAddress != original.withdrawalAddress
                 || form.targetAmount != original.targetAmount
+                || form.allowSells != original.allowSells
+                || form.targetProfitAmount != original.targetProfitAmount
         )
         local.copy(planForm = form, hasChanges = hasChanges)
     }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EditPlanUiState())
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            EditPlanUiState(tradingEnabled = userPreferences.isTradingEnabled())
+        )
 
     private var originalPlan: DcaPlanEntity? = null
+
+    /**
+     * Intercept the allow-sells toggle: when the user tries to turn it OFF and there
+     * are open sell orders for this plan, show a confirmation dialog first. Otherwise
+     * apply the change immediately via the form delegate.
+     */
+    fun setAllowSells(value: Boolean) {
+        val currentForm = planForm.state.value
+        if (!value && currentForm.allowSells) {
+            val planId = _localState.value.planId
+            if (planId <= 0L) {
+                planForm.setAllowSells(false)
+                return
+            }
+            viewModelScope.launch {
+                val openCount = transactionDao.observeOpenSellsForPlan(planId).first().size
+                if (openCount > 0) {
+                    _localState.update { it.copy(showDisableSellsDialog = openCount) }
+                } else {
+                    planForm.setAllowSells(false)
+                }
+            }
+        } else {
+            planForm.setAllowSells(value)
+        }
+    }
+
+    fun confirmDisableSells() {
+        planForm.setAllowSells(false)
+        _localState.update { it.copy(showDisableSellsDialog = null) }
+    }
+
+    fun dismissDisableSellsDialog() {
+        _localState.update { it.copy(showDisableSellsDialog = null) }
+    }
 
     fun loadPlan(planId: Long) {
         viewModelScope.launch {
@@ -117,7 +170,9 @@ class EditPlanViewModel @Inject constructor(
                     strategy = plan.strategy,
                     withdrawalEnabled = plan.withdrawalEnabled,
                     withdrawalAddress = plan.withdrawalAddress ?: "",
-                    targetAmount = plan.targetAmount?.toPlainString() ?: ""
+                    targetAmount = plan.targetAmount?.toPlainString() ?: "",
+                    allowSells = plan.allowSells,
+                    targetProfitAmount = plan.targetProfitAmount?.toPlainString() ?: ""
                 )
 
                 // Snapshot the original form state for change tracking
@@ -179,6 +234,12 @@ class EditPlanViewModel @Inject constructor(
                     plan.nextExecutionAt
                 }
 
+                val tradingGloballyEnabled = userPreferences.isTradingEnabled()
+                val allowSells = tradingGloballyEnabled && form.allowSells
+                val targetProfit = if (allowSells) {
+                    form.targetProfitAmount.trim().takeIf { it.isNotEmpty() }?.toBigDecimalOrNull()
+                } else null
+
                 val updatedPlan = plan.copy(
                     amount = amount,
                     frequency = form.selectedFrequency,
@@ -187,7 +248,9 @@ class EditPlanViewModel @Inject constructor(
                     withdrawalEnabled = form.withdrawalEnabled,
                     withdrawalAddress = if (form.withdrawalEnabled) form.withdrawalAddress.trim() else null,
                     nextExecutionAt = nextExecution,
-                    targetAmount = form.targetAmount.toBigDecimalOrNull()
+                    targetAmount = form.targetAmount.toBigDecimalOrNull(),
+                    allowSells = allowSells,
+                    targetProfitAmount = targetProfit
                 )
 
                 dcaPlanDao.updatePlan(updatedPlan)

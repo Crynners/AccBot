@@ -171,7 +171,15 @@ data class DcaPlan(
     val nextExecutionAt: Instant? = null,
     val targetAmount: BigDecimal? = null,
     /** Order for Dashboard display. Lower values shown first. */
-    val displayOrder: Int = 0
+    val displayOrder: Int = 0,
+    /**
+     * Opt-in per-plan toggle for sell extension.
+     */
+    val allowSells: Boolean = false,
+    /**
+     * Optional profit goal in [fiat]. Null when user didn't specify a target.
+     */
+    val targetProfitAmount: BigDecimal? = null
 )
 
 /**
@@ -209,15 +217,37 @@ data class Transaction(
     val exchangeOrderId: String? = null,
     val errorMessage: String? = null,
     val warningMessage: String? = null,
-    val executedAt: Instant = Instant.now()
+    val executedAt: Instant = Instant.now(),
+    /**
+     * BUY for DCA purchases (default), SELL for limit sell orders.
+     */
+    val side: TransactionSide = TransactionSide.BUY,
+    /**
+     * Requested limit price for SELL orders; null for market BUYs.
+     */
+    val limitPrice: BigDecimal? = null,
+    /**
+     * Original requested crypto amount for SELL orders (fixed across lifecycle).
+     * [cryptoAmount] tracks filled amount progressively. Null for BUYs.
+     */
+    val requestedCryptoAmount: BigDecimal? = null
 )
 
 enum class TransactionStatus {
     PENDING,
     COMPLETED,
     FAILED,
-    PARTIAL
+    PARTIAL,
+    /** User or exchange-side cancellation with no fills. Distinct from FAILED (which
+     * means the exchange rejected the order outright). PARTIAL covers cancellation
+     * after some fills happened. */
+    CANCELLED
 }
+
+/**
+ * Direction of a transaction - BUY for DCA purchases, SELL for user-initiated limit sell orders.
+ */
+enum class TransactionSide { BUY, SELL }
 
 /**
  * Withdrawal record

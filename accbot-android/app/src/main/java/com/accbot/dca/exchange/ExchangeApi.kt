@@ -63,11 +63,69 @@ interface ExchangeApi {
 
     /**
      * Query the status and fill details of a previously placed order.
-     * Used to resolve PENDING transactions whose fill details weren't available at order time.
+     * Used to resolve PENDING/PARTIAL transactions whose fill details weren't available at
+     * order time, and to track progress of open limit sell orders.
+     *
+     * Binance requires the trading pair as `symbol=${crypto}${fiat}` context; other
+     * exchanges (Coinmate, Coinbase, Kraken) ignore the crypto/fiat params.
+     *
      * @param orderId The exchange order ID
-     * @return Filled transaction details, or null if still pending/unknown
+     * @param crypto Cryptocurrency symbol (e.g., "BTC") - used by Binance
+     * @param fiat Fiat currency (e.g., "EUR") - used by Binance
+     * @return Current order status + fill details, or null if unknown / parse failure.
      */
-    suspend fun getOrderStatus(orderId: String): Transaction? = null
+    suspend fun getOrderStatus(orderId: String, crypto: String, fiat: String): OrderStatusResult? = null
+
+    /**
+     * Place a limit sell order.
+     *
+     * On success returns a [DcaResult.Success] with a PENDING [Transaction] that has:
+     * - side = SELL
+     * - status = PENDING
+     * - cryptoAmount = ZERO (filled amount, updated later by resolver)
+     * - fiatAmount = ZERO (filled fiat, updated later by resolver)
+     * - limitPrice = [limitPrice]
+     * - requestedCryptoAmount = [cryptoAmount]
+     * - price = [limitPrice] (initial value; updated to avg fill price when resolved)
+     * - exchangeOrderId = order id returned by exchange
+     *
+     * The caller is responsible for setting planId and connectionId.
+     *
+     * Default: unsupported.
+     */
+    suspend fun limitSell(
+        crypto: String,
+        fiat: String,
+        cryptoAmount: BigDecimal,
+        limitPrice: BigDecimal
+    ): DcaResult = throw UnsupportedOperationException(
+        "AccBot zatim nepodporuje limit sell pro ${exchange.displayName}"
+    )
+
+    /**
+     * Cancel an open order.
+     *
+     * Binance requires the trading pair as context; other exchanges ignore crypto/fiat.
+     *
+     * Default: unsupported.
+     */
+    suspend fun cancelOrder(orderId: String, crypto: String, fiat: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException(
+            "AccBot zatim nepodporuje cancel order pro ${exchange.displayName}"
+        ))
+
+    /**
+     * Whether this exchange implementation supports placing limit sell orders.
+     * Used by the UI to hide the "Prodat" action for unsupported exchanges.
+     */
+    val supportsLimitSell: Boolean get() = false
+
+    /**
+     * Estimated taker fee rate (e.g. 0.0035 = 0.35%) for decision support in the sell wizard.
+     * Approximate; actual user fee may be lower with VIP tier or fee discounts (e.g. BNB on
+     * Binance). Default 0.002 used for exchanges where the actual rate is unknown.
+     */
+    val estimatedTakerFeeRate: BigDecimal get() = BigDecimal("0.002")
 
     /**
      * Get trade history for a currency pair.

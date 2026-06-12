@@ -29,6 +29,7 @@ import androidx.core.content.FileProvider
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.data.local.TransactionEntity
+import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.EmptyState
@@ -101,6 +102,7 @@ fun HistoryScreen(
             currentFilter = uiState.filter,
             availableCryptos = uiState.availableCryptos,
             availableExchanges = uiState.availableExchanges,
+            availablePlans = uiState.availablePlans,
             onApplyFilter = { filter ->
                 viewModel.setFilter(filter)
                 viewModel.hideFilterSheet()
@@ -140,6 +142,7 @@ fun HistoryScreen(
     val hasActiveFilter = uiState.filter.crypto != null ||
             uiState.filter.exchange != null ||
             uiState.filter.status != null ||
+            uiState.filter.planId != null ||
             uiState.filter.dateFrom != null ||
             uiState.filter.dateTo != null
     var showSearchBar by rememberSaveable { mutableStateOf(false) }
@@ -231,10 +234,17 @@ fun HistoryScreen(
                 )
             }
 
+            // Side filter chips (Vse / Nakupy / Prodeje / Pending)
+            SideFilterChipsRow(
+                selected = uiState.filter.sideFilter,
+                onSelect = { viewModel.setSideFilter(it) }
+            )
+
             // Active filter chips
             if (hasActiveFilter) {
                 ActiveFilterChips(
                     filter = uiState.filter,
+                    availablePlans = uiState.availablePlans,
                     onUpdateFilter = { viewModel.setFilter(it) },
                     onClearFilter = { viewModel.clearFilter() }
                 )
@@ -333,6 +343,7 @@ private fun SortDropdownMenu(
 @Composable
 private fun ActiveFilterChips(
     filter: HistoryFilter,
+    availablePlans: List<HistoryPlanOption>,
     onUpdateFilter: (HistoryFilter) -> Unit,
     onClearFilter: () -> Unit
 ) {
@@ -344,6 +355,20 @@ private fun ActiveFilterChips(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        filter.planId?.let { planId ->
+            item {
+                val label = availablePlans.firstOrNull { it.id == planId }?.label
+                    ?: stringResource(R.string.history_filter_plan)
+                SelectableChip(
+                    text = label,
+                    selected = true,
+                    onClick = { onUpdateFilter(filter.copy(planId = null)) },
+                    trailingIcon = {
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.common_remove), modifier = Modifier.size(16.dp))
+                    }
+                )
+            }
+        }
         filter.crypto?.let { crypto ->
             item {
                 SelectableChip(
@@ -472,6 +497,7 @@ private fun FilterBottomSheet(
     currentFilter: HistoryFilter,
     availableCryptos: List<String>,
     availableExchanges: List<String>,
+    availablePlans: List<HistoryPlanOption>,
     onApplyFilter: (HistoryFilter) -> Unit,
     onClearFilter: () -> Unit,
     onDismiss: () -> Unit
@@ -479,6 +505,7 @@ private fun FilterBottomSheet(
     var selectedCrypto by rememberSaveable { mutableStateOf(currentFilter.crypto) }
     var selectedExchange by rememberSaveable { mutableStateOf(currentFilter.exchange) }
     var selectedStatus by rememberSaveable { mutableStateOf(currentFilter.status) }
+    var selectedPlanId by rememberSaveable { mutableStateOf(currentFilter.planId) }
     var selectedDateFrom by rememberSaveable { mutableStateOf(currentFilter.dateFrom) }
     var selectedDateTo by rememberSaveable { mutableStateOf(currentFilter.dateTo) }
     var showDateFromPicker by rememberSaveable { mutableStateOf(false) }
@@ -570,6 +597,33 @@ private fun FilterBottomSheet(
                             text = crypto,
                             selected = selectedCrypto == crypto,
                             onClick = { selectedCrypto = crypto }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Plan filter
+            if (availablePlans.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.history_filter_plan),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        SelectableChip(
+                            text = stringResource(R.string.common_all),
+                            selected = selectedPlanId == null,
+                            onClick = { selectedPlanId = null }
+                        )
+                    }
+                    items(availablePlans, key = { it.id }) { plan ->
+                        SelectableChip(
+                            text = plan.label,
+                            selected = selectedPlanId == plan.id,
+                            onClick = { selectedPlanId = plan.id }
                         )
                     }
                 }
@@ -682,10 +736,11 @@ private fun FilterBottomSheet(
                 Button(
                     onClick = {
                         onApplyFilter(
-                            HistoryFilter(
+                            currentFilter.copy(
                                 crypto = selectedCrypto,
                                 exchange = selectedExchange,
                                 status = selectedStatus,
+                                planId = selectedPlanId,
                                 dateFrom = selectedDateFrom,
                                 dateTo = selectedDateTo
                             )
@@ -703,11 +758,39 @@ private fun FilterBottomSheet(
 }
 
 @Composable
+private fun SideFilterChipsRow(
+    selected: HistorySideFilter,
+    onSelect: (HistorySideFilter) -> Unit
+) {
+    val entries = listOf(
+        HistorySideFilter.ALL to stringResource(R.string.history_side_all),
+        HistorySideFilter.BUYS to stringResource(R.string.history_side_buys),
+        HistorySideFilter.SELLS to stringResource(R.string.history_side_sells),
+        HistorySideFilter.PENDING to stringResource(R.string.history_side_pending)
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        entries.forEach { (side, label) ->
+            FilterChip(
+                selected = selected == side,
+                onClick = { onSelect(side) },
+                label = { Text(label) }
+            )
+        }
+    }
+}
+
+@Composable
 internal fun TransactionCard(
     transaction: TransactionEntity,
     onClick: () -> Unit
 ) {
     val dateFormatter = DateFormatters.transactionDateTime
+    val isSell = transaction.side == TransactionSide.SELL
 
     Card(
         modifier = Modifier
@@ -726,12 +809,23 @@ internal fun TransactionCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Direction badge: green ArrowDownward for BUY, red ArrowUpward for SELL.
+                    Icon(
+                        imageVector = if (isSell) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
+                        contentDescription = stringResource(
+                            if (isSell) R.string.history_side_sell_label else R.string.history_side_buy_label
+                        ),
+                        tint = if (isSell) Error else successColor(),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
                     Icon(
                         imageVector = when (transaction.status) {
                             TransactionStatus.COMPLETED -> Icons.Default.CheckCircle
                             TransactionStatus.FAILED -> Icons.Default.Error
                             TransactionStatus.PENDING -> Icons.Default.Schedule
                             TransactionStatus.PARTIAL -> Icons.Default.Warning
+                            TransactionStatus.CANCELLED -> Icons.Default.Cancel
                         },
                         contentDescription = null,
                         tint = when (transaction.status) {
@@ -784,11 +878,16 @@ internal fun TransactionCard(
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                if (transaction.status == TransactionStatus.COMPLETED) {
+                // Amount signs: BUY = +crypto/-fiat, SELL = -crypto/+fiat.
+                // Only show filled crypto for COMPLETED and PARTIAL (in-flight PENDING has 0).
+                val showCryptoLine = transaction.status == TransactionStatus.COMPLETED ||
+                    (transaction.status == TransactionStatus.PARTIAL && transaction.cryptoAmount.signum() > 0)
+                if (showCryptoLine) {
+                    val cryptoSign = if (isSell) "-" else "+"
                     Text(
-                        text = "+${NumberFormatters.crypto(transaction.cryptoAmount)}",
+                        text = "$cryptoSign${NumberFormatters.crypto(transaction.cryptoAmount)}",
                         fontWeight = FontWeight.SemiBold,
-                        color = successColor()
+                        color = if (isSell) Error else successColor()
                     )
                     Text(
                         text = transaction.crypto,
@@ -799,10 +898,11 @@ internal fun TransactionCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
+                val fiatSign = if (isSell) "+" else "-"
                 Text(
-                    text = "-${NumberFormatters.fiat(transaction.fiatAmount)} ${transaction.fiat}",
+                    text = "$fiatSign${NumberFormatters.fiat(transaction.fiatAmount)} ${transaction.fiat}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isSell) successColor() else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 // Chevron to indicate clickable

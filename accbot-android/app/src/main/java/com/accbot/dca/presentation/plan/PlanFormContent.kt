@@ -59,7 +59,13 @@ fun PlanFormContent(
     exchange: Exchange? = null,
     showCryptoFiatSelection: Boolean = true,
     showNameField: Boolean = true,
-    errorMessage: String? = null
+    errorMessage: String? = null,
+    // Sell extension (Task 21/22) - gated by the hosting screen's global trading flag.
+    // When [showSellSection] is false the section is hidden entirely; when true it
+    // renders the allow-sells switch and (when allowed) the profit-target field.
+    showSellSection: Boolean = false,
+    onAllowSellsChanged: (Boolean) -> Unit = {},
+    onTargetProfitAmountChanged: (String) -> Unit = {}
 ) {
     Column(
         modifier = modifier,
@@ -239,6 +245,61 @@ fun PlanFormContent(
                     )
                 }
             )
+        }
+
+        // Sell extension section (gated by global trading switch in Settings)
+        if (showSellSection) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionTitle(stringResource(R.string.plan_form_sell_section_title))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(role = Role.Switch) { onAllowSellsChanged(!state.allowSells) }
+                        .semantics(mergeDescendants = true) { role = Role.Switch },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.plan_form_allow_sells_title),
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Switch(
+                        checked = state.allowSells,
+                        onCheckedChange = null,
+                        modifier = Modifier.clearAndSetSemantics {}
+                    )
+                }
+
+                if (state.allowSells) {
+                    OutlinedTextField(
+                        value = state.targetProfitAmount,
+                        onValueChange = onTargetProfitAmountChanged,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = {
+                            Text(stringResource(R.string.plan_form_target_profit_label, state.selectedFiat))
+                        },
+                        isError = state.targetProfitAmountError != null,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        supportingText = {
+                            val error = state.targetProfitAmountError
+                            if (error != null) {
+                                // Translate the internal sentinel into the localized resource.
+                                val localized = when (error) {
+                                    "Zadej platne cislo" -> stringResource(R.string.plan_form_target_profit_error_invalid)
+                                    "Cil musi byt kladny" -> stringResource(R.string.plan_form_target_profit_error_positive)
+                                    else -> error
+                                }
+                                Text(localized, color = MaterialTheme.colorScheme.error)
+                            } else {
+                                Text(stringResource(R.string.plan_form_target_profit_supporting))
+                            }
+                        }
+                    )
+                }
+            }
         }
 
         // Error message

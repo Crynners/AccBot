@@ -29,6 +29,10 @@ class BinanceApi(
 
     override val exchange = Exchange.BINANCE
 
+    override val supportsLimitSell: Boolean = true
+
+    override val estimatedTakerFeeRate: BigDecimal = BigDecimal("0.001")
+
     private val baseUrl = ExchangeConfig.getBaseUrl(Exchange.BINANCE, isSandbox)
 
     /** Offset in ms: serverTime - localTime. Add to System.currentTimeMillis() to get server time. */
@@ -177,6 +181,206 @@ class BinanceApi(
             DcaResult.Error(e.message ?: "Network error", retryable = true)
         } catch (e: Exception) {
             DcaResult.Error(e.message ?: "Unknown error", retryable = false)
+        }
+    }
+
+    override suspend fun limitSell(
+        crypto: String,
+        fiat: String,
+        cryptoAmount: BigDecimal,
+        limitPrice: BigDecimal
+    ): DcaResult = withContext(Dispatchers.IO) {
+        try {
+            ensureTimeSynced()
+            val symbol = "$crypto$fiat"
+            val timestamp = serverTimestamp()
+
+            val params = buildString {
+                append("symbol=$symbol")
+                append("&side=SELL")
+                append("&type=LIMIT")
+                append("&timeInForce=GTC")
+                append("&quantity=${cryptoAmount.setScale(8, RoundingMode.DOWN).toPlainString()}")
+                append("&price=${limitPrice.setScale(2, RoundingMode.HALF_UP).toPlainString()}")
+                append("&timestamp=$timestamp")
+                append("&recvWindow=60000")
+            }
+
+            val signature = CryptoUtils.hmacSha256Hex(params, credentials.apiSecret)
+            val signedParams = "$params&signature=$signature"
+
+            val request = Request.Builder()
+                .url("$baseUrl/api/v3/order?$signedParams")
+                .header("X-MBX-APIKEY", credentials.apiKey)
+                .post("".toRequestBody())
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: throw Exception("Empty response")
+
+                if (!response.isSuccessful) {
+                    val isRetryable = response.code in 500..599 || response.code == 429
+                    val errorMsg = try {
+                        JSONObject(body).optString("msg", "HTTP ${response.code}")
+                    } catch (_: Exception) { "HTTP ${response.code}" }
+                    return@withContext DcaResult.Error(errorMsg, retryable = isRetryable)
+                }
+
+                val json = JSONObject(body)
+
+                if (json.has("code")) {
+                    val errorMessage = json.optString("msg", "Unknown error")
+                    return@withContext DcaResult.Error(errorMessage, retryable = false)
+                }
+
+                // Binance returns orderId as a Long; convert to String for our domain
+                val orderId = json.get("orderId").toString()
+
+                DcaResult.Success(
+                    Transaction(
+                        planId = 0, // caller fills in
+                        connectionId = null, // caller fills in
+                        exchange = Exchange.BINANCE,
+                        crypto = crypto,
+                        fiat = fiat,
+                        fiatAmount = BigDecimal.ZERO,
+                        cryptoAmount = BigDecimal.ZERO,
+                        price = limitPrice,
+                        fee = BigDecimal.ZERO,
+                        feeAsset = "",
+                        status = TransactionStatus.PENDING,
+                        exchangeOrderId = orderId,
+                        executedAt = Instant.now(),
+                        side = TransactionSide.SELL,
+                        limitPrice = limitPrice,
+                        requestedCryptoAmount = cryptoAmount
+                    )
+                )
+            }
+        } catch (e: java.io.IOException) {
+            DcaResult.Error(e.message ?: "Network error", retryable = true)
+        } catch (e: Exception) {
+            DcaResult.Error(e.message ?: "Unknown error", retryable = false)
+        }
+    }
+
+    override suspend fun cancelOrder(
+        orderId: String,
+        crypto: String,
+        fiat: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            ensureTimeSynced()
+            val symbol = "$crypto$fiat"
+            val timestamp = serverTimestamp()
+
+            val params = buildString {
+                append("symbol=$symbol")
+                append("&orderId=$orderId")
+                append("&timestamp=$timestamp")
+                append("&recvWindow=60000")
+            }
+
+            val signature = CryptoUtils.hmacSha256Hex(params, credentials.apiSecret)
+            val signedParams = "$params&signature=$signature"
+
+            val request = Request.Builder()
+                .url("$baseUrl/api/v3/order?$signedParams")
+                .header("X-MBX-APIKEY", credentials.apiKey)
+                .delete()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string()
+                    ?: return@withContext Result.failure(java.io.IOException("Empty response"))
+
+                if (!response.isSuccessful) {
+                    val errorMsg = try {
+                        JSONObject(body).optString("msg", "HTTP ${response.code}")
+                    } catch (_: Exception) { "HTTP ${response.code}" }
+                    return@withContext Result.failure(java.io.IOException(errorMsg))
+                }
+
+                val json = JSONObject(body)
+                if (json.has("code")) {
+                    val errorMessage = json.optString("msg", "Cancel failed")
+                    return@withContext Result.failure(java.io.IOException(errorMessage))
+                }
+
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getOrderStatus(
+        orderId: String,
+        crypto: String,
+        fiat: String
+    ): OrderStatusResult? = withContext(Dispatchers.IO) {
+        try {
+            ensureTimeSynced()
+            val symbol = "$crypto$fiat"
+            val timestamp = serverTimestamp()
+
+            val params = buildString {
+                append("symbol=$symbol")
+                append("&orderId=$orderId")
+                append("&timestamp=$timestamp")
+                append("&recvWindow=60000")
+            }
+
+            val signature = CryptoUtils.hmacSha256Hex(params, credentials.apiSecret)
+
+            val request = Request.Builder()
+                .url("$baseUrl/api/v3/order?$params&signature=$signature")
+                .header("X-MBX-APIKEY", credentials.apiKey)
+                .get()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext null
+                if (!response.isSuccessful) return@withContext null
+
+                val json = JSONObject(body)
+                if (json.has("code")) return@withContext null
+
+                val status = json.optString("status", "")
+                val executedQty = BigDecimal(json.optString("executedQty", "0"))
+                val cummulativeQuoteQty = BigDecimal(json.optString("cummulativeQuoteQty", "0"))
+
+                val avgFillPrice = if (executedQty > BigDecimal.ZERO) {
+                    cummulativeQuoteQty.divide(executedQty, 8, RoundingMode.HALF_UP)
+                } else null
+
+                val mappedStatus = when (status) {
+                    "FILLED" -> TransactionStatus.COMPLETED
+                    "NEW", "PENDING_NEW" -> if (executedQty > BigDecimal.ZERO) {
+                        TransactionStatus.PARTIAL
+                    } else TransactionStatus.PENDING
+                    "PARTIALLY_FILLED" -> TransactionStatus.PARTIAL
+                    "CANCELED", "CANCELLED", "EXPIRED", "PENDING_CANCEL" ->
+                        if (executedQty > BigDecimal.ZERO) TransactionStatus.PARTIAL
+                        else TransactionStatus.CANCELLED
+                    "REJECTED" ->
+                        if (executedQty > BigDecimal.ZERO) TransactionStatus.PARTIAL
+                        else TransactionStatus.FAILED
+                    else -> return@withContext null
+                }
+
+                OrderStatusResult(
+                    status = mappedStatus,
+                    filledCryptoAmount = executedQty,
+                    filledFiatAmount = cummulativeQuoteQty,
+                    avgFillPrice = avgFillPrice,
+                    // Binance fees are per-trade (need /api/v3/myTrades). MVP: leave null.
+                    fee = null,
+                    feeAsset = null
+                )
+            }
+        } catch (_: Exception) {
+            null
         }
     }
 

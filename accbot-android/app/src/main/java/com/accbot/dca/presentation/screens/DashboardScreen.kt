@@ -65,6 +65,7 @@ import com.accbot.dca.data.remote.CryptoData
 import com.accbot.dca.data.remote.FearGreedData
 import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.DcaStrategy
+import com.accbot.dca.domain.model.Transaction
 import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.presentation.components.CryptoIcon
 import com.accbot.dca.presentation.components.EmptyState
@@ -325,6 +326,7 @@ fun DashboardScreen(
                                 onToggle = { viewModel.togglePlan(planId) },
                                 onClick = { onNavigateToPlanDetails?.invoke(planId) },
                                 currentTime = currentTime,
+                                openSellCount = uiState.openSellsByPlan[planId]?.size ?: 0,
                                 isDragging = landscapeDragState.isDragging(planId),
                                 dragOffset = if (landscapeDragState.isDragging(planId)) landscapeDragState.dragOffset else 0f,
                                 onDragStart = { heightPx -> landscapeDragState.startDrag(planId, heightPx) },
@@ -444,6 +446,7 @@ fun DashboardScreen(
                             onToggle = { viewModel.togglePlan(planId) },
                             onClick = { onNavigateToPlanDetails?.invoke(planId) },
                             currentTime = currentTime,
+                            openSellCount = uiState.openSellsByPlan[planId]?.size ?: 0,
                             isDragging = portraitDragState.isDragging(planId),
                             dragOffset = if (portraitDragState.isDragging(planId)) portraitDragState.dragOffset else 0f,
                             onDragStart = { heightPx -> portraitDragState.startDrag(planId, heightPx) },
@@ -1037,6 +1040,7 @@ internal fun DcaPlanCard(
     onToggle: () -> Unit,
     onClick: (() -> Unit)? = null,
     currentTime: Long = System.currentTimeMillis(),
+    openSellCount: Int = 0,
     isDragging: Boolean = false,
     dragOffset: Float = 0f,
     onDragStart: ((heightPx: Int) -> Unit)? = null,
@@ -1316,6 +1320,28 @@ internal fun DcaPlanCard(
                             color = goalColor,
                             fontWeight = FontWeight.Medium
                         )
+                    }
+                    if (openSellCount > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TrendingDown,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = stringResource(
+                                    R.string.dashboard_plan_open_sells,
+                                    openSellCount
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }

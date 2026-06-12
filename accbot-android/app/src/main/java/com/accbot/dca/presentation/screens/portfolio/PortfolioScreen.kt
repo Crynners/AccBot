@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -68,8 +69,16 @@ fun PortfolioScreen(
     viewModel: PortfolioViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val openSellLimitPrices by viewModel.openSellLimitPrices.collectAsStateWithLifecycle()
+    val openSells by viewModel.openSells.collectAsStateWithLifecycle()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    // Snackbar host for cancel-order failures
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.snackbar.collect { msg -> snackbarHostState.showSnackbar(msg) }
+    }
 
     // Refresh portfolio data when returning to screen (e.g. after transaction import)
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -82,6 +91,21 @@ fun PortfolioScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+
+    // Sell wizard bottom sheet
+    var sellWizardPlanId by rememberSaveable { mutableStateOf<Long?>(null) }
+    sellWizardPlanId?.let { planId ->
+        com.accbot.dca.presentation.screens.plans.sell.SellWizardBottomSheet(
+            planId = planId,
+            onDismiss = { sellWizardPlanId = null }
+        )
+    }
+
+    val currentPage = uiState.pages.getOrNull(uiState.selectedPageIndex)
+    val currentPlanId = (currentPage as? PairPage.Plan)?.planId
+    val onCreateSellOrder: (() -> Unit)? = if (currentPlanId != null && uiState.currentPlanAllowsSells) {
+        { sellWizardPlanId = currentPlanId }
+    } else null
 
     // Landscape: two-pane layout – chart left, controls right
     if (isLandscape) {
@@ -146,6 +170,10 @@ fun PortfolioScreen(
                             visibleCryptoGroupLines = uiState.visibleCryptoGroupLines,
                             zoomLevel = uiState.zoomLevel,
                             onScrub = { idx -> scrubbedIndex = idx ?: -1 },
+                            // Show open-sell limit lines only on per-plan pages with sells enabled
+                            openSellLimitPrices = if (uiState.currentPlanAllowsSells &&
+                                uiState.denominationMode == DenominationMode.FIAT &&
+                                uiState.limitLinesVisible) openSellLimitPrices else emptyList(),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
@@ -170,6 +198,22 @@ fun PortfolioScreen(
                                 isAdvancedExpanded = uiState.isAdvancedLegendExpanded,
                                 onToggleAdvanced = { viewModel.toggleAdvancedLegendExpanded() }
                             )
+                        }
+                        // Limit-sell legend entry (landscape)
+                        if (uiState.currentPlanAllowsSells &&
+                            uiState.denominationMode == DenominationMode.FIAT &&
+                            openSellLimitPrices.isNotEmpty()
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                LimitOrderLegendItem(
+                                    label = stringResource(R.string.chart_legend_limit_sell),
+                                    enabled = uiState.limitLinesVisible,
+                                    onClick = { viewModel.toggleLimitLinesVisibility() }
+                                )
+                            }
                         }
 
                         // Zoom header + drill-down chips
@@ -284,7 +328,8 @@ fun PortfolioScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         when {
             uiState.isLoading -> {
@@ -313,6 +358,9 @@ fun PortfolioScreen(
             else -> {
                 PortfolioContent(
                     uiState = uiState,
+                    openSellLimitPrices = openSellLimitPrices,
+                    openSells = openSells,
+                    onCancelSell = viewModel::cancelSell,
                     onDrillDownYear = { viewModel.drillDownToYear(it) },
                     onDrillDownMonth = { year, month -> viewModel.drillDownToMonth(year, month) },
                     onZoomOut = { viewModel.zoomOut() },
@@ -323,6 +371,8 @@ fun PortfolioScreen(
                     onTogglePlanLineVisibility = { id, type -> viewModel.togglePlanLineVisibility(id, type) },
                     onToggleCryptoGroupLineVisibility = { crypto, type -> viewModel.toggleCryptoGroupLineVisibility(crypto, type) },
                     onToggleAdvancedLegend = { viewModel.toggleAdvancedLegendExpanded() },
+                    onToggleLimitLinesVisibility = { viewModel.toggleLimitLinesVisibility() },
+                    onCreateSellOrder = onCreateSellOrder,
                     onRefresh = { viewModel.syncPricesAndLoadChart() },
                     onChartTouching = onChartTouching,
                     modifier = Modifier.padding(paddingValues)
@@ -336,6 +386,9 @@ fun PortfolioScreen(
 @Composable
 internal fun PortfolioContent(
     uiState: PortfolioUiState,
+    openSellLimitPrices: List<BigDecimal> = emptyList(),
+    openSells: List<com.accbot.dca.domain.model.Transaction> = emptyList(),
+    onCancelSell: (Long) -> Unit = {},
     onDrillDownYear: (Int) -> Unit,
     onDrillDownMonth: (Int, Int) -> Unit,
     onZoomOut: () -> Unit,
@@ -346,6 +399,8 @@ internal fun PortfolioContent(
     onTogglePlanLineVisibility: (Long, PlanLineType) -> Unit,
     onToggleCryptoGroupLineVisibility: (String, CryptoGroupLineType) -> Unit,
     onToggleAdvancedLegend: () -> Unit,
+    onToggleLimitLinesVisibility: () -> Unit = {},
+    onCreateSellOrder: (() -> Unit)? = null,
     onRefresh: () -> Unit,
     onChartTouching: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
@@ -583,6 +638,10 @@ internal fun PortfolioContent(
                     visibleCryptoGroupLines = uiState.visibleCryptoGroupLines,
                     zoomLevel = uiState.zoomLevel,
                     onScrub = { idx -> scrubbedIndex = idx ?: -1 },
+                    // Show open-sell limit lines only on per-plan pages with sells enabled
+                    openSellLimitPrices = if (uiState.currentPlanAllowsSells &&
+                        uiState.denominationMode == DenominationMode.FIAT &&
+                        uiState.limitLinesVisible) openSellLimitPrices else emptyList(),
                     modifier = Modifier.fillMaxWidth()
                 )
             } else if (chartData.size == 1) {
@@ -627,6 +686,52 @@ internal fun PortfolioContent(
                         isAdvancedExpanded = uiState.isAdvancedLegendExpanded,
                         onToggleAdvanced = onToggleAdvancedLegend
                     )
+                }
+                // Limit-sell legend entry: shown only when matching dashed lines render on the chart
+                if (uiState.currentPlanAllowsSells &&
+                    uiState.denominationMode == DenominationMode.FIAT &&
+                    openSellLimitPrices.isNotEmpty()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        LimitOrderLegendItem(
+                            label = stringResource(R.string.chart_legend_limit_sell),
+                            enabled = uiState.limitLinesVisible,
+                            onClick = onToggleLimitLinesVisibility
+                        )
+                    }
+                }
+            }
+        }
+
+        // Open sell-orders section + new order button (only on per-plan pages with sells enabled)
+        if (uiState.currentPlanAllowsSells) {
+            if (openSells.isNotEmpty()) {
+                item(key = "portfolio-open-sells-section") {
+                    com.accbot.dca.presentation.screens.portfolio.components.OpenSellsCollapsibleSection(
+                        openSells = openSells,
+                        onCancelClick = onCancelSell
+                    )
+                }
+            }
+            if (onCreateSellOrder != null) {
+                item(key = "portfolio-new-sell-order") {
+                    OutlinedButton(
+                        onClick = onCreateSellOrder,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.portfolio_new_sell_order))
+                    }
                 }
             }
         }
@@ -1113,6 +1218,64 @@ internal fun KpiCardContent(
             }
         }
     }
+
+    // Sell-extension trading metrics: realized + net P&L (only when trading enabled)
+    TradingMetricsRows(uiState = uiState, fiatSymbol = fiatSymbol)
+}
+
+@Composable
+private fun TradingMetricsRows(
+    uiState: PortfolioUiState,
+    fiatSymbol: String
+) {
+    if (!uiState.showTradingMetrics) return
+    val realized = uiState.totalRealized ?: BigDecimal.ZERO
+    if (realized.signum() <= 0 && uiState.netPnL == null) return
+
+    Spacer(modifier = Modifier.height(12.dp))
+    HorizontalDivider()
+    Spacer(modifier = Modifier.height(8.dp))
+
+    if (realized.signum() > 0) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = stringResource(R.string.portfolio_realized),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${NumberFormatters.fiat(realized)} $fiatSymbol",
+                fontWeight = FontWeight.SemiBold,
+                color = successColor()
+            )
+        }
+    }
+
+    val net = uiState.netPnL
+    if (net != null) {
+        Spacer(modifier = Modifier.height(4.dp))
+        val isPositive = net.signum() >= 0
+        val pnlColor = if (isPositive) successColor() else MaterialTheme.colorScheme.error
+        val sign = if (isPositive) "+" else ""
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = stringResource(R.string.portfolio_net_pnl),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "$sign${NumberFormatters.fiat(net)} $fiatSymbol",
+                fontWeight = FontWeight.SemiBold,
+                color = pnlColor
+            )
+        }
+    }
 }
 
 @Composable
@@ -1259,6 +1422,9 @@ private fun LandscapeKpiContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        // Sell-extension trading metrics: realized + net P&L (only when trading enabled)
+        TradingMetricsRows(uiState = uiState, fiatSymbol = fiatSymbol)
     }
 }
 

@@ -41,8 +41,16 @@ val SandboxSuccess = Color(0xFFFFA726)
 private val DarkColorScheme = darkColorScheme(
     primary = Primary,
     onPrimary = OnPrimary,
+    primaryContainer = Color(0xFF276652),       // Primary @ ~50% brightness, same mint hue
+    onPrimaryContainer = Color(0xFFB8E8D5),
     secondary = Secondary,
     onSecondary = OnSecondary,
+    secondaryContainer = Color(0xFF142B4D),     // slightly darker variant of Secondary
+    onSecondaryContainer = Color(0xFFB0CCEE),
+    tertiary = Warning,
+    onTertiary = Color(0xFF1A1A2E),
+    tertiaryContainer = Color(0xFF553300),      // dark amber for warning surfaces
+    onTertiaryContainer = Color(0xFFFFD194),
     background = Background,
     onBackground = OnBackground,
     surface = Surface,
@@ -50,7 +58,9 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = SurfaceVariant,
     onSurfaceVariant = OnSurfaceVariant,
     error = Error,
-    onError = Color.White
+    onError = Color.White,
+    errorContainer = Color(0xFF601824),
+    onErrorContainer = Color(0xFFFFB4B4)
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -84,8 +94,16 @@ private val LightColorScheme = lightColorScheme(
 private val SandboxDarkColorScheme = darkColorScheme(
     primary = SandboxPrimary,
     onPrimary = OnPrimary,
+    primaryContainer = Color(0xFF553300),       // dark amber for sandbox primary
+    onPrimaryContainer = Color(0xFFFFD194),
     secondary = Secondary,
     onSecondary = OnSecondary,
+    secondaryContainer = Color(0xFF142B4D),
+    onSecondaryContainer = Color(0xFFB0CCEE),
+    tertiary = Warning,
+    onTertiary = Color(0xFF1A1A2E),
+    tertiaryContainer = Color(0xFF553300),
+    onTertiaryContainer = Color(0xFFFFD194),
     background = Background,
     onBackground = OnBackground,
     surface = Surface,
@@ -93,7 +111,9 @@ private val SandboxDarkColorScheme = darkColorScheme(
     surfaceVariant = SurfaceVariant,
     onSurfaceVariant = OnSurfaceVariant,
     error = Error,
-    onError = Color.White
+    onError = Color.White,
+    errorContainer = Color(0xFF601824),
+    onErrorContainer = Color(0xFFFFB4B4)
 )
 
 // Sandbox light color scheme (orange theme)

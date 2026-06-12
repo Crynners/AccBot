@@ -2,6 +2,7 @@ package com.accbot.dca.data.local
 
 import androidx.room.*
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.model.TransactionStatus
 import kotlinx.coroutines.flow.Flow
 import java.math.BigDecimal
 import java.time.Instant
@@ -115,11 +116,17 @@ interface DcaPlanDao {
     @Query("UPDATE dca_plans SET networkRetryCount = 0, nextNetworkRetryAt = NULL, originalScheduledAt = NULL WHERE id = :planId")
     suspend fun resetNetworkRetry(planId: Long)
 
+    @Query("UPDATE dca_plans SET networkRetryCount = 0, nextNetworkRetryAt = NULL, originalScheduledAt = NULL WHERE id = :planId")
+    fun resetNetworkRetrySync(planId: Long)
+
     @Query("UPDATE dca_plans SET missedPurchaseCount = :count WHERE id = :planId")
     suspend fun setMissedPurchaseCount(planId: Long, count: Int)
 
     @Query("UPDATE dca_plans SET missedPurchaseCount = 0 WHERE id = :planId")
     suspend fun resetMissedPurchaseCount(planId: Long)
+
+    @Query("UPDATE dca_plans SET missedPurchaseCount = MAX(missedPurchaseCount - 1, 0) WHERE id = :planId")
+    suspend fun decrementMissedPurchaseCount(planId: Long)
 
     @Query("UPDATE dca_plans SET name = :name WHERE id = :planId")
     suspend fun renamePlan(planId: Long, name: String)
@@ -209,6 +216,13 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE planId = :planId ORDER BY executedAt DESC")
     fun getTransactionsByPlan(planId: Long): Flow<List<TransactionEntity>>
 
+    /**
+     * One-shot snapshot of all transactions for a plan. Used by PnL / validation
+     * logic where a Flow isn't practical (suspend call from use case).
+     */
+    @Query("SELECT * FROM transactions WHERE planId = :planId ORDER BY executedAt DESC")
+    suspend fun getTransactionsByPlanSync(planId: Long): List<TransactionEntity>
+
     @Query("SELECT * FROM transactions WHERE crypto = :crypto ORDER BY executedAt DESC")
     fun getTransactionsByCrypto(crypto: String): Flow<List<TransactionEntity>>
 
@@ -226,12 +240,14 @@ interface TransactionDao {
         WHERE (:crypto IS NULL OR crypto = :crypto)
         AND (:exchange IS NULL OR exchange = :exchange)
         AND (:status IS NULL OR status = :status)
+        AND (:planId IS NULL OR planId = :planId)
         ORDER BY executedAt DESC
     """)
     fun getFilteredTransactions(
         crypto: String?,
         exchange: String?,
-        status: String?
+        status: String?,
+        planId: Long?
     ): Flow<List<TransactionEntity>>
 
     @Query("SELECT * FROM transactions ORDER BY executedAt DESC LIMIT :limit")
@@ -240,12 +256,15 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getTransactionById(id: Long): TransactionEntity?
 
-    // Returns sum as String to avoid Double precision loss for monetary values
-    @Query("SELECT CAST(COALESCE(SUM(CAST(fiatAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE fiat = :fiat AND status = 'COMPLETED'")
+    // Returns sum as String to avoid Double precision loss for monetary values.
+    // SELL excluded: this query represents money INVESTED via BUYs, not net cash flow.
+    @Query("SELECT CAST(COALESCE(SUM(CAST(fiatAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE fiat = :fiat AND status = 'COMPLETED' AND side = 'BUY'")
     suspend fun getTotalInvestedByFiat(fiat: String): String
 
-    // Returns sum as String to avoid Double precision loss for crypto amounts
-    @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE crypto = :crypto AND status = 'COMPLETED'")
+    // Returns sum as String to avoid Double precision loss for crypto amounts.
+    // SELL excluded: represents accumulated BUY volume, mirroring the dashboard's
+    // "total accumulated" KPI.
+    @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE crypto = :crypto AND status = 'COMPLETED' AND side = 'BUY'")
     suspend fun getTotalCryptoBySymbol(crypto: String): String
 
     @Query("SELECT COUNT(*) FROM transactions WHERE status = 'COMPLETED'")
@@ -275,8 +294,69 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE status = 'PENDING' AND exchangeOrderId IS NOT NULL")
     suspend fun getPendingTransactionsWithOrderId(): List<TransactionEntity>
 
+    @Query("SELECT * FROM transactions WHERE status IN ('PENDING', 'PARTIAL') AND exchangeOrderId IS NOT NULL")
+    suspend fun getResolvablePendingTransactions(): List<TransactionEntity>
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE side = 'SELL' AND status IN ('PENDING', 'PARTIAL')")
+    suspend fun countOpenSells(): Int
+
+    @Query("""
+        SELECT * FROM transactions
+        WHERE planId = :planId
+          AND side = 'SELL'
+          AND status IN ('PENDING', 'PARTIAL')
+        ORDER BY executedAt DESC
+    """)
+    fun observeOpenSellsForPlan(planId: Long): Flow<List<TransactionEntity>>
+
+    @Query("""
+        SELECT * FROM transactions
+        WHERE side = 'SELL' AND status IN ('PENDING', 'PARTIAL')
+        ORDER BY executedAt DESC
+    """)
+    fun observeAllOpenSells(): Flow<List<TransactionEntity>>
+
+    /**
+     * Guarded update for resolving an order. Only updates rows still in PENDING/PARTIAL
+     * state - prevents races with concurrent user cancel (which sets status=FAILED).
+     * Returns number of rows updated (0 = race lost, order state already changed).
+     */
+    @Query("""
+        UPDATE transactions
+        SET status = :newStatus,
+            cryptoAmount = :cryptoAmount,
+            fiatAmount = :fiatAmount,
+            price = :price,
+            fee = :fee
+        WHERE id = :id
+          AND status IN ('PENDING', 'PARTIAL')
+    """)
+    suspend fun updateResolvedTransaction(
+        id: Long,
+        newStatus: TransactionStatus,
+        cryptoAmount: BigDecimal,
+        fiatAmount: BigDecimal,
+        price: BigDecimal,
+        fee: BigDecimal
+    ): Int
+
     @Query("SELECT exchangeOrderId FROM transactions WHERE planId = :planId AND exchangeOrderId IS NOT NULL")
     suspend fun getExchangeOrderIdsByPlan(planId: Long): List<String>
+
+    /**
+     * All recorded exchange order IDs for a connection. Used by buy reconciliation to avoid
+     * re-recording an order that another plan on the same account already captured.
+     */
+    @Query("SELECT exchangeOrderId FROM transactions WHERE connectionId = :connectionId AND exchangeOrderId IS NOT NULL")
+    suspend fun getExchangeOrderIdsByConnection(connectionId: Long): List<String>
+
+    /**
+     * Number of completed BUY transactions for a plan executed at or after [since].
+     * Used by the runaway circuit breaker - counts real spend, including buys recovered
+     * via reconciliation, so it reflects what actually hit the exchange.
+     */
+    @Query("SELECT COUNT(*) FROM transactions WHERE planId = :planId AND side = 'BUY' AND status = 'COMPLETED' AND executedAt >= :since")
+    fun countCompletedBuysSinceSync(planId: Long, since: Instant): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransaction(transaction: TransactionEntity): Long
@@ -299,12 +379,19 @@ interface TransactionDao {
     @Query("DELETE FROM transactions WHERE exchange = :exchange")
     suspend fun deleteTransactionsByExchange(exchange: Exchange)
 
+    /**
+     * Per-pair holdings used for dashboard / portfolio summaries.
+     * Sell-extension: SELL rows are excluded so the displayed "total accumulated"
+     * and "total invested" reflect BUY-only DCA activity. Realized P&L from sells
+     * is surfaced separately in the portfolio summary, not subtracted from these
+     * totals (avoids double-counting and keeps the historical chart logic stable).
+     */
     @Query("""
         SELECT crypto || '/' || fiat as pair, crypto, fiat,
                CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) as totalCrypto,
                CAST(COALESCE(SUM(CAST(fiatAmount AS REAL)), 0) AS TEXT) as totalFiat,
                COUNT(*) as transactionCount
-        FROM transactions WHERE status = 'COMPLETED'
+        FROM transactions WHERE status = 'COMPLETED' AND side = 'BUY'
         GROUP BY crypto, fiat
         ORDER BY SUM(CAST(fiatAmount AS REAL)) DESC
     """)
@@ -315,7 +402,7 @@ interface TransactionDao {
                CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) as totalCrypto,
                CAST(COALESCE(SUM(CAST(fiatAmount AS REAL)), 0) AS TEXT) as totalFiat,
                COUNT(*) as transactionCount
-        FROM transactions WHERE status = 'COMPLETED'
+        FROM transactions WHERE status = 'COMPLETED' AND side = 'BUY'
         GROUP BY crypto, fiat
         ORDER BY SUM(CAST(fiatAmount AS REAL)) DESC
     """)
@@ -327,18 +414,37 @@ interface TransactionDao {
     @Query("DELETE FROM transactions")
     suspend fun deleteAllTransactions()
 
+    /**
+     * Used by the portfolio chart pipeline. SELL excluded so the historical
+     * "invested / accumulated" series stays monotonic (sells would create
+     * counterintuitive dips in cumulative volume). Realized P&L is reported
+     * separately in the portfolio summary, see [getRealizedFiatByFiat].
+     */
     @Query("""
         SELECT * FROM transactions
-        WHERE status = 'COMPLETED'
+        WHERE status = 'COMPLETED' AND side = 'BUY'
         AND (:exchange IS NULL OR exchange = :exchange)
         ORDER BY executedAt ASC
     """)
     suspend fun getCompletedTransactionsOrdered(exchange: String? = null): List<TransactionEntity>
 
-    @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE exchange = :exchange AND crypto = :crypto AND status = 'COMPLETED'")
+    /**
+     * Completed SELL transactions, ordered by execution. Used to draw chart timeline
+     * markers; kept separate from [getCompletedTransactionsOrdered] so the BUY-only
+     * invariant of the chart series pipeline isn't disturbed.
+     */
+    @Query("""
+        SELECT * FROM transactions
+        WHERE status = 'COMPLETED' AND side = 'SELL'
+        AND (:exchange IS NULL OR exchange = :exchange)
+        ORDER BY executedAt ASC
+    """)
+    suspend fun getCompletedSellsOrdered(exchange: String? = null): List<TransactionEntity>
+
+    @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE exchange = :exchange AND crypto = :crypto AND status = 'COMPLETED' AND side = 'BUY'")
     suspend fun getTotalCryptoByExchangeAndCrypto(exchange: String, crypto: String): String
 
-    @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE connectionId = :connectionId AND crypto = :crypto AND status = 'COMPLETED'")
+    @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE connectionId = :connectionId AND crypto = :crypto AND status = 'COMPLETED' AND side = 'BUY'")
     suspend fun getTotalCryptoByConnectionAndCrypto(connectionId: Long, crypto: String): String
 
     @Query("SELECT * FROM transactions WHERE exchangeOrderId = :orderId LIMIT 1")
@@ -353,8 +459,33 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE exchangeOrderId = :orderId AND connectionId = :connectionId LIMIT 1")
     suspend fun getByExchangeOrderIdAndConnection(orderId: String, connectionId: Long): TransactionEntity?
 
-    @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE planId = :planId AND status = 'COMPLETED'")
+    @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE planId = :planId AND status = 'COMPLETED' AND side = 'BUY'")
     suspend fun getAccumulatedCryptoByPlan(planId: Long): String
+
+    /**
+     * Total realized fiat from completed/partial SELL orders for a given fiat
+     * currency. Used by the portfolio summary to surface "Realized P&L" alongside
+     * the existing BUY-based totals. PARTIAL is included because partial fills
+     * have already booked their fiatAmount (= filled amount * avg fill price).
+     */
+    @Query("""
+        SELECT CAST(COALESCE(SUM(CAST(fiatAmount AS REAL)), 0) AS TEXT)
+        FROM transactions
+        WHERE fiat = :fiat AND side = 'SELL' AND status IN ('COMPLETED', 'PARTIAL')
+    """)
+    suspend fun getRealizedFiatByFiat(fiat: String): String
+
+    /**
+     * Per-plan variant of [getRealizedFiatByFiat]. Same semantics, scoped to a
+     * single plan id so the per-plan portfolio summary can show realized P&L
+     * for that plan only.
+     */
+    @Query("""
+        SELECT CAST(COALESCE(SUM(CAST(fiatAmount AS REAL)), 0) AS TEXT)
+        FROM transactions
+        WHERE planId = :planId AND side = 'SELL' AND status IN ('COMPLETED', 'PARTIAL')
+    """)
+    suspend fun getRealizedFiatByPlan(planId: Long): String
 }
 
 data class CryptoFiatHolding(

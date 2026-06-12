@@ -35,6 +35,10 @@ data class AddPlanUiState(
     // Change tracking
     val hasChanges: Boolean = false,
 
+    // Global trading master switch (from UserPreferences). Gates whether the
+    // Sells section is shown in the plan form.
+    val tradingEnabled: Boolean = false,
+
     // Action state
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
@@ -78,7 +82,9 @@ class AddPlanViewModel @Inject constructor(
         dcaPlanDao = dcaPlanDao
     )
 
-    private val _localState = MutableStateFlow(AddPlanUiState())
+    private val _localState = MutableStateFlow(
+        AddPlanUiState(tradingEnabled = userPreferences.isTradingEnabled())
+    )
 
     val uiState: StateFlow<AddPlanUiState> = combine(
         _localState,
@@ -88,7 +94,11 @@ class AddPlanViewModel @Inject constructor(
         val hasChanges = cred.selectedExchange != null
         local.copy(planForm = form, credentialForm = cred, hasChanges = hasChanges)
     }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AddPlanUiState())
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            AddPlanUiState(tradingEnabled = userPreferences.isTradingEnabled())
+        )
 
     init {
         credentialForm.initialize()
@@ -145,6 +155,12 @@ class AddPlanViewModel @Inject constructor(
                     }
                 }
 
+                val tradingGloballyEnabled = userPreferences.isTradingEnabled()
+                val allowSells = tradingGloballyEnabled && form.allowSells
+                val targetProfit = if (allowSells) {
+                    form.targetProfitAmount.trim().takeIf { it.isNotEmpty() }?.toBigDecimalOrNull()
+                } else null
+
                 createDcaPlanUseCase.execute(
                     exchange = exchange,
                     connectionId = targetConnectionId,
@@ -157,7 +173,9 @@ class AddPlanViewModel @Inject constructor(
                     withdrawalEnabled = form.withdrawalEnabled,
                     withdrawalAddress = if (form.withdrawalEnabled) form.withdrawalAddress.trim() else null,
                     targetAmount = form.targetAmount.toBigDecimalOrNull(),
-                    name = form.name.trim()
+                    name = form.name.trim(),
+                    allowSells = allowSells,
+                    targetProfitAmount = targetProfit
                 )
 
                 // Only offer the API import flow when this was a freshly created connection.

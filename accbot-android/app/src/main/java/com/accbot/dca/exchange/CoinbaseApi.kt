@@ -31,6 +31,8 @@ class CoinbaseApi(
 
     override val exchange = Exchange.COINBASE
 
+    override val estimatedTakerFeeRate: BigDecimal = BigDecimal("0.0040")
+
     private val baseUrl = ExchangeConfig.getBaseUrl(Exchange.COINBASE, isSandbox)
 
     private val jsonMediaType = "application/json".toMediaType()
@@ -230,7 +232,11 @@ class CoinbaseApi(
         val fee: BigDecimal
     )
 
-    override suspend fun getOrderStatus(orderId: String): Transaction? = withContext(Dispatchers.IO) {
+    override suspend fun getOrderStatus(
+        orderId: String,
+        crypto: String,
+        fiat: String
+    ): OrderStatusResult? = withContext(Dispatchers.IO) {
         try {
             val request = buildGetRequest("/api/v3/brokerage/orders/historical/$orderId")
             client.newCall(request).execute().use { response ->
@@ -241,30 +247,36 @@ class CoinbaseApi(
                 val order = json.optJSONObject("order") ?: return@withContext null
                 val status = order.optString("status", "")
 
-                if (status == "FILLED") {
-                    val filledSize = BigDecimal(order.optString("filled_size", "0"))
-                    val avgPrice = BigDecimal(order.optString("average_filled_price", "0"))
-                    val totalFees = BigDecimal(order.optString("total_fees", "0"))
-                    val cost = if (filledSize > BigDecimal.ZERO && avgPrice > BigDecimal.ZERO) {
-                        filledSize.multiply(avgPrice).setScale(8, RoundingMode.HALF_UP)
-                    } else BigDecimal.ZERO
+                val filledSize = BigDecimal(order.optString("filled_size", "0"))
+                val avgPrice = BigDecimal(order.optString("average_filled_price", "0"))
+                val totalFees = BigDecimal(order.optString("total_fees", "0"))
+                val filledFiat = if (filledSize > BigDecimal.ZERO && avgPrice > BigDecimal.ZERO) {
+                    filledSize.multiply(avgPrice).setScale(8, RoundingMode.HALF_UP)
+                } else BigDecimal.ZERO
 
-                    Transaction(
-                        planId = 0,
-                        exchange = Exchange.COINBASE,
-                        crypto = "",
-                        fiat = "",
-                        fiatAmount = cost,
-                        cryptoAmount = filledSize,
-                        price = avgPrice,
-                        fee = totalFees,
-                        status = TransactionStatus.COMPLETED,
-                        exchangeOrderId = orderId,
-                        executedAt = Instant.now()
-                    )
-                } else {
-                    null
+                val mappedStatus = when (status) {
+                    "FILLED" -> TransactionStatus.COMPLETED
+                    "OPEN", "PENDING" -> if (filledSize > BigDecimal.ZERO) {
+                        TransactionStatus.PARTIAL
+                    } else TransactionStatus.PENDING
+                    "PARTIALLY_FILLED" -> TransactionStatus.PARTIAL
+                    "CANCELLED", "CANCEL_QUEUED", "EXPIRED" ->
+                        if (filledSize > BigDecimal.ZERO) TransactionStatus.PARTIAL
+                        else TransactionStatus.CANCELLED
+                    "FAILED", "REJECTED" ->
+                        if (filledSize > BigDecimal.ZERO) TransactionStatus.PARTIAL
+                        else TransactionStatus.FAILED
+                    else -> return@withContext null
                 }
+
+                OrderStatusResult(
+                    status = mappedStatus,
+                    filledCryptoAmount = filledSize,
+                    filledFiatAmount = filledFiat,
+                    avgFillPrice = if (filledSize > BigDecimal.ZERO) avgPrice else null,
+                    fee = totalFees,
+                    feeAsset = fiat
+                )
             }
         } catch (_: Exception) {
             null

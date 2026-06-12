@@ -53,11 +53,12 @@ sealed class Screen(val route: String) {
     }
 
     // History screens
-    data object History : Screen("history?crypto={crypto}&fiat={fiat}") {
-        fun createRoute(crypto: String? = null, fiat: String? = null): String {
+    data object History : Screen("history?crypto={crypto}&fiat={fiat}&planId={planId}") {
+        fun createRoute(crypto: String? = null, fiat: String? = null, planId: Long? = null): String {
             val params = buildList {
                 if (crypto != null) add("crypto=$crypto")
                 if (fiat != null) add("fiat=$fiat")
+                if (planId != null) add("planId=$planId")
             }
             return if (params.isEmpty()) "history" else "history?${params.joinToString("&")}"
         }

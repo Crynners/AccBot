@@ -20,7 +20,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         WithdrawalThresholdEntity::class,
         ExchangeConnectionEntity::class
     ],
-    version = 20,
+    version = 22,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -374,6 +374,41 @@ abstract class DcaDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 20 to 21: Add sell extension fields to dca_plans and transactions.
+        // Enables opt-in limit sell orders, P&L tracking, and optional profit targets.
+        //
+        // Defaults: allowSells/side use ColumnInfo defaultValue (must match SQL DEFAULT exactly).
+        // Nullable columns intentionally OMIT `DEFAULT NULL` - Room schema validator treats
+        // nullable-with-no-Kotlin-default as "no SQL default", and explicit DEFAULT NULL
+        // would cause a schema mismatch.
+        private val MIGRATION_20_21 = object : Migration(20, 21) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE dca_plans ADD COLUMN allowSells INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE dca_plans ADD COLUMN targetProfitAmount TEXT")
+                database.execSQL("ALTER TABLE transactions ADD COLUMN side TEXT NOT NULL DEFAULT 'BUY'")
+                database.execSQL("ALTER TABLE transactions ADD COLUMN limitPrice TEXT")
+                database.execSQL("ALTER TABLE transactions ADD COLUMN requestedCryptoAmount TEXT")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_planId_side_status ON transactions(planId, side, status)")
+            }
+        }
+
+        // Migration 21 -> 22: backfill transactions.connectionId from the parent plan.
+        // Trade-history imports (and pre-v19 rows) left connectionId NULL, which breaks
+        // per-connection aggregation and backup-restore dedup. Only backfill real
+        // connections (> 0); leave NULL where the plan has no connection.
+        internal val MIGRATION_21_22 = object : Migration(21, 22) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    UPDATE transactions
+                    SET connectionId = (SELECT p.connectionId FROM dca_plans p WHERE p.id = transactions.planId)
+                    WHERE connectionId IS NULL
+                      AND EXISTS (SELECT 1 FROM dca_plans p WHERE p.id = transactions.planId AND p.connectionId > 0)
+                    """.trimIndent()
+                )
+            }
+        }
+
         // Migration from version 9 to 10: Add notifications and withdrawal_thresholds tables
         private val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -476,7 +511,7 @@ abstract class DcaDatabase : RoomDatabase() {
                 DcaDatabase::class.java,
                 databaseName
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22)
                 // Only allow destructive migration on app downgrade, never on failed upgrade
                 // This protects user's transaction history from accidental deletion
                 .fallbackToDestructiveMigrationOnDowngrade()

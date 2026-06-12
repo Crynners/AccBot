@@ -39,7 +39,7 @@
 
     <!-- Navigation -->
     <string name="nav_dashboard">Dashboard</string>
-    <string name="nav_portfolio">Portfolio</string>
+    <string name="nav_portfolio">Positions</string>
     <string name="nav_notifications">Notifications</string>
     <string name="nav_settings">Settings</string>
 
@@ -232,6 +232,7 @@
     <string name="history_clear_all">Clear all</string>
     <string name="history_filter_title">Filter Transactions</string>
     <string name="history_filter_crypto">Cryptocurrency</string>
+    <string name="history_filter_plan">Plan</string>
     <string name="history_filter_exchange">Exchange</string>
     <string name="history_filter_status">Status</string>
     <string name="history_transactions_count">%1$d transaction(s)</string>
@@ -255,6 +256,16 @@
     <string name="history_filter_date_to">To</string>
     <string name="history_search">Search transactions…</string>
     <string name="history_filter_date_select">Select date</string>
+    <string name="history_side_all">All</string>
+    <string name="history_side_buys">Buys</string>
+    <string name="history_side_sells">Sells</string>
+    <string name="history_side_pending">Pending</string>
+    <string name="history_side_buy_label">Buy</string>
+    <string name="history_side_sell_label">Sell</string>
+
+    <!-- Dashboard - open sells -->
+    <string name="dashboard_open_sells_title">%1$s: %2$d open sell order(s)</string>
+    <string name="dashboard_plan_open_sells">%1$d open sell order(s)</string>
 
     <!-- Add Plan Screen -->
     <string name="add_plan_title">Create DCA Plan</string>
@@ -312,6 +323,9 @@
     <string name="plan_details_delete_transactions_hint">Type %1$d to confirm</string>
     <string name="plan_details_delete_transactions_button">Delete All Transactions</string>
     <string name="plan_details_delete_transactions_success">%1$d transactions deleted</string>
+    <string name="plan_details_create_sell_order">+ Create sell order</string>
+    <string name="plan_details_delete_blocked_title">Cannot delete plan</string>
+    <string name="plan_details_delete_blocked_text">This plan has %1$d open sell order(s). Cancel them first before deleting the plan.</string>
 
     <!-- Edit Plan Screen -->
     <string name="edit_plan_title">Edit Plan</string>
@@ -321,10 +335,14 @@
     <string name="edit_plan_save">Save Changes</string>
     <string name="edit_plan_enter_wallet">Enter your %1$s wallet address</string>
 
-    <!-- Portfolio Screen -->
-    <string name="portfolio_title">Portfolio</string>
+    <!-- Positions Screen (internally Portfolio) -->
+    <string name="portfolio_title">Positions</string>
     <string name="portfolio_transactions">Transactions</string>
-    <string name="portfolio_loading">Loading portfolio…</string>
+    <string name="portfolio_loading">Loading positions…</string>
+    <string name="portfolio_realized">Realized</string>
+    <string name="portfolio_net_pnl">Net P&amp;L</string>
+    <string name="portfolio_open_sells_section_title">Open sell orders (%1$d)</string>
+    <string name="portfolio_new_sell_order">New sell order</string>
 
     <!-- Performance Chart -->
     <string name="chart_all_pairs">All Pairs</string>
@@ -359,6 +377,7 @@
     <string name="chart_accumulated_crypto">Accum. %1$s</string>
     <string name="chart_avg_buy_price">Avg Buy Price</string>
     <string name="chart_explore">Explore history:</string>
+    <string name="chart_legend_limit_sell">Limit sell</string>
 
     <!-- Exchange Management Screen -->
     <string name="exchanges_title">Exchanges</string>
@@ -427,9 +446,17 @@
     <string name="transaction_details_copied">Copied to clipboard</string>
     <string name="transaction_status_completed">Completed</string>
     <string name="transaction_status_failed">Failed</string>
+    <string name="transaction_status_cancelled">Cancelled</string>
     <string name="transaction_status_pending">Pending</string>
     <string name="transaction_status_partial">Partially Filled</string>
     <string name="transaction_details_at">at</string>
+    <string name="transaction_details_sell_section">Sell order</string>
+    <string name="transaction_details_limit_price">Limit price</string>
+    <string name="transaction_details_filled">Filled</string>
+    <string name="transaction_details_avg_fill_price">Avg fill price</string>
+    <string name="transaction_details_cancel_order">Cancel order</string>
+    <string name="transaction_details_cancel_confirm_title">Cancel order?</string>
+    <string name="transaction_details_cancel_confirm_text">Are you sure you want to cancel this limit sell order?</string>
 
     <!-- Credentials Input -->
     <string name="credentials_client_id">Client ID</string>
@@ -584,6 +611,7 @@
     <string name="notification_dca_failed">DCA Failed</string>
     <string name="notification_dca_failed_text">Failed to buy %1$s: %2$s</string>
     <string name="notification_dca_error">DCA Error</string>
+    <string name="notification_runaway_disabled">Plan paused: an unusually high number of purchases was detected. Check your account and re-enable once resolved.</string>
     <string name="notification_low_balance_title">Low balance on %1$s</string>
     <string name="notification_low_balance_text">%1$s of %2$s remaining for DCA</string>
     <string name="notification_low_balance_less_1_day">&lt; 1 day</string>
@@ -920,4 +948,107 @@
 
     <!-- Accessibility -->
     <string name="a11y_retry">Retry</string>
+
+    <!-- Settings: Advanced (Sell extension) -->
+    <string name="settings_advanced">ADVANCED</string>
+    <string name="settings_trading_enabled_title">Enable sell orders</string>
+    <string name="settings_trading_enabled_subtitle">Allow selected plans to place limit sell orders and track P&amp;L.</string>
+    <string name="settings_sell_polling_title">Check sell orders in background</string>
+    <string name="settings_sell_polling_subtitle">Periodically check order status. Increases battery usage.</string>
+    <string name="settings_sell_polling_frequency">Frequency</string>
+    <string name="settings_sell_polling_cron_label">Custom schedule (CRON)</string>
+    <string name="settings_sell_polling_cron_hint">e.g. 0 *\/2 * * *</string>
+    <string name="settings_sell_polling_battery_note">Frequent checks increase battery usage and count against exchange API limits.</string>
+
+    <!-- Plan form: Sell extension -->
+    <string name="plan_form_sell_section_title">Sells (optional)</string>
+    <string name="plan_form_allow_sells_title">Enable sells for this plan</string>
+    <string name="plan_form_target_profit_label">Profit target (optional, in %1$s)</string>
+    <string name="plan_form_target_profit_supporting">Plan detail shows a progress bar toward this target.</string>
+    <string name="plan_form_target_profit_error_invalid">Enter a valid number</string>
+    <string name="plan_form_target_profit_error_positive">Target must be positive</string>
+
+    <!-- Edit plan: Disable sells dialog -->
+    <string name="edit_plan_disable_sells_dialog_title">Turn off sells?</string>
+    <string name="edit_plan_disable_sells_dialog_text">You have %1$d open sell order(s). Turning sells off will hide the sell section, but the orders remain on the exchange. You must cancel them manually on the exchange, or by turning sells back on and clicking Cancel.</string>
+    <string name="edit_plan_disable_sells_confirm">Turn off</string>
+
+    <!-- Sell Wizard -->
+    <string name="sell_wizard_title">Limit sell %1$s/%2$s</string>
+    <string name="sell_wizard_spot_price">Current price:</string>
+    <string name="sell_wizard_avg_buy">Avg buy price:</string>
+    <string name="sell_wizard_available">Available:</string>
+    <string name="sell_wizard_amount">Amount to sell</string>
+    <string name="sell_wizard_amount_all">All</string>
+    <string name="sell_wizard_limit_price">Limit price</string>
+    <string name="sell_wizard_chip_spot">Market</string>
+    <string name="sell_wizard_summary">Summary</string>
+    <string name="sell_wizard_proceeds">Proceeds:</string>
+    <string name="sell_wizard_instant_fill_warning">The sell will execute immediately. The limit price is below the current market price (%1$s %2$s). The order will fill at the highest bid on the exchange (usually close to market price minus spread). This is not an error.</string>
+    <string name="sell_wizard_far_from_market_warning">The price is far above market - the order may take a long time to fill.</string>
+    <string name="sell_wizard_proceed">Continue</string>
+    <string name="sell_wizard_confirm_title">Confirm sell</string>
+    <string name="sell_wizard_confirm_exchange">Exchange:</string>
+    <string name="sell_wizard_confirm_plan">Plan:</string>
+    <string name="sell_wizard_confirm_side">Side:</string>
+    <string name="sell_wizard_confirm_side_sell">SELL</string>
+    <string name="sell_wizard_confirm_amount">Amount:</string>
+    <string name="sell_wizard_confirm_limit_price">Limit price:</string>
+    <string name="sell_wizard_confirm_proceeds">Proceeds:</string>
+    <string name="sell_wizard_confirm_warning">This action will submit an order to %1$s and cannot be undone. The order can be cancelled later, as long as it has not been partially or fully filled.</string>
+    <string name="sell_wizard_back">Back</string>
+    <string name="sell_wizard_submit">Submit</string>
+    <string name="sell_wizard_timeout_title">Cannot verify order status</string>
+    <string name="sell_wizard_timeout_text">Connection to the exchange failed or timed out. The order may have been submitted, but cannot be confirmed. Check open orders on the exchange via web and cancel any duplicates if needed.</string>
+    <string name="sell_wizard_avg_buy_helper_auto">Auto-calculated from this plan</string>
+    <string name="sell_wizard_avg_buy_helper_manual">Manually entered</string>
+    <string name="sell_wizard_avg_buy_helper_required">No buys yet (or all sold) - enter manually</string>
+    <string name="sell_wizard_avg_buy_reset">Calc from plan</string>
+    <string name="sell_wizard_net_fiat">Net proceeds (after fee)</string>
+    <string name="sell_wizard_net_preset_label">Profit on this transaction:</string>
+    <string name="sell_wizard_summary_fee">Estimated fee</string>
+    <string name="sell_wizard_summary_net_profit">Net profit (after fee)</string>
+    <string name="sell_wizard_summary_remaining_after">After this sell</string>
+    <string name="sell_wizard_summary_target_progress">Plan target progress</string>
+    <string name="sell_wizard_loss_below_buy">Selling below buy price: %1$s %2$s loss</string>
+    <string name="sell_wizard_loss_after_fee">After fee, this is a loss: %1$s %2$s</string>
+    <string name="sell_wizard_inventory_deficit">Inventory mismatch (%1$s missing) - enter avg buy price manually</string>
+    <string name="sell_wizard_ladder_enable">Split into multiple orders</string>
+    <string name="sell_wizard_ladder_from">From</string>
+    <string name="sell_wizard_ladder_to">To</string>
+    <string name="sell_wizard_ladder_count">Number of orders</string>
+    <string name="sell_wizard_ladder_range_price">Price</string>
+    <string name="sell_wizard_ladder_range_profit">Profit %</string>
+    <string name="sell_wizard_ladder_amount_equal_crypto">Equal crypto</string>
+    <string name="sell_wizard_ladder_amount_equal_fiat">Equal fiat</string>
+    <string name="sell_wizard_ladder_preview_total">Total at full fill</string>
+    <string name="sell_wizard_ladder_outcome_all">All %1$d orders placed</string>
+    <string name="sell_wizard_ladder_outcome_partial">Placed %1$d of %2$d. Stopped: %3$s</string>
+    <string name="sell_wizard_ladder_dialog_title">Result</string>
+    <string name="sell_wizard_ladder_table_profit">Profit</string>
+    <string name="sell_wizard_ladder_table_net">Net</string>
+    <string name="open_sells_title">Open sell orders (%1$d)</string>
+    <string name="open_sells_status_partial">Partial: %1$s %% (%2$s / %3$s)</string>
+    <string name="open_sells_status_pending">Waiting for fill</string>
+    <string name="open_sells_cancel_action">Cancel order</string>
+    <string name="open_sells_cancel_confirm_title">Cancel order?</string>
+    <string name="open_sells_cancel_confirm_text">Cancel limit sell %1$s %2$s @ %3$s %4$s?</string>
+    <string name="open_sells_cancel_back">Back</string>
+    <string name="open_sells_cancel_all">Cancel all</string>
+    <string name="open_sells_cancel_all_confirm_title">Cancel all orders?</string>
+    <string name="open_sells_cancel_all_confirm_text">Cancel all %1$d open sell orders? This cannot be undone.</string>
+    <string name="sell_validation_amount_must_be_positive">Amount must be greater than 0</string>
+    <string name="sell_validation_price_must_be_positive">Limit price must be greater than 0</string>
+    <string name="sell_validation_min_order_too_low">Minimum order value is %1$s (raise amount or price)</string>
+    <string name="sell_validation_insufficient_inventory">Not enough available (available %1$s)</string>
+    <string name="sell_wizard_ladder_error_avg_required">Profit %% requires the average buy price to be set</string>
+    <string name="sell_wizard_ladder_error_amount_positive">Amount must be greater than 0</string>
+    <string name="sell_wizard_ladder_error_count_min2">Order count must be at least 2</string>
+    <string name="sell_wizard_ladder_error_to_must_exceed_from">To must be greater than From (both positive)</string>
+    <string name="sell_wizard_ladder_error_insufficient">Not enough available</string>
+    <string name="sell_wizard_ladder_error_below_min">Smallest order (%1$s %2$s) is below the minimum %3$s %2$s</string>
+    <string name="sell_wizard_amount_pct_hint">= %1$s %% of available</string>
+    <string name="sell_wizard_submit_error_unknown">Unknown error</string>
+    <string name="notification_sell_filled_title">Sell filled ✓</string>
+    <string name="notification_sell_filled_text">Sold %1$s %2$s for %3$s %4$s @&#160;%5$s %4$s</string>
 </resources>

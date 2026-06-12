@@ -11,6 +11,9 @@ import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.data.local.UserPreferences
 // TransactionStatus filtering now done in DAO query
 import com.accbot.dca.domain.usecase.CalculateChartDataUseCase
+import com.accbot.dca.domain.usecase.CancelSellOrderUseCase
+import com.accbot.dca.domain.model.Transaction
+import com.accbot.dca.data.local.toDomain
 import com.accbot.dca.domain.usecase.ChartDataPoint
 import com.accbot.dca.domain.usecase.ChartZoomLevel
 import com.accbot.dca.domain.usecase.SyncDailyPricesUseCase
@@ -22,6 +25,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -70,6 +74,7 @@ data class PortfolioUiState(
     val currentPairFiat: String? = null,
     val totalTransactions: Int = 0,
     val visibleSeries: Set<Int> = setOf(0, 1),
+    val limitLinesVisible: Boolean = false,
     val scrubbedIndex: Int? = null,
     val planLines: List<PlanLineInfo> = emptyList(),
     val visiblePlanLines: Set<Pair<Long, PlanLineType>> = emptySet(),
@@ -79,7 +84,31 @@ data class PortfolioUiState(
     val isLoading: Boolean = true,
     val isChartLoading: Boolean = false,
     val isPriceSyncing: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    /**
+     * True when the global trading master switch is on. Gates display of the
+     * sell-extension summary rows (realized P&L, net P&L) so users without the
+     * feature enabled don't see empty/zero rows.
+     */
+    val showTradingMetrics: Boolean = false,
+    /**
+     * Sum of fiat received from completed/partial SELL orders for the currently
+     * selected fiat. Null when not loaded yet, BigDecimal.ZERO when there are
+     * no realized sells.
+     */
+    val totalRealized: BigDecimal? = null,
+    /**
+     * Net P&L = currentPortfolioValue + totalRealized - totalInvested.
+     * Null when current price is unavailable (matches the existing chart-loading
+     * pattern where ROI fields are also null until prices arrive).
+     */
+    val netPnL: BigDecimal? = null,
+    /**
+     * True when the currently selected page is a [PairPage.Plan] AND the plan has
+     * `allowSells = true`. Drives visibility of the open-orders list and chart
+     * horizontal lines on the per-plan page.
+     */
+    val currentPlanAllowsSells: Boolean = false,
 )
 
 @HiltViewModel
@@ -89,7 +118,8 @@ class PortfolioViewModel @Inject constructor(
     private val dcaPlanDao: DcaPlanDao,
     private val syncDailyPricesUseCase: SyncDailyPricesUseCase,
     private val calculateChartDataUseCase: CalculateChartDataUseCase,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val cancelSellOrderUseCase: CancelSellOrderUseCase
 ) : ViewModel() {
 
     // Consumed once on first loadPortfolio() and then nulled out so a process-death
@@ -107,6 +137,28 @@ class PortfolioViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PortfolioUiState())
     val uiState: StateFlow<PortfolioUiState> = _uiState.asStateFlow()
+
+    /**
+     * Stream of open (PENDING / PARTIAL) sell-order transactions for the currently
+     * selected per-plan page. Empty when the page is Aggregate, the plan has
+     * allowSells=false, or no open sells exist. Drives both the chart's horizontal
+     * limit-price lines (Task B) and the collapsible open-orders list (Task C).
+     */
+    private val _openSells = MutableStateFlow<List<Transaction>>(emptyList())
+    val openSells: StateFlow<List<Transaction>> = _openSells.asStateFlow()
+
+    /**
+     * Convenience derived flow exposing only the sorted limit prices for the
+     * chart's horizontal lines.
+     */
+    val openSellLimitPrices: StateFlow<List<BigDecimal>> = openSells
+        .map { txs -> txs.mapNotNull { it.limitPrice } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _snackbar = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val snackbar: SharedFlow<String> = _snackbar.asSharedFlow()
+
+    private var openSellsJob: Job? = null
 
     private var completedTransactions: List<TransactionEntity> = emptyList()
     /**
@@ -145,7 +197,12 @@ class PortfolioViewModel @Inject constructor(
     private fun loadPortfolio() {
         portfolioJob?.cancel()
         portfolioJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            val tradingEnabled = userPreferences.isTradingEnabled()
+            _uiState.update { it.copy(
+                isLoading = true,
+                error = null,
+                showTradingMetrics = tradingEnabled
+            ) }
             try {
                 // Use pre-filtered, sorted query (avoids loading failed/pending into memory)
                 val completed = transactionDao.getCompletedTransactionsOrdered()
@@ -203,6 +260,7 @@ class PortfolioViewModel @Inject constructor(
                 }
 
                 updateNavigationState()
+                refreshOpenSellsForCurrentPage()
                 syncPricesAndLoadChart()
                 lastLoadedAt = System.currentTimeMillis()
             } catch (e: CancellationException) {
@@ -252,6 +310,7 @@ class PortfolioViewModel @Inject constructor(
                     )
                 }
                 updateNavigationState()
+                refreshOpenSellsForCurrentPage()
                 lastTransactionsFetchedAt = System.currentTimeMillis()
             } catch (e: CancellationException) {
                 throw e
@@ -388,6 +447,50 @@ class PortfolioViewModel @Inject constructor(
         }
         updateNavigationState()
         loadChartData()
+        refreshOpenSellsForCurrentPage()
+    }
+
+    /**
+     * (Re)subscribe to the open-sells Flow for the currently selected page.
+     * Cancels any prior subscription so we never have two collectors competing
+     * to push into [_openSells]. Aggregate pages and plans without `allowSells`
+     * yield an empty list.
+     */
+    private fun refreshOpenSellsForCurrentPage() {
+        openSellsJob?.cancel()
+        val page = _uiState.value.pages.getOrNull(_uiState.value.selectedPageIndex)
+        if (page !is PairPage.Plan) {
+            _openSells.value = emptyList()
+            _uiState.update { it.copy(currentPlanAllowsSells = false) }
+            return
+        }
+        val planEntity = cachedDbPlans.firstOrNull { it.id == page.planId }
+        val allowSells = planEntity?.allowSells == true
+        _uiState.update { it.copy(currentPlanAllowsSells = allowSells) }
+        if (!allowSells) {
+            _openSells.value = emptyList()
+            return
+        }
+        openSellsJob = viewModelScope.launch {
+            transactionDao.observeOpenSellsForPlan(page.planId).collect { entities ->
+                _openSells.value = entities.map { it.toDomain() }
+            }
+        }
+    }
+
+    /**
+     * Cancel an open limit-sell order for the currently visible plan. On failure
+     * a localized message is pushed to [snackbar] for the screen to display.
+     */
+    fun cancelSell(txId: Long) {
+        viewModelScope.launch {
+            val result = cancelSellOrderUseCase(txId)
+            if (result.isFailure) {
+                _snackbar.emit(
+                    "Zruseni orderu selhalo: ${result.exceptionOrNull()?.message ?: "neznama chyba"}"
+                )
+            }
+        }
     }
 
     fun toggleDenomination() {
@@ -410,6 +513,10 @@ class PortfolioViewModel @Inject constructor(
             val toggled = if (seriesIndex in current) current - seriesIndex else current + seriesIndex
             state.copy(visibleSeries = toggled)
         }
+    }
+
+    fun toggleLimitLinesVisibility() {
+        _uiState.update { state -> state.copy(limitLinesVisible = !state.limitLinesVisible) }
     }
 
     fun togglePlanLineVisibility(planId: Long, type: PlanLineType) {
@@ -536,7 +643,52 @@ class PortfolioViewModel @Inject constructor(
                 cryptoGroupLines = chartResult.cryptoGroupLines,
                 isChartLoading = false
             ) }
+
+            // Sell-extension: compute realized P&L from SELL transactions and net P&L
+            // (currentValue + realized - invested). Gated by the global trading switch.
+            recomputeTradingMetrics(chartResult)
         }
+    }
+
+    /**
+     * Computes [PortfolioUiState.totalRealized] and [PortfolioUiState.netPnL] for
+     * the currently selected page. Reads SELL transactions from cache instead of
+     * re-querying because they're already in [completedTransactions] (the DAO
+     * pre-filter is BUY-only, so we look at the global `db` here via DAO).
+     */
+    private suspend fun recomputeTradingMetrics(chartResult: ChartComputeResult) {
+        if (!_uiState.value.showTradingMetrics) {
+            _uiState.update { it.copy(totalRealized = null, netPnL = null) }
+            return
+        }
+        val fiat = chartResult.fiat
+        if (fiat == null) {
+            _uiState.update { it.copy(totalRealized = null, netPnL = null) }
+            return
+        }
+
+        val realized = try {
+            // Query SELL totals scoped to fiat. For per-plan pages we filter further
+            // via the page's planId; for aggregate pages we use everything in fiat.
+            val state = _uiState.value
+            val page = state.pages.getOrNull(state.selectedPageIndex)
+            val planId = (page as? PairPage.Plan)?.planId
+
+            if (planId != null) {
+                BigDecimal(transactionDao.getRealizedFiatByPlan(planId))
+            } else {
+                BigDecimal(transactionDao.getRealizedFiatByFiat(fiat))
+            }
+        } catch (_: Exception) {
+            BigDecimal.ZERO
+        }
+
+        val lastPoint = chartResult.data.lastOrNull()
+        val net = if (lastPoint != null) {
+            lastPoint.portfolioValue + realized - lastPoint.totalInvested
+        } else null
+
+        _uiState.update { it.copy(totalRealized = realized, netPnL = net) }
     }
 
     private data class ChartComputeResult(

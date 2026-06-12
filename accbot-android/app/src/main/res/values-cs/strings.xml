@@ -37,7 +37,7 @@
 
     <!-- Navigation -->
     <string name="nav_dashboard">Přehled</string>
-    <string name="nav_portfolio">Portfolio</string>
+    <string name="nav_portfolio">Pozice</string>
     <string name="nav_notifications">Oznámení</string>
     <string name="nav_settings">Nastavení</string>
 
@@ -233,6 +233,7 @@
     <string name="history_clear_all">Vymazat vše</string>
     <string name="history_filter_title">Filtrovat transakce</string>
     <string name="history_filter_crypto">Kryptoměna</string>
+    <string name="history_filter_plan">Plán</string>
     <string name="history_filter_exchange">Burza</string>
     <string name="history_filter_status">Stav</string>
     <string name="history_transactions_count">%1$d transakcí</string>
@@ -256,6 +257,16 @@
     <string name="history_filter_date_to">Do</string>
     <string name="history_search">Hledat transakce…</string>
     <string name="history_filter_date_select">Vybrat datum</string>
+    <string name="history_side_all">Vše</string>
+    <string name="history_side_buys">Nákupy</string>
+    <string name="history_side_sells">Prodeje</string>
+    <string name="history_side_pending">Čekající</string>
+    <string name="history_side_buy_label">Nákup</string>
+    <string name="history_side_sell_label">Prodej</string>
+
+    <!-- Dashboard - open sells -->
+    <string name="dashboard_open_sells_title">%1$s: %2$d otevřených prodejních příkazů</string>
+    <string name="dashboard_plan_open_sells">%1$d otevřených prodejních příkazů</string>
 
     <!-- Add Plan Screen -->
     <string name="add_plan_title">Vytvořit DCA plán</string>
@@ -313,6 +324,9 @@
     <string name="plan_details_delete_transactions_hint">Zadejte %1$d pro potvrzení</string>
     <string name="plan_details_delete_transactions_button">Smazat všechny transakce</string>
     <string name="plan_details_delete_transactions_success">%1$d transakcí smazáno</string>
+    <string name="plan_details_create_sell_order">+ Vytvořit prodejní příkaz</string>
+    <string name="plan_details_delete_blocked_title">Nelze smazat plán</string>
+    <string name="plan_details_delete_blocked_text">Tento plán má %1$d otevřených prodejních příkazů. Zruš je nejdřív, než plán smažeš.</string>
 
     <!-- Edit Plan Screen -->
     <string name="edit_plan_title">Upravit plán</string>
@@ -322,10 +336,14 @@
     <string name="edit_plan_save">Uložit změny</string>
     <string name="edit_plan_enter_wallet">Zadejte adresu vaší %1$s peněženky</string>
 
-    <!-- Portfolio Screen -->
-    <string name="portfolio_title">Portfolio</string>
+    <!-- Pozice (Positions) Screen (internally Portfolio) -->
+    <string name="portfolio_title">Pozice</string>
     <string name="portfolio_transactions">Transakce</string>
-    <string name="portfolio_loading">Načítání portfolia…</string>
+    <string name="portfolio_loading">Načítání pozic…</string>
+    <string name="portfolio_realized">Realizováno</string>
+    <string name="portfolio_net_pnl">Čistý P&amp;L</string>
+    <string name="portfolio_open_sells_section_title">Otevřené prodejní příkazy (%1$d)</string>
+    <string name="portfolio_new_sell_order">Nový prodejní příkaz</string>
 
     <!-- Performance Chart -->
     <string name="chart_all_pairs">Všechny páry</string>
@@ -360,6 +378,7 @@
     <string name="chart_accumulated_crypto">Akum. %1$s</string>
     <string name="chart_avg_buy_price">Prům. nákupní cena</string>
     <string name="chart_explore">Prozkoumat historii:</string>
+    <string name="chart_legend_limit_sell">Limitní prodej</string>
 
     <!-- Exchange Management Screen -->
     <string name="exchanges_title">Burzy</string>
@@ -428,9 +447,17 @@
     <string name="transaction_details_copied">Zkopírováno do schránky</string>
     <string name="transaction_status_completed">Dokončeno</string>
     <string name="transaction_status_failed">Selhalo</string>
+    <string name="transaction_status_cancelled">Zrušeno</string>
     <string name="transaction_status_pending">Čekající</string>
     <string name="transaction_status_partial">Částečně vyplněno</string>
     <string name="transaction_details_at">v</string>
+    <string name="transaction_details_sell_section">Prodejní příkaz</string>
+    <string name="transaction_details_limit_price">Limitní cena</string>
+    <string name="transaction_details_filled">Vyplněno</string>
+    <string name="transaction_details_avg_fill_price">Průměrná cena plnění</string>
+    <string name="transaction_details_cancel_order">Zrušit příkaz</string>
+    <string name="transaction_details_cancel_confirm_title">Zrušit příkaz?</string>
+    <string name="transaction_details_cancel_confirm_text">Opravdu zrušit limitní prodej?</string>
 
     <!-- Credentials Input -->
     <string name="credentials_client_id">Client ID</string>
@@ -585,6 +612,7 @@
     <string name="notification_dca_failed">DCA selhalo</string>
     <string name="notification_dca_failed_text">Nepodařilo se nakoupit %1$s: %2$s</string>
     <string name="notification_dca_error">DCA chyba</string>
+    <string name="notification_runaway_disabled">Plán pozastaven: zjištěno neobvykle mnoho nákupů. Zkontroluj účet a po vyřešení plán znovu zapni.</string>
     <string name="notification_low_balance_title">Nízký zůstatek na %1$s</string>
     <string name="notification_low_balance_text">%1$s %2$s zbývá pro DCA</string>
     <string name="notification_low_balance_less_1_day">&lt; 1 den</string>
@@ -926,4 +954,107 @@
 
     <!-- Accessibility -->
     <string name="a11y_retry">Opakovat</string>
+
+    <!-- Settings: Pokrocile (Rozsireni prodeju) -->
+    <string name="settings_advanced">POKROČILÉ</string>
+    <string name="settings_trading_enabled_title">Povolit prodeje</string>
+    <string name="settings_trading_enabled_subtitle">Umožní u vybraných plánů zadávat limitní prodejní příkazy a sledovat P&amp;L.</string>
+    <string name="settings_sell_polling_title">Kontrolovat prodejní příkazy na pozadí</string>
+    <string name="settings_sell_polling_subtitle">Periodická kontrola stavu příkazů. Zvyšuje spotřebu baterie.</string>
+    <string name="settings_sell_polling_frequency">Frekvence</string>
+    <string name="settings_sell_polling_cron_label">Vlastní plán (CRON)</string>
+    <string name="settings_sell_polling_cron_hint">např. 0 *\/2 * * *</string>
+    <string name="settings_sell_polling_battery_note">Časté kontroly zvyšují spotřebu baterie a počítají se do API limitů burzy.</string>
+
+    <!-- Plan formulář: Rozšíření prodejů -->
+    <string name="plan_form_sell_section_title">Prodeje (volitelné)</string>
+    <string name="plan_form_allow_sells_title">Povolit prodeje pro tento plán</string>
+    <string name="plan_form_target_profit_label">Cíl zisku (volitelné, v %1$s)</string>
+    <string name="plan_form_target_profit_supporting">Detail plánu zobrazí progress bar k tomuto cíli.</string>
+    <string name="plan_form_target_profit_error_invalid">Zadej platné číslo</string>
+    <string name="plan_form_target_profit_error_positive">Cíl musí být kladný</string>
+
+    <!-- Edit plán: Dialog vypnutí prodejů -->
+    <string name="edit_plan_disable_sells_dialog_title">Vypnout prodeje?</string>
+    <string name="edit_plan_disable_sells_dialog_text">Máš %1$d otevřených prodejních příkazů. Vypnutím prodejů se skryje sekce prodejů, ale příkazy na burze zůstávají. Musíš je zrušit ručně přes burzu, nebo zapnutím prodejů a zrušením příkazů.</string>
+    <string name="edit_plan_disable_sells_confirm">Vypnout</string>
+
+    <!-- Sell Wizard -->
+    <string name="sell_wizard_title">Limitní prodej %1$s/%2$s</string>
+    <string name="sell_wizard_spot_price">Aktuální cena:</string>
+    <string name="sell_wizard_avg_buy">Průměrný nákup:</string>
+    <string name="sell_wizard_available">K dispozici:</string>
+    <string name="sell_wizard_amount">Množství k prodeji</string>
+    <string name="sell_wizard_amount_all">Vše</string>
+    <string name="sell_wizard_limit_price">Limitní cena</string>
+    <string name="sell_wizard_chip_spot">Tržní</string>
+    <string name="sell_wizard_summary">Souhrn</string>
+    <string name="sell_wizard_proceeds">Získáte:</string>
+    <string name="sell_wizard_instant_fill_warning">Prodej proběhne okamžitě. Limitní cena je pod aktuální tržní (%1$s %2$s). Příkaz se vyplní ihned za nejvyšší nabídku na burze (obvykle blízko tržní ceny minus spread). Není to chyba.</string>
+    <string name="sell_wizard_far_from_market_warning">Cena je vysoko nad trhem - prodej se nemusí vyplnit dlouho.</string>
+    <string name="sell_wizard_proceed">Pokračovat</string>
+    <string name="sell_wizard_confirm_title">Potvrdit prodej</string>
+    <string name="sell_wizard_confirm_exchange">Burza:</string>
+    <string name="sell_wizard_confirm_plan">Plán:</string>
+    <string name="sell_wizard_confirm_side">Směr:</string>
+    <string name="sell_wizard_confirm_side_sell">PRODEJ</string>
+    <string name="sell_wizard_confirm_amount">Množství:</string>
+    <string name="sell_wizard_confirm_limit_price">Limitní cena:</string>
+    <string name="sell_wizard_confirm_proceeds">Získáte:</string>
+    <string name="sell_wizard_confirm_warning">Tato akce odešle příkaz na %1$s a nelze ji vrátit. Příkaz lze poté zrušit, dokud není částečně nebo celý vyplněn.</string>
+    <string name="sell_wizard_back">Zpět</string>
+    <string name="sell_wizard_submit">Odeslat</string>
+    <string name="sell_wizard_timeout_title">Nelze ověřit stav příkazu</string>
+    <string name="sell_wizard_timeout_text">Spojení s burzou selhalo nebo vypršelo. Příkaz mohl být odeslán, ale nelze to potvrdit. Zkontroluj otevřené příkazy na burze přes web a v případě potřeby zruš duplicitu.</string>
+    <string name="sell_wizard_avg_buy_helper_auto">Spočítáno z plánu</string>
+    <string name="sell_wizard_avg_buy_helper_manual">Zadáno ručně</string>
+    <string name="sell_wizard_avg_buy_helper_required">Zatím žádné nákupy (nebo vše prodáno) - zadej ručně</string>
+    <string name="sell_wizard_avg_buy_reset">Spočítat z plánu</string>
+    <string name="sell_wizard_net_fiat">Čistý výnos (po fee)</string>
+    <string name="sell_wizard_net_preset_label">Zisk z této transakce:</string>
+    <string name="sell_wizard_summary_fee">Odhad fee</string>
+    <string name="sell_wizard_summary_net_profit">Čistý zisk (po fee)</string>
+    <string name="sell_wizard_summary_remaining_after">Po tomto prodeji</string>
+    <string name="sell_wizard_summary_target_progress">Postup k cíli plánu</string>
+    <string name="sell_wizard_loss_below_buy">Prodáváš pod nákupní cenou: ztráta %1$s %2$s</string>
+    <string name="sell_wizard_loss_after_fee">Po fee jdeš do ztráty: %1$s %2$s</string>
+    <string name="sell_wizard_inventory_deficit">Inventář nesedí (chybí %1$s) - zadej průměrnou nákupní cenu ručně</string>
+    <string name="sell_wizard_ladder_enable">Rozdělit na více příkazů</string>
+    <string name="sell_wizard_ladder_from">Od</string>
+    <string name="sell_wizard_ladder_to">Do</string>
+    <string name="sell_wizard_ladder_count">Počet příkazů</string>
+    <string name="sell_wizard_ladder_range_price">Cena</string>
+    <string name="sell_wizard_ladder_range_profit">Zisk %</string>
+    <string name="sell_wizard_ladder_amount_equal_crypto">Stejné množství</string>
+    <string name="sell_wizard_ladder_amount_equal_fiat">Stejný výnos</string>
+    <string name="sell_wizard_ladder_preview_total">Celkem při plném vyplnění</string>
+    <string name="sell_wizard_ladder_outcome_all">Vytvořeno všech %1$d příkazů</string>
+    <string name="sell_wizard_ladder_outcome_partial">Vytvořeno %1$d z %2$d příkazů. Zastaveno: %3$s</string>
+    <string name="sell_wizard_ladder_dialog_title">Výsledek</string>
+    <string name="sell_wizard_ladder_table_profit">Zisk</string>
+    <string name="sell_wizard_ladder_table_net">Výnos</string>
+    <string name="open_sells_title">Otevřené prodejní příkazy (%1$d)</string>
+    <string name="open_sells_status_partial">Částečně: %1$s %% (%2$s / %3$s)</string>
+    <string name="open_sells_status_pending">Čeká na vyplnění</string>
+    <string name="open_sells_cancel_action">Zrušit příkaz</string>
+    <string name="open_sells_cancel_confirm_title">Zrušit příkaz?</string>
+    <string name="open_sells_cancel_confirm_text">Opravdu zrušit limitní prodej %1$s %2$s @ %3$s %4$s?</string>
+    <string name="open_sells_cancel_back">Zpět</string>
+    <string name="open_sells_cancel_all">Zrušit vše</string>
+    <string name="open_sells_cancel_all_confirm_title">Zrušit všechny příkazy?</string>
+    <string name="open_sells_cancel_all_confirm_text">Opravdu zrušit všechny otevřené prodejní příkazy (%1$d)? Akci nelze vrátit.</string>
+    <string name="sell_validation_amount_must_be_positive">Množství musí být větší než 0</string>
+    <string name="sell_validation_price_must_be_positive">Limitní cena musí být větší než 0</string>
+    <string name="sell_validation_min_order_too_low">Minimální hodnota orderu je %1$s (zvyš množství nebo cenu)</string>
+    <string name="sell_validation_insufficient_inventory">Nemáš tolik k dispozici (k dispozici %1$s)</string>
+    <string name="sell_wizard_ladder_error_avg_required">Pro profit %% musí být zadaná průměrná nákupní cena</string>
+    <string name="sell_wizard_ladder_error_amount_positive">Množství musí být větší než 0</string>
+    <string name="sell_wizard_ladder_error_count_min2">Počet orderů musí být alespoň 2</string>
+    <string name="sell_wizard_ladder_error_to_must_exceed_from">Do musí být větší než Od (oba kladné)</string>
+    <string name="sell_wizard_ladder_error_insufficient">Nemáš tolik k dispozici</string>
+    <string name="sell_wizard_ladder_error_below_min">Hodnota nejmenšího orderu (%1$s %2$s) je pod minimem %3$s %2$s</string>
+    <string name="sell_wizard_amount_pct_hint">= %1$s %% z dostupných</string>
+    <string name="sell_wizard_submit_error_unknown">Neznámá chyba</string>
+    <string name="notification_sell_filled_title">Prodej proveden ✓</string>
+    <string name="notification_sell_filled_text">Prodáno %1$s %2$s za %3$s %4$s @&#160;%5$s %4$s</string>
 </resources>

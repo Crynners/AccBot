@@ -88,7 +88,11 @@ data class BackupPlan(
     @SerializedName("nextExecutionAt") val nextExecutionAt: Long? = null,
     @SerializedName("targetAmount") val targetAmount: String? = null,  // BigDecimal.toPlainString()
     /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
-    @SerializedName("connectionId") val connectionId: Long? = null
+    @SerializedName("connectionId") val connectionId: Long? = null,
+    /** v3+: sell extension - opt-in per-plan. */
+    @SerializedName("allowSells") val allowSells: Boolean = false,
+    /** v3+: sell extension - optional profit target (BigDecimal.toPlainString). */
+    @SerializedName("targetProfitAmount") val targetProfitAmount: String? = null
 )
 
 /**
@@ -142,7 +146,13 @@ data class BackupTransaction(
     @SerializedName("warningMessage") val warningMessage: String? = null,
     @SerializedName("executedAt") val executedAt: Long = 0,
     /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
-    @SerializedName("connectionId") val connectionId: Long? = null
+    @SerializedName("connectionId") val connectionId: Long? = null,
+    /** v3+: sell extension - BUY or SELL. Default BUY for legacy transactions. */
+    @SerializedName("side") val side: String = "BUY",
+    /** v3+: sell extension - limit price for SELL orders. */
+    @SerializedName("limitPrice") val limitPrice: String? = null,
+    /** v3+: sell extension - original requested crypto amount for SELL orders. */
+    @SerializedName("requestedCryptoAmount") val requestedCryptoAmount: String? = null
 )
 
 /**

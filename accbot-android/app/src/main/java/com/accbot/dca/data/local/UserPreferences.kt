@@ -2,6 +2,7 @@ package com.accbot.dca.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.accbot.dca.domain.model.DcaFrequency
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -226,6 +227,87 @@ class UserPreferences @Inject constructor(
         prefs.edit().putString(KEY_PORTFOLIO_SELECTED_PAGE, pageId).apply()
     }
 
+    // ==================== Trading (Sell Extension) ====================
+
+    /**
+     * Master trading switch. When false, all sell-order flows (take-profit,
+     * trailing, manual limit-sell) are disabled regardless of per-plan settings.
+     * Defaults to false so upgrading users must explicitly opt in.
+     */
+    fun isTradingEnabled(): Boolean {
+        return prefs.getBoolean(KEY_TRADING_ENABLED, false)
+    }
+
+    fun setTradingEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_TRADING_ENABLED, enabled).apply()
+    }
+
+    // ==================== Sell Polling ====================
+
+    /**
+     * Whether the background [SellPollingWorker] is enabled.
+     * Independent from [isTradingEnabled] so users can keep polling on for
+     * historical fills even after disabling new sell orders, and off by default.
+     */
+    fun isPeriodicSellPollingEnabled(): Boolean {
+        return prefs.getBoolean(KEY_SELL_POLLING_ENABLED, false)
+    }
+
+    /**
+     * Polling frequency. For CUSTOM, [getSellPollingCronExpression] provides
+     * the cron string. Falls back to HOURLY if the stored enum name can't be
+     * parsed (e.g. after downgrading from a build that added a new frequency).
+     */
+    fun getSellPollingFrequency(): DcaFrequency {
+        val name = prefs.getString(KEY_SELL_POLLING_FREQUENCY, DcaFrequency.HOURLY.name)
+            ?: return DcaFrequency.HOURLY
+        return try {
+            DcaFrequency.valueOf(name)
+        } catch (e: IllegalArgumentException) {
+            DcaFrequency.HOURLY
+        }
+    }
+
+    /**
+     * Cron expression used when [getSellPollingFrequency] returns CUSTOM.
+     * Null for preset frequencies.
+     */
+    fun getSellPollingCronExpression(): String? {
+        return prefs.getString(KEY_SELL_POLLING_CRON, null)
+    }
+
+    /**
+     * Serialized visual schedule builder state (JSON). Null for preset frequencies.
+     * The worker ignores this - it's only used by the UI to re-hydrate the
+     * schedule picker without having to reverse-engineer the cron string.
+     */
+    fun getSellPollingScheduleConfig(): String? {
+        return prefs.getString(KEY_SELL_POLLING_SCHEDULE_CONFIG, null)
+    }
+
+    /**
+     * Update all sell-polling settings in one edit so readers never see a
+     * half-applied state (e.g. CUSTOM frequency with a stale cron from a
+     * previous save).
+     */
+    fun setPeriodicSellPolling(
+        enabled: Boolean,
+        frequency: DcaFrequency,
+        cron: String?,
+        scheduleConfig: String?
+    ) {
+        prefs.edit()
+            .putBoolean(KEY_SELL_POLLING_ENABLED, enabled)
+            .putString(KEY_SELL_POLLING_FREQUENCY, frequency.name)
+            .apply {
+                if (cron != null) putString(KEY_SELL_POLLING_CRON, cron)
+                else remove(KEY_SELL_POLLING_CRON)
+                if (scheduleConfig != null) putString(KEY_SELL_POLLING_SCHEDULE_CONFIG, scheduleConfig)
+                else remove(KEY_SELL_POLLING_SCHEDULE_CONFIG)
+            }
+            .apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "accbot_user_prefs"
         private const val KEY_APP_THEME = "app_theme"
@@ -242,5 +324,10 @@ class UserPreferences @Inject constructor(
         private const val KEY_MARKET_PULSE_EXPANDED = "market_pulse_expanded"
         private const val KEY_EXPERIMENTAL_EXCHANGES = "experimental_exchanges_enabled"
         private const val KEY_PORTFOLIO_SELECTED_PAGE = "portfolio_selected_page"
+        private const val KEY_TRADING_ENABLED = "trading_enabled"
+        private const val KEY_SELL_POLLING_ENABLED = "sell_polling_enabled"
+        private const val KEY_SELL_POLLING_FREQUENCY = "sell_polling_frequency"
+        private const val KEY_SELL_POLLING_CRON = "sell_polling_cron"
+        private const val KEY_SELL_POLLING_SCHEDULE_CONFIG = "sell_polling_schedule_config"
     }
 }

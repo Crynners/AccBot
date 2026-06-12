@@ -12,9 +12,13 @@ import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.DcaResult
 import com.accbot.dca.domain.model.DcaStrategy
+import com.accbot.dca.domain.model.Transaction
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.util.CronUtils
+import com.accbot.dca.domain.usecase.BuySafetyPolicy
 import com.accbot.dca.domain.usecase.CalculateStrategyMultiplierUseCase
+import com.accbot.dca.domain.usecase.ReconcileRecentBuyUseCase
+import com.accbot.dca.domain.usecase.ReconcileResult
 import com.accbot.dca.domain.usecase.ResolvePendingTransactionsUseCase
 import com.accbot.dca.exchange.ExchangeApi
 import com.accbot.dca.exchange.ExchangeApiFactory
@@ -62,8 +66,19 @@ class DcaWorker @AssistedInject constructor(
             Log.w(TAG, "Failed to resolve pending transactions", e)
         }
 
+        // Catch-up progress is persisted in missedPurchaseCount so that a replayed worker
+        // (process death mid-loop -> WorkManager re-runs the whole request) resumes where
+        // it left off instead of re-buying already-covered slots from iteration 1.
+        val isCatchUp = forceRun && forcePlanId > 0 && repeatCount > 1
+        val totalIterations = if (isCatchUp) {
+            val remaining = database.dcaPlanDao().getPlanById(forcePlanId)?.missedPurchaseCount ?: 0
+            minOf(repeatCount, remaining)
+        } else {
+            repeatCount
+        }
+
         try {
-            for (iteration in 1..repeatCount) {
+            for (iteration in 1..totalIterations) {
             if (iteration > 1) {
                 Log.d(TAG, "Repeat iteration $iteration/$repeatCount")
                 kotlinx.coroutines.delay(3_000L) // brief pause between missed purchases
@@ -195,6 +210,32 @@ class DcaWorker @AssistedInject constructor(
                     continue
                 }
 
+                // Circuit breaker: if this plan has already bought far more than its schedule
+                // allows in the last 24h, something is wrong - auto-disable instead of continuing
+                // to spend. Counts reconciled buys too, so it reflects real exchange spend.
+                // Forced runs (run-now / catch-up) are user-initiated and may legitimately
+                // exceed the schedule, so they get a wider allowance (+repeatCount) instead
+                // of bypassing the breaker - a replayed or duplicated force run must still
+                // be bounded.
+                val buysLast24h = database.transactionDao()
+                    .countCompletedBuysSinceSync(plan.id, now.minus(Duration.ofHours(24)))
+                val expectedPerDay = BuySafetyPolicy.expectedBuysPerDay(effectiveIntervalMinutes(plan))
+                val allowedPerDay = if (forceRun) expectedPerDay + repeatCount else expectedPerDay
+                if (BuySafetyPolicy.isRunaway(buysLast24h, allowedPerDay)) {
+                    Log.e(TAG, "Plan ${plan.id} runaway detected ($buysLast24h buys/24h, allowed ~$allowedPerDay) - auto-disabling")
+                    database.dcaPlanDao().setEnabled(plan.id, false)
+                    notificationService.showErrorNotification(
+                        planId = plan.id,
+                        exchange = plan.exchange,
+                        connectionId = plan.connectionId,
+                        templateArgs = NotificationTemplateArgs.Error(
+                            crypto = plan.crypto,
+                            errorMessage = context.getString(R.string.notification_runaway_disabled)
+                        )
+                    )
+                    continue
+                }
+
                 // Atomically claim the plan to prevent double-purchase from concurrent workers.
                 // claimPlanForExecutionSync advances nextExecutionAt only if it's still in the past
                 // (or null), returning 0 if another worker already claimed it.
@@ -208,17 +249,26 @@ class DcaWorker @AssistedInject constructor(
                     Log.d(TAG, "Plan ${plan.id} claimed for execution, nextExecution advanced to $nextExec")
                 }
 
-                // Execute DCA purchase with immediate retry
+                // Execute DCA purchase. A market buy is NOT idempotent: the order may be placed
+                // server-side even when the client sees a timeout/network error. So before EVER
+                // re-issuing a buy, reconcile against the exchange to see whether the order
+                // actually went through - this prevents the runaway duplicate-spend bug.
                 val api = exchangeApiFactory.create(credentials)
+                val reconcileRecentBuy = ReconcileRecentBuyUseCase(database.transactionDao())
+                val attemptStart = Instant.now()
                 val maxAttempts = 3
                 val retryDelayMs = 2_000L
                 val failedAttemptMessages = mutableListOf<String>()
                 var finalResult: DcaResult? = null
+                var reconcileUncertain = false
 
-                for (attempt in 1..maxAttempts) {
-                    val attemptResult = withTimeoutOrNull(30_000L) {
+                attemptLoop@ for (attempt in 1..maxAttempts) {
+                    // Kept strictly ABOVE OkHttp's callTimeout (30s) so this coroutine
+                    // timeout only fires after OkHttp has already aborted the request -
+                    // reconciliation must never run while the order POST is still in flight.
+                    val attemptResult = withTimeoutOrNull(45_000L) {
                         api.marketBuy(plan.crypto, plan.fiat, purchaseAmount)
-                    } ?: DcaResult.Error("API call timed out after 30s", retryable = true)
+                    } ?: DcaResult.Error("API call timed out after 45s", retryable = true)
 
                     if (attemptResult is DcaResult.Success) {
                         finalResult = attemptResult
@@ -228,6 +278,46 @@ class DcaWorker @AssistedInject constructor(
                     val error = attemptResult as DcaResult.Error
                     failedAttemptMessages.add("Attempt $attempt: ${error.message}")
                     Log.w(TAG, "Plan ${plan.id} attempt $attempt/$maxAttempts failed: ${error.message}")
+
+                    if (!error.retryable) {
+                        // Business error (e.g. insufficient balance) - no order placed, don't retry.
+                        finalResult = error
+                        break
+                    }
+
+                    // Ambiguous failure - did the order actually go through on the exchange?
+                    when (val rec = reconcileRecentBuy(api, plan, attemptStart, purchaseAmount)) {
+                        is ReconcileResult.Found -> {
+                            Log.w(TAG, "Plan ${plan.id} buy timed out client-side but order ${rec.trade.orderId} exists on exchange - recording, not retrying")
+                            finalResult = DcaResult.Success(
+                                Transaction(
+                                    planId = plan.id,
+                                    exchange = plan.exchange,
+                                    crypto = plan.crypto,
+                                    fiat = plan.fiat,
+                                    fiatAmount = rec.trade.fiatAmount,
+                                    cryptoAmount = rec.trade.cryptoAmount,
+                                    price = rec.trade.price,
+                                    fee = rec.trade.fee,
+                                    feeAsset = rec.trade.feeAsset,
+                                    status = TransactionStatus.COMPLETED,
+                                    exchangeOrderId = rec.trade.orderId,
+                                    executedAt = rec.trade.timestamp
+                                )
+                            )
+                            break@attemptLoop
+                        }
+                        ReconcileResult.Unknown -> {
+                            // We don't know whether an order was placed - NEVER retry on uncertainty.
+                            Log.w(TAG, "Plan ${plan.id} buy failed and reconciliation inconclusive - not retrying")
+                            reconcileUncertain = true
+                            finalResult = error
+                            break@attemptLoop
+                        }
+                        ReconcileResult.NotFound -> {
+                            // Confirmed: no order exists. Safe to retry.
+                        }
+                    }
 
                     if (attempt < maxAttempts) {
                         kotlinx.coroutines.delay(retryDelayMs)
@@ -331,28 +421,51 @@ class DcaWorker @AssistedInject constructor(
 
                     is DcaResult.Error -> {
                         if (finalResult.retryable) {
-                            // Network error – retry in 5 min and notify user.
-                            // Override the claimed nextExecutionAt with an earlier retry time.
+                            // We only reach here when reconciliation confirmed NO order exists
+                            // (safe) or was inconclusive (uncertain). Bound how often we re-issue
+                            // a market buy so a degraded network can never drain the account.
                             try {
-                                val retryTime = now.plus(Duration.ofMinutes(5))
-                                database.runInTransaction {
-                                    database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, retryTime)
-                                    database.dcaPlanDao().incrementNetworkRetrySync(plan.id, retryTime, nextExecution ?: now)
-                                }
-                                Log.w(TAG, "Network error for plan ${plan.id}, will retry at $retryTime: ${finalResult.message}")
-
-                                // Only notify on first failure, not on subsequent retries
-                                if (plan.networkRetryCount == 0) {
-                                    notificationService.showNetworkRetryNotification(
-                                        crypto = plan.crypto,
-                                        exchangeName = plan.exchange.displayName,
-                                        errorMessage = finalResult.message,
-                                        nextRetryAt = retryTime,
-                                        attemptCount = 1,
+                                val capReached = !BuySafetyPolicy.shouldRetryAfterConfirmedFailure(plan.networkRetryCount)
+                                if (reconcileUncertain || capReached) {
+                                    // Stop hammering: advance to the next normal slot and reset.
+                                    // A later run / trade-history import records the order if it
+                                    // actually went through.
+                                    database.runInTransaction {
+                                        database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, calculateNextExecution(plan, now))
+                                        database.dcaPlanDao().resetNetworkRetrySync(plan.id)
+                                    }
+                                    Log.w(TAG, "Plan ${plan.id} giving up this slot (uncertain=$reconcileUncertain, capReached=$capReached): ${finalResult.message}")
+                                    notificationService.showErrorNotification(
                                         planId = plan.id,
                                         exchange = plan.exchange,
-                                        connectionId = plan.connectionId
+                                        connectionId = plan.connectionId,
+                                        templateArgs = NotificationTemplateArgs.Error(
+                                            crypto = plan.crypto,
+                                            errorMessage = finalResult.message
+                                        )
                                     )
+                                } else {
+                                    // Confirmed-failed network buy under the retry cap: retry in 5 min.
+                                    val retryTime = now.plus(Duration.ofMinutes(5))
+                                    database.runInTransaction {
+                                        database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, retryTime)
+                                        database.dcaPlanDao().incrementNetworkRetrySync(plan.id, retryTime, nextExecution ?: now)
+                                    }
+                                    Log.w(TAG, "Network error for plan ${plan.id}, will retry at $retryTime: ${finalResult.message}")
+
+                                    // Only notify on first failure, not on subsequent retries
+                                    if (plan.networkRetryCount == 0) {
+                                        notificationService.showNetworkRetryNotification(
+                                            crypto = plan.crypto,
+                                            exchangeName = plan.exchange.displayName,
+                                            errorMessage = finalResult.message,
+                                            nextRetryAt = retryTime,
+                                            attemptCount = 1,
+                                            planId = plan.id,
+                                            exchange = plan.exchange,
+                                            connectionId = plan.connectionId
+                                        )
+                                    }
                                 }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to update retry time for plan ${plan.id}", e)
@@ -408,18 +521,34 @@ class DcaWorker @AssistedInject constructor(
                     }
                 }
             }
+
+            // Consume one persisted catch-up slot per finished iteration (see isCatchUp
+            // above) so a replayed worker continues instead of starting over.
+            if (isCatchUp) {
+                database.dcaPlanDao().decrementMissedPurchaseCount(forcePlanId)
+            }
             } // repeat loop
 
             // Re-arm alarm for next execution (self-perpetuating chain)
             DcaAlarmScheduler.scheduleNextAlarm(context)
 
             return Result.success()
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            // Worker was cancelled (e.g. system reclaimed it mid-run). This is not an error -
+            // don't show a scary "Job was cancelled" notification. Let WorkManager reschedule.
+            Log.d(TAG, "DcaWorker cancelled", ce)
+            try { DcaAlarmScheduler.scheduleNextAlarm(context) } catch (_: Exception) {}
+            throw ce
         } catch (e: Exception) {
             Log.e(TAG, "DcaWorker error", e)
             notificationService.showErrorNotification(context.getString(R.string.notification_dca_error), e.message ?: "Unknown error")
             // Still try to re-arm alarm even on error
             try { DcaAlarmScheduler.scheduleNextAlarm(context) } catch (_: Exception) {}
-            return Result.retry()
+            // Forced runs bypass the per-plan claim and due-time guards, so an automatic
+            // WorkManager retry could re-buy plans that already bought in this run. They
+            // are user-initiated - fail instead; the user sees the error notification
+            // and can trigger the run again.
+            return if (forceRun) Result.failure() else Result.retry()
         }
     }
 
@@ -449,6 +578,14 @@ class DcaWorker @AssistedInject constructor(
             now.plus(Duration.ofMinutes(plan.frequency.intervalMinutes))
         }
     }
+
+    /** Best-effort minutes between executions, used by the runaway circuit breaker. */
+    private fun effectiveIntervalMinutes(plan: DcaPlanEntity): Long =
+        if (plan.cronExpression != null) {
+            CronUtils.getIntervalMinutesEstimate(plan.cronExpression) ?: 1440L
+        } else {
+            plan.frequency.intervalMinutes
+        }
 
     private suspend fun checkWithdrawalThreshold(plan: DcaPlanEntity, api: ExchangeApi) {
         try {
@@ -499,6 +636,14 @@ class DcaWorker @AssistedInject constructor(
         private const val KEY_PLAN_ID = "planId"
         private const val KEY_REPEAT_COUNT = "repeatCount"
         const val WORK_NAME = "dca_periodic_work"
+
+        /**
+         * Single unique-work queue for ALL user-initiated (forceRun) executions.
+         * Forced runs bypass the per-plan claim, so they must never run concurrently -
+         * APPEND_OR_REPLACE serializes them one after another (and replaces a failed
+         * chain instead of blocking future runs).
+         */
+        private const val FORCE_WORK_NAME = "dca_force_work"
 
         /**
          * Plan IDs we've already shown a "missing credentials" notification for in
@@ -558,7 +703,7 @@ class DcaWorker @AssistedInject constructor(
                 .build()
 
             WorkManager.getInstance(context)
-                .enqueue(oneTimeWorkRequest)
+                .enqueueUniqueWork(FORCE_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, oneTimeWorkRequest)
 
             Log.d(TAG, "DCA one-time work enqueued (forceRun=true)")
         }
@@ -582,7 +727,7 @@ class DcaWorker @AssistedInject constructor(
                 .build()
 
             WorkManager.getInstance(context)
-                .enqueue(oneTimeWorkRequest)
+                .enqueueUniqueWork(FORCE_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, oneTimeWorkRequest)
 
             Log.d(TAG, "DCA one-time work enqueued for plan $planId (forceRun=true)")
         }
@@ -607,7 +752,7 @@ class DcaWorker @AssistedInject constructor(
                 .build()
 
             WorkManager.getInstance(context)
-                .enqueue(oneTimeWorkRequest)
+                .enqueueUniqueWork(FORCE_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, oneTimeWorkRequest)
 
             Log.d(TAG, "Missed purchases enqueued for plan $planId (count=$count)")
         }
@@ -635,7 +780,10 @@ class DcaWorker @AssistedInject constructor(
                 .build()
 
             WorkManager.getInstance(context)
-                .enqueueUniqueWork(ALARM_WORK_NAME, ExistingWorkPolicy.REPLACE, oneTimeWorkRequest)
+                // KEEP, never REPLACE: a re-fired alarm must not cancel a worker that may
+                // be mid-buy - REPLACE could abort it after the order POST was sent,
+                // leaving a real order unrecorded (invisible to the runaway breaker).
+                .enqueueUniqueWork(ALARM_WORK_NAME, ExistingWorkPolicy.KEEP, oneTimeWorkRequest)
 
             Log.d(TAG, "DCA alarm-triggered work enqueued (unique=$ALARM_WORK_NAME)")
         }

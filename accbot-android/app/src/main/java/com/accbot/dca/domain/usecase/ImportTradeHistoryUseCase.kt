@@ -1,5 +1,6 @@
 package com.accbot.dca.domain.usecase
 
+import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.domain.model.Exchange
@@ -25,7 +26,8 @@ sealed class ApiImportProgress {
 }
 
 class ImportTradeHistoryUseCase @Inject constructor(
-    private val transactionDao: TransactionDao
+    private val transactionDao: TransactionDao,
+    private val dcaPlanDao: DcaPlanDao
 ) {
     fun importFromApi(
         api: ExchangeApi,
@@ -90,11 +92,21 @@ class ImportTradeHistoryUseCase @Inject constructor(
 
             emit(ApiImportProgress.Importing(newTrades.size))
 
+            // Resolve the plan's connectionId so imported rows are attributed to the right
+            // account. Leaving it null breaks per-connection aggregation and backup-restore
+            // dedup (which keys on (orderId, connectionId)). Use the suspend DAO variant -
+            // the flow runs on the caller's (main) thread and a blocking Room query there
+            // throws "cannot access database on the main thread".
+            // Mirror MIGRATION_21_22: only attribute a real connection (> 0); leave null
+            // for plans without one, so fresh imports and the backfill stay consistent.
+            val connectionId = dcaPlanDao.getPlanById(planId)?.connectionId?.takeIf { it > 0 }
+
             // Map to TransactionEntity and batch insert
             val entities = newTrades.map { trade ->
                 TransactionEntity(
                     planId = planId,
                     exchange = exchange,
+                    connectionId = connectionId,
                     crypto = trade.crypto,
                     fiat = trade.fiat,
                     fiatAmount = trade.fiatAmount,

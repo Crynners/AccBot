@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -57,8 +58,15 @@ import java.time.format.DateTimeFormatter
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberShowOnPress
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
+import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
+import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.core.cartesian.marker.CartesianMarkerController
+import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
+import com.patrykandpatrick.vico.core.common.shape.DashedShape
+import com.patrykandpatrick.vico.core.common.shape.Shape
+import androidx.compose.ui.graphics.toArgb
 
 private val chartAccentColor = Primary
 private val costBasisColor = Color(0xFF888888)
@@ -151,6 +159,50 @@ fun InteractiveChartLegend(
     }
 }
 
+/**
+ * Static (non-interactive) legend entry describing the dashed red horizontal lines
+ * that mark open sell-order limit prices on the per-plan chart. Shown only when
+ * the chart actually renders such lines (i.e. plan allows sells, FIAT mode, and
+ * at least one open sell exists). Mirrors the dashed look used on the chart with
+ * a tiny dashed mini-line as the colour swatch.
+ */
+@Composable
+fun LimitOrderLegendItem(
+    label: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit = {},
+) {
+    val baseColor = MaterialTheme.colorScheme.error
+    val swatchColor = if (enabled) baseColor else baseColor.copy(alpha = 0.3f)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(4.dp)
+    ) {
+        // Mini dashed line: 3 short segments to evoke the chart's dash pattern.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            repeat(3) { i ->
+                if (i > 0) Spacer(Modifier.width(2.dp))
+                Box(
+                    Modifier
+                        .size(width = 4.dp, height = 2.dp)
+                        .background(swatchColor)
+                )
+            }
+        }
+        Spacer(Modifier.width(6.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+            textDecoration = if (enabled) null else TextDecoration.LineThrough
+        )
+    }
+}
+
 @Composable
 private fun LegendItem(color: Color, label: String, enabled: Boolean = true, onClick: () -> Unit = {}) {
     Row(
@@ -196,6 +248,13 @@ fun PortfolioLineChart(
     visibleCryptoGroupLines: Set<Pair<String, CryptoGroupLineType>> = emptySet(),
     zoomLevel: ChartZoomLevel = ChartZoomLevel.Overview,
     onScrub: (Int?) -> Unit = {},
+    /**
+     * Limit prices of currently open (PENDING / PARTIAL) sell orders for the
+     * displayed plan. Each value yields a horizontal line on the left (fiat) axis
+     * to give the user a visual reference for where their orders will fill.
+     * Empty for aggregate pages or plans with sells disabled.
+     */
+    openSellLimitPrices: List<BigDecimal> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     if (chartData.isEmpty()) return
@@ -465,6 +524,51 @@ fun PortfolioLineChart(
         if (isEmpty()) add(hiddenLine)
     }
 
+    // Open-sell limit-price horizontal lines (per plan, on the left/fiat axis).
+    // Each value renders a thin dashed red line so the user can visually compare
+    // their pending sell targets against the current portfolio value / crypto price.
+    val sellLineColor = MaterialTheme.colorScheme.error
+    val dashedSellShape = remember {
+        DashedShape(
+            shape = Shape.Rectangle,
+            dashLengthDp = 6f,
+            gapLengthDp = 4f,
+            fitStrategy = DashedShape.FitStrategy.Resize
+        )
+    }
+    val sellLineComponent = rememberLineComponent(
+        fill = fill(sellLineColor),
+        thickness = 1.5.dp,
+        shape = dashedSellShape
+    )
+    val sellDecorations = remember(openSellLimitPrices, sellLineComponent) {
+        openSellLimitPrices.map { price ->
+            val v = price.toDouble()
+            HorizontalLine(
+                y = { v },
+                line = sellLineComponent
+            )
+        }
+    }
+
+    // Y-axis range provider: when there are open-sell limit lines, expand the
+    // auto-calculated Y range (left/fiat axis) so all limit prices remain visible
+    // even when they sit far above/below the actual portfolio/price series.
+    val leftRangeProvider = remember(openSellLimitPrices) {
+        if (openSellLimitPrices.isEmpty()) {
+            CartesianLayerRangeProvider.auto()
+        } else {
+            object : CartesianLayerRangeProvider {
+                private val limitMax = openSellLimitPrices.maxOf { it.toDouble() }
+                private val limitMin = openSellLimitPrices.minOf { it.toDouble() }
+                override fun getMaxY(minY: Double, maxY: Double, extraStore: ExtraStore): Double =
+                    maxOf(maxY, limitMax * 1.05)
+                override fun getMinY(minY: Double, maxY: Double, extraStore: ExtraStore): Double =
+                    minOf(minY, limitMin * 0.95)
+            }
+        }
+    }
+
     // Tap-to-inspect marker – scrub fires onScrub to update KPI cards, no tooltip text
     val indicatorComponent = rememberShapeComponent(
         fill = fill(chartAccentColor),
@@ -523,48 +627,52 @@ fun PortfolioLineChart(
                 }
             }
     ) {
-        CartesianChartHost(
-            chart = rememberCartesianChart(
-                rememberLineCartesianLayer(
-                    lineProvider = LineCartesianLayer.LineProvider.series(leftLines)
-                ),
-                rememberLineCartesianLayer(
-                    lineProvider = LineCartesianLayer.LineProvider.series(rightLines),
-                    verticalAxisPosition = Axis.Position.Vertical.End
-                ),
-                startAxis = VerticalAxis.rememberStart(
-                    label = axisLabelComponent,
-                    title = unitSuffix,
-                    titleComponent = axisTitleComponent,
-                    itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
-                    valueFormatter = { _, value, _ ->
-                        val bd = BigDecimal.valueOf(value)
-                        when {
-                            value >= 1 -> NumberFormatters.compactFiat(bd)
-                            else -> NumberFormatters.cryptoCompact(bd)
+        key(openSellLimitPrices) {
+            CartesianChartHost(
+                chart = rememberCartesianChart(
+                    rememberLineCartesianLayer(
+                        lineProvider = LineCartesianLayer.LineProvider.series(leftLines),
+                        rangeProvider = leftRangeProvider
+                    ),
+                    rememberLineCartesianLayer(
+                        lineProvider = LineCartesianLayer.LineProvider.series(rightLines),
+                        verticalAxisPosition = Axis.Position.Vertical.End
+                    ),
+                    startAxis = VerticalAxis.rememberStart(
+                        label = axisLabelComponent,
+                        title = unitSuffix,
+                        titleComponent = axisTitleComponent,
+                        itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
+                        valueFormatter = { _, value, _ ->
+                            val bd = BigDecimal.valueOf(value)
+                            when {
+                                value >= 1 -> NumberFormatters.compactFiat(bd)
+                                else -> NumberFormatters.cryptoCompact(bd)
+                            }
                         }
-                    }
+                    ),
+                    endAxis = if (hasRightAxis) endAxisComponent else null,
+                    bottomAxis = HorizontalAxis.rememberBottom(
+                        label = axisLabelComponent,
+                        valueFormatter = { _, value, _ ->
+                            val index = value.toInt().coerceIn(0, xLabels.size - 1)
+                            xLabels.getOrElse(index) { "" }
+                        },
+                        itemPlacer = remember(chartData.size, xAxisSpacing) {
+                            HorizontalAxis.ItemPlacer.aligned(
+                                spacing = { xAxisSpacing }
+                            )
+                        }
+                    ),
+                    marker = marker,
+                    markerController = CartesianMarkerController.rememberShowOnPress(),
+                    decorations = sellDecorations
                 ),
-                endAxis = if (hasRightAxis) endAxisComponent else null,
-                bottomAxis = HorizontalAxis.rememberBottom(
-                    label = axisLabelComponent,
-                    valueFormatter = { _, value, _ ->
-                        val index = value.toInt().coerceIn(0, xLabels.size - 1)
-                        xLabels.getOrElse(index) { "" }
-                    },
-                    itemPlacer = remember(chartData.size, xAxisSpacing) {
-                        HorizontalAxis.ItemPlacer.aligned(
-                            spacing = { xAxisSpacing }
-                        )
-                    }
-                ),
-                marker = marker,
-                markerController = CartesianMarkerController.rememberShowOnPress()
-            ),
-            modelProducer = modelProducer,
-            scrollState = rememberVicoScrollState(scrollEnabled = false),
-            zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = remember { Zoom.Content }),
-            modifier = Modifier.fillMaxSize()
-        )
+                modelProducer = modelProducer,
+                scrollState = rememberVicoScrollState(scrollEnabled = false),
+                zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = remember { Zoom.Content }),
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 }

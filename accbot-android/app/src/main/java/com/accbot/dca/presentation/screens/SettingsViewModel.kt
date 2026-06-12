@@ -21,6 +21,7 @@ import com.accbot.dca.data.local.WithdrawalDao
 import com.accbot.dca.data.local.WithdrawalThresholdDao
 import com.accbot.dca.data.local.WithdrawalThresholdEntity
 import com.accbot.dca.data.local.toDomain
+import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.WithdrawalThreshold
 import java.math.BigDecimal
@@ -28,6 +29,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.accbot.dca.service.DcaForegroundService
 import com.accbot.dca.worker.DcaWorker
+import com.accbot.dca.worker.SellPollingScheduler
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -61,7 +63,12 @@ data class SettingsUiState(
     val purchaseNotificationsEnabled: Boolean = true,
     val errorNotificationsEnabled: Boolean = true,
     val weeklySummaryEnabled: Boolean = false,
-    val isExperimentalExchangesEnabled: Boolean = false
+    val isExperimentalExchangesEnabled: Boolean = false,
+    // Sell-extension (Pokrocile)
+    val tradingEnabled: Boolean = false,
+    val periodicSellPollingEnabled: Boolean = false,
+    val sellPollingFrequency: DcaFrequency = DcaFrequency.HOURLY,
+    val sellPollingCronExpression: String? = null
 )
 
 @HiltViewModel
@@ -78,7 +85,8 @@ class SettingsViewModel @Inject constructor(
     private val dailyPriceDao: DailyPriceDao,
     private val withdrawalDao: WithdrawalDao,
     private val withdrawalThresholdDao: WithdrawalThresholdDao,
-    private val exchangeConnectionDao: ExchangeConnectionDao
+    private val exchangeConnectionDao: ExchangeConnectionDao,
+    private val sellPollingScheduler: SellPollingScheduler
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -133,7 +141,11 @@ class SettingsViewModel @Inject constructor(
                 appTheme = userPreferences.getAppTheme(),
                 isBiometricLockEnabled = userPreferences.isBiometricLockEnabled(),
                 isMarketPulseEnabled = userPreferences.isMarketPulseEnabled(),
-                isExperimentalExchangesEnabled = userPreferences.areExperimentalExchangesEnabled()
+                isExperimentalExchangesEnabled = userPreferences.areExperimentalExchangesEnabled(),
+                tradingEnabled = userPreferences.isTradingEnabled(),
+                periodicSellPollingEnabled = userPreferences.isPeriodicSellPollingEnabled(),
+                sellPollingFrequency = userPreferences.getSellPollingFrequency(),
+                sellPollingCronExpression = userPreferences.getSellPollingCronExpression()
             )
         }
     }
@@ -196,6 +208,44 @@ class SettingsViewModel @Inject constructor(
     fun setMarketPulseEnabled(enabled: Boolean) {
         userPreferences.setMarketPulseEnabled(enabled)
         _uiState.update { it.copy(isMarketPulseEnabled = enabled) }
+    }
+
+    /**
+     * Master trading switch. When turned off, also disables background sell polling
+     * and cancels the worker so leftover settings don't silently keep it alive.
+     */
+    fun setTradingEnabled(enabled: Boolean) {
+        userPreferences.setTradingEnabled(enabled)
+        if (!enabled) {
+            userPreferences.setPeriodicSellPolling(
+                enabled = false,
+                frequency = DcaFrequency.HOURLY,
+                cron = null,
+                scheduleConfig = null
+            )
+            sellPollingScheduler.cancel()
+        }
+        loadSettings()
+    }
+
+    /**
+     * Enable / reschedule / disable periodic sell-order polling. Callers pass the full
+     * scheduling config in one shot (see [UserPreferences.setPeriodicSellPolling]) so
+     * readers never see a half-applied state.
+     */
+    fun setPeriodicSellPolling(
+        enabled: Boolean,
+        frequency: DcaFrequency = _uiState.value.sellPollingFrequency,
+        cron: String? = null,
+        scheduleConfig: String? = null
+    ) {
+        userPreferences.setPeriodicSellPolling(enabled, frequency, cron, scheduleConfig)
+        if (enabled) {
+            sellPollingScheduler.rescheduleIfEnabled()
+        } else {
+            sellPollingScheduler.cancel()
+        }
+        loadSettings()
     }
 
     fun setBiometricLockEnabled(enabled: Boolean) {

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,6 +31,9 @@ import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.presentation.components.*
+import com.accbot.dca.presentation.screens.plans.components.OpenSellsList
+import com.accbot.dca.presentation.screens.plans.components.PnLCard
+import com.accbot.dca.presentation.screens.plans.sell.SellWizardBottomSheet
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -50,6 +54,10 @@ fun PlanDetailsScreen(
     viewModel: PlanDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sellUiVisible by viewModel.sellUiVisible.collectAsStateWithLifecycle()
+    val planPnL by viewModel.planPnL.collectAsStateWithLifecycle()
+    val openSells by viewModel.openSells.collectAsStateWithLifecycle()
+    val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
@@ -59,10 +67,22 @@ fun PlanDetailsScreen(
     var showDeleteTransactionsDialog by rememberSaveable { mutableStateOf(false) }
     var deleteTransactionsConfirmText by rememberSaveable { mutableStateOf("") }
     var dangerZoneExpanded by rememberSaveable { mutableStateOf(false) }
+    var sellWizardOpen by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(planId) {
         viewModel.loadPlan(planId)
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.snackbar.collect { msg -> snackbarHostState.showSnackbar(msg) }
+    }
+
+    if (sellWizardOpen) {
+        SellWizardBottomSheet(
+            planId = planId,
+            onDismiss = { sellWizardOpen = false }
+        )
     }
 
     // Delete confirmation dialog
@@ -187,6 +207,20 @@ fun PlanDetailsScreen(
         ApiImportResultDialog(result = result, onDismiss = { viewModel.dismissImportResult() })
     }
 
+    // Delete blocked: plan still has open sell orders. User must cancel them first.
+    uiState.deleteBlockedOpenSells?.let { count ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDeleteBlockedDialog() },
+            title = { Text(stringResource(R.string.plan_details_delete_blocked_title)) },
+            text = { Text(stringResource(R.string.plan_details_delete_blocked_text, count)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissDeleteBlockedDialog() }) {
+                    Text(stringResource(R.string.common_done))
+                }
+            }
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
@@ -228,10 +262,16 @@ fun PlanDetailsScreen(
             uiState.plan != null -> {
                 val plan = uiState.plan!!
 
-                LazyColumn(
+                PullToRefreshBox(
+                    isRefreshing = refreshing,
+                    onRefresh = { viewModel.refresh() },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
+                ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -713,6 +753,48 @@ fun PlanDetailsScreen(
                         }
                     }
 
+                    // 4.5 Sell section (P&L card, open orders, create-sell button).
+                    // Shown only when plan opted in + global trading enabled + exchange supports it.
+                    if (sellUiVisible) {
+                        planPnL?.let { pnl ->
+                            item {
+                                PnLCard(
+                                    pnl = pnl,
+                                    fiat = plan.fiat,
+                                    crypto = plan.crypto,
+                                    targetAmount = plan.targetProfitAmount
+                                )
+                            }
+                        }
+
+                        if (openSells.isNotEmpty()) {
+                            item {
+                                OpenSellsList(
+                                    openSells = openSells,
+                                    onCancelClick = viewModel::cancelSell,
+                                    onCancelAllClick = viewModel::cancelAllOpenSells
+                                )
+                            }
+                        }
+
+                        item {
+                            val heldCrypto = planPnL?.currentCryptoHeld ?: BigDecimal.ZERO
+                            Button(
+                                onClick = { sellWizardOpen = true },
+                                enabled = heldCrypto > BigDecimal.ZERO,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Sell,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.plan_details_create_sell_order))
+                            }
+                        }
+                    }
+
                     // 5. Transactions section (with Import API in header)
                     item {
                         Row(
@@ -888,6 +970,7 @@ fun PlanDetailsScreen(
 
                     item { Spacer(modifier = Modifier.height(32.dp)) }
                 }
+                } // PullToRefreshBox
             }
         }
     }

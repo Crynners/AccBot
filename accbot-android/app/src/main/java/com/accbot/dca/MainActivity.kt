@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.os.SystemClock
 import android.provider.Settings
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
@@ -71,8 +72,13 @@ import com.accbot.dca.service.NotificationService
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.lifecycleScope
 import javax.inject.Inject
+
+/** How long the app may stay in background before the biometric lock re-engages. */
+private const val BIOMETRIC_RELOCK_GRACE_MS = 30_000L
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -112,8 +118,35 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val isSandboxMode = userPreferences.isSandboxMode()
-            var isUnlocked by rememberSaveable { mutableStateOf(false) }
+            // Plain remember, NOT rememberSaveable: saved instance state survives process
+            // death (system kills the app in background, task stays in recents), so a
+            // saveable flag would restore isUnlocked=true and silently skip the lock.
+            var isUnlocked by remember { mutableStateOf(false) }
             val biometricEnabled = userPreferences.isBiometricLockEnabled()
+
+            // Re-lock when the app spends longer than a short grace period in background,
+            // so a quick app switch doesn't re-prompt but a real walk-away does.
+            if (biometricEnabled) {
+                DisposableEffect(Unit) {
+                    var backgroundedAt = 0L
+                    val observer = LifecycleEventObserver { _, event ->
+                        when (event) {
+                            Lifecycle.Event.ON_STOP ->
+                                backgroundedAt = SystemClock.elapsedRealtime()
+                            Lifecycle.Event.ON_START -> {
+                                if (backgroundedAt != 0L &&
+                                    SystemClock.elapsedRealtime() - backgroundedAt > BIOMETRIC_RELOCK_GRACE_MS
+                                ) {
+                                    isUnlocked = false
+                                }
+                            }
+                            else -> {}
+                        }
+                    }
+                    lifecycle.addObserver(observer)
+                    onDispose { lifecycle.removeObserver(observer) }
+                }
+            }
             // Theme: collect reactive flow so changes apply immediately
             val appTheme by userPreferences.appThemeFlow.collectAsState()
             val darkTheme = when (appTheme) {
@@ -433,7 +466,7 @@ fun AccBotApp(
                     navController.navigate(Screen.EditPlan.createRoute(planId))
                 },
                 onNavigateToHistory = { crypto, fiat ->
-                    navController.navigate(Screen.History.createRoute(crypto, fiat))
+                    navController.navigate(Screen.History.createRoute(crypto, fiat, planId))
                 },
                 onNavigateToTransactionDetails = { transactionId ->
                     navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
@@ -503,7 +536,8 @@ fun AccBotApp(
             route = Screen.History.route,
             arguments = listOf(
                 navArgument("crypto") { type = NavType.StringType; nullable = true; defaultValue = null },
-                navArgument("fiat") { type = NavType.StringType; nullable = true; defaultValue = null }
+                navArgument("fiat") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("planId") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
         ) {
             HistoryScreen(
