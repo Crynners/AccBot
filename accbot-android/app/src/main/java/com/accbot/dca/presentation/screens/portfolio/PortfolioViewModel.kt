@@ -109,11 +109,6 @@ data class PortfolioUiState(
      * horizontal lines on the per-plan page.
      */
     val currentPlanAllowsSells: Boolean = false,
-    /**
-     * Completed BUY/SELL transactions for the currently selected page, mapped to
-     * (executedAt, side). Drives the chart timeline triangle markers.
-     */
-    val tradeMarkers: List<com.accbot.dca.presentation.components.ChartTradeMarker> = emptyList()
 )
 
 @HiltViewModel
@@ -166,8 +161,6 @@ class PortfolioViewModel @Inject constructor(
     private var openSellsJob: Job? = null
 
     private var completedTransactions: List<TransactionEntity> = emptyList()
-    /** Cache of completed SELL transactions for chart-marker rendering only. */
-    private var completedSells: List<TransactionEntity> = emptyList()
     /**
      * Cached plan list used by [loadChartData] to build aggregate per-plan lines.
      * Refreshed by [loadPortfolio] and [refreshTransactionsAndPairs]. Without this
@@ -214,7 +207,6 @@ class PortfolioViewModel @Inject constructor(
                 // Use pre-filtered, sorted query (avoids loading failed/pending into memory)
                 val completed = transactionDao.getCompletedTransactionsOrdered()
                 completedTransactions = completed
-                completedSells = transactionDao.getCompletedSellsOrdered()
 
                 // Load all plans (including disabled) for page building
                 val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
@@ -290,7 +282,6 @@ class PortfolioViewModel @Inject constructor(
             try {
                 val completed = transactionDao.getCompletedTransactionsOrdered()
                 completedTransactions = completed
-                completedSells = transactionDao.getCompletedSellsOrdered()
 
                 val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
                 cachedDbPlans = allDbPlans
@@ -650,7 +641,6 @@ class PortfolioViewModel @Inject constructor(
                 totalTransactions = chartResult.txCount,
                 planLines = chartResult.planLines,
                 cryptoGroupLines = chartResult.cryptoGroupLines,
-                tradeMarkers = chartResult.tradeMarkers,
                 isChartLoading = false
             ) }
 
@@ -707,8 +697,7 @@ class PortfolioViewModel @Inject constructor(
         val fiat: String?,
         val txCount: Int,
         val planLines: List<PlanLineInfo>,
-        val cryptoGroupLines: List<CryptoGroupLineInfo>,
-        val tradeMarkers: List<com.accbot.dca.presentation.components.ChartTradeMarker>
+        val cryptoGroupLines: List<CryptoGroupLineInfo>
     )
 
     private suspend fun computeChartData(): ChartComputeResult {
@@ -833,36 +822,13 @@ class PortfolioViewModel @Inject constructor(
             (fiat == null || tx.fiat == fiat)
         }
 
-        // Build trade markers from BUY (filteredTxs already pair/plan-scoped) + SELL.
-        val sellsForPage = if (planId != null) {
-            completedSells.filter { it.planId == planId }
-        } else {
-            completedSells.filter { (crypto == null || it.crypto == crypto) && (fiat == null || it.fiat == fiat) }
-        }
-        val buysForMarkers = filteredTxs.filter {
-            (crypto == null || it.crypto == crypto) && (fiat == null || it.fiat == fiat)
-        }
-        val markers = buildList {
-            buysForMarkers.forEach { add(
-                com.accbot.dca.presentation.components.ChartTradeMarker(
-                    time = it.executedAt, side = com.accbot.dca.domain.model.TransactionSide.BUY
-                )
-            ) }
-            sellsForPage.forEach { add(
-                com.accbot.dca.presentation.components.ChartTradeMarker(
-                    time = it.executedAt, side = com.accbot.dca.domain.model.TransactionSide.SELL
-                )
-            ) }
-        }
-
         return ChartComputeResult(
             data = data,
             crypto = crypto,
             fiat = fiat,
             txCount = txCount,
             planLines = planLinesList,
-            cryptoGroupLines = cryptoGroupLinesList,
-            tradeMarkers = markers
+            cryptoGroupLines = cryptoGroupLinesList
         )
     }
 

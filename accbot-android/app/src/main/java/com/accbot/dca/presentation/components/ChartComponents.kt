@@ -51,10 +51,8 @@ import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.Zoom
 import com.patrykandpatrick.vico.core.cartesian.marker.DefaultCartesianMarker
 import com.patrykandpatrick.vico.core.cartesian.marker.LineCartesianLayerMarkerTarget
-import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.presentation.utils.NumberFormatters
 import java.math.BigDecimal
-import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
@@ -62,7 +60,6 @@ import com.patrykandpatrick.vico.compose.cartesian.marker.rememberShowOnPress
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
-import com.patrykandpatrick.vico.core.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.core.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.core.common.data.ExtraStore
@@ -70,7 +67,6 @@ import com.patrykandpatrick.vico.core.common.shape.CorneredShape
 import com.patrykandpatrick.vico.core.common.shape.DashedShape
 import com.patrykandpatrick.vico.core.common.shape.Shape
 import androidx.compose.ui.graphics.toArgb
-import java.time.ZoneId
 
 private val chartAccentColor = Primary
 private val costBasisColor = Color(0xFF888888)
@@ -233,68 +229,6 @@ private fun LegendItem(color: Color, label: String, enabled: Boolean = true, onC
 }
 
 /**
- * BUY/SELL transaction marker for the portfolio chart timeline.
- *
- * Rendered by [TradeMarkersDecoration] as a small triangle at the bottom (BUY,
- * up-triangle, success color) or top (SELL, down-triangle, error color) of the
- * plot area, x-aligned with the chart bucket that contains the trade.
- */
-data class ChartTradeMarker(
-    val time: Instant,
-    val side: TransactionSide
-)
-
-/**
- * Custom Vico [Decoration] that renders BUY/SELL trade markers as triangles
- * pinned to the plot area edges, aligned with chart-bucket indices.
- *
- * Coordinate math: each [ChartDataPoint] is at integer model x = its array
- * index, so a marker for chart index i lives at model x = i.toDouble(). The
- * pixel x is derived from layerBounds + layerDimensions.startPadding plus the
- * scaled offset relative to ranges.minX, minus the current scroll.
- */
-private class TradeMarkersDecoration(
-    private val markers: List<Pair<Double, TransactionSide>>,
-    private val buyColorArgb: Int,
-    private val sellColorArgb: Int,
-    private val sizeDp: Float = 8f
-) : Decoration {
-
-    private val paint = android.graphics.Paint().apply {
-        isAntiAlias = true
-        style = android.graphics.Paint.Style.FILL
-    }
-
-    override fun drawOverLayers(context: com.patrykandpatrick.vico.core.cartesian.CartesianDrawingContext) {
-        if (markers.isEmpty()) return
-        val bounds = context.layerBounds
-        val dims = context.layerDimensions
-        val ranges = context.ranges
-        val sizePx = context.dpToPx(sizeDp)
-        val halfSize = sizePx / 2f
-        val scroll = context.scroll
-
-        for ((x, side) in markers) {
-            val modelDelta = x - ranges.minX
-            val pxX = bounds.left + dims.startPadding + (modelDelta * dims.xSpacing).toFloat() - scroll
-            if (pxX < bounds.left - halfSize || pxX > bounds.right + halfSize) continue
-            val (color, apexY, baseY) = when (side) {
-                TransactionSide.BUY -> Triple(buyColorArgb, bounds.bottom - sizePx, bounds.bottom)
-                TransactionSide.SELL -> Triple(sellColorArgb, bounds.top + sizePx, bounds.top)
-            }
-            paint.color = color
-            val path = android.graphics.Path().apply {
-                moveTo(pxX, apexY)
-                lineTo(pxX - halfSize, baseY)
-                lineTo(pxX + halfSize, baseY)
-                close()
-            }
-            context.canvas.drawPath(path, paint)
-        }
-    }
-}
-
-/**
  * Portfolio line chart with dual Y-axis support.
  * Left axis (start): portfolio value, cost basis, crypto price (all in fiat).
  * Right axis (end): accumulated crypto (in crypto units, e.g. BTC).
@@ -314,12 +248,6 @@ fun PortfolioLineChart(
     visibleCryptoGroupLines: Set<Pair<String, CryptoGroupLineType>> = emptySet(),
     zoomLevel: ChartZoomLevel = ChartZoomLevel.Overview,
     onScrub: (Int?) -> Unit = {},
-    /**
-     * Optional BUY (green up-triangle) / SELL (red down-triangle) markers to render
-     * on the chart timeline. Markers are bucketed to the chart point whose epochDay
-     * is the floor of the trade's epochDay.
-     */
-    tradeMarkers: List<ChartTradeMarker> = emptyList(),
     /**
      * Limit prices of currently open (PENDING / PARTIAL) sell orders for the
      * displayed plan. Each value yields a horizontal line on the left (fiat) axis
@@ -623,33 +551,6 @@ fun PortfolioLineChart(
         }
     }
 
-    // Trade markers: convert each ChartTradeMarker into a chart-x model index by
-    // finding the chart bucket whose epochDay floors the trade's epochDay.
-    val buyMarkerColor = accumulatedCryptoColor.toArgb()
-    val sellMarkerColor = MaterialTheme.colorScheme.error.toArgb()
-    val tradeMarkerPoints = remember(tradeMarkers, chartData) {
-        if (tradeMarkers.isEmpty() || chartData.isEmpty()) emptyList()
-        else {
-            val zone = ZoneId.systemDefault()
-            val firstDay = chartData.first().epochDay
-            val lastDay = chartData.last().epochDay
-            tradeMarkers.mapNotNull { m ->
-                val txDay = m.time.atZone(zone).toLocalDate().toEpochDay()
-                if (txDay < firstDay || txDay > lastDay) return@mapNotNull null
-                // Floor: largest index whose epochDay <= txDay.
-                val idx = chartData.indexOfLast { it.epochDay <= txDay }
-                if (idx < 0) null else idx.toDouble() to m.side
-            }
-        }
-    }
-    val tradeMarkerDecoration = remember(tradeMarkerPoints, buyMarkerColor, sellMarkerColor) {
-        if (tradeMarkerPoints.isEmpty()) null
-        else TradeMarkersDecoration(tradeMarkerPoints, buyMarkerColor, sellMarkerColor)
-    }
-    val allDecorations = remember(sellDecorations, tradeMarkerDecoration) {
-        sellDecorations + listOfNotNull(tradeMarkerDecoration)
-    }
-
     // Y-axis range provider: when there are open-sell limit lines, expand the
     // auto-calculated Y range (left/fiat axis) so all limit prices remain visible
     // even when they sit far above/below the actual portfolio/price series.
@@ -726,7 +627,7 @@ fun PortfolioLineChart(
                 }
             }
     ) {
-        key(openSellLimitPrices, tradeMarkerPoints) {
+        key(openSellLimitPrices) {
             CartesianChartHost(
                 chart = rememberCartesianChart(
                     rememberLineCartesianLayer(
@@ -765,7 +666,7 @@ fun PortfolioLineChart(
                     ),
                     marker = marker,
                     markerController = CartesianMarkerController.rememberShowOnPress(),
-                    decorations = allDecorations
+                    decorations = sellDecorations
                 ),
                 modelProducer = modelProducer,
                 scrollState = rememberVicoScrollState(scrollEnabled = false),
