@@ -109,7 +109,21 @@ class KrakenApi(
         withContext(Dispatchers.IO) {
             try {
                 val pair = mapPair(crypto, fiat)
-                val params = "ordertype=market&type=buy&pair=$pair&oflags=viqc&volume=${fiatAmount.toPlainString()}"
+                // Kraken's AddOrder takes volume in BASE currency - the 'viqc'
+                // (volume-in-quote) flag was removed from the spot API, so we size the
+                // order from the current price and reserve the taker fee so that
+                // cost + fee stays within the plan's fiat amount.
+                val price = getCurrentPrice(crypto, fiat)
+                    ?: return@withContext DcaResult.Error(
+                        "Could not fetch $pair price to size the order",
+                        retryable = true
+                    )
+                val volume = fiatAmount.divide(
+                    price.multiply(BigDecimal.ONE.plus(estimatedTakerFeeRate)),
+                    8,
+                    RoundingMode.DOWN
+                )
+                val params = "ordertype=market&type=buy&pair=$pair&volume=${volume.toPlainString()}"
 
                 val (isSuccessful, code, body) = executePrivateRequest("/0/private/AddOrder", params)
 
