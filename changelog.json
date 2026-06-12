@@ -1,5 +1,33 @@
 [
   {
+    "versionCode": 28000,
+    "version": "2.8.0",
+    "title": {
+      "en": "Sell Your Crypto & Portfolio P&L",
+      "cs": "Prodej kryptoměn a zisk portfolia"
+    },
+    "features": {
+      "en": [
+        "Sell crypto right from the app - a single sell at your target price, or a ladder of sell orders",
+        "Track open sell orders and cancel them anytime",
+        "Portfolio now shows realized and total profit/loss",
+        "Filter transaction history by plan",
+        "Cleaner portfolio chart",
+        "More reliable scheduled and manual purchases",
+        "Various bug fixes and stability improvements"
+      ],
+      "cs": [
+        "Prodávejte krypto přímo z aplikace - jednorázový prodej za vaši cílovou cenu, nebo žebříček prodejních příkazů",
+        "Přehled otevřených prodejních příkazů s možností je kdykoliv zrušit",
+        "Portfolio nově zobrazuje realizovaný a celkový zisk/ztrátu",
+        "Filtrování historie transakcí podle plánu",
+        "Přehlednější graf portfolia",
+        "Spolehlivější naplánované i ruční nákupy",
+        "Různé opravy chyb a vylepšení stability"
+      ]
+    }
+  },
+  {
     "versionCode": 27000,
     "version": "2.7.0",
     "title": {
