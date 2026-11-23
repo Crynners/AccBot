@@ -112,6 +112,9 @@ data class DashboardUiState(
     val isMarketPulseExpanded: Boolean = true,
     val networkRetryInfo: NetworkRetryInfo = NetworkRetryInfo(),
     val missedPurchases: List<MissedPurchaseInfo> = emptyList(),
+    val nextPurchase: Instant? = null,
+    val lastConfirmedPurchase: Transaction? = null,
+    val purchasesAwaitingReview: Int = 0,
     /**
      * Open SELL orders grouped by plan id. Empty when trading is off or no
      * pending sells exist; the dashboard renders one card per non-empty group.
@@ -159,6 +162,18 @@ class DashboardViewModel @Inject constructor(
     init {
         loadData()
         observeOpenSells()
+        viewModelScope.launch {
+            combine(
+                dcaPlanDao.observeEarliestNextExecution(),
+                transactionDao.observeLatestConfirmedPurchase(),
+                transactionDao.observePurchasesAwaitingReview()
+            ) { next, last, pending -> Triple(next?.let(Instant::ofEpochMilli), last?.toDomain(), pending) }
+                .collect { (next, last, pending) ->
+                    _uiState.update {
+                        it.copy(nextPurchase = next, lastConfirmedPurchase = last, purchasesAwaitingReview = pending)
+                    }
+                }
+        }
     }
 
     /**

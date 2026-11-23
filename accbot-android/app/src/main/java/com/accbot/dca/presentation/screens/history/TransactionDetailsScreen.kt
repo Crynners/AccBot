@@ -108,6 +108,61 @@ fun TransactionDetailsScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    if (transaction.status == TransactionStatus.PENDING &&
+                        transaction.exchangeOrderId.isNullOrBlank()
+                    ) {
+                        val isSell = transaction.side == TransactionSide.SELL
+                        val reviewTitle = stringResource(
+                            if (isSell) R.string.transaction_review_sell else R.string.transaction_review_purchase
+                        )
+                        var showReviewDialog by remember(transaction.id) { mutableStateOf(false) }
+                        var reviewOrderId by remember(transaction.id) { mutableStateOf("") }
+                        Text(
+                            text = stringResource(
+                                if (isSell) R.string.transaction_sell_needs_review else R.string.notification_purchase_needs_review
+                            ),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        OutlinedButton(onClick = { showReviewDialog = true }) {
+                            Text(reviewTitle)
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        if (showReviewDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showReviewDialog = false },
+                                title = { Text(reviewTitle) },
+                                text = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        Text(stringResource(
+                                            if (isSell) R.string.transaction_review_sell_message
+                                            else R.string.transaction_review_purchase_message
+                                        ))
+                                        if (isSell) {
+                                            OutlinedTextField(
+                                                value = reviewOrderId,
+                                                onValueChange = { reviewOrderId = it.take(32) },
+                                                singleLine = true,
+                                                label = { Text(stringResource(R.string.transaction_details_order_id)) }
+                                            )
+                                        }
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        showReviewDialog = false
+                                        if (isSell) viewModel.acknowledgeSellReview(transaction.id, reviewOrderId)
+                                        else viewModel.acknowledgePurchaseReview(transaction.id)
+                                    }) { Text(stringResource(android.R.string.ok)) }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showReviewDialog = false }) {
+                                        Text(stringResource(android.R.string.cancel))
+                                    }
+                                }
+                            )
+                        }
+                    }
+
                     // Amount card
                     Card(
                         colors = CardDefaults.cardColors(
@@ -203,8 +258,7 @@ fun TransactionDetailsScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         SellDetailsCard(transaction = transaction)
 
-                        if (transaction.status == TransactionStatus.PENDING ||
-                            transaction.status == TransactionStatus.PARTIAL
+                        if (transaction.status.isOpen && !transaction.exchangeOrderId.isNullOrBlank()
                         ) {
                             Spacer(modifier = Modifier.height(16.dp))
                             var showConfirm by remember { mutableStateOf(false) }
@@ -344,6 +398,7 @@ private fun StatusHeader(status: TransactionStatus) {
         TransactionStatus.FAILED -> Triple(Icons.Default.Error, Error, stringResource(R.string.transaction_status_failed))
         TransactionStatus.PENDING -> Triple(Icons.Default.Schedule, accentCol, stringResource(R.string.transaction_status_pending))
         TransactionStatus.PARTIAL -> Triple(Icons.Default.RemoveCircle, Color(0xFFFFA500), stringResource(R.string.transaction_status_partial))
+        TransactionStatus.PARTIAL_CANCELLED -> Triple(Icons.Default.Cancel, Color(0xFFFFA500), stringResource(R.string.transaction_status_partial_cancelled))
         TransactionStatus.CANCELLED -> Triple(Icons.Default.Cancel, MaterialTheme.colorScheme.onSurfaceVariant, stringResource(R.string.transaction_status_cancelled))
     }
 

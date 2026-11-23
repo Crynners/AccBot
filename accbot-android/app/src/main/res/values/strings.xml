@@ -175,13 +175,23 @@
     <string name="backup_preview_withdrawals">Withdrawals: %1$d</string>
     <string name="backup_preview_thresholds">Withdrawal Thresholds: %1$d</string>
     <string name="backup_restore_button">Restore</string>
+    <string name="backup_restore_merge">Merge with current data</string>
+    <string name="backup_restore_replace">Replace current data</string>
+    <string name="backup_restore_paused">Restored plans are paused until you review and enable them.</string>
+    <string name="backup_environment">Environment</string>
+    <string name="backup_environment_test">Sandbox</string>
+    <string name="backup_environment_live">Live</string>
+    <string name="backup_wrong_environment">This backup belongs to a different environment. Switch to that environment before restoring it.</string>
+    <string name="backup_too_large">This backup exceeds the supported size limit.</string>
+    <string name="backup_open_orders">Resolve pending orders before replacing current data.</string>
+    <string name="backup_restart">Restart app</string>
     <string name="backup_restore_warning">This will add data from the backup to your current data. Existing data will not be deleted.</string>
-    <string name="backup_restore_warning_replace">Restoring will replace all existing data with the backup contents.</string>
+    <string name="backup_restore_warning_replace">This will replace current plans, history and API keys with the backup contents. Restored plans will be paused.</string>
     <string name="backup_restoring">Restoring backup…</string>
     <string name="backup_decrypting">Decrypting…</string>
-    <string name="backup_restore_success">Backup restored successfully. The app will restart.</string>
+    <string name="backup_restore_success">Backup restored</string>
     <string name="backup_restore_error">Failed to restore backup</string>
-    <string name="backup_credentials_require_encryption">Encryption is required when including credentials</string>
+    <string name="backup_credentials_require_encryption">A backup that includes API credentials must be encrypted.</string>
     <string name="backup_no_passphrase">Please enter a password or generate a seed</string>
     <string name="backup_items_count">%1$d items</string>
 
@@ -318,14 +328,14 @@
     <string name="plan_details_days_remaining">~%1$d days (%2$d executions)</string>
     <string name="plan_details_delete_subtitle">Permanently delete this plan and all its transactions</string>
     <string name="plan_details_delete_confirm_hint">Type %1$s to confirm</string>
-    <string name="plan_details_delete_transactions_title">Delete All Transactions</string>
-    <string name="plan_details_delete_transactions_text">This will permanently delete all %1$d transactions for this plan. This action cannot be undone.\n\nTo confirm, type the number of transactions below:</string>
+    <string name="plan_details_delete_transactions_title">Delete closed transactions</string>
+    <string name="plan_details_delete_transactions_text">This permanently deletes %1$d closed transactions for this plan.\n\nType the number of transactions to confirm.</string>
     <string name="plan_details_delete_transactions_hint">Type %1$d to confirm</string>
-    <string name="plan_details_delete_transactions_button">Delete All Transactions</string>
+    <string name="plan_details_delete_transactions_button">Delete closed transactions</string>
     <string name="plan_details_delete_transactions_success">%1$d transactions deleted</string>
     <string name="plan_details_create_sell_order">+ Create sell order</string>
     <string name="plan_details_delete_blocked_title">Cannot delete plan</string>
-    <string name="plan_details_delete_blocked_text">This plan has %1$d open sell order(s). Cancel them first before deleting the plan.</string>
+    <string name="plan_details_delete_blocked_text">Resolve this plan’s pending orders or orders awaiting review before deleting it.</string>
 
     <!-- Edit Plan Screen -->
     <string name="edit_plan_title">Edit Plan</string>
@@ -449,6 +459,7 @@
     <string name="transaction_status_cancelled">Cancelled</string>
     <string name="transaction_status_pending">Pending</string>
     <string name="transaction_status_partial">Partially Filled</string>
+    <string name="transaction_status_partial_cancelled">Partially Filled (Cancelled)</string>
     <string name="transaction_details_at">at</string>
     <string name="transaction_details_sell_section">Sell order</string>
     <string name="transaction_details_limit_price">Limit price</string>
@@ -611,6 +622,25 @@
     <string name="notification_dca_failed">DCA Failed</string>
     <string name="notification_dca_failed_text">Failed to buy %1$s: %2$s</string>
     <string name="notification_dca_error">DCA Error</string>
+    <string name="notification_purchase_needs_review">The exchange hasn’t confirmed this purchase. This plan will wait for your review.</string>
+    <string name="dashboard_next_purchase_status">Next scheduled purchase · %1$s</string>
+    <string name="dashboard_last_purchase_status">Last confirmed purchase · %1$s %2$s · %3$s</string>
+    <string name="dashboard_open_sell_status">Open sell orders · %1$d</string>
+    <string name="dashboard_purchase_review_count">Purchases to review · %1$d</string>
+    <string name="run_now_sandbox">The selected plans will submit test orders.</string>
+    <string name="run_now_production">The selected plans will submit real orders.</string>
+    <string name="first_plan_schedules_test_orders">This plan schedules test purchases on %1$s.</string>
+    <string name="first_plan_schedules_real_orders">This plan schedules real purchases on %1$s.</string>
+    <string name="transaction_review_purchase">Confirm purchase review</string>
+    <string name="transaction_purchase_in_progress">AccBot is still processing a purchase. Wait for it to finish and check the exchange before confirming.</string>
+    <string name="transaction_review_sell">Confirm sell review</string>
+    <string name="transaction_sell_needs_review">The exchange hasn’t confirmed this sell. Its quantity stays reserved until you review it.</string>
+    <string name="transaction_review_sell_message">Enter the order ID from your exchange. Confirm with an empty field only after verifying that no order is open and nothing was filled.</string>
+    <string name="transaction_sell_in_progress">AccBot is still processing a sell. Wait for it to finish and check the exchange before confirming.</string>
+    <string name="transaction_sell_order_unverified">The order ID could not be verified. The quantity remains reserved.</string>
+    <string name="notification_purchase_without_fill">The exchange closed the order without a fill.</string>
+    <string name="exchange_connection_open_orders">Resolve pending orders for this connection before removing it.</string>
+    <string name="transaction_review_purchase_message">Check the order on your exchange. If it went through, import the trade history first. Confirming allows the plan to resume on its schedule.</string>
     <string name="notification_runaway_disabled">Plan paused: an unusually high number of purchases was detected. Check your account and re-enable once resolved.</string>
     <string name="notification_low_balance_title">Low balance on %1$s</string>
     <string name="notification_low_balance_text">%1$s of %2$s remaining for DCA</string>
@@ -850,7 +880,7 @@
     <string name="settings_delete_plans_dialog_title">Delete All DCA Plans?</string>
     <string name="settings_delete_plans_dialog_text">This will permanently delete all %1$d DCA plans. Active plans will stop executing. This action cannot be undone.</string>
     <string name="settings_delete_transactions_dialog_title">Delete Transaction History?</string>
-    <string name="settings_delete_transactions_dialog_text">This will permanently delete all %1$d transactions. Your portfolio data will be lost. This action cannot be undone.</string>
+    <string name="settings_delete_transactions_dialog_text">This permanently deletes %1$d closed transactions and their portfolio data.</string>
     <string name="settings_delete_notifications_dialog_title">Delete Notification History?</string>
     <string name="settings_delete_notifications_dialog_text">This will permanently delete all %1$d notifications. This action cannot be undone.</string>
 
@@ -1044,9 +1074,23 @@
     <string name="sell_wizard_ladder_error_avg_required">Profit %% requires the average buy price to be set</string>
     <string name="sell_wizard_ladder_error_amount_positive">Amount must be greater than 0</string>
     <string name="sell_wizard_ladder_error_count_min2">Order count must be at least 2</string>
+    <string name="sell_wizard_ladder_error_count_max">Order count can be at most %1$d</string>
     <string name="sell_wizard_ladder_error_to_must_exceed_from">To must be greater than From (both positive)</string>
     <string name="sell_wizard_ladder_error_insufficient">Not enough available</string>
     <string name="sell_wizard_ladder_error_below_min">Smallest order (%1$s %2$s) is below the minimum %3$s %2$s</string>
+    <string name="sell_wizard_ladder_error_net_unreachable_max">Target net proceeds are unreachable in equal-fiat mode (must be below %1$s %2$s for this starting price and order count)</string>
+    <string name="sell_wizard_ladder_error_net_unreachable_min">Target net proceeds must exceed %1$s %2$s</string>
+    <string name="sell_wizard_ladder_error_invalid_order">One or more generated orders have invalid amount or price</string>
+    <string name="sell_validation_sells_disabled">Sells are disabled for this plan</string>
+    <string name="sell_wizard_ladder_instant_fill_warning">%1$d order(s) are at or below current market price (%2$s %3$s) and will fill immediately.</string>
+    <string name="sell_wizard_ladder_far_from_market_warning">%1$d order(s) are far above market price and may take a long time to fill.</string>
+    <string name="sell_wizard_ladder_loss_warning">%1$d order(s) would sell at a loss after fees (%2$s %3$s total loss on those orders).</string>
+    <string name="sell_wizard_uncertain_single_text">Order status is uncertain (%1$s). The order may have been placed on %2$s. Submission is blocked until you verify open orders on the exchange and confirm.</string>
+    <string name="sell_wizard_uncertain_ladder_text">Placed %1$d of %2$d orders. Order #%3$d is uncertain (%4$s) and may have been placed on %5$s. Remaining orders were not sent. Resubmission is blocked until you check the exchange.</string>
+    <string name="sell_wizard_uncertain_resolve_action">I checked the exchange — refresh &amp; unlock</string>
+    <string name="sell_wizard_uncertain_keep_locked">Close warning</string>
+    <string name="sell_wizard_submitting_progress">Placing %1$d / %2$d…</string>
+    <string name="sell_wizard_validation_failed">Could not validate order against current plan inventory. Try again.</string>
     <string name="sell_wizard_amount_pct_hint">= %1$s %% of available</string>
     <string name="sell_wizard_submit_error_unknown">Unknown error</string>
     <string name="notification_sell_filled_title">Sell filled ✓</string>

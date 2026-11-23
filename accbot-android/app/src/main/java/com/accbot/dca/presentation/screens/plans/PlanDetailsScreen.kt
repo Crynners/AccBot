@@ -29,6 +29,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.Exchange
+import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.presentation.components.*
 import com.accbot.dca.presentation.screens.plans.components.OpenSellsList
@@ -137,7 +138,9 @@ fun PlanDetailsScreen(
 
     // Delete all transactions confirmation dialog
     if (showDeleteTransactionsDialog) {
-        val txCount = uiState.transactions.size
+        val txCount = uiState.transactions.count {
+            it.status != TransactionStatus.PENDING && it.status != TransactionStatus.PARTIAL
+        }
         AlertDialog(
             onDismissRequest = {
                 showDeleteTransactionsDialog = false
@@ -207,12 +210,11 @@ fun PlanDetailsScreen(
         ApiImportResultDialog(result = result, onDismiss = { viewModel.dismissImportResult() })
     }
 
-    // Delete blocked: plan still has open sell orders. User must cancel them first.
-    uiState.deleteBlockedOpenSells?.let { count ->
+    if (uiState.deleteBlockedOpenOrders) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissDeleteBlockedDialog() },
             title = { Text(stringResource(R.string.plan_details_delete_blocked_title)) },
-            text = { Text(stringResource(R.string.plan_details_delete_blocked_text, count)) },
+            text = { Text(stringResource(R.string.plan_details_delete_blocked_text)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.dismissDeleteBlockedDialog() }) {
                     Text(stringResource(R.string.common_done))

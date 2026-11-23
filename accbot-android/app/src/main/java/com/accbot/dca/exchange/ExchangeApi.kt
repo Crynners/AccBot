@@ -155,6 +155,10 @@ class ExchangeApiFactory @Inject constructor(
     private val userPreferences: UserPreferences,
     private val okHttpClient: OkHttpClient
 ) {
+    private val sandboxClient by lazy {
+        okHttpClient.newBuilder().followRedirects(false).followSslRedirects(false).build()
+    }
+
     /**
      * Create an exchange API instance.
      * @param credentials The credentials for the exchange
@@ -162,14 +166,34 @@ class ExchangeApiFactory @Inject constructor(
      */
     fun create(credentials: ExchangeCredentials, isSandbox: Boolean? = null): ExchangeApi {
         val sandboxMode = isSandbox ?: userPreferences.isSandboxMode()
+        if (sandboxMode != userPreferences.processSandboxMode || sandboxMode != userPreferences.isSandboxMode()) {
+            return UnavailableExchangeApi(credentials.exchange, "Restart the app before using the new environment")
+        }
+        if (sandboxMode && !ExchangeConfig.hasSandboxEndpoint(credentials.exchange)) {
+            return UnavailableExchangeApi(credentials.exchange, "${credentials.exchange.displayName} has no spot sandbox endpoint")
+        }
+        val client = if (sandboxMode) sandboxClient else okHttpClient
         return when (credentials.exchange) {
-            Exchange.COINMATE -> CoinmateApi(credentials, sandboxMode, okHttpClient)
-            Exchange.BINANCE -> BinanceApi(credentials, sandboxMode, okHttpClient)
-            Exchange.KRAKEN -> KrakenApi(credentials, sandboxMode, okHttpClient)
-            Exchange.KUCOIN -> KuCoinApi(credentials, sandboxMode, okHttpClient)
+            Exchange.COINMATE -> CoinmateApi(credentials, sandboxMode, client)
+            Exchange.BINANCE -> BinanceApi(credentials, sandboxMode, client)
+            Exchange.KRAKEN -> KrakenApi(credentials, sandboxMode, client)
+            Exchange.KUCOIN -> KuCoinApi(credentials, sandboxMode, client)
             Exchange.BITFINEX -> BitfinexApi(credentials, sandboxMode)
             Exchange.HUOBI -> HuobiApi(credentials, sandboxMode)
-            Exchange.COINBASE -> CoinbaseApi(credentials, sandboxMode, okHttpClient)
+            Exchange.COINBASE -> CoinbaseApi(credentials, sandboxMode, client)
         }
     }
+}
+
+private class UnavailableExchangeApi(override val exchange: Exchange, private val message: String) : ExchangeApi {
+    override suspend fun marketBuy(crypto: String, fiat: String, fiatAmount: BigDecimal) =
+        DcaResult.Error(message, retryable = false, confirmedRejection = true)
+
+    override suspend fun getBalance(currency: String): BigDecimal? = null
+    override suspend fun getCurrentPrice(crypto: String, fiat: String): BigDecimal? = null
+    override suspend fun withdraw(crypto: String, amount: BigDecimal, address: String): Result<String> =
+        Result.failure(UnsupportedOperationException(message))
+
+    override suspend fun getWithdrawalFee(crypto: String): BigDecimal? = null
+    override suspend fun validateCredentials() = false
 }

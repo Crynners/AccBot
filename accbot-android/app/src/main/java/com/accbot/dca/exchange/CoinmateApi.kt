@@ -69,7 +69,10 @@ class CoinmateApi(
 
                 if (json.optBoolean("error", true)) {
                     val errorMessage = json.optString("errorMessage", "Unknown error")
-                    return@withContext DcaResult.Error(errorMessage, retryable = false)
+                    return@withContext DcaResult.Error(
+                        errorMessage, retryable = false,
+                        confirmedRejection = response.isSuccessful && json.opt("error") == true
+                    )
                 }
 
                 // buyInstant returns just the order ID
@@ -79,26 +82,6 @@ class CoinmateApi(
             // Query tradeHistory for real fill details (amount, price, fee)
             val tradeDetails = getTradeDetailsByOrderId(orderId, pair)
 
-            val fee: BigDecimal
-            val cryptoAmount: BigDecimal
-            val fillingPrice: BigDecimal
-
-            if (tradeDetails != null) {
-                // Real values from trade history
-                cryptoAmount = tradeDetails.totalAmount
-                fee = tradeDetails.totalFee
-                fillingPrice = tradeDetails.weightedAvgPrice
-            } else {
-                // Fallback: estimate from current price if tradeHistory call failed
-                fee = fiatAmount.multiply(takerFeeRate).setScale(2, RoundingMode.HALF_UP)
-                val currentPrice = getCurrentPrice(crypto, fiat) ?: BigDecimal.ONE
-                val netFiatAmount = fiatAmount - fee
-                cryptoAmount = if (currentPrice > BigDecimal.ZERO)
-                    netFiatAmount.divide(currentPrice, 8, RoundingMode.HALF_UP)
-                else BigDecimal.ZERO
-                fillingPrice = currentPrice
-            }
-
             DcaResult.Success(
                 Transaction(
                     planId = 0, // Will be set by caller
@@ -106,11 +89,11 @@ class CoinmateApi(
                     crypto = crypto,
                     fiat = fiat,
                     fiatAmount = fiatAmount,
-                    cryptoAmount = cryptoAmount,
-                    price = fillingPrice,
-                    fee = fee,
+                    cryptoAmount = tradeDetails?.totalAmount ?: BigDecimal.ZERO,
+                    price = tradeDetails?.weightedAvgPrice ?: BigDecimal.ZERO,
+                    fee = tradeDetails?.totalFee ?: BigDecimal.ZERO,
                     feeAsset = fiat,
-                    status = TransactionStatus.COMPLETED,
+                    status = if (tradeDetails == null) TransactionStatus.PENDING else TransactionStatus.COMPLETED,
                     exchangeOrderId = orderId,
                     executedAt = Instant.now()
                 )
@@ -213,6 +196,16 @@ class CoinmateApi(
         limitPrice: BigDecimal
     ): DcaResult = withContext(Dispatchers.IO) {
         try {
+            val roundedAmount = cryptoAmount.setScale(8, RoundingMode.DOWN)
+            val roundedPrice = limitPrice.setScale(2, RoundingMode.HALF_UP)
+            if (roundedAmount <= BigDecimal.ZERO || roundedPrice <= BigDecimal.ZERO) {
+                return@withContext DcaResult.Error(
+                    "Invalid limit sell amount or price",
+                    retryable = false,
+                    confirmedRejection = true
+                )
+            }
+
             val pair = "${crypto}_${fiat}"
             val nonce = System.currentTimeMillis()
             val signature = createSignature(nonce)
@@ -224,8 +217,8 @@ class CoinmateApi(
                 .add("signature", signature)
                 .add("currencyPair", pair)
                 // Coinmate expects the crypto amount (not fiat total) for sellLimit
-                .add("amount", cryptoAmount.setScale(8, RoundingMode.DOWN).toPlainString())
-                .add("price", limitPrice.setScale(2, RoundingMode.HALF_UP).toPlainString())
+                .add("amount", roundedAmount.toPlainString())
+                .add("price", roundedPrice.toPlainString())
                 .build()
 
             val request = Request.Builder()
@@ -237,15 +230,23 @@ class CoinmateApi(
                 val body = response.body?.string() ?: throw Exception("Empty response")
 
                 if (!response.isSuccessful) {
-                    val isRetryable = response.code in 500..599 || response.code == 429
-                    return@withContext DcaResult.Error("HTTP ${response.code}", retryable = isRetryable)
+                    val isRetryable = response.code in 500..599 || response.code == 429 || response.code == 408
+                    return@withContext DcaResult.Error(
+                        "HTTP ${response.code}",
+                        retryable = isRetryable,
+                        confirmedRejection = false
+                    )
                 }
 
                 val json = JSONObject(body)
 
                 if (json.optBoolean("error", true)) {
                     val errorMessage = json.optString("errorMessage", "Unknown error")
-                    return@withContext DcaResult.Error(errorMessage, retryable = false)
+                    return@withContext DcaResult.Error(
+                        errorMessage,
+                        retryable = false,
+                        confirmedRejection = response.isSuccessful && json.opt("error") == true
+                    )
                 }
 
                 // sellLimit returns the order ID in "data"
@@ -260,22 +261,22 @@ class CoinmateApi(
                         fiat = fiat,
                         fiatAmount = BigDecimal.ZERO,
                         cryptoAmount = BigDecimal.ZERO,
-                        price = limitPrice,
+                        price = roundedPrice,
                         fee = BigDecimal.ZERO,
                         feeAsset = "",
                         status = TransactionStatus.PENDING,
                         exchangeOrderId = orderId,
                         executedAt = Instant.now(),
                         side = TransactionSide.SELL,
-                        limitPrice = limitPrice,
-                        requestedCryptoAmount = cryptoAmount
+                        limitPrice = roundedPrice,
+                        requestedCryptoAmount = roundedAmount
                     )
                 )
             }
         } catch (e: java.io.IOException) {
-            DcaResult.Error(e.message ?: "Network error", retryable = true)
+            DcaResult.Error(e.message ?: "Network error", retryable = true, confirmedRejection = false)
         } catch (e: Exception) {
-            DcaResult.Error(e.message ?: "Unknown error", retryable = false)
+            DcaResult.Error(e.message ?: "Unknown error", retryable = false, confirmedRejection = false)
         }
     }
 
@@ -347,46 +348,7 @@ class CoinmateApi(
             client.newCall(request).execute().use { response ->
                 val body = response.body?.string() ?: return@withContext null
                 if (!response.isSuccessful) return@withContext null
-
-                val json = JSONObject(body)
-                if (json.optBoolean("error", true)) return@withContext null
-
-                val data = json.optJSONObject("data") ?: return@withContext null
-                val status = data.optString("status", "")
-
-                val originalAmount = BigDecimal(data.optString("originalAmount", "0"))
-                val remainingAmount = BigDecimal(data.optString("remainingAmount", "0"))
-                val avgPriceStr = data.optString("avgPrice", "")
-                val avgPrice = if (avgPriceStr.isNotEmpty()) {
-                    try { BigDecimal(avgPriceStr) } catch (_: Exception) { null }
-                } else null
-
-                val filledAmount = (originalAmount - remainingAmount).max(BigDecimal.ZERO)
-                val filledFiat = if (avgPrice != null && filledAmount > BigDecimal.ZERO) {
-                    filledAmount.multiply(avgPrice).setScale(2, RoundingMode.HALF_UP)
-                } else BigDecimal.ZERO
-
-                val mappedStatus = when (status.uppercase()) {
-                    "FILLED" -> TransactionStatus.COMPLETED
-                    "OPEN" -> if (filledAmount > BigDecimal.ZERO) {
-                        TransactionStatus.PARTIAL
-                    } else TransactionStatus.PENDING
-                    "PARTIALLY_FILLED" -> TransactionStatus.PARTIAL
-                    "CANCELLED", "CANCELED", "EXPIRED" ->
-                        if (filledAmount > BigDecimal.ZERO) TransactionStatus.PARTIAL
-                        else TransactionStatus.CANCELLED
-                    else -> return@withContext null
-                }
-
-                OrderStatusResult(
-                    status = mappedStatus,
-                    filledCryptoAmount = filledAmount,
-                    filledFiatAmount = filledFiat,
-                    avgFillPrice = if (filledAmount > BigDecimal.ZERO) avgPrice else null,
-                    // Coinmate doesn't return aggregate fee on orderById - caller can fetch from tradeHistory if needed
-                    fee = null,
-                    feeAsset = null
-                )
+                parseOrderStatusJson(body)
             }
         } catch (_: Exception) {
             null
@@ -603,5 +565,66 @@ class CoinmateApi(
     private fun createSignature(nonce: Long): String {
         val message = "$nonce$clientId${credentials.apiKey}"
         return CryptoUtils.hmacSha256Hex(message, credentials.apiSecret).uppercase()
+    }
+
+    companion object {
+        internal fun parseOrderStatusJson(body: String): OrderStatusResult? {
+            return try {
+                val json = JSONObject(body)
+                if (json.optBoolean("error", true)) return null
+
+                val data = json.optJSONObject("data") ?: return null
+                val status = data.optString("status", "")
+
+                val originalAmount = BigDecimal(data.optString("originalAmount", "0"))
+                val remainingAmount = data.optString("remainingAmount").toBigDecimalOrNull()
+                    ?: data.optString("amount").toBigDecimalOrNull()
+                    ?: return null
+                val avgPriceStr = data.optString("avgPrice", "")
+                val avgPrice = if (avgPriceStr.isNotEmpty()) {
+                    try { BigDecimal(avgPriceStr).takeIf { it > BigDecimal.ZERO } } catch (_: Exception) { null }
+                } else null
+
+                val filledAmount = (originalAmount - remainingAmount).max(BigDecimal.ZERO)
+                val filledFiat = if (avgPrice != null && filledAmount > BigDecimal.ZERO) {
+                    filledAmount.multiply(avgPrice).setScale(2, RoundingMode.HALF_UP)
+                } else BigDecimal.ZERO
+
+                val mappedStatus = when (status.uppercase()) {
+                    "FILLED" -> TransactionStatus.COMPLETED
+                    "OPEN" -> if (filledAmount > BigDecimal.ZERO) {
+                        TransactionStatus.PARTIAL
+                    } else TransactionStatus.PENDING
+                    "PARTIALLY_FILLED" -> TransactionStatus.PARTIAL
+                    "CANCELLED", "CANCELED", "EXPIRED" ->
+                        if (filledAmount > BigDecimal.ZERO) TransactionStatus.PARTIAL_CANCELLED
+                        else TransactionStatus.CANCELLED
+                    else -> return null
+                }
+
+                val identity = runCatching {
+                    OrderIdentity(
+                        id = data.getString("id"),
+                        side = TransactionSide.valueOf(data.getString("type")),
+                        pair = data.getString("currencyPair"),
+                        createdAt = Instant.ofEpochMilli(data.getLong("timestamp")),
+                        amount = originalAmount,
+                        limitPrice = data.getString("price").toBigDecimal()
+                    )
+                }.getOrNull()
+                OrderStatusResult(
+                    status = mappedStatus,
+                    filledCryptoAmount = filledAmount,
+                    filledFiatAmount = filledFiat,
+                    avgFillPrice = if (filledAmount > BigDecimal.ZERO) avgPrice else null,
+                    // Coinmate doesn't return aggregate fee on orderById - caller can fetch from tradeHistory if needed
+                    fee = null,
+                    feeAsset = null,
+                    identity = identity
+                )
+            } catch (_: Exception) {
+                null
+            }
+        }
     }
 }

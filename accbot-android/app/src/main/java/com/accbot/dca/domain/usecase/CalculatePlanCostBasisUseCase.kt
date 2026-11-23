@@ -32,15 +32,11 @@ class CalculatePlanCostBasisUseCase @Inject constructor(
     companion object {
         fun computeCostBasis(transactions: List<TransactionEntity>): RemainingInventory {
             val buys = transactions.filter {
-                it.side == TransactionSide.BUY &&
-                    (it.status == TransactionStatus.COMPLETED || it.status == TransactionStatus.PARTIAL)
+                it.side == TransactionSide.BUY && it.status.hasFilledPortion
             }
 
             val sells = transactions.filter {
-                it.side == TransactionSide.SELL &&
-                    (it.status == TransactionStatus.COMPLETED ||
-                        it.status == TransactionStatus.PARTIAL ||
-                        it.status == TransactionStatus.PENDING)
+                it.side == TransactionSide.SELL && (it.status.isOpen || it.status.hasFilledPortion)
             }.sortedBy { it.executedAt }
 
             val consumed = HashMap<Long, BigDecimal>(buys.size)
@@ -93,13 +89,21 @@ class CalculatePlanCostBasisUseCase @Inject constructor(
         }
 
         /**
-         * Crypto reserved/consumed by a sell. PENDING/PARTIAL: full requested amount (filled
-         * + still-reserved unfilled portion). COMPLETED: cryptoAmount (= requested when fully
-         * filled). max() guards against rare overflow if filled > requested.
+         * Crypto reserved/consumed by a sell:
+         * - Open orders ([TransactionStatus.PENDING], [TransactionStatus.PARTIAL]): reserve full
+         *   requested amount (`max(requested, filled)`) so the unfilled remainder stays locked.
+         * - Terminal orders with fills ([TransactionStatus.COMPLETED], [TransactionStatus.PARTIAL_CANCELLED]):
+         *   consume ONLY the actually filled [TransactionEntity.cryptoAmount], releasing any
+         *   cancelled unfilled remainder back into available capacity.
+         * - [TransactionStatus.CANCELLED] / [TransactionStatus.FAILED]: consume nothing.
          */
-        private fun effectiveConsumption(sell: TransactionEntity): BigDecimal {
-            val requested = sell.requestedCryptoAmount ?: BigDecimal.ZERO
-            return requested.max(sell.cryptoAmount)
+        private fun effectiveConsumption(sell: TransactionEntity): BigDecimal = when (sell.status) {
+            TransactionStatus.PENDING, TransactionStatus.PARTIAL -> {
+                val requested = sell.requestedCryptoAmount ?: BigDecimal.ZERO
+                requested.max(sell.cryptoAmount)
+            }
+            TransactionStatus.COMPLETED, TransactionStatus.PARTIAL_CANCELLED -> sell.cryptoAmount
+            TransactionStatus.CANCELLED, TransactionStatus.FAILED -> BigDecimal.ZERO
         }
     }
 }

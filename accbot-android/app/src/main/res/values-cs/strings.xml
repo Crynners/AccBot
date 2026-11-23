@@ -176,13 +176,23 @@
     <string name="backup_preview_withdrawals">Výběry: %1$d</string>
     <string name="backup_preview_thresholds">Prahové hodnoty výběrů: %1$d</string>
     <string name="backup_restore_button">Obnovit</string>
+    <string name="backup_restore_merge">Sloučit se stávajícími daty</string>
+    <string name="backup_restore_replace">Přepsat stávající data</string>
+    <string name="backup_restore_paused">Obnovené plány zůstanou pozastavené, dokud je nezkontrolujete a nezapnete.</string>
+    <string name="backup_environment">Prostředí</string>
+    <string name="backup_environment_test">Testovací</string>
+    <string name="backup_environment_live">Produkční</string>
+    <string name="backup_wrong_environment">Záloha patří do jiného prostředí. Před obnovou do něj přepněte aplikaci.</string>
+    <string name="backup_too_large">Záloha překračuje podporovanou velikost.</string>
+    <string name="backup_open_orders">Před přepsáním dat vyřešte čekající objednávky.</string>
+    <string name="backup_restart">Restartovat aplikaci</string>
     <string name="backup_restore_warning">Data ze zálohy budou přidána k aktuálním datům. Stávající data nebudou smazána.</string>
-    <string name="backup_restore_warning_replace">Obnova nahradí všechna stávající data obsahem zálohy.</string>
+    <string name="backup_restore_warning_replace">Obnova nahradí stávající plány, historii a API klíče obsahem zálohy. Obnovené plány zůstanou pozastavené.</string>
     <string name="backup_restoring">Obnovuji zálohu…</string>
     <string name="backup_decrypting">Dešifruji…</string>
-    <string name="backup_restore_success">Záloha obnovena úspěšně. Aplikace se restartuje.</string>
+    <string name="backup_restore_success">Záloha obnovena</string>
     <string name="backup_restore_error">Obnova zálohy se nezdařila</string>
-    <string name="backup_credentials_require_encryption">Při zahrnutí přístupových údajů je nutné šifrování</string>
+    <string name="backup_credentials_require_encryption">Záloha s API klíči musí být šifrovaná.</string>
     <string name="backup_no_passphrase">Zadejte heslo nebo vygenerujte seed</string>
     <string name="backup_items_count">%1$d položek</string>
 
@@ -319,14 +329,14 @@
     <string name="plan_details_days_remaining">~%1$d dní (%2$d nákupů)</string>
     <string name="plan_details_delete_subtitle">Trvale smazat tento plán a všechny jeho transakce</string>
     <string name="plan_details_delete_confirm_hint">Zadejte %1$s pro potvrzení</string>
-    <string name="plan_details_delete_transactions_title">Smazat všechny transakce</string>
-    <string name="plan_details_delete_transactions_text">Trvale se smaže všech %1$d transakcí tohoto plánu. Tuto akci nelze vrátit zpět.\n\nPro potvrzení zadejte počet transakcí:</string>
+    <string name="plan_details_delete_transactions_title">Smazat uzavřené transakce</string>
+    <string name="plan_details_delete_transactions_text">Trvale se smaže %1$d uzavřených transakcí tohoto plánu.\n\nPro potvrzení zadejte počet transakcí.</string>
     <string name="plan_details_delete_transactions_hint">Zadejte %1$d pro potvrzení</string>
-    <string name="plan_details_delete_transactions_button">Smazat všechny transakce</string>
+    <string name="plan_details_delete_transactions_button">Smazat uzavřené transakce</string>
     <string name="plan_details_delete_transactions_success">%1$d transakcí smazáno</string>
     <string name="plan_details_create_sell_order">+ Vytvořit prodejní příkaz</string>
     <string name="plan_details_delete_blocked_title">Nelze smazat plán</string>
-    <string name="plan_details_delete_blocked_text">Tento plán má %1$d otevřených prodejních příkazů. Zruš je nejdřív, než plán smažeš.</string>
+    <string name="plan_details_delete_blocked_text">Před smazáním plánu vyřešte čekající příkazy a příkazy ke kontrole.</string>
 
     <!-- Edit Plan Screen -->
     <string name="edit_plan_title">Upravit plán</string>
@@ -450,6 +460,7 @@
     <string name="transaction_status_cancelled">Zrušeno</string>
     <string name="transaction_status_pending">Čekající</string>
     <string name="transaction_status_partial">Částečně vyplněno</string>
+    <string name="transaction_status_partial_cancelled">Částečně vyplněno (zrušeno)</string>
     <string name="transaction_details_at">v</string>
     <string name="transaction_details_sell_section">Prodejní příkaz</string>
     <string name="transaction_details_limit_price">Limitní cena</string>
@@ -612,6 +623,25 @@
     <string name="notification_dca_failed">DCA selhalo</string>
     <string name="notification_dca_failed_text">Nepodařilo se nakoupit %1$s: %2$s</string>
     <string name="notification_dca_error">DCA chyba</string>
+    <string name="notification_purchase_needs_review">Burza nepotvrdila výsledek nákupu. Plán počká na vaši kontrolu.</string>
+    <string name="dashboard_next_purchase_status">Další plánovaný nákup · %1$s</string>
+    <string name="dashboard_last_purchase_status">Poslední potvrzený nákup · %1$s %2$s · %3$s</string>
+    <string name="dashboard_open_sell_status">Otevřené prodeje · %1$d</string>
+    <string name="dashboard_purchase_review_count">Nákupy ke kontrole · %1$d</string>
+    <string name="run_now_sandbox">Vybrané plány odešlou testovací objednávky.</string>
+    <string name="run_now_production">Vybrané plány odešlou skutečné objednávky.</string>
+    <string name="first_plan_schedules_test_orders">Tento plán naplánuje testovací nákupy na %1$s.</string>
+    <string name="first_plan_schedules_real_orders">Tento plán naplánuje skutečné nákupy na %1$s.</string>
+    <string name="transaction_review_purchase">Potvrdit kontrolu nákupu</string>
+    <string name="transaction_purchase_in_progress">AccBot právě zpracovává nákup. Počkejte na dokončení a před potvrzením zkontrolujte burzu.</string>
+    <string name="transaction_review_sell">Potvrdit kontrolu prodeje</string>
+    <string name="transaction_sell_needs_review">Burza nepotvrdila výsledek prodeje. Množství zůstane rezervované, dokud objednávku nezkontrolujete.</string>
+    <string name="transaction_review_sell_message">Zadejte ID objednávky z burzy. Prázdné pole potvrďte pouze tehdy, když jste ověřili, že objednávka není otevřená a nic se neprovedlo.</string>
+    <string name="transaction_sell_in_progress">AccBot právě zpracovává prodej. Počkejte na dokončení a před potvrzením zkontrolujte burzu.</string>
+    <string name="transaction_sell_order_unverified">ID objednávky se nepodařilo ověřit. Množství zůstává rezervované.</string>
+    <string name="notification_purchase_without_fill">Burza uzavřela objednávku bez plnění.</string>
+    <string name="exchange_connection_open_orders">Před odebráním připojení vyřešte jeho čekající objednávky.</string>
+    <string name="transaction_review_purchase_message">Ověřte výsledek na burze. Pokud nákup proběhl, nejprve importujte historii obchodů. Po potvrzení může plán pokračovat podle rozvrhu.</string>
     <string name="notification_runaway_disabled">Plán pozastaven: zjištěno neobvykle mnoho nákupů. Zkontroluj účet a po vyřešení plán znovu zapni.</string>
     <string name="notification_low_balance_title">Nízký zůstatek na %1$s</string>
     <string name="notification_low_balance_text">%1$s %2$s zbývá pro DCA</string>
@@ -856,7 +886,7 @@
     <string name="settings_delete_plans_dialog_title">Smazat všechny DCA plány?</string>
     <string name="settings_delete_plans_dialog_text">Trvale se smaže všech %1$d DCA plánů. Aktivní plány přestanou fungovat. Tuto akci nelze vrátit zpět.</string>
     <string name="settings_delete_transactions_dialog_title">Smazat historii transakcí?</string>
-    <string name="settings_delete_transactions_dialog_text">Trvale se smaže všech %1$d transakcí. Portfolio data budou ztracena. Tuto akci nelze vrátit zpět.</string>
+    <string name="settings_delete_transactions_dialog_text">Trvale se smaže %1$d uzavřených transakcí včetně souvisejících údajů o portfoliu.</string>
     <string name="settings_delete_notifications_dialog_title">Smazat historii oznámení?</string>
     <string name="settings_delete_notifications_dialog_text">Trvale se smaže všech %1$d oznámení. Tuto akci nelze vrátit zpět.</string>
 
@@ -1050,9 +1080,23 @@
     <string name="sell_wizard_ladder_error_avg_required">Pro profit %% musí být zadaná průměrná nákupní cena</string>
     <string name="sell_wizard_ladder_error_amount_positive">Množství musí být větší než 0</string>
     <string name="sell_wizard_ladder_error_count_min2">Počet orderů musí být alespoň 2</string>
+    <string name="sell_wizard_ladder_error_count_max">Počet orderů může být nejvýše %1$d</string>
     <string name="sell_wizard_ladder_error_to_must_exceed_from">Do musí být větší než Od (oba kladné)</string>
     <string name="sell_wizard_ladder_error_insufficient">Nemáš tolik k dispozici</string>
     <string name="sell_wizard_ladder_error_below_min">Hodnota nejmenšího orderu (%1$s %2$s) je pod minimem %3$s %2$s</string>
+    <string name="sell_wizard_ladder_error_net_unreachable_max">Cílový čistý výnos nelze v režimu stejného výnosu dosáhnout (musí být pod %1$s %2$s pro zvolenou počáteční cenu a počet příkazů)</string>
+    <string name="sell_wizard_ladder_error_net_unreachable_min">Cílový čistý výnos musí být vyšší než %1$s %2$s</string>
+    <string name="sell_wizard_ladder_error_invalid_order">Jeden nebo více příkazů série má neplatné množství nebo cenu</string>
+    <string name="sell_validation_sells_disabled">Prodeje jsou pro tento plán vypnuté</string>
+    <string name="sell_wizard_ladder_instant_fill_warning">%1$d příkaz(y) jsou na nebo pod aktuální tržní cenou (%2$s %3$s) a vyplní se okamžitě.</string>
+    <string name="sell_wizard_ladder_far_from_market_warning">%1$d příkaz(y) jsou vysoko nad tržní cenou a nemusí se dlouho vyplnit.</string>
+    <string name="sell_wizard_ladder_loss_warning">%1$d příkaz(y) by se po poplatku prodaly se ztrátou (celkem %2$s %3$s ztráta na těchto příkazech).</string>
+    <string name="sell_wizard_uncertain_single_text">Stav příkazu je nejistý (%1$s). Příkaz mohl být na %2$s přijat. Opakované odeslání je zablokováno, dokud nezkontroluješ otevřené příkazy na burze a stav neodblokuješ.</string>
+    <string name="sell_wizard_uncertain_ladder_text">Vytvořeno %1$d z %2$d příkazů. Příkaz #%3$d má nejistý stav (%4$s) a mohl být na %5$s přijat. Zbývající příkazy nebyly odeslány. Opakované odeslání je zablokováno, dokud nezkontroluješ burzu.</string>
+    <string name="sell_wizard_uncertain_resolve_action">Zkontrolováno na burze – obnovit a odemknout</string>
+    <string name="sell_wizard_uncertain_keep_locked">Zavřít upozornění</string>
+    <string name="sell_wizard_submitting_progress">Odesílám %1$d / %2$d…</string>
+    <string name="sell_wizard_validation_failed">Nepodařilo se ověřit příkaz vůči aktuální kapacitě plánu. Zkus to znovu.</string>
     <string name="sell_wizard_amount_pct_hint">= %1$s %% z dostupných</string>
     <string name="sell_wizard_submit_error_unknown">Neznámá chyba</string>
     <string name="notification_sell_filled_title">Prodej proveden ✓</string>

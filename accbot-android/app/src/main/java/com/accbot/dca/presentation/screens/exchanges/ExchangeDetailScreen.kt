@@ -69,6 +69,7 @@ fun ExchangeDetailScreen(
     val scope = rememberCoroutineScope()
     var showRemoveDialog by remember { mutableStateOf(false) }
     val savedMessage = stringResource(R.string.exchange_detail_saved)
+    val openOrdersMessage = stringResource(R.string.exchange_connection_open_orders)
 
     // Import result dialog
     uiState.apiImportResult?.let { result ->
@@ -94,7 +95,9 @@ fun ExchangeDetailScreen(
                 TextButton(
                     onClick = {
                         showRemoveDialog = false
-                        viewModel.removeExchange(onRemoved = onNavigateBack)
+                        viewModel.removeExchange(onRemoved = onNavigateBack, onOpenOrders = {
+                            scope.launch { snackbarHostState.showSnackbar(openOrdersMessage) }
+                        })
                     }
                 ) {
                     Text(stringResource(R.string.common_remove), color = MaterialTheme.colorScheme.error)

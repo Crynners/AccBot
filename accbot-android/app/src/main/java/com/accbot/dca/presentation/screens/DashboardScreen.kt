@@ -77,6 +77,7 @@ import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.TimeUtils
 import com.accbot.dca.presentation.utils.NumberFormatters
+import com.accbot.dca.presentation.utils.DateFormatters
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlinx.coroutines.delay
@@ -198,6 +199,7 @@ fun DashboardScreen(
     if (uiState.showRunNowSheet) {
         RunNowBottomSheet(
             plans = uiState.activePlans,
+            isSandbox = uiState.isSandboxMode,
             onDismiss = { viewModel.hideRunNowSheet() },
             onConfirm = { viewModel.runSelectedPlans(it) }
         )
@@ -240,6 +242,8 @@ fun DashboardScreen(
                     if (uiState.isSandboxMode) {
                         SandboxBanner()
                     }
+
+                    PurchaseStatusCard(uiState, onNavigateToHistory)
 
                     if (uiState.networkRetryInfo.plans.isNotEmpty() && !uiState.networkRetryInfo.dismissed) {
                         NetworkRetryBanner(
@@ -362,6 +366,8 @@ fun DashboardScreen(
                         SandboxBanner()
                     }
                 }
+
+                item { PurchaseStatusCard(uiState, onNavigateToHistory) }
 
                 // Network Retry Banner
                 if (uiState.networkRetryInfo.plans.isNotEmpty() && !uiState.networkRetryInfo.dismissed) {
@@ -1382,6 +1388,47 @@ private fun formatRemainingDays(days: Double, context: android.content.Context):
 }
 
 @Composable
+private fun PurchaseStatusCard(state: DashboardUiState, onViewHistory: () -> Unit) {
+    val openSells = state.openSellsByPlan.values.sumOf { it.size }
+    if (state.nextPurchase == null && state.lastConfirmedPurchase == null &&
+        state.purchasesAwaitingReview == 0 && openSells == 0
+    ) return
+
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            state.nextPurchase?.let { time ->
+                Text(
+                    stringResource(R.string.dashboard_next_purchase_status, DateFormatters.shortDateTime.format(time)),
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
+            state.lastConfirmedPurchase?.let { purchase ->
+                Text(
+                    stringResource(
+                        R.string.dashboard_last_purchase_status,
+                        NumberFormatters.crypto(purchase.cryptoAmount),
+                        purchase.crypto,
+                        DateFormatters.shortDateTime.format(purchase.executedAt)
+                    ),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            if (openSells > 0) {
+                Text(stringResource(R.string.dashboard_open_sell_status, openSells))
+            }
+            if (state.purchasesAwaitingReview > 0) {
+                TextButton(onClick = onViewHistory) {
+                    Text(stringResource(R.string.dashboard_purchase_review_count, state.purchasesAwaitingReview))
+                }
+            }
+        }
+    }
+}
+
+@Composable
 internal fun EmptyPlansCard(onAddPlan: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1551,6 +1598,7 @@ internal fun PortfolioSummaryCard(
 @Composable
 private fun RunNowBottomSheet(
     plans: List<DcaPlanWithBalance>,
+    isSandbox: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (List<Long>) -> Unit
 ) {
@@ -1569,6 +1617,11 @@ private fun RunNowBottomSheet(
                 text = stringResource(R.string.run_now_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = stringResource(if (isSandbox) R.string.run_now_sandbox else R.string.run_now_production),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
 

@@ -1,0 +1,44 @@
+name: Sign AccBot 2.9.0 beta
+on:
+  push:
+    branches: [beta/sign-2.9.0]
+permissions:
+  contents: read
+jobs:
+  sign:
+    if: github.repository == 'Crynners/AccBot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: gradle
+      - name: Build and sign the Play bundle
+        working-directory: accbot-android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          export KEYSTORE_PATH="$(mktemp "$RUNNER_TEMP/accbot-upload.XXXXXX")"
+          trap 'rm -f -- "$KEYSTORE_PATH"' EXIT
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          bash ./gradlew :app:bundleRelease
+          bundle=app/build/outputs/bundle/release/app-release.aab
+          jar tf "$bundle" | awk '/^META-INF\/[^/]+\.(RSA|DSA|EC)$/ { signed=1 } END { exit !signed }'
+          openssl cms -encrypt -binary -aes-256-cbc -outform DER \
+            -in "$bundle" -out "$RUNNER_TEMP/accbot-2.9.0.aab.cms" ../.github/accbot-beta-delivery-cert.pem
+      - uses: actions/upload-artifact@v4
+        with:
+          name: accbot-2.9.0-beta-encrypted
+          path: ${{ runner.temp }}/accbot-2.9.0.aab.cms
+          if-no-files-found: error
+          retention-days: 1

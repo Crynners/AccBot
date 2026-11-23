@@ -24,6 +24,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.isStable
+import com.accbot.dca.domain.model.ExchangeFilter
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.EmptyState
 import com.accbot.dca.presentation.components.ExchangeSelectionTile
@@ -77,7 +78,7 @@ fun ExchangeManagementScreen(
         val groupedConnections = remember(uiState.connections) {
             uiState.connections.groupBy { it.exchange }
         }
-        val availableExchanges = Exchange.entries
+        val availableExchanges = ExchangeFilter.getAvailableExchanges(uiState.isSandboxMode)
             .filter { uiState.showExperimental || it.isStable }
 
         if (uiState.connections.isEmpty() && availableExchanges.isEmpty()) {

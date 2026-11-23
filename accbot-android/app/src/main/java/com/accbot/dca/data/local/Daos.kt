@@ -45,8 +45,23 @@ interface DcaPlanDao {
     @Query("SELECT * FROM dca_plans WHERE isEnabled = 1")
     suspend fun getEnabledPlans(): List<DcaPlanEntity>
 
-    @Query("SELECT MIN(nextExecutionAt) FROM dca_plans WHERE isEnabled = 1 AND nextExecutionAt IS NOT NULL")
+    @Query("""
+        SELECT MIN(nextExecutionAt) FROM dca_plans
+        WHERE isEnabled = 1 AND NOT EXISTS (
+            SELECT 1 FROM transactions WHERE planId = dca_plans.id AND side = 'BUY'
+              AND status = 'PENDING' AND (exchangeOrderId IS NULL OR exchangeOrderId = '')
+        )
+    """)
     suspend fun getEarliestNextExecution(): Long?
+
+    @Query("""
+        SELECT MIN(nextExecutionAt) FROM dca_plans
+        WHERE isEnabled = 1 AND NOT EXISTS (
+            SELECT 1 FROM transactions WHERE planId = dca_plans.id AND side = 'BUY'
+              AND status = 'PENDING' AND (exchangeOrderId IS NULL OR exchangeOrderId = '')
+        )
+    """)
+    fun observeEarliestNextExecution(): Flow<Long?>
 
     @Query("SELECT * FROM dca_plans WHERE id = :id")
     suspend fun getPlanById(id: Long): DcaPlanEntity?
@@ -59,6 +74,9 @@ interface DcaPlanDao {
 
     @Query("SELECT COUNT(*) FROM dca_plans WHERE connectionId = :connectionId")
     suspend fun countPlansByConnection(connectionId: Long): Int
+
+    @Query("UPDATE dca_plans SET isEnabled = 0 WHERE connectionId = :connectionId")
+    suspend fun pausePlansForConnection(connectionId: Long)
 
     @Query("DELETE FROM dca_plans WHERE connectionId = :connectionId")
     suspend fun deletePlansByConnection(connectionId: Long)
@@ -165,6 +183,42 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions ORDER BY executedAt DESC")
     suspend fun getAllTransactionsOnce(): List<TransactionEntity>
 
+    @Query("SELECT EXISTS(SELECT 1 FROM transactions WHERE status IN ('PENDING', 'PARTIAL'))")
+    suspend fun hasOpenTransactions(): Boolean
+
+    @Query("SELECT EXISTS(SELECT 1 FROM transactions WHERE connectionId = :connectionId AND status IN ('PENDING', 'PARTIAL'))")
+    suspend fun hasOpenTransactionsForConnection(connectionId: Long): Boolean
+
+    @Query("""
+        SELECT EXISTS(SELECT 1 FROM transactions WHERE planId = :planId AND side = 'BUY'
+            AND status = 'PENDING' AND (exchangeOrderId IS NULL OR exchangeOrderId = ''))
+    """)
+    suspend fun hasUnidentifiedBuy(planId: Long): Boolean
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE side = 'BUY' AND status = 'PENDING' AND (exchangeOrderId IS NULL OR exchangeOrderId = '')")
+    fun observePurchasesAwaitingReview(): Flow<Int>
+
+    @Query("SELECT * FROM transactions WHERE side = 'BUY' AND status = 'COMPLETED' ORDER BY executedAt DESC LIMIT 1")
+    fun observeLatestConfirmedPurchase(): Flow<TransactionEntity?>
+
+    @Query("""
+        UPDATE transactions SET status = 'CANCELLED' WHERE id = :id AND side = 'BUY'
+            AND status = 'PENDING' AND (exchangeOrderId IS NULL OR exchangeOrderId = '')
+    """)
+    suspend fun acknowledgeUnidentifiedBuy(id: Long)
+
+    @Query("""
+        SELECT EXISTS(SELECT 1 FROM transactions WHERE planId = :planId AND side = 'SELL'
+            AND status = 'PENDING' AND (exchangeOrderId IS NULL OR exchangeOrderId = ''))
+    """)
+    suspend fun hasUnidentifiedSell(planId: Long): Boolean
+
+    @Query("""
+        UPDATE transactions SET status = 'CANCELLED' WHERE id = :id AND side = 'SELL' AND status = 'PENDING'
+            AND (exchangeOrderId IS NULL OR exchangeOrderId = '')
+    """)
+    suspend fun acknowledgeUnidentifiedSell(id: Long)
+
     /**
      * Get paginated transactions for efficient memory usage with large datasets.
      * @param limit Maximum number of items to return
@@ -178,6 +232,9 @@ interface TransactionDao {
      */
     @Query("SELECT COUNT(*) FROM transactions")
     suspend fun getTransactionCount(): Int
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE status NOT IN ('PENDING', 'PARTIAL')")
+    suspend fun getClosedTransactionCount(): Int
 
     /**
      * Get paginated filtered transactions for efficient memory usage.
@@ -370,8 +427,17 @@ interface TransactionDao {
     @Update
     suspend fun updateTransaction(transaction: TransactionEntity)
 
-    @Delete
-    suspend fun deleteTransaction(transaction: TransactionEntity)
+    @Query("DELETE FROM transactions WHERE id = :id AND status NOT IN ('PENDING', 'PARTIAL')")
+    suspend fun deleteClosedTransaction(id: Long)
+
+    @Query("DELETE FROM transactions WHERE planId = :planId AND status NOT IN ('PENDING', 'PARTIAL')")
+    suspend fun deleteClosedTransactionsByPlanId(planId: Long): Int
+
+    @Query("DELETE FROM transactions WHERE status NOT IN ('PENDING', 'PARTIAL')")
+    suspend fun deleteAllClosedTransactions()
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE planId = :planId AND status IN ('PENDING', 'PARTIAL')")
+    suspend fun countOpenTransactionsForPlan(planId: Long): Int
 
     @Query("DELETE FROM transactions WHERE planId = :planId")
     suspend fun deleteTransactionsByPlanId(planId: Long)
@@ -459,19 +525,27 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE exchangeOrderId = :orderId AND connectionId = :connectionId LIMIT 1")
     suspend fun getByExchangeOrderIdAndConnection(orderId: String, connectionId: Long): TransactionEntity?
 
+    @Query("""
+        SELECT * FROM transactions WHERE exchangeOrderId = :orderId AND connectionId IS :connectionId
+          AND exchange = :exchange AND crypto = :crypto AND fiat = :fiat LIMIT 1
+    """)
+    suspend fun findMatchingBackupOrder(
+        orderId: String, connectionId: Long?, exchange: Exchange, crypto: String, fiat: String
+    ): TransactionEntity?
+
     @Query("SELECT CAST(COALESCE(SUM(CAST(cryptoAmount AS REAL)), 0) AS TEXT) FROM transactions WHERE planId = :planId AND status = 'COMPLETED' AND side = 'BUY'")
     suspend fun getAccumulatedCryptoByPlan(planId: Long): String
 
     /**
-     * Total realized fiat from completed/partial SELL orders for a given fiat
+     * Total realized fiat from completed/partial/partial-cancelled SELL orders for a given fiat
      * currency. Used by the portfolio summary to surface "Realized P&L" alongside
-     * the existing BUY-based totals. PARTIAL is included because partial fills
-     * have already booked their fiatAmount (= filled amount * avg fill price).
+     * the existing BUY-based totals. PARTIAL and PARTIAL_CANCELLED are included because
+     * partial fills have already booked their fiatAmount (= filled amount * avg fill price).
      */
     @Query("""
         SELECT CAST(COALESCE(SUM(CAST(fiatAmount AS REAL)), 0) AS TEXT)
         FROM transactions
-        WHERE fiat = :fiat AND side = 'SELL' AND status IN ('COMPLETED', 'PARTIAL')
+        WHERE fiat = :fiat AND side = 'SELL' AND status IN ('COMPLETED', 'PARTIAL', 'PARTIAL_CANCELLED')
     """)
     suspend fun getRealizedFiatByFiat(fiat: String): String
 
@@ -483,7 +557,7 @@ interface TransactionDao {
     @Query("""
         SELECT CAST(COALESCE(SUM(CAST(fiatAmount AS REAL)), 0) AS TEXT)
         FROM transactions
-        WHERE planId = :planId AND side = 'SELL' AND status IN ('COMPLETED', 'PARTIAL')
+        WHERE planId = :planId AND side = 'SELL' AND status IN ('COMPLETED', 'PARTIAL', 'PARTIAL_CANCELLED')
     """)
     suspend fun getRealizedFiatByPlan(planId: Long): String
 }

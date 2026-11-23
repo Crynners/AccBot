@@ -31,6 +31,9 @@ class UserPreferences @Inject constructor(
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
+    // The injected Room database is bound to the mode selected at process startup.
+    val processSandboxMode: Boolean = isSandboxMode()
+
     // ==================== Theme ====================
 
     private val _appThemeFlow = MutableStateFlow(readAppTheme())
@@ -147,12 +150,16 @@ class UserPreferences @Inject constructor(
 
     // ==================== Biometric Lock ====================
 
+    private val _biometricLockEnabledFlow = MutableStateFlow(isBiometricLockEnabled())
+    val biometricLockEnabledFlow = _biometricLockEnabledFlow.asStateFlow()
+
     fun isBiometricLockEnabled(): Boolean {
         return prefs.getBoolean(KEY_BIOMETRIC_LOCK_ENABLED, false)
     }
 
     fun setBiometricLockEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_BIOMETRIC_LOCK_ENABLED, enabled).apply()
+        _biometricLockEnabledFlow.value = enabled
     }
 
     // ==================== Changelog ====================

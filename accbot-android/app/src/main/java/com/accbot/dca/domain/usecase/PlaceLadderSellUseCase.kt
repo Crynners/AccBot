@@ -4,9 +4,10 @@ import android.util.Log
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.UserPreferences
-import com.accbot.dca.data.local.toEntity
-import com.accbot.dca.domain.model.DcaResult
+import com.accbot.dca.domain.model.ExchangeCredentials
+import com.accbot.dca.exchange.ExchangeApi
 import com.accbot.dca.exchange.ExchangeApiFactory
+import kotlinx.coroutines.CancellationException
 import java.math.BigDecimal
 import javax.inject.Inject
 
@@ -14,70 +15,170 @@ data class LadderOrder(val cryptoAmount: BigDecimal, val limitPrice: BigDecimal)
 
 sealed class LadderResult {
     data class AllPlaced(val placedTxIds: List<Long>) : LadderResult()
+
+    /**
+     * Series stopped due to a definitive rejection (pre-flight validation or exchange
+     * `confirmedRejection=true`) at [failedAtIndex]. Orders in [placedTxIds] were accepted
+     * and saved in DB; order [failedAtIndex] was definitely not placed.
+     */
     data class PartialFailure(
         val placedTxIds: List<Long>,
         val failedAtIndex: Int,
+        val totalCount: Int,
+        val reason: String,
+        val validationErrors: List<SellValidation.HardError> = emptyList()
+    ) : LadderResult()
+
+    /**
+     * Series stopped because order [uncertainAtIndex] timed out or returned an unconfirmed
+     * error. All orders in [placedTxIds] ARE confirmed placed on the exchange and persisted
+     * locally; order [uncertainAtIndex] MAY have been created on the exchange. Subsequent
+     * orders were not sent. Callers must preserve [placedTxIds] and block blind resubmission
+     * until resolved.
+     */
+    data class UncertainOutcome(
+        val placedTxIds: List<Long>,
+        val uncertainAtIndex: Int,
         val totalCount: Int,
         val reason: String
     ) : LadderResult()
 }
 
 /**
- * Place a sequence of limit sell orders for a single plan. On the first failure we stop
- * and report partial success - already placed orders stay on the exchange and as PENDING
- * transactions in the DB. The caller (UI) can ask the user whether to retry the rest or
- * cancel placed orders manually via the existing cancel flow on plan detail.
+ * Place a sequence of limit sell orders for a single plan.
+ *
+ * Enforces shared ladder validation ([ValidateSellOrderUseCase.validateLadder]) against fresh
+ * DB inventory before sending any order. Each leg reserves its quantity before submission,
+ * so the confirmed and uncertain outcomes remain visible after leaving the wizard.
  */
-class PlaceLadderSellUseCase @Inject constructor(
+class PlaceLadderSellUseCase internal constructor(
     private val database: DcaDatabase,
-    private val credentialsStore: CredentialsStore,
-    private val exchangeApiFactory: ExchangeApiFactory,
-    private val userPreferences: UserPreferences,
-    private val resolvePendingTransactionsUseCase: ResolvePendingTransactionsUseCase
+    private val credentialsProvider: (connectionId: Long, isSandbox: Boolean) -> ExchangeCredentials?,
+    private val apiProvider: (ExchangeCredentials) -> ExchangeApi,
+    private val isSandboxProvider: () -> Boolean,
+    private val isTradingEnabledProvider: () -> Boolean,
+    private val validateSellOrderUseCase: ValidateSellOrderUseCase,
+    private val resolvePending: suspend () -> Int,
+    private val perOrderTimeoutMs: Long = DEFAULT_PER_ORDER_TIMEOUT_MS
 ) {
-    suspend operator fun invoke(planId: Long, orders: List<LadderOrder>): LadderResult {
-        if (orders.size < 2) return LadderResult.PartialFailure(
-            emptyList(), 0, orders.size, "Ladder requires at least 2 orders"
-        )
+    @Inject constructor(
+        database: DcaDatabase,
+        credentialsStore: CredentialsStore,
+        exchangeApiFactory: ExchangeApiFactory,
+        userPreferences: UserPreferences,
+        validateSellOrderUseCase: ValidateSellOrderUseCase,
+        resolvePendingTransactionsUseCase: ResolvePendingTransactionsUseCase
+    ) : this(
+        database = database,
+        credentialsProvider = { connId, sandbox -> credentialsStore.getCredentials(connId, sandbox) },
+        apiProvider = { exchangeApiFactory.create(it) },
+        isSandboxProvider = { userPreferences.isSandboxMode() },
+        isTradingEnabledProvider = { userPreferences.isTradingEnabled() },
+        validateSellOrderUseCase = validateSellOrderUseCase,
+        resolvePending = { resolvePendingTransactionsUseCase() }
+    )
 
+    suspend operator fun invoke(
+        planId: Long,
+        orders: List<LadderOrder>,
+        minOrderFiat: BigDecimal? = null,
+        onOrderPlaced: ((placedCount: Int, totalCount: Int) -> Unit)? = null
+    ): LadderResult {
         val plan = database.dcaPlanDao().getPlanById(planId)
             ?: return LadderResult.PartialFailure(emptyList(), 0, orders.size, "Plan not found")
-        val credentials = credentialsStore.getCredentials(
-            plan.connectionId, userPreferences.isSandboxMode()
-        ) ?: return LadderResult.PartialFailure(emptyList(), 0, orders.size, "Missing credentials")
 
-        val api = exchangeApiFactory.create(credentials)
+        if (!plan.allowSells || !isTradingEnabledProvider()) {
+            return LadderResult.PartialFailure(
+                placedTxIds = emptyList(),
+                failedAtIndex = 0,
+                totalCount = orders.size,
+                reason = "Sells are disabled for this plan",
+                validationErrors = listOf(SellValidation.HardError.SellsDisabled)
+            )
+        }
+
+        val credentials = credentialsProvider(plan.connectionId, isSandboxProvider())
+            ?: return LadderResult.PartialFailure(emptyList(), 0, orders.size, "Missing credentials")
+
+        val api = apiProvider(credentials)
+        if (!api.supportsLimitSell) {
+            return LadderResult.PartialFailure(
+                emptyList(), 0, orders.size,
+                "${plan.exchange.displayName} does not support limit sells"
+            )
+        }
+
+        val effectiveMinOrderFiat = minOrderFiat ?: plan.exchange.minOrderSize[plan.fiat] ?: BigDecimal.ZERO
+        val hardErrors = validateSellOrderUseCase.validateLadder(
+            planId = planId,
+            orders = orders,
+            minOrderFiat = effectiveMinOrderFiat,
+            currentSpot = null
+        ).filterIsInstance<SellValidation.HardError>()
+
+        if (hardErrors.isNotEmpty()) {
+            return LadderResult.PartialFailure(
+                placedTxIds = emptyList(),
+                failedAtIndex = 0,
+                totalCount = orders.size,
+                reason = PlaceLimitSellUseCase.describeHardError(hardErrors.first()),
+                validationErrors = hardErrors
+            )
+        }
+
         val placed = mutableListOf<Long>()
 
         orders.forEachIndexed { idx, order ->
-            val result = api.limitSell(plan.crypto, plan.fiat, order.cryptoAmount, order.limitPrice)
+            val result = submitReservedSellOrder(database, plan, api, order, perOrderTimeoutMs) {
+                validateSellOrderUseCase(
+                    planId, order.cryptoAmount, order.limitPrice, effectiveMinOrderFiat,
+                    currentSpot = null
+                ).filterIsInstance<SellValidation.HardError>()
+            }
             when (result) {
-                is DcaResult.Success -> {
-                    val tx = result.transaction.copy(planId = planId, connectionId = plan.connectionId)
-                    val id = database.transactionDao().insertTransaction(tx.toEntity())
-                    placed += id
+                is PlaceSellResult.Uncertain -> {
+                    bestEffortResolve(placed)
+                    return LadderResult.UncertainOutcome(
+                        placedTxIds = placed.toList(),
+                        uncertainAtIndex = idx,
+                        totalCount = orders.size,
+                        reason = result.reason
+                    )
                 }
-                is DcaResult.Error -> {
-                    // NOTE (orphan-order caveat): like market buys, limitSell is not idempotent.
-                    // A retryable error means the order MIGHT have been placed server-side even
-                    // though we got no orderId back. We deliberately do NOT auto-retry here, so
-                    // there is no runaway, but a blind user retry could create a duplicate sell.
-                    // Full idempotency needs a per-exchange "list open orders" reconciliation
-                    // (no such API yet) - tracked as a follow-up.
-                    return LadderResult.PartialFailure(placed, idx, orders.size, result.message)
+                is PlaceSellResult.Placed -> {
+                    placed += result.txId
+                    onOrderPlaced?.invoke(placed.size, orders.size)
+                }
+                is PlaceSellResult.Rejected -> {
+                    bestEffortResolve(placed)
+                    return LadderResult.PartialFailure(
+                        placedTxIds = placed.toList(),
+                        failedAtIndex = idx,
+                        totalCount = orders.size,
+                        reason = result.reason,
+                        validationErrors = result.validationErrors
+                    )
                 }
             }
         }
 
+        bestEffortResolve(placed)
+        return LadderResult.AllPlaced(placed.toList())
+    }
+
+    private suspend fun bestEffortResolve(placed: List<Long>) {
+        if (placed.isEmpty()) return
         try {
-            resolvePendingTransactionsUseCase()
+            resolvePending()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "resolvePending after ladder failed: ${e.message}")
         }
-        return LadderResult.AllPlaced(placed)
     }
 
     companion object {
         private const val TAG = "PlaceLadderSellUseCase"
+        const val DEFAULT_PER_ORDER_TIMEOUT_MS = 15_000L
     }
 }

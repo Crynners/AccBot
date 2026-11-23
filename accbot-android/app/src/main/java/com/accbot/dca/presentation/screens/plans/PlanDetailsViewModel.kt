@@ -67,7 +67,7 @@ data class PlanDetailsUiState(
      * the given number of open sell orders. UI should show a blocking dialog explaining the
      * user must cancel them first.
      */
-    val deleteBlockedOpenSells: Int? = null
+    val deleteBlockedOpenOrders: Boolean = false
 )
 
 @HiltViewModel
@@ -370,26 +370,24 @@ class PlanDetailsViewModel @Inject constructor(
 
     fun deleteAllTransactions(onDeleted: (Int) -> Unit) {
         viewModelScope.launch {
-            val count = _uiState.value.transactions.size
-            transactionDao.deleteTransactionsByPlanId(planId)
-            onDeleted(count)
+            onDeleted(transactionDao.deleteClosedTransactionsByPlanId(planId))
         }
     }
 
     fun deletePlan(onDeleted: () -> Unit) {
         viewModelScope.launch {
             try {
-                // Block delete when the plan still has open sell orders on the exchange.
-                // Without this guard, the user would lose the FK link to the order rows and
-                // any subsequent fill polling would silently fail.
-                val openSellsCount = transactionDao.observeOpenSellsForPlan(planId).first().size
-                if (openSellsCount > 0) {
-                    _uiState.update { it.copy(deleteBlockedOpenSells = openSellsCount) }
-                    return@launch
+                val openCount = database.withTransaction {
+                    val count = transactionDao.countOpenTransactionsForPlan(planId)
+                    if (count == 0) {
+                        transactionDao.deleteTransactionsByPlanId(planId)
+                        dcaPlanDao.deletePlanById(planId)
+                    }
+                    count
                 }
-                database.withTransaction {
-                    transactionDao.deleteTransactionsByPlanId(planId)
-                    dcaPlanDao.deletePlanById(planId)
+                if (openCount > 0) {
+                    _uiState.update { it.copy(deleteBlockedOpenOrders = true) }
+                    return@launch
                 }
                 DcaAlarmScheduler.scheduleNextAlarm(context)
                 onDeleted()
@@ -400,7 +398,7 @@ class PlanDetailsViewModel @Inject constructor(
     }
 
     fun dismissDeleteBlockedDialog() {
-        _uiState.update { it.copy(deleteBlockedOpenSells = null) }
+        _uiState.update { it.copy(deleteBlockedOpenOrders = false) }
     }
 
     fun showImportDialog() {

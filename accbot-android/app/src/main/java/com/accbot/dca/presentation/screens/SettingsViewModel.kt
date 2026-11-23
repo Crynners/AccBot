@@ -335,7 +335,7 @@ class SettingsViewModel @Inject constructor(
     private fun loadDataCounts() {
         viewModelScope.launch {
             val plans = dcaPlanDao.getPlanCount()
-            val txs = transactionDao.getTransactionCount()
+            val txs = transactionDao.getClosedTransactionCount()
             val notifs = notificationDao.getNotificationCount()
             _uiState.update { it.copy(dcaPlanCount = plans, transactionCount = txs, notificationCount = notifs) }
         }
@@ -352,7 +352,7 @@ class SettingsViewModel @Inject constructor(
 
     fun deleteTransactions() {
         viewModelScope.launch {
-            transactionDao.deleteAllTransactions()
+            transactionDao.deleteAllClosedTransactions()
             loadDataCounts()
         }
     }

@@ -21,15 +21,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.accbot.dca.R
+import com.accbot.dca.presentation.utils.writeSharedExport
 import com.accbot.dca.domain.model.EncryptionMode
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.ui.theme.Warning
-import java.io.File
-import java.io.FileWriter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +80,7 @@ fun BackupExportScreen(
                     "password_mismatch" -> stringResource(R.string.backup_password_mismatch)
                     "no_passphrase" -> stringResource(R.string.backup_no_passphrase)
                     "credentials_require_encryption" -> stringResource(R.string.backup_credentials_require_encryption)
+                    "backup_too_large" -> stringResource(R.string.backup_too_large)
                     else -> error
                 }
                 Card(
@@ -389,14 +388,7 @@ private fun ResultStep(
         onClick = {
             uiState.resultJson?.let { json ->
                 try {
-                    val file = File(context.cacheDir, uiState.resultFileName ?: "accbot_backup.json")
-                    FileWriter(file).use { writer -> writer.write(json) }
-
-                    val uri = FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.fileprovider",
-                        file
-                    )
+                    val uri = writeSharedExport(context, uiState.resultFileName ?: "accbot_backup.json", json)
 
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "application/json"

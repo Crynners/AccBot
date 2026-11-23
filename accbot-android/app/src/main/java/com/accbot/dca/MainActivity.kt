@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
+import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,7 +29,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.collectAsState
@@ -121,8 +121,16 @@ class MainActivity : AppCompatActivity() {
             // Plain remember, NOT rememberSaveable: saved instance state survives process
             // death (system kills the app in background, task stays in recents), so a
             // saveable flag would restore isUnlocked=true and silently skip the lock.
-            var isUnlocked by remember { mutableStateOf(false) }
-            val biometricEnabled = userPreferences.isBiometricLockEnabled()
+            val biometricEnabled by userPreferences.biometricLockEnabledFlow.collectAsState()
+            var isUnlocked by remember(biometricEnabled) { mutableStateOf(false) }
+            var sensitiveRoute by remember { mutableStateOf(false) }
+            SideEffect {
+                if (biometricEnabled || sensitiveRoute) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                }
+            }
 
             // Re-lock when the app spends longer than a short grace period in background,
             // so a quick app switch doesn't re-prompt but a real walk-away does.
@@ -188,7 +196,8 @@ class MainActivity : AppCompatActivity() {
                                 onboardingPreferences.setOnboardingCompleted(true)
                             },
                             pendingTab = pendingTab,
-                            unreadNotificationCount = notificationDao.getUnreadCount()
+                            unreadNotificationCount = notificationDao.getUnreadCount(),
+                            onSensitiveRouteChanged = { sensitiveRoute = it }
                         )
                     }
 
@@ -260,11 +269,19 @@ fun AccBotApp(
     isOnboardingCompleted: Boolean,
     onOnboardingComplete: () -> Unit,
     pendingTab: MutableStateFlow<Int?> = MutableStateFlow(null),
-    unreadNotificationCount: kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.flowOf(0)
+    unreadNotificationCount: kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.flowOf(0),
+    onSensitiveRouteChanged: (Boolean) -> Unit = {}
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    LaunchedEffect(currentRoute) {
+        onSensitiveRouteChanged(
+            currentRoute == Screen.BackupExport.route || currentRoute == Screen.BackupImport.route ||
+                currentRoute == Screen.ExchangeSetup.route || currentRoute == Screen.AddExchange.route ||
+                currentRoute == Screen.ExchangeDetail.route
+        )
+    }
 
     // Detect orientation
     val configuration = LocalConfiguration.current

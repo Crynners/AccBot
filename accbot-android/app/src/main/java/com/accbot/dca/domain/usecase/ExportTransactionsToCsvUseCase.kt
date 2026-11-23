@@ -43,16 +43,19 @@ class ExportTransactionsToCsvUseCase @Inject constructor(
     }
 
     /**
-     * Generate CSV content from all transactions.
+     * Export confirmed fills, including partially filled market or limit orders.
      *
      * @return CsvExportResult with content and filename, or error
      */
     suspend fun execute(): CsvExportResult {
         return try {
-            val transactions = transactionDao.getAllTransactionsOnce()
+            val transactions = transactionDao.getAllTransactionsOnce().filter {
+                it.status.hasFilledPortion &&
+                    it.cryptoAmount.signum() > 0 && it.fiatAmount.signum() > 0
+            }
 
             if (transactions.isEmpty()) {
-                return CsvExportResult.Error("No transactions to export")
+                return CsvExportResult.Error("No confirmed fills to export")
             }
 
             val csvContent = generateCsv(transactions)
@@ -71,10 +74,11 @@ class ExportTransactionsToCsvUseCase @Inject constructor(
      * Escape a CSV field value, quoting it if it contains special characters.
      */
     private fun escapeCsvField(value: String): String {
-        return if (value.contains(',') || value.contains('"') || value.contains('\n') || value.contains('\r')) {
-            "\"${value.replace("\"", "\"\"")}\""
+        val safe = if (value.trimStart().firstOrNull() in setOf('=', '+', '-', '@')) "'$value" else value
+        return if (safe.contains(',') || safe.contains('"') || safe.contains('\n') || safe.contains('\r')) {
+            "\"${safe.replace("\"", "\"\"")}\""
         } else {
-            value
+            safe
         }
     }
 
@@ -84,7 +88,7 @@ class ExportTransactionsToCsvUseCase @Inject constructor(
     private fun generateCsv(transactions: List<TransactionEntity>): String {
         return buildString {
             // CSV header
-            appendLine("Date,Exchange,Crypto,Fiat,Crypto Amount,Fiat Amount,Price,Fee,Fee Asset,Status,Order ID,Error,Warning")
+            appendLine("Date,Exchange,Crypto,Fiat,Crypto Amount,Fiat Amount,Price,Fee,Fee Asset,Status,Order ID,Error,Warning,Side")
 
             // Data rows
             transactions.forEach { tx ->
@@ -113,6 +117,8 @@ class ExportTransactionsToCsvUseCase @Inject constructor(
                 append(escapeCsvField(tx.errorMessage ?: ""))
                 append(",")
                 append(escapeCsvField(tx.warningMessage ?: ""))
+                append(",")
+                append(tx.side.name)
                 appendLine()
             }
         }

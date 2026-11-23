@@ -41,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -63,6 +64,7 @@ import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.NumberFormatters
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.util.UUID
 
 @Composable
 private fun SellValidation.HardError.localizedText(): String = when (this) {
@@ -74,6 +76,17 @@ private fun SellValidation.HardError.localizedText(): String = when (this) {
         stringResource(R.string.sell_validation_min_order_too_low, NumberFormatters.fiat(minOrderFiat))
     is SellValidation.HardError.InsufficientInventory ->
         stringResource(R.string.sell_validation_insufficient_inventory, NumberFormatters.crypto(available))
+    is SellValidation.HardError.LadderCountOutOfRange ->
+        stringResource(R.string.sell_wizard_ladder_error_count_max, max)
+    is SellValidation.HardError.LadderLegBelowMin ->
+        stringResource(
+            R.string.sell_wizard_ladder_error_below_min,
+            NumberFormatters.fiat(smallestFiat), "", NumberFormatters.fiat(minOrderFiat)
+        )
+    SellValidation.HardError.LadderOrderInvalid ->
+        stringResource(R.string.sell_wizard_ladder_error_invalid_order)
+    SellValidation.HardError.SellsDisabled ->
+        stringResource(R.string.sell_validation_sells_disabled)
 }
 
 @Composable
@@ -84,14 +97,29 @@ private fun LadderError.localizedText(): String = when (this) {
         stringResource(R.string.sell_wizard_ladder_error_amount_positive)
     LadderError.CountMin2 ->
         stringResource(R.string.sell_wizard_ladder_error_count_min2)
+    is LadderError.CountMaxExceeded ->
+        stringResource(R.string.sell_wizard_ladder_error_count_max, max)
     LadderError.ToMustExceedFrom ->
         stringResource(R.string.sell_wizard_ladder_error_to_must_exceed_from)
     LadderError.Insufficient ->
         stringResource(R.string.sell_wizard_ladder_error_insufficient)
+    LadderError.InvalidOrder ->
+        stringResource(R.string.sell_wizard_ladder_error_invalid_order)
     is LadderError.BelowMin -> stringResource(
         R.string.sell_wizard_ladder_error_below_min,
         NumberFormatters.fiat(smallest), fiat, NumberFormatters.fiat(min)
     )
+    is LadderError.NetTargetUnreachable -> when {
+        maxNet != null -> stringResource(
+            R.string.sell_wizard_ladder_error_net_unreachable_max,
+            NumberFormatters.fiat(maxNet), fiat
+        )
+        minNet != null -> stringResource(
+            R.string.sell_wizard_ladder_error_net_unreachable_min,
+            NumberFormatters.fiat(minNet), fiat
+        )
+        else -> stringResource(R.string.sell_wizard_ladder_error_to_must_exceed_from)
+    }
 }
 
 /**
@@ -106,21 +134,30 @@ fun SellWizardBottomSheet(
     onDismiss: () -> Unit,
     viewModel: SellWizardViewModel = hiltViewModel()
 ) {
-    LaunchedEffect(planId) { viewModel.init(planId) }
+    val sessionId = rememberSaveable(planId) { UUID.randomUUID().toString() }
+    LaunchedEffect(planId, sessionId) { viewModel.openSession(planId, sessionId) }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val dismissWizard: () -> Unit = {
+        if (!state.submitting) {
+            viewModel.onDismissed()
+            onDismiss()
+        }
+    }
 
     LaunchedEffect(state.dismissRequested) {
         if (state.dismissRequested) {
             viewModel.consumeDismiss()
+            viewModel.onDismissed()
             onDismiss()
         }
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = dismissWizard,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
-            dismissOnBackPress = true,
+            dismissOnBackPress = !state.submitting,
             dismissOnClickOutside = false
         )
     ) {
@@ -130,7 +167,7 @@ fun SellWizardBottomSheet(
         ) {
             Box(modifier = Modifier.statusBarsPadding()) {
                 when (state.step) {
-                    SellWizardViewModel.Step.INPUT -> SellInputStep(state, viewModel, onDismiss)
+                    SellWizardViewModel.Step.INPUT -> SellInputStep(state, viewModel, dismissWizard)
                     SellWizardViewModel.Step.CONFIRM -> SellConfirmStep(state, viewModel)
                 }
             }
@@ -181,6 +218,18 @@ private fun SellInputStep(
             .verticalScroll(rememberScrollState())
     ) {
         SellWizardHeader(state, onDismiss)
+        if (state.initializing) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+            return
+        }
+        UncertainLockSection(state, vm)
         Spacer(Modifier.height(12.dp))
         SellInfoBlock(state)
         Spacer(Modifier.height(12.dp))
@@ -199,10 +248,18 @@ private fun SellInputStep(
         NetField(state, vm, netError)
         if (!state.ladderEnabled) {
             OrderSummary(state)
-            LossBannerSection(state)
         }
+        LossBannerSection(state)
         Spacer(Modifier.height(8.dp))
         ValidationsList(state)
+        if (state.validationFailed) {
+            Text(
+                text = stringResource(R.string.sell_wizard_validation_failed),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+        }
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = vm::proceedToConfirm,
@@ -519,17 +576,28 @@ private fun OrderSummary(state: SellWizardViewModel.UiState) {
 private fun LossBannerSection(state: SellWizardViewModel.UiState) {
     val loss = state.validations.filterIsInstance<SellValidation.LossWarning>().firstOrNull() ?: return
     Spacer(Modifier.height(8.dp))
-    val isPriceBelowAvg = state.priceInput.toBigDecimalOrNull()?.let { p ->
-        state.avgBuyPrice?.let { avg -> p < avg }
-    } ?: false
-    LossBanner(
-        stringResource(
-            if (isPriceBelowAvg) R.string.sell_wizard_loss_below_buy
-            else R.string.sell_wizard_loss_after_fee,
-            NumberFormatters.fiat(loss.lossFiat),
-            state.fiat
+    if (state.ladderEnabled) {
+        LossBanner(
+            stringResource(
+                R.string.sell_wizard_ladder_loss_warning,
+                loss.affectedCount,
+                NumberFormatters.fiat(loss.lossFiat),
+                state.fiat
+            )
         )
-    )
+    } else {
+        val isPriceBelowAvg = state.priceInput.toBigDecimalOrNull()?.let { p ->
+            state.avgBuyPrice?.let { avg -> p < avg }
+        } ?: false
+        LossBanner(
+            stringResource(
+                if (isPriceBelowAvg) R.string.sell_wizard_loss_below_buy
+                else R.string.sell_wizard_loss_after_fee,
+                NumberFormatters.fiat(loss.lossFiat),
+                state.fiat
+            )
+        )
+    }
 }
 
 /**
@@ -549,13 +617,67 @@ private fun ValidationsList(state: SellWizardViewModel.UiState) {
                 )
             }
             is SellValidation.InstantFillInfo -> InfoBanner(
-                stringResource(R.string.sell_wizard_instant_fill_warning, NumberFormatters.fiat(v.spot), state.fiat)
+                if (state.ladderEnabled) {
+                    stringResource(
+                        R.string.sell_wizard_ladder_instant_fill_warning,
+                        v.affectedCount,
+                        NumberFormatters.fiat(v.spot),
+                        state.fiat
+                    )
+                } else {
+                    stringResource(R.string.sell_wizard_instant_fill_warning, NumberFormatters.fiat(v.spot), state.fiat)
+                }
             )
             is SellValidation.FarFromMarketWarning -> WarningBanner(
-                stringResource(R.string.sell_wizard_far_from_market_warning)
+                if (state.ladderEnabled) {
+                    stringResource(R.string.sell_wizard_ladder_far_from_market_warning, v.affectedCount)
+                } else {
+                    stringResource(R.string.sell_wizard_far_from_market_warning)
+                }
             )
             is SellValidation.LossWarning -> { /* shown via LossBanner in summary section */ }
         }
+    }
+}
+
+@Composable
+private fun UncertainLockSection(
+    state: SellWizardViewModel.UiState,
+    vm: SellWizardViewModel
+) {
+    val uncertain = state.submissionState as? SellWizardViewModel.SubmissionState.Uncertain ?: return
+    Spacer(Modifier.height(8.dp))
+    val msg = if (uncertain.isLadder) {
+        stringResource(
+            R.string.sell_wizard_uncertain_ladder_text,
+            uncertain.placedCount,
+            uncertain.totalCount,
+            uncertain.placedCount + 1,
+            uncertain.reason,
+            state.exchangeName
+        )
+    } else {
+        stringResource(
+            R.string.sell_wizard_uncertain_single_text,
+            uncertain.reason,
+            state.exchangeName
+        )
+    }
+    LossBanner(msg)
+    Spacer(Modifier.height(8.dp))
+    OutlinedButton(
+        onClick = vm::resolveUncertainSubmission,
+        enabled = !state.resolvingUncertain,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        if (state.resolvingUncertain) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp
+            )
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(stringResource(R.string.sell_wizard_uncertain_resolve_action))
     }
 }
 
@@ -576,7 +698,7 @@ private fun SellConfirmStep(
             .verticalScroll(rememberScrollState())
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = vm::back) {
+            IconButton(onClick = vm::back, enabled = !state.submitting) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
             }
             Text(
@@ -585,6 +707,8 @@ private fun SellConfirmStep(
                 fontWeight = FontWeight.SemiBold
             )
         }
+
+        UncertainLockSection(state, vm)
 
         Spacer(Modifier.height(12.dp))
 
@@ -609,6 +733,9 @@ private fun SellConfirmStep(
             SummaryRow(stringResource(R.string.sell_wizard_confirm_limit_price), "${NumberFormatters.fiat(priceBD)} ${state.fiat}")
             SummaryRow(stringResource(R.string.sell_wizard_confirm_proceeds), "${NumberFormatters.fiat(proceeds)} ${state.fiat}")
         }
+
+        LossBannerSection(state)
+        ValidationsList(state)
 
         Spacer(Modifier.height(16.dp))
         WarningBanner(
@@ -639,15 +766,26 @@ private fun SellConfirmStep(
             }
             Button(
                 onClick = { vm.submit() },
-                enabled = !state.submitting,
+                enabled = state.canSubmit,
                 modifier = Modifier.weight(1f)
             ) {
+                val submittingState = state.submissionState as? SellWizardViewModel.SubmissionState.Submitting
                 if (state.submitting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(18.dp),
                         strokeWidth = 2.dp,
                         color = LocalContentColor.current
                     )
+                    if (submittingState != null && submittingState.totalCount > 1) {
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(
+                                R.string.sell_wizard_submitting_progress,
+                                submittingState.placedSoFar,
+                                submittingState.totalCount
+                            )
+                        )
+                    }
                 } else {
                     Text(stringResource(R.string.sell_wizard_submit))
                 }
@@ -658,14 +796,36 @@ private fun SellConfirmStep(
     }
 
     if (state.showTimeoutDialog) {
+        val uncertain = state.submissionState as? SellWizardViewModel.SubmissionState.Uncertain
+        val dialogText = when {
+            uncertain != null && uncertain.isLadder -> stringResource(
+                R.string.sell_wizard_uncertain_ladder_text,
+                uncertain.placedCount,
+                uncertain.totalCount,
+                uncertain.placedCount + 1,
+                uncertain.reason,
+                state.exchangeName
+            )
+            uncertain != null -> stringResource(
+                R.string.sell_wizard_uncertain_single_text,
+                uncertain.reason,
+                state.exchangeName
+            )
+            else -> stringResource(R.string.sell_wizard_timeout_text)
+        }
         AlertDialog(
             onDismissRequest = vm::dismissTimeoutDialog,
             title = { Text(stringResource(R.string.sell_wizard_timeout_title)) },
-            text = {
-                Text(stringResource(R.string.sell_wizard_timeout_text))
-            },
+            text = { Text(dialogText) },
             confirmButton = {
-                Button(onClick = vm::dismissTimeoutDialog) { Text("OK") }
+                Button(onClick = vm::resolveUncertainSubmission) {
+                    Text(stringResource(R.string.sell_wizard_uncertain_resolve_action))
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = vm::dismissTimeoutDialog) {
+                    Text(stringResource(R.string.sell_wizard_uncertain_keep_locked))
+                }
             }
         )
     }

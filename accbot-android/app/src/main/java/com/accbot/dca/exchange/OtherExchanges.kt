@@ -116,7 +116,8 @@ class KrakenApi(
                 val price = getCurrentPrice(crypto, fiat)
                     ?: return@withContext DcaResult.Error(
                         "Could not fetch $pair price to size the order",
-                        retryable = true
+                        retryable = true,
+                        confirmedRejection = true
                     )
                 val volume = fiatAmount.divide(
                     price.multiply(BigDecimal.ONE.plus(estimatedTakerFeeRate)),
@@ -255,8 +256,8 @@ class KrakenApi(
                     TransactionStatus.PARTIAL
                 } else TransactionStatus.PENDING
                 "canceled", "cancelled", "expired" ->
-                    if (volExec > BigDecimal.ZERO) TransactionStatus.PARTIAL
-                    else TransactionStatus.FAILED
+                    if (volExec > BigDecimal.ZERO) TransactionStatus.PARTIAL_CANCELLED
+                    else TransactionStatus.CANCELLED
                 else -> return@withContext null
             }
 
@@ -442,7 +443,6 @@ class KrakenApi(
 /**
  * KuCoin API implementation
  *
- * Supports sandbox mode via openapi-sandbox.kucoin.com
  */
 class KuCoinApi(
     private val credentials: ExchangeCredentials,
@@ -525,6 +525,51 @@ class KuCoinApi(
             }
         }
 
+    override suspend fun getOrderStatus(orderId: String, crypto: String, fiat: String): OrderStatusResult? =
+        withContext(Dispatchers.IO) {
+            if (!orderId.matches(Regex("[A-Za-z0-9-]+"))) return@withContext null
+            try {
+                val request = signedRequest("GET", "/api/v1/orders/$orderId").get().build()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@withContext null
+                    val body = response.body?.string() ?: return@withContext null
+                    val json = JSONObject(body)
+                    if (json.optString("code") != "200000") return@withContext null
+                    val order = json.optJSONObject("data") ?: return@withContext null
+                    if (order.optString("id") != orderId || order.optString("symbol") != "$crypto-$fiat" ||
+                        order.optString("side") != "buy"
+                    ) return@withContext null
+                    val active = when {
+                        order.has("isActive") -> order.getBoolean("isActive")
+                        order.has("active") -> order.getBoolean("active")
+                        else -> return@withContext null
+                    }
+                    val quantity = order.optString("dealSize").toBigDecimalOrNull() ?: return@withContext null
+                    val cost = order.optString("dealFunds").toBigDecimalOrNull() ?: return@withContext null
+                    if (quantity.signum() < 0 || cost.signum() < 0 || (quantity.signum() == 0) != (cost.signum() == 0)) {
+                        return@withContext null
+                    }
+                    val status = when {
+                        active && quantity.signum() > 0 -> TransactionStatus.PARTIAL
+                        active -> TransactionStatus.PENDING
+                        quantity.signum() == 0 -> TransactionStatus.CANCELLED
+                        order.optBoolean("cancelExist") -> TransactionStatus.PARTIAL_CANCELLED
+                        else -> TransactionStatus.COMPLETED
+                    }
+                    OrderStatusResult(
+                        status = status,
+                        filledCryptoAmount = quantity,
+                        filledFiatAmount = cost,
+                        avgFillPrice = if (quantity.signum() > 0) cost.divide(quantity, 12, RoundingMode.HALF_UP) else null,
+                        fee = order.optString("fee").toBigDecimalOrNull(),
+                        feeAsset = order.optString("feeCurrency").ifBlank { null }
+                    )
+                }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
     override suspend fun getBalance(currency: String): BigDecimal? = null
     override suspend fun getCurrentPrice(crypto: String, fiat: String): BigDecimal? = null
     override suspend fun withdraw(crypto: String, amount: BigDecimal, address: String): Result<String> =
@@ -563,7 +608,7 @@ class BitfinexApi(
     private val baseUrl = ExchangeConfig.getBaseUrl(Exchange.BITFINEX, isSandbox)
 
     override suspend fun marketBuy(crypto: String, fiat: String, fiatAmount: BigDecimal): DcaResult =
-        DcaResult.Error("Bitfinex trading is not yet implemented", retryable = false)
+        DcaResult.Error("Bitfinex trading is not yet implemented", confirmedRejection = true)
 
     override suspend fun getBalance(currency: String): BigDecimal? = null
     override suspend fun getCurrentPrice(crypto: String, fiat: String): BigDecimal? = null
@@ -588,7 +633,7 @@ class HuobiApi(
     private val baseUrl = ExchangeConfig.getBaseUrl(Exchange.HUOBI, isSandbox)
 
     override suspend fun marketBuy(crypto: String, fiat: String, fiatAmount: BigDecimal): DcaResult =
-        DcaResult.Error("Huobi trading is not yet implemented", retryable = false)
+        DcaResult.Error("Huobi trading is not yet implemented", confirmedRejection = true)
 
     override suspend fun getBalance(currency: String): BigDecimal? = null
     override suspend fun getCurrentPrice(crypto: String, fiat: String): BigDecimal? = null

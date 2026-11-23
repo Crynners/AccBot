@@ -27,9 +27,7 @@ class CalculatePlanPnLUseCase @Inject constructor(
 
         val transactions = database.transactionDao().getTransactionsByPlanSync(planId)
 
-        val relevant = transactions.filter {
-            it.status == TransactionStatus.COMPLETED || it.status == TransactionStatus.PARTIAL
-        }
+        val relevant = transactions.filter { it.status.hasFilledPortion }
 
         val buys = relevant.filter { it.side == TransactionSide.BUY }
         val sells = relevant.filter { it.side == TransactionSide.SELL }
