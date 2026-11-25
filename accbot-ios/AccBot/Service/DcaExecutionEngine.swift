@@ -1,8 +1,8 @@
 import Foundation
 import os
 
-/// Core DCA execution logic, shared across BGTask, foreground catch-up, and manual "Run Now".
-/// Ported from Android DcaWorker.doWork().
+/// Owns the shared execution gate for foreground, background and manual purchases.
+@MainActor
 final class DcaExecutionEngine {
     private let database: DcaDatabase
     private let sandboxDatabase: DcaDatabase
@@ -10,12 +10,9 @@ final class DcaExecutionEngine {
     private let userPreferences: UserPreferences
     private let exchangeApiFactory: ExchangeApiFactory
     private let notificationService: NotificationService
-    private let marketDataService: MarketDataService
     private let strategyMultiplierUseCase: CalculateStrategyMultiplierUseCase
     private let logger = Logger(subsystem: "com.accbot.dca", category: "DcaExecutionEngine")
-
-    private let maxAttempts = 3
-    private let retryDelayNs: UInt64 = 2_000_000_000 // 2s
+    private var isExecuting = false
 
     init(
         database: DcaDatabase,
@@ -32,374 +29,393 @@ final class DcaExecutionEngine {
         self.userPreferences = userPreferences
         self.exchangeApiFactory = exchangeApiFactory
         self.notificationService = notificationService
-        self.marketDataService = marketDataService
         self.strategyMultiplierUseCase = CalculateStrategyMultiplierUseCase(marketDataService: marketDataService)
     }
 
-    private var activeDb: DcaDatabase {
-        userPreferences.sandboxMode ? sandboxDatabase : database
-    }
+    @discardableResult
+    func executeDuePlans() async -> Bool {
+        guard !isExecuting, !Task.isCancelled else { return false }
+        isExecuting = true
+        defer { isExecuting = false }
 
-    // MARK: - Execute Due Plans
-
-    /// Execute all enabled plans that are due. Called from BGTask, foreground catch-up, etc.
-    func executeDuePlans() async {
-        logger.info("DCA execution started")
-
-        // Resolve PENDING transactions from previous runs
-        await resolvePendingTransactions()
-
-        do {
-            let duePlans = try activeDb.planDao.getDuePlans()
-            if duePlans.isEmpty {
-                logger.info("No due DCA plans")
-                return
-            }
-
-            for plan in duePlans {
-                await executePlan(plan, forceRun: false)
-            }
-        } catch {
-            logger.error("Failed to fetch due plans: \(error.localizedDescription)")
-        }
-    }
-
-    /// Execute a specific plan (for "Run Now")
-    func executePlan(_ planId: Int64) async {
-        do {
-            guard let plan = try activeDb.planDao.getById(planId) else {
-                logger.error("Plan \(planId) not found")
-                return
-            }
-            await executePlan(plan, forceRun: true)
-        } catch {
-            logger.error("Failed to fetch plan \(planId): \(error.localizedDescription)")
-        }
-    }
-
-    /// Execute selected plans (for "Run Now" with multi-select)
-    func executePlans(_ planIds: [Int64]) async {
-        for planId in planIds {
-            await executePlan(planId)
-        }
-    }
-
-    // MARK: - Core Execution
-
-    private func executePlan(_ plan: DcaPlan, forceRun: Bool) async {
-        let now = Date()
-
-        // Check if it's time to execute
-        if !forceRun, let nextExecution = plan.nextExecutionAt, nextExecution > now {
-            logger.info("Plan \(plan.id) not due yet, skipping")
-            return
-        }
-
-        // Get credentials
         let isSandbox = userPreferences.isSandboxMode()
-        guard let credentials = credentialsStore.get(for: plan.exchange, isSandbox: isSandbox) else {
-            logger.error("No credentials for \(plan.exchange.displayName) (sandbox=\(isSandbox))")
-            return
-        }
+        let db = isSandbox ? sandboxDatabase : database
+        await resolvePendingTransactions(in: db, isSandbox: isSandbox)
 
-        // Calculate strategy multiplier
-        let strategyResult = await calculateStrategyMultiplier(
-            strategy: plan.strategy,
-            crypto: plan.crypto,
-            fiat: plan.fiat
-        )
-
-        let purchaseAmount = roundDecimal(
-            plan.amount * Decimal(Double(strategyResult.multiplier)),
-            scale: 2
-        )
-
-        logger.info("Strategy: \(plan.strategy.dbString), Base: \(plan.amount), Multiplier: \(strategyResult.multiplier), Final: \(purchaseAmount)")
-
-        // Check minimum order size
-        let minOrderSize = MinOrderSizeRepository.getMinOrderSize(exchange: plan.exchange, fiat: plan.fiat)
-        if purchaseAmount < minOrderSize {
-            logger.warning("Plan \(plan.id): \(purchaseAmount) < minimum \(minOrderSize), skipping")
-            let failedTx = Transaction(
-                planId: plan.id,
-                exchange: plan.exchange,
-                crypto: plan.crypto,
-                fiat: plan.fiat,
-                fiatAmount: purchaseAmount,
-                cryptoAmount: 0,
-                price: 0,
-                fee: 0,
-                status: .failed,
-                errorMessage: "Amount \(purchaseAmount) \(plan.fiat) below minimum \(minOrderSize) \(plan.fiat)"
-            )
-            saveTransactionAndAdvance(failedTx, plan: plan, now: now)
-            saveInAppNotification(type: .error, title: "DCA Failed", message: "Amount below minimum for \(plan.crypto)", plan: plan)
-            return
-        }
-
-        // Execute with retry
-        let api = exchangeApiFactory.create(credentials: credentials)
-        var failedAttemptMessages: [String] = []
-        var finalResult: DcaResult?
-
-        for attempt in 1...maxAttempts {
-            let result = await withTimeout(seconds: 30) {
-                await api.marketBuy(crypto: plan.crypto, fiat: plan.fiat, fiatAmount: purchaseAmount)
-            }
-
-            let attemptResult = result ?? .error(message: "API call timed out after 30s", retryable: true)
-
-            if case .success = attemptResult {
-                finalResult = attemptResult
-                break
-            }
-
-            if case .error(let msg, _) = attemptResult {
-                failedAttemptMessages.append("Attempt \(attempt): \(msg)")
-                logger.warning("Plan \(plan.id) attempt \(attempt)/\(self.maxAttempts) failed: \(msg)")
-            }
-
-            if attempt < maxAttempts {
-                try? await Task.sleep(nanoseconds: retryDelayNs)
-            } else {
-                finalResult = attemptResult
-            }
-        }
-
-        let warningMessage: String? = if case .success = finalResult, !failedAttemptMessages.isEmpty {
-            failedAttemptMessages.joined(separator: "; ")
-        } else {
-            nil
-        }
-
-        switch finalResult {
-        case .success(let tx):
-            let savedTx = Transaction(
-                planId: plan.id,
-                exchange: plan.exchange,
-                crypto: plan.crypto,
-                fiat: plan.fiat,
-                fiatAmount: tx.fiatAmount,
-                cryptoAmount: tx.cryptoAmount,
-                price: tx.price,
-                fee: tx.fee,
-                feeAsset: tx.feeAsset,
-                status: tx.status,
-                exchangeOrderId: tx.exchangeOrderId,
-                warningMessage: warningMessage
-            )
-            saveTransactionAndAdvance(savedTx, plan: plan, now: now)
-
-            // Post notification
-            if userPreferences.notificationsEnabled && userPreferences.purchaseNotifications {
-                notificationService.postPurchaseNotification(
-                    crypto: plan.crypto,
-                    fiat: plan.fiat,
-                    amount: tx.fiatAmount,
-                    exchange: plan.exchange
-                )
-            }
-            saveInAppNotification(
-                type: .purchase,
-                title: "DCA Purchase",
-                message: "Bought \(tx.cryptoAmount) \(plan.crypto) for \(tx.fiatAmount) \(plan.fiat)",
-                plan: plan
-            )
-
-            // Check withdrawal threshold
-            await checkWithdrawalThreshold(plan: plan, api: api)
-
-            // Check low balance
-            await checkLowBalance(api: api, plan: plan)
-
-            logger.info("DCA purchase successful: \(tx.cryptoAmount) \(plan.crypto)")
-
-        case .error(let msg, let retryable):
-            if retryable {
-                // Network error - retry in 5 min
-                let retryTime = now.addingTimeInterval(300)
-                try? activeDb.planDao.updateExecution(id: plan.id, lastExecutedAt: now, nextExecutionAt: retryTime)
-                logger.warning("Network error for plan \(plan.id), retry at \(retryTime): \(msg)")
-            } else {
-                let failedTx = Transaction(
-                    planId: plan.id,
-                    exchange: plan.exchange,
-                    crypto: plan.crypto,
-                    fiat: plan.fiat,
-                    fiatAmount: plan.amount,
-                    cryptoAmount: 0,
-                    price: 0,
-                    fee: 0,
-                    status: .failed,
-                    errorMessage: msg,
-                    warningMessage: failedAttemptMessages.count > 1
-                        ? failedAttemptMessages.dropLast().joined(separator: "; ")
-                        : nil
-                )
-                saveTransactionAndAdvance(failedTx, plan: plan, now: now)
-
-                if userPreferences.notificationsEnabled && userPreferences.errorNotifications {
-                    notificationService.postErrorNotification(exchange: plan.exchange, message: msg)
-                }
-                saveInAppNotification(type: .error, title: "DCA Failed", message: "\(plan.crypto): \(msg)", plan: plan)
-            }
-
-        case nil:
-            logger.error("Plan \(plan.id): no result (unexpected)")
-        }
-    }
-
-    // MARK: - Helpers
-
-    private func saveTransactionAndAdvance(_ transaction: Transaction, plan: DcaPlan, now: Date) {
         do {
-            try activeDb.transactionDao.insert(transaction)
-            let nextExecution = calculateNextExecution(plan: plan, from: now)
-            try activeDb.planDao.updateExecution(id: plan.id, lastExecutedAt: now, nextExecutionAt: nextExecution)
+            var ranWithoutDeferral = true
+            for plan in try db.planDao.getDuePlans() {
+                guard canContinue(isSandbox: isSandbox) else { return false }
+                if !(await executePlan(plan, in: db, isSandbox: isSandbox)) {
+                    ranWithoutDeferral = false
+                }
+            }
+            return ranWithoutDeferral && canContinue(isSandbox: isSandbox)
         } catch {
-            logger.error("Failed to save transaction for plan \(plan.id): \(error.localizedDescription)")
+            logger.error("Could not load due DCA plans")
+            return false
         }
     }
 
-    private func calculateNextExecution(plan: DcaPlan, from now: Date) -> Date {
-        if let cron = plan.cronExpression {
-            return CronUtils.getNextExecution(cron: cron, from: now)
-                ?? now.addingTimeInterval(TimeInterval(plan.frequency.intervalMinutes * 60))
+    func executePlan(_ planId: Int64) async {
+        await executePlans([planId])
+    }
+
+    @discardableResult
+    func executePlans(_ planIds: [Int64]) async -> Bool {
+        guard !isExecuting, !Task.isCancelled else { return false }
+        isExecuting = true
+        defer { isExecuting = false }
+
+        let isSandbox = userPreferences.isSandboxMode()
+        let db = isSandbox ? sandboxDatabase : database
+        await resolvePendingTransactions(in: db, isSandbox: isSandbox)
+
+        var ranWithoutDeferral = true
+        for planId in planIds {
+            guard canContinue(isSandbox: isSandbox) else { return false }
+            do {
+                if let plan = try db.planDao.getById(planId),
+                   !(await executePlan(plan, in: db, isSandbox: isSandbox, forceRun: true)) {
+                    ranWithoutDeferral = false
+                }
+            } catch {
+                logger.error("Could not load DCA plan \(planId)")
+                ranWithoutDeferral = false
+            }
+        }
+        return ranWithoutDeferral && canContinue(isSandbox: isSandbox)
+    }
+
+    func resolvePurchaseReview(_ transaction: Transaction, confirmedOrderId: String?, isSandbox: Bool) async throws {
+        guard !isExecuting else { throw PurchaseReviewError.purchaseInProgress }
+        guard canContinue(isSandbox: isSandbox) else { throw PurchaseReviewError.noPendingPurchase }
+        isExecuting = true
+        defer { isExecuting = false }
+        let db = isSandbox ? sandboxDatabase : database
+        do {
+            try db.transactionDao.resolvePurchaseReview(transaction, confirmedOrderId: confirmedOrderId)
+        } catch PurchaseReviewError.orderNotInHistory {
+            guard let orderId = confirmedOrderId,
+                  let credentials = try credentialsStore.load(for: transaction.exchange, isSandbox: isSandbox) else {
+                throw PurchaseReviewError.orderNotInHistory
+            }
+            let api = exchangeApiFactory.create(credentials: credentials, isSandbox: isSandbox)
+            guard let receipt = await api.getOrderStatus(orderId: orderId, crypto: transaction.crypto, fiat: transaction.fiat),
+                  canContinue(isSandbox: isSandbox),
+                  Self.hasConfirmedFill(receipt), receipt.exchangeOrderId == orderId,
+                  receipt.exchange == transaction.exchange, receipt.crypto == transaction.crypto, receipt.fiat == transaction.fiat,
+                  receipt.executedAt >= transaction.executedAt.addingTimeInterval(-60),
+                  receipt.executedAt <= transaction.executedAt.addingTimeInterval(5 * 60) else {
+                throw PurchaseReviewError.orderNotInHistory
+            }
+            try db.transactionDao.resolvePurchaseReview(
+                transaction, confirmedOrderId: orderId,
+                confirmedPurchase: Self.recordedPurchase(transaction, receipt: receipt, orderId: orderId)
+            )
+        }
+        if confirmedOrderId != nil { notifyIfTargetReached(for: transaction.planId, in: db) }
+    }
+
+    private func canContinue(isSandbox: Bool) -> Bool {
+        !Task.isCancelled && userPreferences.isSandboxMode() == isSandbox
+    }
+
+    private func executePlan(
+        _ plan: DcaPlan,
+        in db: DcaDatabase,
+        isSandbox: Bool,
+        forceRun: Bool = false
+    ) async -> Bool {
+        guard plan.isEnabled else { return true }
+        if !forceRun, let nextExecution = plan.nextExecutionAt, nextExecution > Date() { return true }
+
+        do {
+            if try db.transactionDao.hasUnidentifiedPurchase(for: plan.id) {
+                if forceRun {
+                    reportReview(for: plan, in: db)
+                }
+                return false
+            }
+        } catch {
+            logger.error("Could not check outstanding purchases for plan \(plan.id)")
+            return false
+        }
+
+        let credentials: ExchangeCredentials
+        do {
+            guard let stored = try credentialsStore.load(for: plan.exchange, isSandbox: isSandbox) else {
+                let message = String(localized: "Connect the exchange before running this DCA plan.")
+                if forceRun { reportError(message, for: plan, in: db) }
+                logger.info("No credentials for plan \(plan.id)")
+                return false
+            }
+            credentials = stored
+        } catch CredentialsError.temporarilyUnavailable {
+            logger.info("Waiting for protected exchange credentials for plan \(plan.id)")
+            if forceRun {
+                reportError(String(localized: "Unlock the device to make exchange credentials available."), for: plan, in: db)
+            }
+            return false
+        } catch {
+            logger.error("Could not read exchange credentials for plan \(plan.id)")
+            if forceRun {
+                reportError(String(localized: "Unable to read exchange credentials."), for: plan, in: db)
+            }
+            return false
+        }
+
+        let strategy = await strategyMultiplierUseCase.invoke(strategy: plan.strategy, crypto: plan.crypto, fiat: plan.fiat)
+        let amount = roundDecimal(plan.amount * Decimal(Double(strategy.multiplier)), scale: 2)
+        let minimum = MinOrderSizeRepository.getMinOrderSize(exchange: plan.exchange, fiat: plan.fiat)
+        guard canContinue(isSandbox: isSandbox),
+              (try? credentialsStore.load(for: plan.exchange, isSandbox: isSandbox)) == credentials else { return false }
+
+        let started = Date()
+        let belowMinimum = amount <= 0 || amount < minimum
+        let minimumError = String(localized: "The purchase amount is below the exchange minimum.")
+        let intent = Transaction(
+            planId: plan.id, exchange: plan.exchange, crypto: plan.crypto, fiat: plan.fiat,
+            fiatAmount: amount, cryptoAmount: 0, price: 0, fee: 0,
+            status: belowMinimum ? .failed : .pending,
+            errorMessage: belowMinimum ? minimumError : nil,
+            warningMessage: belowMinimum ? nil : reviewMessage,
+            executedAt: started
+        )
+        let intentId: Int64
+        do {
+            switch try db.planDao.beginPurchase(intent, for: plan, nextExecution: nextExecution(for: plan, from: started)) {
+            case .started(let id): intentId = id
+            case .targetReached:
+                notifyTargetReached(for: plan, in: db)
+                return true
+            case .blocked:
+                if forceRun {
+                    reportError(String(localized: "The plan changed or has a purchase awaiting confirmation."), for: plan, in: db)
+                }
+                return false
+            }
+        } catch {
+            logger.error("Could not reserve DCA plan \(plan.id); order was not sent")
+            return false
+        }
+
+        if belowMinimum {
+            reportError(minimumError, for: plan, in: db)
+            return true
+        }
+
+        // Once the intent is stored, an interruption leaves a pending record.
+        // Never infer that an order failed to reach the exchange or submit it again.
+        let api = exchangeApiFactory.create(credentials: credentials, isSandbox: isSandbox)
+        let result = await api.marketBuy(crypto: plan.crypto, fiat: plan.fiat, fiatAmount: amount)
+        do {
+            switch result {
+            case .success(let order):
+                let orderId = order.exchangeOrderId.flatMap { $0.isEmpty ? nil : $0 }
+                let hasFill = orderId != nil && Self.hasConfirmedFill(order)
+                let failed = orderId != nil && order.status == .failed
+                let transaction = Transaction(
+                    id: intentId, planId: plan.id, exchange: plan.exchange, crypto: plan.crypto, fiat: plan.fiat,
+                    fiatAmount: hasFill ? order.fiatAmount : amount,
+                    cryptoAmount: hasFill ? order.cryptoAmount : 0,
+                    price: hasFill ? order.price : 0, fee: hasFill ? order.fee : 0,
+                    feeAsset: hasFill ? order.feeAsset : "",
+                    status: hasFill || failed ? order.status : .pending,
+                    exchangeOrderId: orderId,
+                    errorMessage: failed ? order.errorMessage : nil,
+                    warningMessage: orderId == nil ? reviewMessage : nil,
+                    executedAt: started
+                )
+                try db.transactionDao.update(transaction)
+                let settled = if transaction.status == .pending && canContinue(isSandbox: isSandbox) {
+                    try await settlePendingPurchase(transaction, api: api, in: db) ?? transaction
+                } else {
+                    transaction
+                }
+                if Self.hasConfirmedFill(settled) {
+                    notifyPurchase(settled, in: db)
+                    if canContinue(isSandbox: isSandbox) {
+                        await checkWithdrawalThreshold(plan: plan, api: api, db: db)
+                        if canContinue(isSandbox: isSandbox) {
+                            await checkLowBalance(api: api, plan: plan, db: db)
+                        }
+                    }
+                } else if settled.status == .failed {
+                    reportError(settled.errorMessage ?? String(localized: "The order ended without a fill."), for: plan, in: db)
+                } else if orderId == nil {
+                    reportReview(for: plan, in: db)
+                } else {
+                    notify(
+                        type: .purchase, title: String(localized: "Purchase awaiting confirmation"),
+                        message: String(localized: "The exchange accepted the order. Fill details are pending."),
+                        plan: plan, db: db
+                    )
+                }
+            case .rejected(let message):
+                try db.transactionDao.update(Transaction(
+                    id: intentId, planId: plan.id, exchange: plan.exchange, crypto: plan.crypto, fiat: plan.fiat,
+                    fiatAmount: amount, cryptoAmount: 0, price: 0, fee: 0,
+                    status: .failed, errorMessage: message, executedAt: started
+                ))
+                reportError(message, for: plan, in: db)
+            case .error:
+                reportReview(for: plan, in: db)
+            }
+        } catch {
+            logger.error("Could not record purchase outcome for plan \(plan.id)")
+            reportReview(for: plan, in: db)
+            return false
+        }
+        return true
+    }
+
+    private var reviewMessage: String {
+        String(localized: "Check this purchase on the exchange before allowing the plan to run again.")
+    }
+
+    private func reportReview(for plan: DcaPlan, in db: DcaDatabase) {
+        reportError(reviewMessage, for: plan, in: db)
+    }
+
+    private func reportError(_ message: String, for plan: DcaPlan, in db: DcaDatabase) {
+        if userPreferences.notificationsEnabled && userPreferences.errorNotifications {
+            notificationService.postErrorNotification(exchange: plan.exchange, message: message)
+        }
+        notify(type: .error, title: String(localized: "DCA Error"), message: message, plan: plan, db: db)
+    }
+
+    private func notifyPurchase(_ transaction: Transaction, in db: DcaDatabase) {
+        let partial = transaction.status == .partial
+        if userPreferences.notificationsEnabled && userPreferences.purchaseNotifications {
+            notificationService.postPurchaseNotification(
+                crypto: transaction.crypto, fiat: transaction.fiat,
+                amount: transaction.fiatAmount, exchange: transaction.exchange, partial: partial
+            )
+        }
+        let details = "\(transaction.cryptoAmount) \(transaction.crypto) · \(transaction.fiatAmount) \(transaction.fiat)"
+        try? db.notificationDao.insert(AppNotification(
+            type: .purchase,
+            title: partial ? String(localized: "DCA Purchase Partially Filled") : String(localized: "DCA Purchase Completed"),
+            message: details,
+            planId: transaction.planId, crypto: transaction.crypto, exchange: transaction.exchange
+        ))
+        notifyIfTargetReached(for: transaction.planId, in: db)
+    }
+
+    private func notifyIfTargetReached(for planId: Int64, in db: DcaDatabase) {
+        if let plan = try? db.planDao.pauseIfTargetReached(planId) {
+            notifyTargetReached(for: plan, in: db)
+        }
+    }
+
+    private func notifyTargetReached(for plan: DcaPlan, in db: DcaDatabase) {
+        notify(
+            type: .purchase, title: String(localized: "Accumulation target reached"),
+            message: String(localized: "The plan has been paused."), plan: plan, db: db
+        )
+    }
+
+    private func nextExecution(for plan: DcaPlan, from now: Date) -> Date {
+        if let cron = plan.cronExpression, let next = CronUtils.getNextExecution(cron: cron, from: now) {
+            return next
         }
         let interval = plan.frequency.intervalMinutes > 0 ? plan.frequency.intervalMinutes : 1440
         return now.addingTimeInterval(TimeInterval(interval * 60))
     }
 
-    private func calculateStrategyMultiplier(
-        strategy: DcaStrategy,
-        crypto: String,
-        fiat: String
-    ) async -> StrategyMultiplierResult {
-        await strategyMultiplierUseCase.invoke(strategy: strategy, crypto: crypto, fiat: fiat)
-    }
-
-    private func checkWithdrawalThreshold(plan: DcaPlan, api: ExchangeApi) async {
+    private func checkWithdrawalThreshold(plan: DcaPlan, api: ExchangeApi, db: DcaDatabase) async {
         do {
-            guard let threshold = try activeDb.withdrawalThresholdDao.get(crypto: plan.crypto, exchange: plan.exchange) else { return }
-            guard let balance = await api.getBalance(currency: plan.crypto) else { return }
-            if balance >= threshold.thresholdAmount {
-                notificationService.postWithdrawalThresholdNotification(
-                    crypto: plan.crypto,
-                    exchange: plan.exchange,
-                    amount: balance
-                )
-                saveInAppNotification(
-                    type: .withdrawalThreshold,
-                    title: "Withdrawal Threshold",
-                    message: "\(balance) \(plan.crypto) ready for withdrawal from \(plan.exchange.displayName)",
-                    plan: plan
-                )
-            }
+            guard let threshold = try db.withdrawalThresholdDao.get(crypto: plan.crypto, exchange: plan.exchange),
+                  let balance = await api.getBalance(currency: plan.crypto),
+                  balance >= threshold.thresholdAmount else { return }
+            notificationService.postWithdrawalThresholdNotification(
+                crypto: plan.crypto, exchange: plan.exchange, amount: balance
+            )
+            notify(
+                type: .withdrawalThreshold, title: String(localized: "Withdrawal Threshold Reached"),
+                message: "\(balance) \(plan.crypto) · \(plan.exchange.displayName)",
+                plan: plan, db: db
+            )
         } catch {
-            logger.error("Error checking withdrawal threshold: \(error.localizedDescription)")
+            logger.error("Could not read withdrawal threshold for plan \(plan.id)")
         }
     }
 
-    private func checkLowBalance(api: ExchangeApi, plan: DcaPlan) async {
-        do {
-            guard let balance = await api.getBalance(currency: plan.fiat) else { return }
-            guard plan.amount > 0 else { return }
-            let remainingExec = NSDecimalNumber(decimal: balance / plan.amount).intValue
-            let intervalMinutes = plan.cronExpression != nil
-                ? (CronUtils.getIntervalMinutesEstimate(cron: plan.cronExpression!) ?? 1440)
-                : plan.frequency.intervalMinutes
-            let remainingDays = Double(remainingExec * intervalMinutes) / 1440.0
-            let thresholdDays = userPreferences.lowBalanceThresholdDays
+    private func checkLowBalance(api: ExchangeApi, plan: DcaPlan, db: DcaDatabase) async {
+        guard let balance = await api.getBalance(currency: plan.fiat), plan.amount > 0 else { return }
+        let executions = NSDecimalNumber(decimal: balance / plan.amount).doubleValue
+        let interval = plan.cronExpression.flatMap { CronUtils.getIntervalMinutesEstimate(cron: $0) }
+            ?? (plan.frequency.intervalMinutes > 0 ? plan.frequency.intervalMinutes : 1440)
+        let days = floor(executions) * Double(interval) / 1440.0
+        guard days.isFinite, days >= 0, days < Double(userPreferences.lowBalanceThresholdDays) else { return }
 
-            if remainingDays < Double(thresholdDays) {
-                if userPreferences.notificationsEnabled {
-                    notificationService.postLowBalanceNotification(
-                        exchange: plan.exchange,
-                        fiat: plan.fiat,
-                        balance: balance,
-                        daysLeft: Int(remainingDays)
-                    )
-                }
-                saveInAppNotification(
-                    type: .lowBalance,
-                    title: "Low Balance",
-                    message: "\(plan.exchange.displayName): ~\(Int(remainingDays)) days of \(plan.fiat) remaining",
-                    plan: plan
-                )
-            }
-        } catch {
-            logger.error("Error checking low balance: \(error.localizedDescription)")
+        if userPreferences.notificationsEnabled {
+            notificationService.postLowBalanceNotification(
+                exchange: plan.exchange, fiat: plan.fiat, balance: balance, daysLeft: Int(days)
+            )
         }
-    }
-
-    private func saveInAppNotification(type: NotificationType, title: String, message: String, plan: DcaPlan) {
-        let notification = AppNotification(
-            type: type,
-            title: title,
-            message: message,
-            planId: plan.id,
-            crypto: plan.crypto,
-            exchange: plan.exchange
+        notify(
+            type: .lowBalance, title: String(localized: "Low Balance Warning"),
+            message: "\(plan.exchange.displayName) · \(balance) \(plan.fiat)", plan: plan, db: db
         )
-        try? activeDb.notificationDao.insert(notification)
     }
 
-    // MARK: - Pending Resolution
+    private func notify(type: NotificationType, title: String, message: String, plan: DcaPlan, db: DcaDatabase) {
+        try? db.notificationDao.insert(AppNotification(
+            type: type, title: title, message: message, planId: plan.id, crypto: plan.crypto, exchange: plan.exchange
+        ))
+    }
 
-    private func resolvePendingTransactions() async {
+    private func resolvePendingTransactions(in db: DcaDatabase, isSandbox: Bool) async {
         do {
-            let pendingTxs = try activeDb.transactionDao.getPendingTransactions()
-            let isSandbox = userPreferences.isSandboxMode()
-
-            for tx in pendingTxs {
-                guard let orderId = tx.exchangeOrderId else { continue }
-                guard let credentials = credentialsStore.get(for: tx.exchange, isSandbox: isSandbox) else { continue }
-
-                let api = exchangeApiFactory.create(credentials: credentials)
-                if let resolved = await api.getOrderStatus(orderId: orderId) {
-                    let updatedTx = Transaction(
-                        id: tx.id,
-                        planId: tx.planId,
-                        exchange: tx.exchange,
-                        crypto: tx.crypto,
-                        fiat: tx.fiat,
-                        fiatAmount: resolved.fiatAmount,
-                        cryptoAmount: resolved.cryptoAmount,
-                        price: resolved.price,
-                        fee: resolved.fee,
-                        feeAsset: resolved.feeAsset,
-                        status: resolved.status,
-                        exchangeOrderId: tx.exchangeOrderId,
-                        executedAt: tx.executedAt
-                    )
-                    try activeDb.transactionDao.update(updatedTx)
+            for tx in try db.transactionDao.getPendingTransactions() {
+                guard canContinue(isSandbox: isSandbox) else { return }
+                guard !tx.needsPurchaseReview,
+                      let credentials = credentialsStore.get(for: tx.exchange, isSandbox: isSandbox) else { continue }
+                let api = exchangeApiFactory.create(credentials: credentials, isSandbox: isSandbox)
+                guard let settled = try await settlePendingPurchase(tx, api: api, in: db) else { continue }
+                if Self.hasConfirmedFill(settled) {
+                    notifyPurchase(settled, in: db)
+                } else if let plan = try db.planDao.getById(tx.planId) {
+                    reportError(settled.errorMessage ?? String(localized: "The order ended without a fill."), for: plan, in: db)
                 }
             }
         } catch {
-            logger.warning("Failed to resolve pending transactions: \(error.localizedDescription)")
+            logger.warning("Could not update pending purchase records")
         }
     }
 
-    private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async -> T) async -> T? {
-        await withTaskGroup(of: T?.self) { group in
-            group.addTask {
-                await operation()
-            }
-            group.addTask {
-                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                return nil
-            }
-            let result = await group.next() ?? nil
-            group.cancelAll()
-            return result
-        }
+    private func settlePendingPurchase(_ tx: Transaction, api: ExchangeApi, in db: DcaDatabase) async throws -> Transaction? {
+        guard let orderId = tx.exchangeOrderId, !orderId.isEmpty,
+              let resolved = await api.getOrderStatus(orderId: orderId, crypto: tx.crypto, fiat: tx.fiat),
+              resolved.exchangeOrderId == orderId,
+              Self.hasConfirmedFill(resolved) || resolved.status == .failed else { return nil }
+
+        let updated = Self.recordedPurchase(tx, receipt: resolved, orderId: orderId)
+        try db.transactionDao.update(updated)
+        return updated
+    }
+
+    private static func recordedPurchase(_ tx: Transaction, receipt resolved: Transaction, orderId: String) -> Transaction {
+        Transaction(
+            id: tx.id, planId: tx.planId, exchange: tx.exchange, crypto: tx.crypto, fiat: tx.fiat,
+            fiatAmount: resolved.fiatAmount, cryptoAmount: resolved.cryptoAmount,
+            price: resolved.price, fee: resolved.fee, feeAsset: resolved.feeAsset.isEmpty ? tx.fiat : resolved.feeAsset,
+            status: resolved.status, exchangeOrderId: orderId, errorMessage: resolved.errorMessage,
+            executedAt: tx.executedAt
+        )
+    }
+
+    private static func hasConfirmedFill(_ transaction: Transaction) -> Bool {
+        (transaction.status == .completed || transaction.status == .partial)
+            && transaction.cryptoAmount > 0 && transaction.fiatAmount > 0 && transaction.price > 0
     }
 
     private func roundDecimal(_ value: Decimal, scale: Int) -> Decimal {
         let handler = NSDecimalNumberHandler(
-            roundingMode: .plain, scale: Int16(scale),
-            raiseOnExactness: false, raiseOnOverflow: false,
-            raiseOnUnderflow: false, raiseOnDivideByZero: false
+            roundingMode: .plain, scale: Int16(scale), raiseOnExactness: false,
+            raiseOnOverflow: false, raiseOnUnderflow: false, raiseOnDivideByZero: false
         )
         return NSDecimalNumber(decimal: value).rounding(accordingToBehavior: handler).decimalValue
     }

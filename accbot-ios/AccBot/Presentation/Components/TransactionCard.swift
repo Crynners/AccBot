@@ -67,7 +67,7 @@ struct TransactionCard: View {
                 .foregroundStyle(colors.onSurfaceVariant)
 
             if transaction.status == .failed, let error = transaction.errorMessage {
-                Text(error)
+                Text(FriendlyErrors.shortText(error))
                     .font(AccBotFonts.captionSmall)
                     .foregroundStyle(colors.error)
                     .lineLimit(2)

@@ -27,6 +27,8 @@ import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.service.DcaForegroundService
 
 import com.accbot.dca.worker.DcaWorker
+import com.accbot.dca.presentation.utils.AutomationHealth
+import com.accbot.dca.presentation.utils.AutomationHealthChecker
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -112,6 +114,18 @@ data class DashboardUiState(
     val isMarketPulseExpanded: Boolean = true,
     val networkRetryInfo: NetworkRetryInfo = NetworkRetryInfo(),
     val missedPurchases: List<MissedPurchaseInfo> = emptyList(),
+    /** Latest filled purchase per plan id, shown on each plan card. */
+    val lastPurchaseByPlan: Map<Long, Transaction> = emptyMap(),
+    /** Purchases with an unknown outcome, oldest first. Each blocks its plan until reviewed. */
+    val purchasesAwaitingReview: List<Transaction> = emptyList(),
+    /** Info notice; hidden for the rest of the app session once dismissed. */
+    val sandboxNoticeDismissed: Boolean = false,
+    val automationHealth: AutomationHealth = AutomationHealth(),
+    /** Problems the user chose to ignore; the warning returns only for a new one. */
+    val dismissedAutomationIssues: Set<String> = emptySet(),
+    val firstPlanGuideDismissed: Boolean = true,
+    /** False until the purchase overview first loads, so the first-plan guide can't flash. */
+    val purchaseOverviewLoaded: Boolean = false,
     /**
      * Open SELL orders grouped by plan id. Empty when trading is off or no
      * pending sells exist; the dashboard renders one card per non-empty group.
@@ -137,6 +151,8 @@ class DashboardViewModel @Inject constructor(
     companion object {
         private const val TAG = "DashboardViewModel"
         private const val STALENESS_THRESHOLD_MS = 5 * 60 * 1000L // 5 minutes
+        /** Longer than one purchase request may take (45 s timeout) plus bookkeeping. */
+        private const val IN_FLIGHT_GRACE_MS = 2 * 60 * 1000L
     }
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -156,9 +172,54 @@ class DashboardViewModel @Inject constructor(
      */
     private val reorderMutex = Mutex()
 
+    private var pendingWithoutOrderId: List<Transaction> = emptyList()
+    private var reviewRecheckJob: Job? = null
+
     init {
         loadData()
         observeOpenSells()
+        viewModelScope.launch {
+            combine(
+                transactionDao.observeLatestConfirmedPurchasePerPlan(),
+                transactionDao.observePurchasesAwaitingReviewList()
+            ) { last, pending ->
+                last.map { it.toDomain() }.associateBy { it.planId } to pending.map { it.toDomain() }
+            }.collect { (last, pending) ->
+                // Once any purchase went through, the first-plan guide has done its job.
+                if (last.isNotEmpty() && !userPreferences.isFirstPlanGuideDismissed()) {
+                    userPreferences.setFirstPlanGuideDismissed(true)
+                }
+                _uiState.update {
+                    it.copy(
+                        lastPurchaseByPlan = last,
+                        purchaseOverviewLoaded = true,
+                        firstPlanGuideDismissed = it.firstPlanGuideDismissed || last.isNotEmpty()
+                    )
+                }
+                pendingWithoutOrderId = pending
+                publishPurchasesAwaitingReview()
+            }
+        }
+        refreshAutomationHealth()
+    }
+
+    /**
+     * A purchase that is being sent right now also has no order ID yet. Only a pending
+     * purchase older than [IN_FLIGHT_GRACE_MS] is really waiting for the user, so younger
+     * ones are held back and re-checked when they cross that age.
+     */
+    private fun publishPurchasesAwaitingReview() {
+        val now = System.currentTimeMillis()
+        val (settled, inFlight) = pendingWithoutOrderId.partition {
+            now - it.executedAt.toEpochMilli() >= IN_FLIGHT_GRACE_MS
+        }
+        _uiState.update { it.copy(purchasesAwaitingReview = settled) }
+        reviewRecheckJob?.cancel()
+        val youngest = inFlight.minOfOrNull { it.executedAt.toEpochMilli() } ?: return
+        reviewRecheckJob = viewModelScope.launch {
+            kotlinx.coroutines.delay((youngest + IN_FLIGHT_GRACE_MS - now).coerceAtLeast(1_000L))
+            publishPurchasesAwaitingReview()
+        }
     }
 
     /**
@@ -545,6 +606,7 @@ class DashboardViewModel @Inject constructor(
 
     fun refreshIfStale() {
         refreshPreferences()
+        refreshAutomationHealth()
         if (System.currentTimeMillis() - lastLoadedAt > STALENESS_THRESHOLD_MS) {
             marketDataService.invalidateCache()
             loadData()
@@ -710,6 +772,32 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             dcaPlanDao.resetMissedPurchaseCount(planId)
         }
+    }
+
+    /** Re-checks battery / alarm / notification permissions (they change outside the app). */
+    fun refreshAutomationHealth() {
+        _uiState.update {
+            it.copy(
+                automationHealth = AutomationHealthChecker.check(application),
+                dismissedAutomationIssues = userPreferences.getDismissedAutomationIssues(),
+                firstPlanGuideDismissed = userPreferences.isFirstPlanGuideDismissed()
+            )
+        }
+    }
+
+    fun dismissAutomationWarning() {
+        val keys = _uiState.value.automationHealth.issues.map { it.key }.toSet()
+        userPreferences.setDismissedAutomationIssues(keys)
+        _uiState.update { it.copy(dismissedAutomationIssues = keys) }
+    }
+
+    fun dismissSandboxNotice() {
+        _uiState.update { it.copy(sandboxNoticeDismissed = true) }
+    }
+
+    fun dismissFirstPlanGuide() {
+        userPreferences.setFirstPlanGuideDismissed(true)
+        _uiState.update { it.copy(firstPlanGuideDismissed = true) }
     }
 
     fun dismissRetryBanner() {

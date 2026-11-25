@@ -85,10 +85,10 @@ enum Exchange: String, Codable, CaseIterable, Hashable, Identifiable, Sendable {
         case .coinmate: return .none
         case .binance: return .full
         case .kraken: return .futuresOnly
-        case .kucoin: return .full
+        case .kucoin: return .none
         case .bitfinex: return .paperTrading
         case .huobi: return .none
-        case .coinbase: return .full
+        case .coinbase: return .none
         }
     }
 
@@ -123,6 +123,6 @@ enum ExchangeFilter {
         if isSandboxMode {
             return Exchange.allCases.filter { $0.supportsSandbox }
         }
-        return Array(Exchange.allCases)
+        return Exchange.allCases.filter { $0 != .bitfinex && $0 != .huobi }
     }
 }

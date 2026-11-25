@@ -127,10 +127,14 @@ class BinanceApi(
 
                 if (!response.isSuccessful) {
                     val isRetryable = response.code in 500..599 || response.code == 429
-                    val errorMsg = try {
-                        JSONObject(body).optString("msg", "HTTP ${response.code}")
-                    } catch (_: Exception) { "HTTP ${response.code}" }
-                    return@withContext DcaResult.Error(errorMsg, retryable = isRetryable)
+                    val error = runCatching { JSONObject(body) }.getOrNull()
+                    val confirmedRejection = response.code in 400..499 &&
+                        error?.optInt("code")?.let { it in setOf(-1013, -1021, -1022, -1121, -2010, -2014, -2015) } == true
+                    return@withContext DcaResult.Error(
+                        error?.optString("msg") ?: "HTTP ${response.code}",
+                        retryable = isRetryable,
+                        confirmedRejection = confirmedRejection
+                    )
                 }
 
                 val json = JSONObject(body)
@@ -142,6 +146,16 @@ class BinanceApi(
 
                 val executedQty = BigDecimal(json.getString("executedQty"))
                 val cummulativeQuoteQty = BigDecimal(json.getString("cummulativeQuoteQty"))
+                val orderId = json.optString("orderId").takeIf { it.toLongOrNull()?.let { id -> id > 0 } == true }
+                    ?: return@withContext DcaResult.Error("Missing order ID in Binance purchase response")
+                val filled = executedQty.signum() > 0 && cummulativeQuoteQty.signum() > 0
+                val status = when (json.optString("status")) {
+                    "FILLED" -> if (filled) TransactionStatus.COMPLETED else TransactionStatus.PENDING
+                    "PARTIALLY_FILLED" -> if (filled) TransactionStatus.PARTIAL else TransactionStatus.PENDING
+                    "CANCELED", "EXPIRED", "EXPIRED_IN_MATCH", "REJECTED" ->
+                        if (filled) TransactionStatus.PARTIAL_CANCELLED else TransactionStatus.CANCELLED
+                    else -> TransactionStatus.PENDING
+                }
                 val avgPrice = if (executedQty > BigDecimal.ZERO) {
                     cummulativeQuoteQty.divide(executedQty, 8, RoundingMode.HALF_UP)
                 } else BigDecimal.ZERO
@@ -171,14 +185,14 @@ class BinanceApi(
                         price = avgPrice,
                         fee = totalFee,
                         feeAsset = feeAsset,
-                        status = TransactionStatus.COMPLETED,
-                        exchangeOrderId = json.optString("orderId"),
+                        status = status,
+                        exchangeOrderId = orderId,
                         executedAt = Instant.now()
                     )
                 )
             }
         } catch (e: java.io.IOException) {
-            DcaResult.Error(e.message ?: "Network error", retryable = true)
+            DcaResult.Error(e.message ?: "Network error", retryable = true, confirmedRejection = isPreSendFailure(e))
         } catch (e: Exception) {
             DcaResult.Error(e.message ?: "Unknown error", retryable = false)
         }
@@ -191,6 +205,16 @@ class BinanceApi(
         limitPrice: BigDecimal
     ): DcaResult = withContext(Dispatchers.IO) {
         try {
+            val roundedAmount = cryptoAmount.setScale(8, RoundingMode.DOWN)
+            val roundedPrice = limitPrice.setScale(2, RoundingMode.HALF_UP)
+            if (roundedAmount <= BigDecimal.ZERO || roundedPrice <= BigDecimal.ZERO) {
+                return@withContext DcaResult.Error(
+                    "Invalid limit sell amount or price",
+                    retryable = false,
+                    confirmedRejection = true
+                )
+            }
+
             ensureTimeSynced()
             val symbol = "$crypto$fiat"
             val timestamp = serverTimestamp()
@@ -200,8 +224,8 @@ class BinanceApi(
                 append("&side=SELL")
                 append("&type=LIMIT")
                 append("&timeInForce=GTC")
-                append("&quantity=${cryptoAmount.setScale(8, RoundingMode.DOWN).toPlainString()}")
-                append("&price=${limitPrice.setScale(2, RoundingMode.HALF_UP).toPlainString()}")
+                append("&quantity=${roundedAmount.toPlainString()}")
+                append("&price=${roundedPrice.toPlainString()}")
                 append("&timestamp=$timestamp")
                 append("&recvWindow=60000")
             }
@@ -219,18 +243,26 @@ class BinanceApi(
                 val body = response.body?.string() ?: throw Exception("Empty response")
 
                 if (!response.isSuccessful) {
-                    val isRetryable = response.code in 500..599 || response.code == 429
-                    val errorMsg = try {
-                        JSONObject(body).optString("msg", "HTTP ${response.code}")
-                    } catch (_: Exception) { "HTTP ${response.code}" }
-                    return@withContext DcaResult.Error(errorMsg, retryable = isRetryable)
+                    val isRetryable = response.code in 500..599 || response.code == 429 || response.code == 408
+                    val error = runCatching { JSONObject(body) }.getOrNull()
+                    val confirmedRejection = response.code in 400..499 &&
+                        error?.optInt("code") in setOf(-1013, -1021, -1022, -1121, -2010, -2014, -2015)
+                    return@withContext DcaResult.Error(
+                        error?.optString("msg")?.ifBlank { null } ?: "HTTP ${response.code}",
+                        retryable = isRetryable,
+                        confirmedRejection = confirmedRejection
+                    )
                 }
 
                 val json = JSONObject(body)
 
                 if (json.has("code")) {
                     val errorMessage = json.optString("msg", "Unknown error")
-                    return@withContext DcaResult.Error(errorMessage, retryable = false)
+                    return@withContext DcaResult.Error(
+                        errorMessage,
+                        retryable = false,
+                        confirmedRejection = true
+                    )
                 }
 
                 // Binance returns orderId as a Long; convert to String for our domain
@@ -245,22 +277,22 @@ class BinanceApi(
                         fiat = fiat,
                         fiatAmount = BigDecimal.ZERO,
                         cryptoAmount = BigDecimal.ZERO,
-                        price = limitPrice,
+                        price = roundedPrice,
                         fee = BigDecimal.ZERO,
                         feeAsset = "",
                         status = TransactionStatus.PENDING,
                         exchangeOrderId = orderId,
                         executedAt = Instant.now(),
                         side = TransactionSide.SELL,
-                        limitPrice = limitPrice,
-                        requestedCryptoAmount = cryptoAmount
+                        limitPrice = roundedPrice,
+                        requestedCryptoAmount = roundedAmount
                     )
                 )
             }
         } catch (e: java.io.IOException) {
-            DcaResult.Error(e.message ?: "Network error", retryable = true)
+            DcaResult.Error(e.message ?: "Network error", retryable = true, confirmedRejection = isPreSendFailure(e))
         } catch (e: Exception) {
-            DcaResult.Error(e.message ?: "Unknown error", retryable = false)
+            DcaResult.Error(e.message ?: "Unknown error", retryable = false, confirmedRejection = false)
         }
     }
 
@@ -342,42 +374,7 @@ class BinanceApi(
             client.newCall(request).execute().use { response ->
                 val body = response.body?.string() ?: return@withContext null
                 if (!response.isSuccessful) return@withContext null
-
-                val json = JSONObject(body)
-                if (json.has("code")) return@withContext null
-
-                val status = json.optString("status", "")
-                val executedQty = BigDecimal(json.optString("executedQty", "0"))
-                val cummulativeQuoteQty = BigDecimal(json.optString("cummulativeQuoteQty", "0"))
-
-                val avgFillPrice = if (executedQty > BigDecimal.ZERO) {
-                    cummulativeQuoteQty.divide(executedQty, 8, RoundingMode.HALF_UP)
-                } else null
-
-                val mappedStatus = when (status) {
-                    "FILLED" -> TransactionStatus.COMPLETED
-                    "NEW", "PENDING_NEW" -> if (executedQty > BigDecimal.ZERO) {
-                        TransactionStatus.PARTIAL
-                    } else TransactionStatus.PENDING
-                    "PARTIALLY_FILLED" -> TransactionStatus.PARTIAL
-                    "CANCELED", "CANCELLED", "EXPIRED", "PENDING_CANCEL" ->
-                        if (executedQty > BigDecimal.ZERO) TransactionStatus.PARTIAL
-                        else TransactionStatus.CANCELLED
-                    "REJECTED" ->
-                        if (executedQty > BigDecimal.ZERO) TransactionStatus.PARTIAL
-                        else TransactionStatus.FAILED
-                    else -> return@withContext null
-                }
-
-                OrderStatusResult(
-                    status = mappedStatus,
-                    filledCryptoAmount = executedQty,
-                    filledFiatAmount = cummulativeQuoteQty,
-                    avgFillPrice = avgFillPrice,
-                    // Binance fees are per-trade (need /api/v3/myTrades). MVP: leave null.
-                    fee = null,
-                    feeAsset = null
-                )
+                parseOrderStatusJson(body)
             }
         } catch (_: Exception) {
             null
@@ -648,6 +645,101 @@ class BinanceApi(
         } catch (e: Exception) {
             android.util.Log.e("BinanceApi", "validateCredentials exception: ${e.message}, url=$baseUrl")
             throw e
+        }
+    }
+
+    /**
+     * Reads the key's own restrictions (`/sapi/v1/account/apiRestrictions`). The spot
+     * testnet has no SAPI, so there the account flags are used instead.
+     */
+    override suspend fun getKeyPermissions(): ApiKeyPermissions = withContext(Dispatchers.IO) {
+        ensureTimeSynced()
+        val params = "timestamp=${serverTimestamp()}&recvWindow=60000"
+        val signature = CryptoUtils.hmacSha256Hex(params, credentials.apiSecret)
+        val path = if (isSandbox) "/api/v3/account" else "/sapi/v1/account/apiRestrictions"
+        val request = Request.Builder()
+            .url("$baseUrl$path?$params&signature=$signature")
+            .header("X-MBX-APIKEY", credentials.apiKey)
+            .get()
+            .build()
+        client.newCall(request).execute().use { response ->
+            val body = response.body?.string() ?: throw java.io.IOException("Empty response")
+            val json = JSONObject(body)
+            if (!response.isSuccessful || json.has("code")) {
+                throw IllegalStateException(json.optString("msg", "HTTP ${response.code}"))
+            }
+            if (isSandbox) {
+                ApiKeyPermissions(
+                    canTrade = json.optBoolean("canTrade", true),
+                    canWithdraw = json.optBoolean("canWithdraw", true)
+                )
+            } else {
+                // Unknown or missing flags count as granted, so a key is only read-only when
+                // Binance explicitly reports every trading and transfer permission as off.
+                fun granted(name: String) = json.optBoolean(name, true)
+                ApiKeyPermissions(
+                    canTrade = granted("enableSpotAndMarginTrading") || granted("enableMargin") ||
+                        granted("enableFutures") || json.optBoolean("enableVanillaOptions", false) ||
+                        json.optBoolean("enablePortfolioMarginTrading", false),
+                    canWithdraw = granted("enableWithdrawals") || granted("enableInternalTransfer") ||
+                        granted("permitsUniversalTransfer")
+                )
+            }
+        }
+    }
+
+    companion object {
+        internal fun parseOrderStatusJson(body: String): OrderStatusResult? {
+            return try {
+                val json = JSONObject(body)
+                if (json.has("code")) return null
+
+                val status = json.optString("status", "")
+                val executedQty = BigDecimal(json.optString("executedQty", "0"))
+                val cummulativeQuoteQty = BigDecimal(json.optString("cummulativeQuoteQty", "0"))
+
+                val avgFillPrice = if (executedQty > BigDecimal.ZERO) {
+                    cummulativeQuoteQty.divide(executedQty, 8, RoundingMode.HALF_UP)
+                } else null
+
+                val mappedStatus = when (status.uppercase()) {
+                    "FILLED" -> TransactionStatus.COMPLETED
+                    "NEW", "PENDING_NEW", "PENDING_CANCEL" -> if (executedQty > BigDecimal.ZERO) {
+                        TransactionStatus.PARTIAL
+                    } else TransactionStatus.PENDING
+                    "PARTIALLY_FILLED" -> TransactionStatus.PARTIAL
+                    "CANCELED", "CANCELLED", "EXPIRED", "EXPIRED_IN_MATCH" ->
+                        if (executedQty > BigDecimal.ZERO) TransactionStatus.PARTIAL_CANCELLED
+                        else TransactionStatus.CANCELLED
+                    "REJECTED" ->
+                        if (executedQty > BigDecimal.ZERO) TransactionStatus.PARTIAL_CANCELLED
+                        else TransactionStatus.FAILED
+                    else -> return null
+                }
+
+                val identity = runCatching {
+                    OrderIdentity(
+                        id = json.getString("orderId"),
+                        side = TransactionSide.valueOf(json.getString("side")),
+                        pair = json.getString("symbol"),
+                        createdAt = Instant.ofEpochMilli(json.getLong("time")),
+                        amount = json.getString("origQty").toBigDecimal(),
+                        limitPrice = json.getString("price").toBigDecimal()
+                    )
+                }.getOrNull()
+                OrderStatusResult(
+                    status = mappedStatus,
+                    filledCryptoAmount = executedQty,
+                    filledFiatAmount = cummulativeQuoteQty,
+                    avgFillPrice = avgFillPrice,
+                    // Binance fees are per-trade (need /api/v3/myTrades). MVP: leave null.
+                    fee = null,
+                    feeAsset = null,
+                    identity = identity
+                )
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 }

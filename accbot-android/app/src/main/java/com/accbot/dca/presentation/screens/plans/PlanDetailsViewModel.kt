@@ -11,7 +11,7 @@ import com.accbot.dca.domain.model.DcaPlan
 import com.accbot.dca.domain.model.PlanPnL
 import com.accbot.dca.domain.model.Transaction
 import com.accbot.dca.scheduler.DcaAlarmScheduler
-import com.accbot.dca.domain.model.TransactionStatus
+import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.usecase.ApiImportProgress
 import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.domain.usecase.CalculatePlanPnLUseCase
@@ -21,6 +21,7 @@ import com.accbot.dca.domain.usecase.ResolvePendingTransactionsUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.presentation.utils.NumberFormatters
 import com.accbot.dca.R
+import com.accbot.dca.worker.DcaWorker
 import com.accbot.dca.presentation.utils.TimeUtils
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -67,7 +68,7 @@ data class PlanDetailsUiState(
      * the given number of open sell orders. UI should show a blocking dialog explaining the
      * user must cancel them first.
      */
-    val deleteBlockedOpenSells: Int? = null
+    val deleteBlockedOpenOrders: Boolean = false
 )
 
 @HiltViewModel
@@ -147,7 +148,9 @@ class PlanDetailsViewModel @Inject constructor(
                     val transactions = transactionEntities.map { it.toDomain() }
 
                     // Calculate statistics
-                    val completedTransactions = transactions.filter { it.status == TransactionStatus.COMPLETED }
+                    val completedTransactions = transactions.filter {
+                        it.side == TransactionSide.BUY && it.status.hasFilledPortion
+                    }
                     val totalInvested = completedTransactions.sumOf { it.fiatAmount }
                     val totalCrypto = completedTransactions.sumOf { it.cryptoAmount }
                     val averagePrice = if (totalCrypto > BigDecimal.ZERO) {
@@ -368,28 +371,34 @@ class PlanDetailsViewModel @Inject constructor(
         }
     }
 
+    /** One extra purchase right now (same path as the dashboard "Run now" for one plan). */
+    fun buyNow() {
+        val plan = _uiState.value.plan ?: return
+        if (!plan.isEnabled) return
+        DcaWorker.runPlan(context, plan.id)
+        _snackbar.tryEmit(context.getString(R.string.dashboard_dca_triggered))
+    }
+
     fun deleteAllTransactions(onDeleted: (Int) -> Unit) {
         viewModelScope.launch {
-            val count = _uiState.value.transactions.size
-            transactionDao.deleteTransactionsByPlanId(planId)
-            onDeleted(count)
+            onDeleted(transactionDao.deleteClosedTransactionsByPlanId(planId))
         }
     }
 
     fun deletePlan(onDeleted: () -> Unit) {
         viewModelScope.launch {
             try {
-                // Block delete when the plan still has open sell orders on the exchange.
-                // Without this guard, the user would lose the FK link to the order rows and
-                // any subsequent fill polling would silently fail.
-                val openSellsCount = transactionDao.observeOpenSellsForPlan(planId).first().size
-                if (openSellsCount > 0) {
-                    _uiState.update { it.copy(deleteBlockedOpenSells = openSellsCount) }
-                    return@launch
+                val openCount = database.withTransaction {
+                    val count = transactionDao.countOpenTransactionsForPlan(planId)
+                    if (count == 0) {
+                        transactionDao.deleteTransactionsByPlanId(planId)
+                        dcaPlanDao.deletePlanById(planId)
+                    }
+                    count
                 }
-                database.withTransaction {
-                    transactionDao.deleteTransactionsByPlanId(planId)
-                    dcaPlanDao.deletePlanById(planId)
+                if (openCount > 0) {
+                    _uiState.update { it.copy(deleteBlockedOpenOrders = true) }
+                    return@launch
                 }
                 DcaAlarmScheduler.scheduleNextAlarm(context)
                 onDeleted()
@@ -400,7 +409,7 @@ class PlanDetailsViewModel @Inject constructor(
     }
 
     fun dismissDeleteBlockedDialog() {
-        _uiState.update { it.copy(deleteBlockedOpenSells = null) }
+        _uiState.update { it.copy(deleteBlockedOpenOrders = false) }
     }
 
     fun showImportDialog() {

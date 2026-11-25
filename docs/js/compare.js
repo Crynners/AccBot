@@ -3,6 +3,7 @@
 
   var STOSUJ_FEE = 0.015;
   var ACCBOT_FEE = 0.006;
+  var latestPurchases = [];
 
   function init() {
     var calcBtn = document.getElementById('compare-calc');
@@ -18,12 +19,16 @@
     var btns = document.querySelectorAll('.compare-interval-btn');
     for (var i = 0; i < btns.length; i++) {
       btns[i].addEventListener('click', function () {
-        for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
-        this.classList.add('active');
+        for (var j = 0; j < btns.length; j++) {
+          var selected = btns[j] === this;
+          btns[j].classList.toggle('active', selected);
+          btns[j].setAttribute('aria-pressed', String(selected));
+        }
       });
     }
 
     calcBtn.addEventListener('click', calculate);
+    document.getElementById('compare-table').addEventListener('toggle', renderPurchaseTable);
     document.getElementById('compare-amount').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') calculate();
     });
@@ -169,6 +174,8 @@
   }
 
   function calculate() {
+    var calcBtn = document.getElementById('compare-calc');
+    if (calcBtn.disabled) return;
     var startVal = document.getElementById('compare-start').value;
     var amount = parseFloat(document.getElementById('compare-amount').value);
     var interval = getInterval();
@@ -184,13 +191,16 @@
     var contentEl = document.getElementById('compare-content');
     var errorEl = document.getElementById('compare-error');
 
+    calcBtn.disabled = true;
+    setText('compare-status', '');
     resultsEl.style.display = 'block';
     loadingEl.style.display = 'flex';
     contentEl.style.display = 'none';
     errorEl.style.display = 'none';
 
     setTimeout(function () {
-      resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      resultsEl.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
     }, 100);
 
     var startTs = Math.floor(startDate.getTime() / 1000);
@@ -208,6 +218,7 @@
 
         var sTotal = 0, aTotal = 0;
         var sHist = [], aHist = [];
+        var rows = [];
 
         for (var i = 0; i < dates.length; i++) {
           var p = findPrice(prices, dates[i].getTime());
@@ -215,6 +226,7 @@
           aTotal += (amount * (1 - ACCBOT_FEE)) / p;
           sHist.push([dates[i].getTime(), sTotal]);
           aHist.push([dates[i].getTime(), aTotal]);
+          rows.push([dates[i], p, sTotal, aTotal]);
         }
 
         var invested = dates.length * amount;
@@ -240,21 +252,48 @@
         savEl.innerHTML = tr('compare_savings_tpl', [fmtSats(extraBtc), fmtCZK(extraVal), fmtCZK(feeSave)]);
 
         drawChart(sHist, aHist, prices);
+        latestPurchases = rows;
+        renderPurchaseTable();
 
         loadingEl.style.display = 'none';
         contentEl.style.display = 'block';
+        setText('compare-status', sumEl.textContent + '. ' + savEl.textContent);
       })
       .catch(function () {
         loadingEl.style.display = 'none';
         errorEl.style.display = 'block';
+      })
+      .finally(function () {
+        calcBtn.disabled = false;
       });
+  }
+
+  function renderPurchaseTable() {
+    var table = document.getElementById('compare-table');
+    if (!table.open) return;
+    var fragment = document.createDocumentFragment();
+    var formatter = new Intl.DateTimeFormat(document.documentElement.lang || 'en');
+    latestPurchases.forEach(function (values) {
+      var row = document.createElement('tr');
+      [formatter.format(values[0]), fmtCZK(values[1]), fmtBTC(values[2]), fmtBTC(values[3])].forEach(function (value) {
+        var cell = document.createElement('td');
+        cell.textContent = value;
+        row.appendChild(cell);
+      });
+      fragment.appendChild(row);
+    });
+    document.getElementById('compare-table-body').replaceChildren(fragment);
   }
 
   /* ===== Interactive Chart ===== */
 
   function drawChart(sData, aData, rawPrices) {
     var el = document.getElementById('compare-chart');
-    if (!el || sData.length < 2) return;
+    if (!el) return;
+    if (sData.length < 2) {
+      el.replaceChildren();
+      return;
+    }
 
     // Dimensions
     var W = 700, H = 320;
@@ -307,21 +346,21 @@
       var t = minT + (tRange / xTicks) * i;
       var d = new Date(t);
       var lbl = (d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(2);
-      svg += '<text x="' + sx(t).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="10" font-family="Inter,sans-serif">' + lbl + '</text>';
+      svg += '<text x="' + sx(t).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" fill="#c0c5d4" font-size="10" font-family="Inter,sans-serif">' + lbl + '</text>';
     }
 
     // Left Y-axis labels (sats)
     for (var i = 0; i <= 4; i++) {
       var v = (maxBtc / 4) * i;
       var yy = syB(v);
-      svg += '<text x="' + (L - 8) + '" y="' + (yy + 3.5).toFixed(1) + '" text-anchor="end" fill="rgba(255,255,255,0.4)" font-size="10" font-family="Inter,sans-serif">' + fmtAxisSats(v) + '</text>';
+      svg += '<text x="' + (L - 8) + '" y="' + (yy + 3.5).toFixed(1) + '" text-anchor="end" fill="#c0c5d4" font-size="10" font-family="Inter,sans-serif">' + fmtAxisSats(v) + '</text>';
     }
 
     // Right Y-axis labels (CZK price)
     for (var i = 0; i <= 4; i++) {
       var p = minP + (pRange / 4) * i;
       var yy = syP(p);
-      svg += '<text x="' + (W - R + 8) + '" y="' + (yy + 3.5).toFixed(1) + '" text-anchor="start" fill="rgba(91,141,239,0.55)" font-size="10" font-family="Inter,sans-serif">' + fmtAxisCZK(p) + ' Kč</text>';
+      svg += '<text x="' + (W - R + 8) + '" y="' + (yy + 3.5).toFixed(1) + '" text-anchor="start" fill="#a8c5ff" font-size="10" font-family="Inter,sans-serif">' + fmtAxisCZK(p) + ' Kč</text>';
     }
 
     // Axis lines
@@ -415,11 +454,11 @@
     // Baseline
     dSvg += '<line x1="' + L + '" y1="' + (dH - dB) + '" x2="' + (W - R) + '" y2="' + (dH - dB) + '" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>';
     // Y labels (0 and max)
-    dSvg += '<text x="' + (L - 8) + '" y="' + (dH - dB + 3) + '" text-anchor="end" fill="rgba(255,255,255,0.3)" font-size="9" font-family="Inter,sans-serif">0</text>';
-    dSvg += '<text x="' + (L - 8) + '" y="' + (dT + 8) + '" text-anchor="end" fill="rgba(78,204,163,0.6)" font-size="9" font-family="Inter,sans-serif">+' + fmtAxisSats(maxDiff / 1.15) + '</text>';
+    dSvg += '<text x="' + (L - 8) + '" y="' + (dH - dB + 3) + '" text-anchor="end" fill="#c0c5d4" font-size="9" font-family="Inter,sans-serif">0</text>';
+    dSvg += '<text x="' + (L - 8) + '" y="' + (dT + 8) + '" text-anchor="end" fill="#81ddbf" font-size="9" font-family="Inter,sans-serif">+' + fmtAxisSats(maxDiff / 1.15) + '</text>';
     // Label
     var diffLabel = tr('compare_diff_chart_label');
-    dSvg += '<text x="' + (L + 4) + '" y="' + (dH - 4) + '" fill="rgba(78,204,163,0.5)" font-size="9" font-family="Inter,sans-serif">' + diffLabel + '</text>';
+    dSvg += '<text x="' + (L + 4) + '" y="' + (dH - 4) + '" fill="#81ddbf" font-size="9" font-family="Inter,sans-serif">' + diffLabel + '</text>';
     // End value
     var lastDiff = diffData[diffData.length - 1];
     dSvg += '<circle cx="' + sx(lastDiff[0]).toFixed(1) + '" cy="' + syD(lastDiff[1]).toFixed(1) + '" r="3" fill="#4ECCA3" stroke="var(--bg)" stroke-width="1.5"/>';

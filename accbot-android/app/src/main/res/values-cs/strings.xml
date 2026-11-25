@@ -61,7 +61,6 @@
 
     <!-- Dashboard Screen -->
     <string name="dashboard_add_plan">Přidat plán</string>
-    <string name="dashboard_sandbox_banner">SANDBOX REŽIM – Pouze testovací obchody</string>
     <string name="dashboard_total_accumulated">Celkem nakoupeno</string>
     <string name="dashboard_no_transactions">Zatím žádné transakce</string>
     <string name="dashboard_start_plan_hint">Spusťte DCA plán pro zobrazení portfolia</string>
@@ -111,11 +110,8 @@
     <string name="settings_manage_exchanges">Správa burz</string>
     <string name="settings_exchanges_connected">%1$d připojení</string>
     <string name="settings_system">NASTAVENÍ SYSTÉMU</string>
-    <string name="settings_battery_optimization">Optimalizace baterie</string>
-    <string name="settings_battery_disabled">Vypnuto – klepněte pro povolení neomezené aktivity na pozadí</string>
-    <string name="settings_battery_unrestricted">Neomezeno – DCA spolehlivě běží na pozadí</string>
     <string name="settings_battery_already_disabled">Optimalizace baterie již vypnuta</string>
-    <string name="settings_battery_open_failed">Nepodařilo se otevřít nastavení baterie</string>
+    <string name="settings_battery_open_failed">Systémové nastavení se nepodařilo otevřít</string>
     <string name="settings_low_balance_warning">Upozornění na nízký zůstatek</string>
     <string name="settings_low_balance_subtitle">Upozornit, když zůstatek pokryje méně než %1$d dní</string>
     <string name="settings_low_balance_dialog_title">Upozornění na nízký zůstatek</string>
@@ -129,6 +125,98 @@
     <string name="backup_export_subtitle">Uložit data do souboru</string>
     <string name="backup_import_title">Importovat zálohu</string>
     <string name="backup_import_subtitle">Obnovit data ze souboru</string>
+    <!-- Sdílení plánu jen pro čtení -->
+    <string name="share_plan_title">Sdílet plán (jen pro čtení)</string>
+    <string name="share_plan_subject">DCA plán z AccBotu</string>
+    <string name="share_plan_description">Vytvoří soubor se snímkem tohoto plánu. Příjemce ho otevře v AccBotu a může ho jen prohlížet. Aktuální stav později sdílíte tak, že soubor pošlete znovu a nahradí předchozí verzi.</string>
+    <string name="share_plan_include_amounts">Zahrnout částky</string>
+    <string name="share_plan_include_amounts_on">Sdílí se částky nákupů, celková investice i držené množství.</string>
+    <string name="share_plan_include_amounts_off">Sdílí se jen data a ceny nákupů, průměrná nákupní cena a výkonnost v procentech.</string>
+    <string name="share_plan_never_included">Nikdy se nesdílí: API klíče, ID příkazů, názvy připojení ani adresy pro výběr. Soubor nejde použít ke spuštění plánu.</string>
+    <string name="share_plan_confirm">Sdílet</string>
+    <string name="share_plan_failed">Soubor ke sdílení se nepodařilo vytvořit.</string>
+    <string name="shared_plans_title">Sdílené se mnou</string>
+    <string name="shared_plans_settings_subtitle">Plány jen pro čtení, které vám poslali ostatní</string>
+    <string name="shared_plans_import">Importovat sdílený plán</string>
+    <string name="shared_plans_intro">Snímky plánů, které s vámi sdíleli ostatní. Jsou jen pro čtení, nikdy se nespouští a nejsou součástí vašeho portfolia.</string>
+    <string name="shared_plans_empty_title">Zatím žádné sdílené plány</string>
+    <string name="shared_plans_empty_description">Když s vámi někdo z AccBotu sdílí plán, uložte si soubor a naimportujte ho sem.</string>
+    <string name="shared_plans_snapshot_from">Snímek z %1$s</string>
+    <string name="shared_plans_sandbox_badge">Data z testovacího prostředí</string>
+    <string name="shared_plans_import_added">Přidáno: „%1$s“</string>
+    <string name="shared_plans_import_updated">Aktualizováno: „%1$s“</string>
+    <string name="shared_plans_import_outdated">Novější snímek plánu „%1$s“ už máte uložený.</string>
+    <string name="shared_plans_import_failed">Soubor se nepodařilo přečíst.</string>
+    <string name="shared_plans_error_not_share">Tento soubor není sdílený plán z AccBotu.</string>
+    <string name="shared_plans_error_version">Tento sdílený plán vyžaduje novější verzi AccBotu.</string>
+    <string name="shared_plans_error_too_large">Soubor je příliš velký.</string>
+    <string name="shared_plans_error_invalid">Sdílený plán je poškozený nebo neúplný.</string>
+    <string name="shared_plan_title">Sdílený plán</string>
+    <string name="shared_plan_read_only">Jen pro čtení</string>
+    <string name="shared_plan_read_only_text">Snímek z %1$s. Sám se neaktualizuje a nejde upravit ani spustit.</string>
+    <string name="shared_plan_not_found">Tento sdílený plán už není k dispozici.</string>
+    <string name="shared_plan_delete_title">Odebrat sdílený plán?</string>
+    <string name="shared_plan_delete_text">Snímek se odebere z tohoto zařízení. Plánu odesílatele se to nijak nedotkne.</string>
+    <string name="shared_plan_amount">Částka za nákup</string>
+    <string name="shared_plan_schedule">Rozvrh</string>
+    <string name="shared_plan_schedule_unknown">Neznámý</string>
+    <string name="shared_plan_strategy">Strategie</string>
+    <string name="shared_plan_state">Stav při sdílení</string>
+    <string name="shared_plan_state_active">Aktivní</string>
+    <string name="shared_plan_state_paused">Pozastavený</string>
+    <string name="shared_plan_created">Vytvořen</string>
+    <string name="shared_plan_summary">Souhrn</string>
+    <string name="shared_plan_buys">Nákupy</string>
+    <string name="shared_plan_sells">Prodeje</string>
+    <string name="shared_plan_first_buy">První nákup</string>
+    <string name="shared_plan_invested">Investováno</string>
+    <string name="shared_plan_held">Drženo</string>
+    <string name="shared_plan_sold">Prodáno za</string>
+    <string name="shared_plan_avg_price">Průměrná nákupní cena</string>
+    <string name="shared_plan_current_price">Aktuální cena</string>
+    <string name="shared_plan_current_value">Aktuální hodnota</string>
+    <string name="shared_plan_performance">Výkonnost vůči průměru</string>
+    <string name="shared_plan_amounts_hidden">Odesílatel se rozhodl částky nesdílet.</string>
+    <string name="shared_plan_trades">Obchody (%1$d)</string>
+    <string name="shared_plan_no_trades">Zatím žádné potvrzené obchody.</string>
+    <string name="shared_plan_side_buy">Nákup</string>
+    <string name="shared_plan_side_sell">Prodej</string>
+    <string name="shared_plan_at_price">za %1$s</string>
+    <string name="share_plan_live_updates">Živé aktualizace</string>
+    <string name="share_plan_live_updates_subtitle">Příjemce si může stahovat nové obchody pomocí samostatného API klíče jen pro čtení.</string>
+    <string name="share_plan_never_included_live">Nikdy se nesdílí: klíč, kterým plán obchoduje, ID příkazů, názvy připojení ani adresy pro výběr. Soubor se zašifruje vaším heslem.</string>
+    <string name="share_plan_live_key_instructions">Na burze %1$s vytvořte nový API klíč jen pro čtení, bez obchodování a bez výběrů. Nepoužívejte klíč, kterým plán nakupuje. Kdo má soubor a heslo, může klíč použít i mimo AccBot, takže vás chrání jen oprávnění nastavená na burze.</string>
+    <string name="share_plan_live_api_key">API klíč jen pro čtení</string>
+    <string name="share_plan_live_api_secret">API secret jen pro čtení</string>
+    <string name="share_plan_live_client_id">Client ID</string>
+    <string name="share_plan_live_passphrase">Passphrase</string>
+    <string name="share_plan_live_verify">Ověřit klíč</string>
+    <string name="share_plan_live_verified">Burza potvrdila, že klíč nemůže obchodovat ani vybírat.</string>
+    <string name="share_plan_live_unverifiable">%1$s neumí oprávnění klíče ověřit. Potvrzuji, že klíč je jen pro čtení, bez obchodování a výběrů.</string>
+    <string name="share_plan_key_unsupported">Pro tuto burzu nejsou živé aktualizace k dispozici.</string>
+    <string name="share_plan_key_wrong_exchange">Klíč musí patřit burze, na které plán běží.</string>
+    <string name="share_plan_key_same_as_plan">Tímto klíčem plán obchoduje. Vytvořte samostatný klíč jen pro čtení.</string>
+    <string name="share_plan_key_not_read_only">Tento klíč umí obchodovat nebo vybírat. Vytvořte klíč jen pro čtení.</string>
+    <string name="share_plan_key_check_failed">Klíč se nepodařilo ověřit. Zkontrolujte, že je správně, a zkuste to znovu.</string>
+    <string name="share_plan_live_password_info">Soubor se zašifruje. Heslo pošlete příjemci jinou cestou než soubor.</string>
+    <string name="share_plan_live_password">Heslo k souboru</string>
+    <string name="share_plan_live_password_confirm">Heslo znovu</string>
+    <string name="share_plan_live_password_invalid">Použijte aspoň %1$d znaků a zadejte heslo dvakrát stejně.</string>
+    <string name="shared_plans_password_title">Šifrovaný sdílený plán</string>
+    <string name="shared_plans_password_text">Tento plán obsahuje živé aktualizace. Zadejte heslo, které vám dal odesílatel.</string>
+    <string name="shared_plans_password_open">Otevřít</string>
+    <string name="shared_plans_wrong_password">Nesprávné heslo.</string>
+    <string name="shared_plans_key_not_read_only">Sdílený klíč umí obchodovat nebo vybírat, proto ho AccBot odmítl. Požádejte odesílatele o klíč jen pro čtení.</string>
+    <string name="shared_plans_live_badge">Živé aktualizace</string>
+    <string name="shared_plan_refresh">Obnovit</string>
+    <string name="shared_plan_refresh_new">Nové obchody: %1$d</string>
+    <string name="shared_plan_key_revoked_not_read_only">Sdílený klíč nově umožňuje obchodovat nebo vybírat. AccBot ho odstranil a živé aktualizace zastavil.</string>
+    <string name="shared_plan_live_text">Živé aktualizace · naposledy obnoveno %1$s. Nejde upravit ani spustit.</string>
+    <string name="shared_plan_live_text_never">Živé aktualizace · zatím neobnoveno. Nejde upravit ani spustit.</string>
+    <string name="shared_plan_refresh_failed">Poslední obnovení selhalo. Klíč mohl být odvolán nebo je burza nedostupná.</string>
+    <string name="shared_plan_key_verified">Burza ověřila, že klíč je jen pro čtení.</string>
+    <string name="shared_plan_key_unverified">Burza neumí ověřit, že je klíč jen pro čtení; potvrdil to odesílatel.</string>
+    <string name="shared_plan_account_scope">Nové obchody zahrnují všechny obchody tohoto páru na burzovním účtu odesílatele.</string>
     <string name="backup_step_select_data">Výběr dat</string>
     <string name="backup_step_encryption">Šifrování</string>
     <string name="backup_step_result">Výsledek</string>
@@ -176,19 +264,26 @@
     <string name="backup_preview_withdrawals">Výběry: %1$d</string>
     <string name="backup_preview_thresholds">Prahové hodnoty výběrů: %1$d</string>
     <string name="backup_restore_button">Obnovit</string>
-    <string name="backup_restore_warning">Data ze zálohy budou přidána k aktuálním datům. Stávající data nebudou smazána.</string>
-    <string name="backup_restore_warning_replace">Obnova nahradí všechna stávající data obsahem zálohy.</string>
+    <string name="backup_restore_merge">Sloučit se stávajícími daty</string>
+    <string name="backup_restore_replace">Přepsat stávající data</string>
+    <string name="backup_restore_paused">Obnovené plány zůstanou pozastavené, dokud je nezkontrolujete a nezapnete.</string>
+    <string name="backup_environment">Prostředí</string>
+    <string name="backup_environment_test">Testovací</string>
+    <string name="backup_environment_live">Produkční</string>
+    <string name="backup_wrong_environment">Záloha patří do jiného prostředí. Před obnovou do něj přepněte aplikaci.</string>
+    <string name="backup_too_large">Záloha překračuje podporovanou velikost.</string>
+    <string name="backup_open_orders">Před přepsáním dat vyřešte čekající příkazy.</string>
+    <string name="backup_restart">Restartovat aplikaci</string>
+    <string name="backup_restore_warning">Data ze zálohy se přidají k současným a nic se nesmaže. Plány ze zálohy i vaše stávající plány na připojeních, jejichž API klíče pocházejí ze zálohy, se pozastaví, dokud je znovu nezapnete.</string>
+    <string name="backup_restore_warning_replace">Obnova nahradí stávající plány, historii a API klíče obsahem zálohy. Obnovené plány zůstanou pozastavené.</string>
     <string name="backup_restoring">Obnovuji zálohu…</string>
     <string name="backup_decrypting">Dešifruji…</string>
-    <string name="backup_restore_success">Záloha obnovena úspěšně. Aplikace se restartuje.</string>
+    <string name="backup_restore_success">Záloha obnovena</string>
     <string name="backup_restore_error">Obnova zálohy se nezdařila</string>
-    <string name="backup_credentials_require_encryption">Při zahrnutí přístupových údajů je nutné šifrování</string>
+    <string name="backup_credentials_require_encryption">Záloha s API klíči musí být šifrovaná.</string>
     <string name="backup_no_passphrase">Zadejte heslo nebo vygenerujte seed</string>
     <string name="backup_items_count">%1$d položek</string>
 
-    <string name="settings_general">OBECNÉ</string>
-    <string name="settings_alerts_security">UPOZORNĚNÍ A ZABEZPEČENÍ</string>
-    <string name="settings_data">DATA</string>
     <string name="settings_about">O APLIKACI</string>
     <string name="settings_documentation">Dokumentace</string>
     <string name="settings_documentation_subtitle">Návody a API dokumentace</string>
@@ -265,8 +360,7 @@
     <string name="history_side_sell_label">Prodej</string>
 
     <!-- Dashboard - open sells -->
-    <string name="dashboard_open_sells_title">%1$s: %2$d otevřených prodejních příkazů</string>
-    <string name="dashboard_plan_open_sells">%1$d otevřených prodejních příkazů</string>
+    <string name="dashboard_open_sells_title">%1$s: otevřené prodejní příkazy %2$d</string>
 
     <!-- Add Plan Screen -->
     <string name="add_plan_title">Vytvořit DCA plán</string>
@@ -319,14 +413,13 @@
     <string name="plan_details_days_remaining">~%1$d dní (%2$d nákupů)</string>
     <string name="plan_details_delete_subtitle">Trvale smazat tento plán a všechny jeho transakce</string>
     <string name="plan_details_delete_confirm_hint">Zadejte %1$s pro potvrzení</string>
-    <string name="plan_details_delete_transactions_title">Smazat všechny transakce</string>
-    <string name="plan_details_delete_transactions_text">Trvale se smaže všech %1$d transakcí tohoto plánu. Tuto akci nelze vrátit zpět.\n\nPro potvrzení zadejte počet transakcí:</string>
+    <string name="plan_details_delete_transactions_title">Smazat uzavřené transakce</string>
+    <string name="plan_details_delete_transactions_text">Trvale se smaže %1$d uzavřených transakcí tohoto plánu.\n\nPro potvrzení zadejte počet transakcí.</string>
     <string name="plan_details_delete_transactions_hint">Zadejte %1$d pro potvrzení</string>
-    <string name="plan_details_delete_transactions_button">Smazat všechny transakce</string>
+    <string name="plan_details_delete_transactions_button">Smazat uzavřené transakce</string>
     <string name="plan_details_delete_transactions_success">%1$d transakcí smazáno</string>
-    <string name="plan_details_create_sell_order">+ Vytvořit prodejní příkaz</string>
     <string name="plan_details_delete_blocked_title">Nelze smazat plán</string>
-    <string name="plan_details_delete_blocked_text">Tento plán má %1$d otevřených prodejních příkazů. Zruš je nejdřív, než plán smažeš.</string>
+    <string name="plan_details_delete_blocked_text">Před smazáním plánu vyřešte čekající příkazy a příkazy ke kontrole.</string>
 
     <!-- Edit Plan Screen -->
     <string name="edit_plan_title">Upravit plán</string>
@@ -341,7 +434,7 @@
     <string name="portfolio_transactions">Transakce</string>
     <string name="portfolio_loading">Načítání pozic…</string>
     <string name="portfolio_realized">Realizováno</string>
-    <string name="portfolio_net_pnl">Čistý P&amp;L</string>
+    <string name="portfolio_net_pnl">Čistý zisk / ztráta</string>
     <string name="portfolio_open_sells_section_title">Otevřené prodejní příkazy (%1$d)</string>
     <string name="portfolio_new_sell_order">Nový prodejní příkaz</string>
 
@@ -391,7 +484,7 @@
     <string name="exchanges_connection_name_taken">Tento název už pro tuto burzu existuje</string>
     <string name="exchanges_connection_name_hint">např. Hlavní, Spoření, Dlouhodobé…</string>
     <string name="exchanges_default_connection_label">Výchozí připojení</string>
-    <string name="add_plan_pick_connection">Vyber připojení</string>
+    <string name="add_plan_pick_connection">Vyberte připojení</string>
     <string name="add_plan_create_new_connection">Vytvořit nové připojení…</string>
     <string name="exchanges_remove_title">Odebrat burzu</string>
     <string name="exchanges_remove_text">Opravdu chcete odebrat %1$s? Tím se smaže veškerá historie transakcí a API přihlašovací údaje pro tuto burzu.</string>
@@ -441,7 +534,7 @@
     <string name="transaction_details_price">Cena</string>
     <string name="transaction_details_fee">Poplatek</string>
     <string name="transaction_details_date_time">Datum a čas</string>
-    <string name="transaction_details_order_id">ID objednávky</string>
+    <string name="transaction_details_order_id">ID příkazu</string>
     <string name="transaction_details_error_message">Chybová zpráva</string>
     <string name="transaction_details_warning_message">Upozornění při opakování</string>
     <string name="transaction_details_copied">Zkopírováno do schránky</string>
@@ -450,6 +543,7 @@
     <string name="transaction_status_cancelled">Zrušeno</string>
     <string name="transaction_status_pending">Čekající</string>
     <string name="transaction_status_partial">Částečně vyplněno</string>
+    <string name="transaction_status_partial_cancelled">Částečně vyplněno (zrušeno)</string>
     <string name="transaction_details_at">v</string>
     <string name="transaction_details_sell_section">Prodejní příkaz</string>
     <string name="transaction_details_limit_price">Limitní cena</string>
@@ -612,7 +706,21 @@
     <string name="notification_dca_failed">DCA selhalo</string>
     <string name="notification_dca_failed_text">Nepodařilo se nakoupit %1$s: %2$s</string>
     <string name="notification_dca_error">DCA chyba</string>
-    <string name="notification_runaway_disabled">Plán pozastaven: zjištěno neobvykle mnoho nákupů. Zkontroluj účet a po vyřešení plán znovu zapni.</string>
+    <string name="notification_purchase_needs_review">Burza nepotvrdila výsledek nákupu. Plán počká na vaši kontrolu.</string>
+    <string name="run_now_sandbox">Vybrané plány odešlou testovací příkazy.</string>
+    <string name="run_now_production">Vybrané plány odešlou skutečné příkazy.</string>
+    <string name="first_plan_schedules_test_orders">Tento plán naplánuje testovací nákupy na %1$s.</string>
+    <string name="first_plan_schedules_real_orders">Tento plán naplánuje skutečné nákupy na %1$s.</string>
+    <string name="transaction_review_purchase">Zkontrolovat nákup</string>
+    <string name="transaction_purchase_in_progress">AccBot právě zpracovává nákup. Počkejte na dokončení a před potvrzením zkontrolujte burzu.</string>
+    <string name="transaction_review_sell">Zkontrolovat prodej</string>
+    <string name="transaction_sell_needs_review">Burza nepotvrdila výsledek prodeje. Množství zůstane rezervované, dokud příkaz nezkontrolujete.</string>
+    <string name="transaction_sell_in_progress">AccBot právě zpracovává prodej. Počkejte na dokončení a před potvrzením zkontrolujte burzu.</string>
+    <string name="transaction_sell_order_unverified">ID příkazu se nepodařilo ověřit. Množství zůstává rezervované.</string>
+    <string name="notification_purchase_without_fill">Burza uzavřela příkaz bez plnění.</string>
+    <string name="exchange_connection_open_orders">Před odebráním připojení vyřešte jeho čekající příkazy.</string>
+    <string name="transaction_purchase_order_unverified">ID příkazu se nepodařilo ověřit. Zkontrolujte, že jde o nákup tohoto páru z té doby.</string>
+    <string name="notification_runaway_disabled">Plán pozastaven: zjištěno neobvykle mnoho nákupů. Zkontrolujte účet a po vyřešení plán znovu zapněte.</string>
     <string name="notification_low_balance_title">Nízký zůstatek na %1$s</string>
     <string name="notification_low_balance_text">%1$s %2$s zbývá pro DCA</string>
     <string name="notification_low_balance_less_1_day">&lt; 1 den</string>
@@ -821,9 +929,8 @@
     <string name="notification_network_retry_banner_next">Další pokus v %1$s</string>
     <string name="notification_missed_purchases_title">AccBot: Zmeškané nákupy</string>
     <string name="notification_missed_purchases_text">Zmeškaných %1$d nákupů %2$s na %3$s během offline.</string>
-    <string name="notification_missed_purchases_banner">Zmeškaných %1$d nákupů %2$s na %3$s během offline.</string>
     <string name="notification_missing_credentials_title">AccBot: Chybí API klíče</string>
-    <string name="notification_missing_credentials_text">Plán %1$s na %2$s nemůže běžet - chybí API přihlašovací údaje. Otevři Správu burz a zadej klíče znovu.</string>
+    <string name="notification_missing_credentials_text">Plán %1$s na %2$s nemůže běžet - chybí API přihlašovací údaje. Otevřete Správu burz a zadejte klíče znovu.</string>
     <string name="missed_purchases_buy">Dokoupit</string>
     <string name="missed_purchases_skip">Přeskočit</string>
     <string name="dashboard_withdrawal_ready">%1$s %2$s na burze – zvažte výběr</string>
@@ -856,7 +963,7 @@
     <string name="settings_delete_plans_dialog_title">Smazat všechny DCA plány?</string>
     <string name="settings_delete_plans_dialog_text">Trvale se smaže všech %1$d DCA plánů. Aktivní plány přestanou fungovat. Tuto akci nelze vrátit zpět.</string>
     <string name="settings_delete_transactions_dialog_title">Smazat historii transakcí?</string>
-    <string name="settings_delete_transactions_dialog_text">Trvale se smaže všech %1$d transakcí. Portfolio data budou ztracena. Tuto akci nelze vrátit zpět.</string>
+    <string name="settings_delete_transactions_dialog_text">Trvale se smaže %1$d uzavřených transakcí včetně souvisejících údajů o portfoliu.</string>
     <string name="settings_delete_notifications_dialog_title">Smazat historii oznámení?</string>
     <string name="settings_delete_notifications_dialog_text">Trvale se smaže všech %1$d oznámení. Tuto akci nelze vrátit zpět.</string>
 
@@ -956,9 +1063,8 @@
     <string name="a11y_retry">Opakovat</string>
 
     <!-- Settings: Pokrocile (Rozsireni prodeju) -->
-    <string name="settings_advanced">POKROČILÉ</string>
     <string name="settings_trading_enabled_title">Povolit prodeje</string>
-    <string name="settings_trading_enabled_subtitle">Umožní u vybraných plánů zadávat limitní prodejní příkazy a sledovat P&amp;L.</string>
+    <string name="settings_trading_enabled_subtitle">Umožní u vybraných plánů zadávat limitní prodejní příkazy a ukáže zisk a ztrátu.</string>
     <string name="settings_sell_polling_title">Kontrolovat prodejní příkazy na pozadí</string>
     <string name="settings_sell_polling_subtitle">Periodická kontrola stavu příkazů. Zvyšuje spotřebu baterie.</string>
     <string name="settings_sell_polling_frequency">Frekvence</string>
@@ -971,18 +1077,18 @@
     <string name="plan_form_allow_sells_title">Povolit prodeje pro tento plán</string>
     <string name="plan_form_target_profit_label">Cíl zisku (volitelné, v %1$s)</string>
     <string name="plan_form_target_profit_supporting">Detail plánu zobrazí progress bar k tomuto cíli.</string>
-    <string name="plan_form_target_profit_error_invalid">Zadej platné číslo</string>
+    <string name="plan_form_target_profit_error_invalid">Zadejte platné číslo</string>
     <string name="plan_form_target_profit_error_positive">Cíl musí být kladný</string>
 
     <!-- Edit plán: Dialog vypnutí prodejů -->
     <string name="edit_plan_disable_sells_dialog_title">Vypnout prodeje?</string>
-    <string name="edit_plan_disable_sells_dialog_text">Máš %1$d otevřených prodejních příkazů. Vypnutím prodejů se skryje sekce prodejů, ale příkazy na burze zůstávají. Musíš je zrušit ručně přes burzu, nebo zapnutím prodejů a zrušením příkazů.</string>
+    <string name="edit_plan_disable_sells_dialog_text">Otevřené prodejní příkazy: %1$d. Vypnutím prodejů se skryje sekce prodejů, ale příkazy na burze zůstanou. Zrušte je na burze, nebo prodeje znovu zapněte a zrušte je v aplikaci.</string>
     <string name="edit_plan_disable_sells_confirm">Vypnout</string>
 
     <!-- Sell Wizard -->
     <string name="sell_wizard_title">Limitní prodej %1$s/%2$s</string>
     <string name="sell_wizard_spot_price">Aktuální cena:</string>
-    <string name="sell_wizard_avg_buy">Průměrný nákup:</string>
+    <string name="sell_wizard_avg_buy">Průměrná nákupní cena</string>
     <string name="sell_wizard_available">K dispozici:</string>
     <string name="sell_wizard_amount">Množství k prodeji</string>
     <string name="sell_wizard_amount_all">Vše</string>
@@ -990,7 +1096,7 @@
     <string name="sell_wizard_chip_spot">Tržní</string>
     <string name="sell_wizard_summary">Souhrn</string>
     <string name="sell_wizard_proceeds">Získáte:</string>
-    <string name="sell_wizard_instant_fill_warning">Prodej proběhne okamžitě. Limitní cena je pod aktuální tržní (%1$s %2$s). Příkaz se vyplní ihned za nejvyšší nabídku na burze (obvykle blízko tržní ceny minus spread). Není to chyba.</string>
+    <string name="sell_wizard_instant_fill_warning">Prodej proběhne okamžitě. Limitní cena je pod aktuální tržní cenou (%1$s %2$s), takže se příkaz vyplní hned za nejlepší nabídku na burze, obvykle kousek pod tržní cenou. Není to chyba.</string>
     <string name="sell_wizard_far_from_market_warning">Cena je vysoko nad trhem - prodej se nemusí vyplnit dlouho.</string>
     <string name="sell_wizard_proceed">Pokračovat</string>
     <string name="sell_wizard_confirm_title">Potvrdit prodej</string>
@@ -1005,20 +1111,20 @@
     <string name="sell_wizard_back">Zpět</string>
     <string name="sell_wizard_submit">Odeslat</string>
     <string name="sell_wizard_timeout_title">Nelze ověřit stav příkazu</string>
-    <string name="sell_wizard_timeout_text">Spojení s burzou selhalo nebo vypršelo. Příkaz mohl být odeslán, ale nelze to potvrdit. Zkontroluj otevřené příkazy na burze přes web a v případě potřeby zruš duplicitu.</string>
+    <string name="sell_wizard_timeout_text">Spojení s burzou selhalo nebo vypršelo. Příkaz mohl být odeslán, ale nelze to potvrdit. Zkontrolujte otevřené příkazy na webu burzy a případnou duplicitu zrušte.</string>
     <string name="sell_wizard_avg_buy_helper_auto">Spočítáno z plánu</string>
     <string name="sell_wizard_avg_buy_helper_manual">Zadáno ručně</string>
-    <string name="sell_wizard_avg_buy_helper_required">Zatím žádné nákupy (nebo vše prodáno) - zadej ručně</string>
+    <string name="sell_wizard_avg_buy_helper_required">Zatím žádné nákupy (nebo vše prodáno) - zadejte ručně</string>
     <string name="sell_wizard_avg_buy_reset">Spočítat z plánu</string>
-    <string name="sell_wizard_net_fiat">Čistý výnos (po fee)</string>
+    <string name="sell_wizard_net_fiat">Čistý výnos (po poplatcích)</string>
     <string name="sell_wizard_net_preset_label">Zisk z této transakce:</string>
-    <string name="sell_wizard_summary_fee">Odhad fee</string>
-    <string name="sell_wizard_summary_net_profit">Čistý zisk (po fee)</string>
+    <string name="sell_wizard_summary_fee">Odhadovaný poplatek</string>
+    <string name="sell_wizard_summary_net_profit">Čistý zisk (po poplatcích)</string>
     <string name="sell_wizard_summary_remaining_after">Po tomto prodeji</string>
     <string name="sell_wizard_summary_target_progress">Postup k cíli plánu</string>
-    <string name="sell_wizard_loss_below_buy">Prodáváš pod nákupní cenou: ztráta %1$s %2$s</string>
-    <string name="sell_wizard_loss_after_fee">Po fee jdeš do ztráty: %1$s %2$s</string>
-    <string name="sell_wizard_inventory_deficit">Inventář nesedí (chybí %1$s) - zadej průměrnou nákupní cenu ručně</string>
+    <string name="sell_wizard_loss_below_buy">Prodáváte pod nákupní cenou: ztráta %1$s %2$s</string>
+    <string name="sell_wizard_loss_after_fee">Po poplatku budete ve ztrátě: %1$s %2$s</string>
+    <string name="sell_wizard_inventory_deficit">Dostupné množství nesedí s nákupy (chybí %1$s). Zadejte průměrnou nákupní cenu ručně.</string>
     <string name="sell_wizard_ladder_enable">Rozdělit na více příkazů</string>
     <string name="sell_wizard_ladder_from">Od</string>
     <string name="sell_wizard_ladder_to">Do</string>
@@ -1045,16 +1151,164 @@
     <string name="open_sells_cancel_all_confirm_text">Opravdu zrušit všechny otevřené prodejní příkazy (%1$d)? Akci nelze vrátit.</string>
     <string name="sell_validation_amount_must_be_positive">Množství musí být větší než 0</string>
     <string name="sell_validation_price_must_be_positive">Limitní cena musí být větší než 0</string>
-    <string name="sell_validation_min_order_too_low">Minimální hodnota orderu je %1$s (zvyš množství nebo cenu)</string>
-    <string name="sell_validation_insufficient_inventory">Nemáš tolik k dispozici (k dispozici %1$s)</string>
-    <string name="sell_wizard_ladder_error_avg_required">Pro profit %% musí být zadaná průměrná nákupní cena</string>
+    <string name="sell_validation_min_order_too_low">Minimální hodnota příkazu je %1$s (zvyšte množství nebo cenu)</string>
+    <string name="sell_validation_insufficient_inventory">Tolik nemáte k dispozici (k dispozici %1$s)</string>
+    <string name="sell_wizard_ladder_error_avg_required">Pro zisk v %% je potřeba průměrná nákupní cena</string>
     <string name="sell_wizard_ladder_error_amount_positive">Množství musí být větší než 0</string>
-    <string name="sell_wizard_ladder_error_count_min2">Počet orderů musí být alespoň 2</string>
+    <string name="sell_wizard_ladder_error_count_min2">Počet příkazů musí být alespoň 2</string>
+    <string name="sell_wizard_ladder_error_count_max">Počet příkazů může být nejvýše %1$d</string>
     <string name="sell_wizard_ladder_error_to_must_exceed_from">Do musí být větší než Od (oba kladné)</string>
-    <string name="sell_wizard_ladder_error_insufficient">Nemáš tolik k dispozici</string>
-    <string name="sell_wizard_ladder_error_below_min">Hodnota nejmenšího orderu (%1$s %2$s) je pod minimem %3$s %2$s</string>
+    <string name="sell_wizard_ladder_error_insufficient">Tolik nemáte k dispozici</string>
+    <string name="sell_wizard_ladder_error_below_min">Hodnota nejmenšího příkazu (%1$s %2$s) je pod minimem %3$s %2$s</string>
+    <string name="sell_wizard_ladder_error_net_unreachable_max">Cílový čistý výnos nelze v režimu stejného výnosu dosáhnout (musí být pod %1$s %2$s pro zvolenou počáteční cenu a počet příkazů)</string>
+    <string name="sell_wizard_ladder_error_net_unreachable_min">Cílový čistý výnos musí být vyšší než %1$s %2$s</string>
+    <string name="sell_wizard_ladder_error_invalid_order">Jeden nebo více příkazů série má neplatné množství nebo cenu</string>
+    <string name="sell_validation_sells_disabled">Prodeje jsou pro tento plán vypnuté</string>
+    <string name="sell_wizard_ladder_instant_fill_warning">Příkazy na nebo pod tržní cenou (%2$s %3$s): %1$d. Vyplní se okamžitě.</string>
+    <string name="sell_wizard_ladder_far_from_market_warning">Příkazy vysoko nad tržní cenou: %1$d. Můžou se vyplňovat dlouho.</string>
+    <string name="sell_wizard_ladder_loss_warning">Příkazy, které by se po poplatcích prodaly se ztrátou: %1$d (celková ztráta %2$s %3$s).</string>
+    <string name="sell_wizard_uncertain_single_text">Stav příkazu je nejistý (%1$s). Příkaz mohl být na %2$s přijat. Opakované odeslání je zablokované, dokud nezkontrolujete otevřené příkazy na burze a stav neodblokujete.</string>
+    <string name="sell_wizard_uncertain_ladder_text">Vytvořeno %1$d z %2$d příkazů. Příkaz #%3$d má nejistý stav (%4$s) a mohl být na %5$s přijat. Zbývající příkazy nebyly odeslány. Opakované odeslání je zablokované, dokud nezkontrolujete burzu.</string>
+    <string name="sell_wizard_uncertain_resolve_action">Zkontrolováno na burze – obnovit a odemknout</string>
+    <string name="sell_wizard_uncertain_keep_locked">Zavřít upozornění</string>
+    <string name="sell_wizard_submitting_progress">Odesílám %1$d / %2$d…</string>
+    <string name="sell_wizard_validation_failed">Příkaz se nepodařilo ověřit vůči dostupnému množství plánu. Zkuste to znovu.</string>
     <string name="sell_wizard_amount_pct_hint">= %1$s %% z dostupných</string>
     <string name="sell_wizard_submit_error_unknown">Neznámá chyba</string>
     <string name="notification_sell_filled_title">Prodej proveden ✓</string>
     <string name="notification_sell_filled_text">Prodáno %1$s %2$s za %3$s %4$s @&#160;%5$s %4$s</string>
+    <!-- Sell errors -->
+    <string name="sell_error_plan_not_found">Tento plán už neexistuje.</string>
+    <string name="sell_error_sells_disabled">Prodeje jsou pro tento plán vypnuté.</string>
+    <string name="sell_error_missing_credentials">Chybí API přihlašovací údaje pro toto připojení k burze.</string>
+    <string name="sell_error_limit_unsupported">%1$s nepodporuje limitní prodeje.</string>
+    <string name="sell_error_plan_changed">Plán se mezitím změnil. Zkontrolujte prodej znovu.</string>
+    <string name="sell_error_review_pending">Před odesláním dalšího prodeje zkontrolujte čekající prodej v Historii.</string>
+    <string name="sell_uncertain_unreadable">Odpověď burzy se nepodařilo přečíst.</string>
+    <string name="sell_uncertain_no_order_id">Burza nevrátila ID příkazu.</string>
+    <string name="sell_uncertain_id_not_saved">Burza příkaz přijala, ale AccBot nedokázal uložit jeho ID.</string>
+    <string name="sell_uncertain_timeout">Burza prodej včas nepotvrdila.</string>
+    <string name="sell_error_ladder_count">Počet příkazů musí být mezi %1$d a %2$d.</string>
+    <string name="sell_error_ladder_leg_min">Nejmenší příkaz (%1$s) je pod minimem (%2$s).</string>
+    <string name="sell_error_transaction_not_found">Transakce už neexistuje.</string>
+    <string name="sell_error_order_closed">Příkaz je už uzavřený.</string>
+    <string name="sell_error_no_exchange_id">Příkaz nemá ID z burzy, takže ho nejde zrušit.</string>
+    <string name="sell_cancel_sent_unverified">Zrušení bylo odesláno, ale nepodařilo se ověřit konečná plnění. Obnovte stav.</string>
+    <string name="sell_cancel_not_confirmed">Burza zatím nepotvrdila uzavření zrušeného příkazu. Obnovte stav.</string>
+    <string name="sell_cancel_failed">Zrušení příkazu selhalo: %1$s</string>
+    <string name="sell_cancel_failed_unknown">neznámá chyba</string>
+
+    <!-- Dashboard: needs attention, automation status, first plan guide -->
+    <string name="dashboard_last_purchase_line">Naposledy: %1$s %2$s · %3$s</string>
+    <string name="dashboard_plan_review_blocked">Nákupy stojí, dokud nezkontrolujete poslední</string>
+    <plurals name="dashboard_plan_open_sells_count">
+        <item quantity="one">%1$d otevřený prodejní příkaz</item>
+        <item quantity="few">%1$d otevřené prodejní příkazy</item>
+        <item quantity="many">%1$d otevřeného prodejního příkazu</item>
+        <item quantity="other">%1$d otevřených prodejních příkazů</item>
+    </plurals>
+    <string name="time_ago_just_now">právě teď</string>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">před %1$d minutou</item>
+        <item quantity="few">před %1$d minutami</item>
+        <item quantity="many">před %1$d minutami</item>
+        <item quantity="other">před %1$d minutami</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">před %1$d hodinou</item>
+        <item quantity="few">před %1$d hodinami</item>
+        <item quantity="many">před %1$d hodinami</item>
+        <item quantity="other">před %1$d hodinami</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">před %1$d dnem</item>
+        <item quantity="few">před %1$d dny</item>
+        <item quantity="many">před %1$d dny</item>
+        <item quantity="other">před %1$d dny</item>
+    </plurals>
+    <string name="attention_title">Vyžaduje pozornost</string>
+    <string name="attention_dismiss">Zavřít</string>
+    <string name="attention_dont_remind">Nepřipomínat</string>
+    <plurals name="attention_review_title">
+        <item quantity="one">Nákup čeká na vaši kontrolu</item>
+        <item quantity="few">%1$d nákupy čekají na vaši kontrolu</item>
+        <item quantity="many">%1$d nákupu čeká na vaši kontrolu</item>
+        <item quantity="other">%1$d nákupů čeká na vaši kontrolu</item>
+    </plurals>
+    <string name="attention_review_message">AccBot odeslal nákup %1$s na %2$s, ale neví, jestli ho burza provedla. Dokud ho nezkontrolujete, plán znovu nenakoupí.</string>
+    <string name="attention_review_action">Zkontrolovat</string>
+    <string name="attention_network_title">Nákup selhal kvůli připojení</string>
+    <string name="attention_retry_now">Zkusit znovu</string>
+    <string name="attention_missed_title">Zmeškané nákupy</string>
+    <plurals name="attention_missed_message">
+        <item quantity="one">Zatímco byl telefon offline, zmeškal se %1$d nákup %2$s na %3$s.</item>
+        <item quantity="few">Zatímco byl telefon offline, zmeškaly se %1$d nákupy %2$s na %3$s.</item>
+        <item quantity="many">Zatímco byl telefon offline, zmeškalo se %1$d nákupu %2$s na %3$s.</item>
+        <item quantity="other">Zatímco byl telefon offline, zmeškalo se %1$d nákupů %2$s na %3$s.</item>
+    </plurals>
+    <string name="attention_sandbox_title">Sandbox režim</string>
+    <string name="attention_sandbox_message">Příkazy jdou jen na testovací účty burz. Skutečné peníze se nepoužívají.</string>
+    <string name="automation_status_title">Automatické nákupy</string>
+    <string name="automation_status_ok">V pořádku: nákupy běží na pozadí včas</string>
+    <string name="automation_status_limited">Automatické nákupy můžou být omezené</string>
+    <string name="automation_status_limited_message">Android může nákupy odložit nebo vám nedá vědět o chybě:</string>
+    <string name="automation_issue_battery">Optimalizace baterie může nákupy zdržet i o hodiny.</string>
+    <string name="automation_issue_exact_alarms">Přesné budíky jsou vypnuté, nákupy můžou proběhnout později.</string>
+    <string name="automation_issue_notifications">Oznámení jsou vypnutá, o selhání nákupu se nedozvíte.</string>
+    <string name="automation_fix">Opravit</string>
+    <string name="first_plan_guide_title">Co bude dál</string>
+    <string name="first_plan_guide_first_purchase">První nákup %1$s: %2$s na %3$s.</string>
+    <string name="first_plan_guide_funds">Mějte na %2$s dost %1$s na několik nákupů.</string>
+    <string name="first_plan_guide_low_balance">Teď tam máte jen %1$s, na další nákup to nestačí.</string>
+    <string name="first_plan_guide_background">AccBot nakupuje na pozadí i se zavřenou aplikací a po každém nákupu vám pošle oznámení.</string>
+    <string name="first_plan_guide_got_it">Rozumím</string>
+
+    <!-- Review of an uncertain order -->
+    <string name="review_question">Otevřete historii příkazů %1$s na %2$s kolem %3$s. Co jste tam našli?</string>
+    <string name="review_choice_found_purchase">Nákup tam je</string>
+    <string name="review_choice_found_sell">Příkaz tam je</string>
+    <string name="review_choice_not_found">Na burze nic není</string>
+    <string name="review_enter_id_purchase">Zkopírujte z burzy ID příkazu. AccBot ho ověří a zapíše skutečně nakoupené množství.</string>
+    <string name="review_enter_id_sell">Zkopírujte z burzy ID příkazu. AccBot ho ověří a bude ho dál sledovat.</string>
+    <string name="review_import_first">%1$s neumí dohledat příkaz podle ID. Naimportujte historii obchodů (Správa burz → připojení → Import přes API), aby se nákup započítal, a pak kontrolu tady dokončete.</string>
+    <string name="review_import_done">Historii mám naimportovanou</string>
+    <string name="review_not_found_purchase">Nákup se označí jako neprovedený a plán bude dál nakupovat podle rozvrhu.</string>
+    <string name="review_not_found_sell">Prodej se označí jako neprovedený a rezervované množství se uvolní.</string>
+    <string name="review_mark_not_executed">Označit jako neprovedený</string>
+    <string name="review_verify_save">Ověřit a uložit</string>
+    <string name="review_back">Zpět</string>
+
+    <!-- Friendly error messages -->
+    <string name="error_network_title">Bez spojení s burzou</string>
+    <string name="error_network_advice">Zkontrolujte připojení k internetu. AccBot to zkusí znovu sám.</string>
+    <string name="error_auth_title">Burza odmítla API klíč</string>
+    <string name="error_auth_advice">Klíč mohl vypršet, nemít oprávnění k obchodování nebo být omezený na jiné IP adresy. Zkontrolujte ho na burze a zadejte znovu ve Správě burz.</string>
+    <string name="error_funds_title">Na burze není dost peněz</string>
+    <string name="error_funds_advice">Zkontrolujte zůstatek na burze a případně ho doplňte.</string>
+    <string name="error_limit_title">Příkaz je pod limitem burzy</string>
+    <string name="error_limit_advice">Zvyšte částku příkazu, aby splnila minimum burzy (u nákupů v nastavení plánu).</string>
+    <string name="error_rate_limit_title">Burza omezuje počet požadavků</string>
+    <string name="error_rate_limit_advice">Příliš mnoho požadavků v krátké době. Počkejte pár minut, AccBot to zkusí znovu.</string>
+    <string name="error_unavailable_title">Burza je nedostupná</string>
+    <string name="error_unavailable_advice">Burza má nejspíš údržbu. Zkuste to později.</string>
+    <string name="error_technical_detail">Technický detail: %1$s</string>
+
+    <!-- Settings groups -->
+    <string name="settings_section_exchanges">BURZY A PRODEJE</string>
+    <string name="settings_section_automation">AUTOMATICKÉ NÁKUPY A UPOZORNĚNÍ</string>
+    <string name="settings_section_appearance">VZHLED</string>
+    <string name="settings_section_security_data">ZABEZPEČENÍ A DATA</string>
+    <string name="settings_section_developers">PRO VÝVOJÁŘE</string>
+
+    <!-- Sell wizard advanced section -->
+    <string name="sell_wizard_advanced">Pokročilé</string>
+    <string name="sell_wizard_advanced_hint">Rozdělení na více příkazů, vlastní průměrná nákupní cena, cílový čistý výnos</string>
+
+    <!-- Plan details action bar -->
+    <string name="plan_details_pause">Pozastavit</string>
+    <string name="plan_details_resume">Spustit</string>
+    <string name="plan_details_buy_now">Koupit teď</string>
+    <string name="plan_details_sell">Prodat</string>
+    <string name="plan_details_buy_now_title">Koupit teď?</string>
+    <string name="plan_details_buy_now_message">AccBot hned odešle na %3$s nákup %2$s za %1$s. Další nákup se pak naplánuje podle frekvence plánu.</string>
 </resources>

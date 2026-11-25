@@ -3,6 +3,8 @@
     <cloud-backup>
         <!-- Exclude sensitive data from cloud backup -->
         <exclude domain="sharedpref" path="accbot_credentials.xml"/>
+        <exclude domain="sharedpref" path="accbot_shared_plan_keys.xml"/>
+        <exclude domain="file" path="shared_plans/"/>
         <exclude domain="sharedpref" path="__androidx_security_crypto_encrypted_prefs__.xml"/>
         <exclude domain="database" path="accbot_prod.db"/>
         <exclude domain="database" path="accbot_prod.db-wal"/>
@@ -13,6 +15,8 @@
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="accbot_credentials.xml"/>
+        <exclude domain="sharedpref" path="accbot_shared_plan_keys.xml"/>
+        <exclude domain="file" path="shared_plans/"/>
         <exclude domain="sharedpref" path="__androidx_security_crypto_encrypted_prefs__.xml"/>
         <exclude domain="database" path="accbot_prod.db"/>
         <exclude domain="database" path="accbot_prod.db-wal"/>

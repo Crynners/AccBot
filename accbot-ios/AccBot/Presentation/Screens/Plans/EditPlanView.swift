@@ -9,6 +9,7 @@ struct EditPlanView: View {
     @State private var selectedCrypto: String = ""
     @State private var selectedFiat: String = ""
     @State private var amount: String = ""
+    @State private var name: String = ""
     @State private var selectedFrequency: DcaFrequency = .daily
     @State private var cronExpression: String = ""
     @State private var selectedStrategy: DcaStrategy = .classic
@@ -51,7 +52,8 @@ struct EditPlanView: View {
     }
 
     private var hasChanges: Bool {
-        amount != originalAmount
+        name != (plan?.name ?? "")
+            || amount != originalAmount
             || selectedFrequency != originalFrequency
             || cronExpression != originalCronExpression
             || selectedStrategy != originalStrategy
@@ -206,6 +208,9 @@ struct EditPlanView: View {
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.onSurfaceVariant)
                 }
+
+                TextField(String(localized: "Plan name (optional)"), text: $name)
+                    .textFieldStyle(.roundedBorder)
 
                 // Amount input
                 amountSection
@@ -607,6 +612,7 @@ struct EditPlanView: View {
                     withdrawalAddress = loaded.withdrawalAddress ?? ""
                     targetAmount = loaded.targetAmount.map { NSDecimalNumber(decimal: $0).stringValue } ?? ""
                     // Save original values for change tracking
+                    name = loaded.name
                     originalAmount = amount
                     originalFrequency = selectedFrequency
                     originalCronExpression = cronExpression
@@ -648,6 +654,8 @@ struct EditPlanView: View {
 
             let updatedPlan = DcaPlan(
                 id: existingPlan.id,
+                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                displayOrder: existingPlan.displayOrder,
                 exchange: existingPlan.exchange,
                 crypto: selectedCrypto,
                 fiat: selectedFiat,

@@ -234,6 +234,10 @@ struct BackupImportView: View {
                     .padding(Spacing.md)
                     .background((viewModel.restoreMode == .replace ? colors.error : colors.warning).opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+
+                    Text(String(localized: "Restored plans are paused. Review each plan before enabling it."))
+                        .font(AccBotFonts.bodySmall)
+                        .foregroundStyle(colors.onSurfaceVariant)
                 }
                 .padding(Spacing.md)
                 .background(colors.surface)
@@ -283,6 +287,12 @@ struct BackupImportView: View {
                 .font(AccBotFonts.body)
                 .foregroundStyle(colors.onSurfaceVariant)
                 .multilineTextAlignment(.center)
+
+            if let warning = viewModel.restoreWarning {
+                Text(warning)
+                    .font(AccBotFonts.body)
+                    .foregroundStyle(colors.warning)
+            }
 
             Button {
                 dismiss()

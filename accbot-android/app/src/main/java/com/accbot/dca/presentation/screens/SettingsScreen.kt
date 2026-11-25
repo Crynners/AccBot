@@ -45,6 +45,9 @@ import com.accbot.dca.domain.model.DcaFrequency
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.WithdrawalThreshold
 import com.accbot.dca.domain.util.CronUtils
+import com.accbot.dca.presentation.utils.AutomationHealth
+import com.accbot.dca.presentation.utils.AutomationHealthChecker
+import com.accbot.dca.presentation.utils.AutomationIssue
 import com.accbot.dca.presentation.components.FrequencyDropdown
 import com.accbot.dca.presentation.components.ScheduleBuilder
 import java.math.BigDecimal
@@ -65,6 +68,7 @@ fun SettingsScreen(
     onNavigateToExchanges: (() -> Unit)? = null,
     onNavigateToBackupExport: (() -> Unit)? = null,
     onNavigateToBackupImport: (() -> Unit)? = null,
+    onNavigateToSharedPlans: (() -> Unit)? = null,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -430,16 +434,10 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // ── GENERAL ──────────────────────────────────────────────
+            // ── EXCHANGES & TRADING ──
+
             item {
-                Text(
-                    text = stringResource(R.string.settings_general),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .padding(top = 8.dp, bottom = 8.dp)
-                        .semantics { heading() }
-                )
+                SettingsSectionHeader(stringResource(R.string.settings_section_exchanges), first = true)
             }
 
             item {
@@ -448,261 +446,6 @@ fun SettingsScreen(
                     subtitle = stringResource(R.string.settings_exchanges_connected, uiState.connectionCount),
                     icon = Icons.Default.AccountBalance,
                     onClick = { onNavigateToExchanges?.invoke() }
-                )
-            }
-
-            item {
-                val languageLabel = when (uiState.languageTag) {
-                    "en" -> stringResource(R.string.settings_language_english)
-                    "cs" -> stringResource(R.string.settings_language_czech)
-                    else -> stringResource(R.string.settings_language_system_default)
-                }
-                SettingsCard(
-                    title = stringResource(R.string.settings_language),
-                    subtitle = languageLabel,
-                    icon = Icons.Default.Language,
-                    onClick = { showLanguageDialog = true }
-                )
-            }
-
-            item {
-                val themeLabel = when (uiState.appTheme) {
-                    AppTheme.DARK -> stringResource(R.string.settings_theme_dark)
-                    AppTheme.LIGHT -> stringResource(R.string.settings_theme_light)
-                    AppTheme.SYSTEM -> stringResource(R.string.settings_theme_system)
-                }
-                SettingsCard(
-                    title = stringResource(R.string.settings_theme),
-                    subtitle = themeLabel,
-                    icon = Icons.Default.Palette,
-                    onClick = { showThemeDialog = true }
-                )
-            }
-
-            item {
-                MarketPulseToggleCard(
-                    isEnabled = uiState.isMarketPulseEnabled,
-                    onToggle = { viewModel.setMarketPulseEnabled(it) }
-                )
-            }
-
-            item {
-                SettingsCardBase(
-                    title = stringResource(R.string.settings_notifications),
-                    subtitle = stringResource(R.string.settings_notifications_subtitle),
-                    icon = Icons.Default.Notifications,
-                    onClick = {
-                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                        }
-                        context.startActivity(intent)
-                    },
-                    trailing = {
-                        IconButton(onClick = { showNotificationInfoDialog = true }) {
-                            Icon(
-                                imageVector = Icons.Default.HelpOutline,
-                                contentDescription = stringResource(R.string.notification_info_title),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                )
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.settings_battery_optimization),
-                    subtitle = if (uiState.isBatteryOptimized) {
-                        stringResource(R.string.settings_battery_disabled)
-                    } else {
-                        stringResource(R.string.settings_battery_unrestricted)
-                    },
-                    icon = Icons.Default.BatteryChargingFull,
-                    showWarning = uiState.isBatteryOptimized,
-                    onClick = {
-                        try {
-                            if (uiState.isBatteryOptimized) {
-                                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                    data = Uri.parse("package:${context.packageName}")
-                                }
-                                context.startActivity(intent)
-                            } else {
-                                context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                            }
-                        } catch (_: Exception) {
-                            try {
-                                context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                            } catch (_: Exception) {
-                                scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.settings_battery_open_failed)) }
-                            }
-                        }
-                    }
-                )
-            }
-
-            // ── ALERTS & SECURITY ──────────────────────────────────
-            item {
-                Text(
-                    text = stringResource(R.string.settings_alerts_security),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .padding(top = 24.dp, bottom = 8.dp)
-                        .semantics { heading() }
-                )
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.settings_low_balance_warning),
-                    subtitle = stringResource(R.string.settings_low_balance_subtitle, uiState.lowBalanceThresholdDays),
-                    icon = Icons.Default.Warning,
-                    onClick = { showLowBalanceDialog = true }
-                )
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.settings_withdrawal_alert),
-                    subtitle = stringResource(R.string.settings_withdrawal_alert_subtitle),
-                    icon = Icons.AutoMirrored.Filled.CallMade,
-                    onClick = { showWithdrawalThresholdDialog = true }
-                )
-            }
-
-            item {
-                val activity = context as? FragmentActivity
-                val biometricTitle = stringResource(R.string.biometric_prompt_title)
-                val biometricSubtitle = stringResource(R.string.biometric_prompt_subtitle)
-
-                BiometricToggleCard(
-                    isEnabled = uiState.isBiometricLockEnabled,
-                    onToggle = { requestedState ->
-                        val biometricManager = BiometricManager.from(context)
-                        val canAuthenticate = biometricManager.canAuthenticate(
-                            BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                        )
-
-                        if (canAuthenticate != BiometricManager.BIOMETRIC_SUCCESS) {
-                            scope.launch {
-                                snackbarHostState.showSnackbar(
-                                    context.getString(R.string.biometric_not_available)
-                                )
-                            }
-                            return@BiometricToggleCard
-                        }
-
-                        if (activity != null) {
-                            showBiometricPrompt(
-                                activity = activity,
-                                title = biometricTitle,
-                                subtitle = biometricSubtitle,
-                                onSuccess = {
-                                    viewModel.setBiometricLockEnabled(requestedState)
-                                }
-                            )
-                        }
-                    }
-                )
-            }
-
-            // ── DATA ───────────────────────────────────────────────
-            item {
-                Text(
-                    text = stringResource(R.string.settings_data),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .padding(top = 24.dp, bottom = 8.dp)
-                        .semantics { heading() }
-                )
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.backup_export_title),
-                    subtitle = stringResource(R.string.backup_export_subtitle),
-                    icon = Icons.Default.Upload,
-                    onClick = { onNavigateToBackupExport?.invoke() }
-                )
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.backup_import_title),
-                    subtitle = stringResource(R.string.backup_import_subtitle),
-                    icon = Icons.Default.Download,
-                    onClick = { onNavigateToBackupImport?.invoke() }
-                )
-            }
-
-            // ── ABOUT ──────────────────────────────────────────────
-            item {
-                Text(
-                    text = stringResource(R.string.settings_about),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .padding(top = 24.dp, bottom = 8.dp)
-                        .semantics { heading() }
-                )
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.changelog_whats_new),
-                    subtitle = stringResource(R.string.settings_changelog_subtitle),
-                    icon = Icons.Default.NewReleases,
-                    onClick = { showChangelog = true }
-                )
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.settings_documentation),
-                    subtitle = stringResource(R.string.settings_documentation_subtitle),
-                    icon = Icons.AutoMirrored.Filled.MenuBook,
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/crynners/AccBot"))
-                        context.startActivity(intent)
-                    }
-                )
-            }
-
-            item {
-                SettingsCard(
-                    title = stringResource(R.string.settings_report_issue),
-                    subtitle = stringResource(R.string.settings_report_issue_subtitle),
-                    icon = Icons.Default.BugReport,
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/crynners/AccBot/issues"))
-                        context.startActivity(intent)
-                    }
-                )
-            }
-
-            item {
-                SandboxToggleCard(
-                    isEnabled = uiState.isSandboxMode,
-                    onToggle = { viewModel.requestSandboxModeChange() }
-                )
-            }
-
-            // ── ADVANCED (Sell extension) ──────────────────────────
-            item {
-                Text(
-                    text = stringResource(R.string.settings_advanced),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .padding(top = 24.dp, bottom = 8.dp)
-                        .semantics { heading() }
                 )
             }
 
@@ -745,6 +488,234 @@ fun SettingsScreen(
                         }
                     )
                 }
+            }
+
+            // ── AUTOMATIC PURCHASES & NOTIFICATIONS ──
+
+            item {
+                SettingsSectionHeader(stringResource(R.string.settings_section_automation), first = false)
+            }
+
+            item {
+                val openFailedText = stringResource(R.string.settings_battery_open_failed)
+                AutomationStatusCard(
+                    health = uiState.automationHealth,
+                    onFix = { issue ->
+                        if (!AutomationHealthChecker.openSettings(context, issue)) {
+                            scope.launch { snackbarHostState.showSnackbar(openFailedText) }
+                        }
+                        viewModel.refreshAutomationHealth()
+                    }
+                )
+            }
+
+            item {
+                SettingsCardBase(
+                    title = stringResource(R.string.settings_notifications),
+                    subtitle = stringResource(R.string.settings_notifications_subtitle),
+                    icon = Icons.Default.Notifications,
+                    onClick = {
+                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        }
+                        context.startActivity(intent)
+                    },
+                    trailing = {
+                        IconButton(onClick = { showNotificationInfoDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.HelpOutline,
+                                contentDescription = stringResource(R.string.notification_info_title),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.settings_low_balance_warning),
+                    subtitle = stringResource(R.string.settings_low_balance_subtitle, uiState.lowBalanceThresholdDays),
+                    icon = Icons.Default.Warning,
+                    onClick = { showLowBalanceDialog = true }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.settings_withdrawal_alert),
+                    subtitle = stringResource(R.string.settings_withdrawal_alert_subtitle),
+                    icon = Icons.AutoMirrored.Filled.CallMade,
+                    onClick = { showWithdrawalThresholdDialog = true }
+                )
+            }
+
+            // ── APPEARANCE ──
+
+            item {
+                SettingsSectionHeader(stringResource(R.string.settings_section_appearance), first = false)
+            }
+
+            item {
+                val languageLabel = when (uiState.languageTag) {
+                    "en" -> stringResource(R.string.settings_language_english)
+                    "cs" -> stringResource(R.string.settings_language_czech)
+                    else -> stringResource(R.string.settings_language_system_default)
+                }
+                SettingsCard(
+                    title = stringResource(R.string.settings_language),
+                    subtitle = languageLabel,
+                    icon = Icons.Default.Language,
+                    onClick = { showLanguageDialog = true }
+                )
+            }
+
+            item {
+                val themeLabel = when (uiState.appTheme) {
+                    AppTheme.DARK -> stringResource(R.string.settings_theme_dark)
+                    AppTheme.LIGHT -> stringResource(R.string.settings_theme_light)
+                    AppTheme.SYSTEM -> stringResource(R.string.settings_theme_system)
+                }
+                SettingsCard(
+                    title = stringResource(R.string.settings_theme),
+                    subtitle = themeLabel,
+                    icon = Icons.Default.Palette,
+                    onClick = { showThemeDialog = true }
+                )
+            }
+
+            item {
+                MarketPulseToggleCard(
+                    isEnabled = uiState.isMarketPulseEnabled,
+                    onToggle = { viewModel.setMarketPulseEnabled(it) }
+                )
+            }
+
+            // ── SECURITY & DATA ──
+
+            item {
+                SettingsSectionHeader(stringResource(R.string.settings_section_security_data), first = false)
+            }
+
+            item {
+                val activity = context as? FragmentActivity
+                val biometricTitle = stringResource(R.string.biometric_prompt_title)
+                val biometricSubtitle = stringResource(R.string.biometric_prompt_subtitle)
+
+                BiometricToggleCard(
+                    isEnabled = uiState.isBiometricLockEnabled,
+                    onToggle = { requestedState ->
+                        val biometricManager = BiometricManager.from(context)
+                        val canAuthenticate = biometricManager.canAuthenticate(
+                            BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                        )
+
+                        if (canAuthenticate != BiometricManager.BIOMETRIC_SUCCESS) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    context.getString(R.string.biometric_not_available)
+                                )
+                            }
+                            return@BiometricToggleCard
+                        }
+
+                        if (activity != null) {
+                            showBiometricPrompt(
+                                activity = activity,
+                                title = biometricTitle,
+                                subtitle = biometricSubtitle,
+                                onSuccess = {
+                                    viewModel.setBiometricLockEnabled(requestedState)
+                                }
+                            )
+                        }
+                    }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.backup_export_title),
+                    subtitle = stringResource(R.string.backup_export_subtitle),
+                    icon = Icons.Default.Upload,
+                    onClick = { onNavigateToBackupExport?.invoke() }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.backup_import_title),
+                    subtitle = stringResource(R.string.backup_import_subtitle),
+                    icon = Icons.Default.Download,
+                    onClick = { onNavigateToBackupImport?.invoke() }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.shared_plans_title),
+                    subtitle = stringResource(R.string.shared_plans_settings_subtitle),
+                    icon = Icons.Default.Visibility,
+                    onClick = { onNavigateToSharedPlans?.invoke() }
+                )
+            }
+
+            // ── ABOUT ──
+
+            item {
+                SettingsSectionHeader(stringResource(R.string.settings_about), first = false)
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.changelog_whats_new),
+                    subtitle = stringResource(R.string.settings_changelog_subtitle),
+                    icon = Icons.Default.NewReleases,
+                    onClick = { showChangelog = true }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.settings_documentation),
+                    subtitle = stringResource(R.string.settings_documentation_subtitle),
+                    icon = Icons.AutoMirrored.Filled.MenuBook,
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/crynners/AccBot"))
+                        context.startActivity(intent)
+                    }
+                )
+            }
+
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.settings_report_issue),
+                    subtitle = stringResource(R.string.settings_report_issue_subtitle),
+                    icon = Icons.Default.BugReport,
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/crynners/AccBot/issues"))
+                        context.startActivity(intent)
+                    }
+                )
+            }
+
+            // ── FOR DEVELOPERS ──
+
+            item {
+                SettingsSectionHeader(stringResource(R.string.settings_section_developers), first = false)
+            }
+
+            item {
+                SandboxToggleCard(
+                    isEnabled = uiState.isSandboxMode,
+                    onToggle = { viewModel.requestSandboxModeChange() }
+                )
             }
 
             // ── DANGER ZONE (collapsible) ──────────────────────────
@@ -974,6 +945,59 @@ internal fun SettingsCardBase(
                 )
             }
             trailing()
+        }
+    }
+}
+
+@Composable
+private fun SettingsSectionHeader(text: String, first: Boolean = false) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .padding(top = if (first) 8.dp else 24.dp, bottom = 8.dp)
+            .semantics { heading() }
+    )
+}
+
+/**
+ * "Automatic purchases: OK / limited" with one fix button per problem
+ * (battery optimization, exact alarms, notifications).
+ */
+@Composable
+internal fun AutomationStatusCard(health: AutomationHealth, onFix: (AutomationIssue) -> Unit) {
+    val ok = health.isOk
+    val tint = if (ok) successColor() else Warning
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (ok) MaterialTheme.colorScheme.surface else Warning.copy(alpha = 0.12f)
+        )
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (ok) Icons.Default.CheckCircle else Icons.Default.BatteryAlert,
+                    contentDescription = null,
+                    tint = tint
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.automation_status_title),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = stringResource(if (ok) R.string.automation_status_ok else R.string.automation_status_limited),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (ok) MaterialTheme.colorScheme.onSurfaceVariant else Warning
+                    )
+                }
+            }
+            if (!ok) {
+                AutomationIssueList(health.issues, onFix)
+            }
         }
     }
 }

@@ -15,7 +15,7 @@ final class HuobiApi: ExchangeApi {
     }
 
     func marketBuy(crypto: String, fiat: String, fiatAmount: Decimal) async -> DcaResult {
-        .error(message: "Huobi trading is not yet implemented", retryable: false)
+        .rejected(message: "Huobi trading is not yet implemented")
     }
 
     func getBalance(currency: String) async -> Decimal? {

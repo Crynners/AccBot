@@ -89,10 +89,12 @@ data class BackupPlan(
     @SerializedName("targetAmount") val targetAmount: String? = null,  // BigDecimal.toPlainString()
     /** v2+: source connection id (backup-local). Null for legacy v1 backups. */
     @SerializedName("connectionId") val connectionId: Long? = null,
-    /** v3+: sell extension - opt-in per-plan. */
-    @SerializedName("allowSells") val allowSells: Boolean = false,
-    /** v3+: sell extension - optional profit target (BigDecimal.toPlainString). */
-    @SerializedName("targetProfitAmount") val targetProfitAmount: String? = null
+    /** Null when an older backup did not include sell settings. */
+    @SerializedName("allowSells") val allowSells: Boolean? = null,
+    @SerializedName("targetProfitAmount") val targetProfitAmount: String? = null,
+    /** Null when the source did not export plan names. An empty name is explicit. */
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("displayOrder") val displayOrder: Int? = null
 )
 
 /**
@@ -104,7 +106,7 @@ data class BackupSettings(
     @SerializedName("purchaseNotifications") val purchaseNotifications: Boolean = true,
     @SerializedName("errorNotifications") val errorNotifications: Boolean = true,
     @SerializedName("weeklySummaryNotifications") val weeklySummaryNotifications: Boolean = false,
-    @SerializedName("languageTag") val languageTag: String = "",
+    @SerializedName("languageTag") val languageTag: String? = null,
     @SerializedName("biometricLockEnabled") val biometricLockEnabled: Boolean = false,
     @SerializedName("lowBalanceThresholdDays") val lowBalanceThresholdDays: Int = 2
 )

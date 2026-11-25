@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.text.font.FontStyle
@@ -77,6 +78,7 @@ import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.TimeUtils
 import com.accbot.dca.presentation.utils.NumberFormatters
+import com.accbot.dca.presentation.utils.DateFormatters
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlinx.coroutines.delay
@@ -159,6 +161,7 @@ fun DashboardScreen(
     onNavigateToPlanDetails: ((Long) -> Unit)? = null,
     onNavigateToPortfolio: ((String, String) -> Unit)? = null,
     onNavigateToExchangeManagement: (() -> Unit)? = null,
+    onNavigateToTransaction: ((Long) -> Unit)? = null,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -195,9 +198,26 @@ fun DashboardScreen(
         }
     }
 
+    val attentionActions = remember(viewModel) {
+        AttentionActions(
+            onReviewTransaction = { id -> onNavigateToTransaction?.invoke(id) ?: onNavigateToHistory() },
+            onRunRetryPlans = { viewModel.runRetryPlans() },
+            onDismissRetry = { viewModel.dismissRetryBanner() },
+            onExecuteMissed = { planId, count -> viewModel.executeMissedPurchases(planId, count) },
+            onSkipMissed = { planId -> viewModel.dismissMissedPurchases(planId) },
+            onDismissAutomation = { viewModel.dismissAutomationWarning() },
+            onRefreshAutomation = { viewModel.refreshAutomationHealth() },
+            onDismissSandbox = { viewModel.dismissSandboxNotice() },
+            onDismissFirstPlanGuide = { viewModel.dismissFirstPlanGuide() }
+        )
+    }
+
+    val attentionModel = remember(uiState) { AttentionModel(uiState) }
+
     if (uiState.showRunNowSheet) {
         RunNowBottomSheet(
             plans = uiState.activePlans,
+            isSandbox = uiState.isSandboxMode,
             onDismiss = { viewModel.hideRunNowSheet() },
             onConfirm = { viewModel.runSelectedPlans(it) }
         )
@@ -237,25 +257,7 @@ fun DashboardScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    if (uiState.isSandboxMode) {
-                        SandboxBanner()
-                    }
-
-                    if (uiState.networkRetryInfo.plans.isNotEmpty() && !uiState.networkRetryInfo.dismissed) {
-                        NetworkRetryBanner(
-                            retryPlans = uiState.networkRetryInfo.plans,
-                            onRunNow = { viewModel.runRetryPlans() },
-                            onDismiss = { viewModel.dismissRetryBanner() }
-                        )
-                    }
-
-                    if (uiState.missedPurchases.isNotEmpty()) {
-                        MissedPurchasesBanner(
-                            missed = uiState.missedPurchases,
-                            onExecute = { planId, count -> viewModel.executeMissedPurchases(planId, count) },
-                            onDismiss = { planId -> viewModel.dismissMissedPurchases(planId) }
-                        )
-                    }
+                    DashboardAttentionSection(attentionModel, attentionActions)
 
                     if (uiState.holdings.size >= 2) {
                         PortfolioSummaryCard(holdings = uiState.holdings)
@@ -327,6 +329,8 @@ fun DashboardScreen(
                                 onClick = { onNavigateToPlanDetails?.invoke(planId) },
                                 currentTime = currentTime,
                                 openSellCount = uiState.openSellsByPlan[planId]?.size ?: 0,
+                            lastPurchase = uiState.lastPurchaseByPlan[planId],
+                            awaitingReview = uiState.purchasesAwaitingReview.any { it.planId == planId },
                                 isDragging = landscapeDragState.isDragging(planId),
                                 dragOffset = if (landscapeDragState.isDragging(planId)) landscapeDragState.dragOffset else 0f,
                                 onDragStart = { heightPx -> landscapeDragState.startDrag(planId, heightPx) },
@@ -356,33 +360,8 @@ fun DashboardScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Sandbox Mode Banner
-                if (uiState.isSandboxMode) {
-                    item {
-                        SandboxBanner()
-                    }
-                }
-
-                // Network Retry Banner
-                if (uiState.networkRetryInfo.plans.isNotEmpty() && !uiState.networkRetryInfo.dismissed) {
-                    item {
-                        NetworkRetryBanner(
-                            retryPlans = uiState.networkRetryInfo.plans,
-                            onRunNow = { viewModel.runRetryPlans() },
-                            onDismiss = { viewModel.dismissRetryBanner() }
-                        )
-                    }
-                }
-
-                // Missed Purchases Banner
-                if (uiState.missedPurchases.isNotEmpty()) {
-                    item {
-                        MissedPurchasesBanner(
-                            missed = uiState.missedPurchases,
-                            onExecute = { planId, count -> viewModel.executeMissedPurchases(planId, count) },
-                            onDismiss = { planId -> viewModel.dismissMissedPurchases(planId) }
-                        )
-                    }
+                if (attentionModel.isVisible) {
+                    item { DashboardAttentionSection(attentionModel, attentionActions) }
                 }
 
                 // Portfolio Summary (when 2+ holdings)
@@ -447,6 +426,8 @@ fun DashboardScreen(
                             onClick = { onNavigateToPlanDetails?.invoke(planId) },
                             currentTime = currentTime,
                             openSellCount = uiState.openSellsByPlan[planId]?.size ?: 0,
+                            lastPurchase = uiState.lastPurchaseByPlan[planId],
+                            awaitingReview = uiState.purchasesAwaitingReview.any { it.planId == planId },
                             isDragging = portraitDragState.isDragging(planId),
                             dragOffset = if (portraitDragState.isDragging(planId)) portraitDragState.dragOffset else 0f,
                             onDragStart = { heightPx -> portraitDragState.startDrag(planId, heightPx) },
@@ -540,199 +521,6 @@ internal fun AccBotHeaderLogo() {
             )
             // Place text on top
             textPlaceable.placeRelative(0, 0)
-        }
-    }
-}
-
-@Composable
-internal fun SandboxBanner() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = Warning.copy(alpha = 0.15f)
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Science,
-                contentDescription = null,
-                tint = Warning,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.dashboard_sandbox_banner),
-                fontWeight = FontWeight.SemiBold,
-                color = Warning,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-    }
-}
-
-@Composable
-internal fun MissedPurchasesBanner(
-    missed: List<MissedPurchaseInfo>,
-    onExecute: (planId: Long, count: Int) -> Unit,
-    onDismiss: (planId: Long) -> Unit
-) {
-    if (missed.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-    for (info in missed) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = Warning.copy(alpha = 0.15f)
-            )
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.EventBusy,
-                        contentDescription = null,
-                        tint = Warning,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.notification_missed_purchases_banner,
-                            info.missedCount,
-                            info.crypto,
-                            info.exchangeName
-                        ),
-                        fontWeight = FontWeight.SemiBold,
-                        color = Warning,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
-                ) {
-                    OutlinedButton(onClick = { onDismiss(info.planId) }) {
-                        Text(stringResource(R.string.missed_purchases_skip))
-                    }
-                    FilledTonalButton(
-                        onClick = { onExecute(info.planId, info.missedCount) },
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = Warning.copy(alpha = 0.2f),
-                            contentColor = Warning
-                        )
-                    ) {
-                        Text(stringResource(R.string.missed_purchases_buy))
-                    }
-                }
-            }
-        }
-    }
-    }
-}
-
-@Composable
-internal fun NetworkRetryBanner(
-    retryPlans: List<NetworkRetryPlan>,
-    onRunNow: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    if (retryPlans.isEmpty()) return
-    val context = LocalContext.current
-    val bannerText = retryPlans.joinToString("\n") { plan ->
-        context.getString(R.string.notification_network_retry_banner, plan.crypto, plan.exchangeName)
-    }
-    val attemptCount = retryPlans.sumOf { it.retryCount }
-    val earliestRetry = retryPlans.mapNotNull { it.nextRetryAt }.minOrNull()
-    val nextRetryText = earliestRetry?.let {
-        val time = it.atZone(java.time.ZoneId.systemDefault())
-            .format(java.time.format.DateTimeFormatter.ofPattern("H:mm"))
-        context.getString(R.string.notification_network_retry_banner_next, time)
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = Error.copy(alpha = 0.15f)
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.WifiOff,
-                    contentDescription = null,
-                    tint = Error,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = bannerText,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Dismiss",
-                        tint = Error,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp)
-            ) {
-                Column {
-                    Text(
-                        text = context.getString(R.string.notification_network_retry_banner_attempts, attemptCount),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (nextRetryText != null) {
-                        Text(
-                            text = nextRetryText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                FilledTonalButton(
-                    onClick = onRunNow,
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = Error.copy(alpha = 0.2f),
-                        contentColor = Error
-                    )
-                ) {
-                    Text(stringResource(R.string.dashboard_run_now))
-                }
-            }
         }
     }
 }
@@ -1041,6 +829,8 @@ internal fun DcaPlanCard(
     onClick: (() -> Unit)? = null,
     currentTime: Long = System.currentTimeMillis(),
     openSellCount: Int = 0,
+    lastPurchase: Transaction? = null,
+    awaitingReview: Boolean = false,
     isDragging: Boolean = false,
     dragOffset: Float = 0f,
     onDragStart: ((heightPx: Int) -> Unit)? = null,
@@ -1201,7 +991,39 @@ internal fun DcaPlanCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (!plan.isEnabled) {
+                    if (lastPurchase != null) {
+                        @Suppress("UNUSED_EXPRESSION")
+                        currentTime // keep "x ago" fresh with the shared ticker
+                        Text(
+                            text = stringResource(
+                                R.string.dashboard_last_purchase_line,
+                                NumberFormatters.crypto(lastPurchase.cryptoAmount),
+                                lastPurchase.crypto,
+                                TimeUtils.formatTimeAgo(lastPurchase.executedAt, context)
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (awaitingReview) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.HelpOutline,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = Error
+                            )
+                            Text(
+                                text = stringResource(R.string.dashboard_plan_review_blocked),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Error,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    } else if (!plan.isEnabled) {
                         Text(
                             text = stringResource(R.string.dashboard_plan_paused),
                             style = MaterialTheme.typography.bodySmall,
@@ -1333,8 +1155,9 @@ internal fun DcaPlanCard(
                                 tint = MaterialTheme.colorScheme.error
                             )
                             Text(
-                                text = stringResource(
-                                    R.string.dashboard_plan_open_sells,
+                                text = pluralStringResource(
+                                    R.plurals.dashboard_plan_open_sells_count,
+                                    openSellCount,
                                     openSellCount
                                 ),
                                 style = MaterialTheme.typography.bodySmall,
@@ -1551,6 +1374,7 @@ internal fun PortfolioSummaryCard(
 @Composable
 private fun RunNowBottomSheet(
     plans: List<DcaPlanWithBalance>,
+    isSandbox: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (List<Long>) -> Unit
 ) {
@@ -1569,6 +1393,11 @@ private fun RunNowBottomSheet(
                 text = stringResource(R.string.run_now_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = stringResource(if (isSandbox) R.string.run_now_sandbox else R.string.run_now_production),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
 

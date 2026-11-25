@@ -7,6 +7,8 @@ struct DashboardView: View {
     @Environment(\.accBotColors) private var colors
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var showRunConfirmation = false
+    @StateObject private var automation = AutomationHealthMonitor()
+    @Environment(\.scenePhase) private var scenePhase
 
     private var isLandscape: Bool {
         verticalSizeClass == .compact
@@ -76,15 +78,28 @@ struct DashboardView: View {
         .onAppear {
             viewModel.setup(dependencies)
         }
+        .task { await automation.refresh() }
+        .onChange(of: scenePhase) { phase in
+            if phase == .active {
+                Task { await automation.refresh() }
+            }
+        }
+    }
+
+    private var attentionSection: some View {
+        DashboardAttentionSection(
+            viewModel: viewModel,
+            automation: automation,
+            isSandbox: colors.isSandbox,
+            onReview: { router.navigate(to: .transactionDetails($0)) }
+        )
     }
 
     // MARK: - Portrait Layout
 
     private var portraitLayout: some View {
         VStack(spacing: Spacing.lg) {
-            if colors.isSandbox {
-                SandboxBanner()
-            }
+            attentionSection
 
             if viewModel.showMarketPulse && (viewModel.fearGreedValue != nil || !viewModel.athData.isEmpty) {
                 marketPulseCard
@@ -103,14 +118,13 @@ struct DashboardView: View {
         .padding(.bottom, Spacing.xxl)
     }
 
+
     // MARK: - Landscape Layout (two-column)
 
     private var landscapeLayout: some View {
         VStack(spacing: Spacing.sm) {
-            if colors.isSandbox {
-                SandboxBanner()
-                    .padding(.horizontal, Spacing.lg)
-            }
+            attentionSection
+                .padding(.horizontal, Spacing.lg)
 
             if viewModel.showMarketPulse && (viewModel.fearGreedValue != nil || !viewModel.athData.isEmpty) {
                 marketPulseCard
@@ -525,7 +539,13 @@ struct DashboardView: View {
                                 : nil,
                             goalProgress: goalProgress(for: pwb),
                             goalText: goalText(for: pwb),
-                            goalReached: goalReached(for: pwb)
+                            goalReached: goalReached(for: pwb),
+                            lastPurchaseText: viewModel.lastPurchaseByPlan[pwb.plan.id].map { tx in
+                                let amount = formatCrypto(tx.cryptoAmount, symbol: tx.crypto)
+                                let ago = tx.executedAt.formatted(.relative(presentation: .named))
+                                return String(localized: "Last: \(amount) · \(ago)")
+                            },
+                            awaitingReview: viewModel.purchasesAwaitingReview.contains { $0.planId == pwb.plan.id }
                         )
                     }
                 }
@@ -682,7 +702,11 @@ struct DashboardView: View {
                         viewModel.runSelectedPlans()
                     }
                 } message: {
-                    Text(String(localized: "Are you sure you want to execute \(viewModel.selectedPlanIds.count) plans? This will place real orders on the exchange."))
+                    let exchanges = Set(viewModel.plans.filter { viewModel.selectedPlanIds.contains($0.id) }
+                        .map { $0.exchange.displayName }).sorted().joined(separator: ", ")
+                    Text(colors.isSandbox
+                         ? String(localized: "Submit test orders on \(exchanges)?")
+                         : String(localized: "Submit real orders on \(exchanges)?"))
                 }
             }
         }

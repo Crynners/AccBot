@@ -50,7 +50,7 @@ class BackupDataCollector @Inject constructor(
         // on the same exchange roundtrip cleanly. Each backup credential row carries the
         // source connectionId.
         val credentials = if (options.includeCredentials) {
-            val isSandbox = userPreferences.isSandboxMode()
+            val isSandbox = userPreferences.processSandboxMode
             connections.mapNotNull { conn ->
                 val source = credentialsStore.getCredentials(conn.id, isSandbox) ?: return@mapNotNull null
                 BackupCredentials(
@@ -96,7 +96,7 @@ class BackupDataCollector @Inject constructor(
         )
     }
 
-    fun isSandbox(): Boolean = userPreferences.isSandboxMode()
+    fun isSandbox(): Boolean = userPreferences.processSandboxMode
 
     suspend fun getDataCounts(): BackupDataCounts {
         val isSandbox = userPreferences.isSandboxMode()
@@ -132,7 +132,9 @@ class BackupDataCollector @Inject constructor(
         targetAmount = targetAmount?.toPlainString(),
         connectionId = connectionId,
         allowSells = allowSells,
-        targetProfitAmount = targetProfitAmount?.toPlainString()
+        targetProfitAmount = targetProfitAmount?.toPlainString(),
+        name = name,
+        displayOrder = displayOrder
     )
 
     private fun TransactionEntity.toBackup() = BackupTransaction(

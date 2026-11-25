@@ -138,6 +138,14 @@ struct FirstPlanView: View {
 
                     // Action buttons
                     VStack(spacing: Spacing.md) {
+                        if let exchange = viewModel.configuredExchange?.displayName {
+                            Text(colors.isSandbox
+                                 ? String(localized: "This plan schedules test purchases on \(exchange).")
+                                 : String(localized: "This plan schedules real purchases on \(exchange)."))
+                                .font(AccBotFonts.bodySmall)
+                                .foregroundStyle(colors.onSurfaceVariant)
+                        }
+
                         Button(action: {
                             Task {
                                 let success = await viewModel.createPlan(dependencies: dependencies)
@@ -283,7 +291,7 @@ private class FirstPlanViewModel: ObservableObject {
     @Published var selectedFrequency: DcaFrequency = .daily
     @Published var availableCryptos: [String] = ["BTC", "ETH", "SOL", "ADA", "DOT"]
     @Published var availableFiats: [String] = ["EUR", "USD", "USDT", "CZK", "GBP"]
-    private var configuredExchange: Exchange?
+    @Published private(set) var configuredExchange: Exchange?
 
     var amountPresets: [Int] {
         let all = [25, 50, 100, 250, 500]

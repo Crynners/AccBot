@@ -43,7 +43,7 @@ final class ResolvePendingTransactionsUseCase {
 
                 do {
                     let api = exchangeApiFactory.create(credentials: credentials)
-                    guard let filled = await api.getOrderStatus(orderId: orderId) else { continue }
+                    guard let filled = await api.getOrderStatus(orderId: orderId, crypto: tx.crypto, fiat: tx.fiat) else { continue }
 
                     let updated = Transaction(
                         id: tx.id,

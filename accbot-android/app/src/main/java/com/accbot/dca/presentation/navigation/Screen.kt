@@ -71,11 +71,18 @@ sealed class Screen(val route: String) {
     data object BackupExport : Screen("backup/export")
     data object BackupImport : Screen("backup/import")
 
+    // Read-only plans shared by other people
+    data object SharedPlans : Screen("shared-plans")
+    data object SharedPlanDetail : Screen("shared-plans/{shareId}") {
+        fun createRoute(shareId: String) = "shared-plans/$shareId"
+    }
+
     companion object {
         const val PLAN_ID_ARG = "planId"
         const val TRANSACTION_ID_ARG = "transactionId"
         const val EXCHANGE_ARG = "exchange"
         const val CONNECTION_ID_ARG = "connectionId"
+        const val SHARE_ID_ARG = "shareId"
     }
 }
 

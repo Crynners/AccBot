@@ -33,9 +33,9 @@ final class NotificationService {
 
     // MARK: - Post Notifications
 
-    func postPurchaseNotification(crypto: String, fiat: String, amount: Decimal, exchange: Exchange) {
+    func postPurchaseNotification(crypto: String, fiat: String, amount: Decimal, exchange: Exchange, partial: Bool = false) {
         let content = UNMutableNotificationContent()
-        content.title = String(localized: "DCA Purchase Completed")
+        content.title = partial ? String(localized: "DCA Purchase Partially Filled") : String(localized: "DCA Purchase Completed")
         content.body = String(localized: "Bought \(crypto) for \(amount as NSDecimalNumber) \(fiat) on \(exchange.displayName)")
         content.sound = .default
         content.categoryIdentifier = Self.purchaseCategory
@@ -51,7 +51,7 @@ final class NotificationService {
     func postErrorNotification(exchange: Exchange, message: String) {
         let content = UNMutableNotificationContent()
         content.title = String(localized: "DCA Error")
-        content.body = "\(exchange.displayName): \(message)"
+        content.body = "\(exchange.displayName): \(FriendlyErrors.summary(message))"
         content.sound = .default
         content.categoryIdentifier = Self.errorCategory
 

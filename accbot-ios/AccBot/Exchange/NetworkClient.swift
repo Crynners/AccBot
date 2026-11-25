@@ -4,8 +4,10 @@ import Foundation
 /// Handles GET/POST with custom headers, form-encoded and JSON bodies.
 final class NetworkClient {
     private let session: URLSession
+    private let redirectDelegate: RejectRedirects?
 
-    init(session: URLSession? = nil) {
+    init(session: URLSession? = nil, followRedirects: Bool = true) {
+        redirectDelegate = followRedirects ? nil : RejectRedirects()
         if let session = session {
             self.session = session
         } else {
@@ -14,6 +16,10 @@ final class NetworkClient {
             config.timeoutIntervalForResource = 60
             self.session = URLSession(configuration: config)
         }
+    }
+
+    func refusingRedirects() -> NetworkClient {
+        NetworkClient(session: session, followRedirects: false)
     }
 
     // MARK: - GET
@@ -157,7 +163,7 @@ final class NetworkClient {
     // MARK: - Private
 
     private func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(for: request, delegate: redirectDelegate)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
@@ -175,6 +181,16 @@ final class NetworkClient {
         var allowed = CharacterSet.urlQueryAllowed
         allowed.remove(charactersIn: "&=+")
         return string.addingPercentEncoding(withAllowedCharacters: allowed) ?? string
+    }
+}
+
+private final class RejectRedirects: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+        _ session: URLSession, task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(nil)
     }
 }
 

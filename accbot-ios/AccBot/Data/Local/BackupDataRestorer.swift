@@ -18,11 +18,35 @@ final class BackupDataRestorer {
 
     func restore(payload: BackupPayload, restoreMode: RestoreMode = .merge) -> BackupResult {
         do {
+            let isSandbox = userPreferences.sandboxMode
+            let credentialsToRestore = try payload.credentials.map { item -> ExchangeCredentials in
+                guard let exchange = Exchange(rawValue: item.exchange) else {
+                    throw NSError(domain: "BackupRestore", code: 3, userInfo: [
+                        NSLocalizedDescriptionKey: String(localized: "The backup contains credentials for an unsupported exchange.")
+                    ])
+                }
+                return ExchangeCredentials(
+                    exchange: exchange, apiKey: item.apiKey, apiSecret: item.apiSecret,
+                    passphrase: item.passphrase, clientId: item.clientId
+                )
+            }
+            var previousCredentials: [Exchange: ExchangeCredentials] = [:]
+            for credential in credentialsToRestore {
+                previousCredentials[credential.exchange] = try credentialsStore.load(for: credential.exchange, isSandbox: isSandbox)
+            }
             var planIdMap = [Int64: Int64]()
 
             try database.dbPool.write { db in
                 // Replace mode: wipe all existing DB data first
                 if restoreMode == .replace {
+                    let hasPending = try Bool.fetchOne(
+                        db, sql: "SELECT EXISTS (SELECT 1 FROM transactions WHERE status IN ('PENDING', 'PARTIAL'))"
+                    ) ?? false
+                    if hasPending {
+                        throw NSError(domain: "BackupRestore", code: 1, userInfo: [
+                            NSLocalizedDescriptionKey: String(localized: "Resolve pending orders before replacing current data.")
+                        ])
+                    }
                     try db.execute(sql: "DELETE FROM transactions")
                     try db.execute(sql: "DELETE FROM withdrawals")
                     try db.execute(sql: "DELETE FROM notifications")
@@ -33,21 +57,51 @@ final class BackupDataRestorer {
                     try db.execute(sql: "DELETE FROM daily_prices")
                 }
 
+                for credential in credentialsToRestore {
+                    let pending = try Bool.fetchOne(
+                        db,
+                        sql: "SELECT EXISTS (SELECT 1 FROM transactions WHERE exchange = ? AND status = 'PENDING')",
+                        arguments: [credential.exchange.rawValue]
+                    ) ?? false
+                    if pending {
+                        throw NSError(domain: "BackupRestore", code: 1, userInfo: [
+                            NSLocalizedDescriptionKey: String(localized: "Resolve pending orders before replacing current data.")
+                        ])
+                    }
+                    try db.execute(
+                        sql: "UPDATE dca_plans SET isEnabled = 0 WHERE exchange = ?",
+                        arguments: [credential.exchange.rawValue]
+                    )
+                }
+
                 // 1. Plans
                 if restoreMode == .merge {
-                    let existingPlans = try DcaPlanRecord.fetchAll(db)
+                    var unmatchedPlans = try DcaPlanRecord.order(Column("id")).fetchAll(db)
                     for plan in payload.plans {
                         let record = Self.planRecord(from: plan)
-                        let match = existingPlans.first { existing in
+                        let candidates = unmatchedPlans.filter { existing in
                             existing.exchange == plan.exchange &&
                             existing.crypto == plan.crypto &&
                             existing.fiat == plan.fiat &&
-                            existing.amount == plan.amount &&
+                            Decimal(string: existing.amount) == Decimal(string: plan.amount) &&
                             existing.frequency == plan.frequency
                         }
+                        let sameCreationTime = candidates.filter {
+                            plan.createdAt > 0 && abs($0.createdAt - record.createdAt) < 0.001
+                        }
+                        let sameMetadata = candidates.filter {
+                            (plan.name == nil || $0.name == plan.name) && $0.cronExpression == record.cronExpression
+                        }
+                        let sameMetadataIds = Set(sameMetadata.compactMap(\.id))
+                        let match = sameCreationTime.first { candidate in
+                            candidate.id.map { sameMetadataIds.contains($0) } == true
+                        } ?? (sameCreationTime.count == 1 ? sameCreationTime.first : nil) ?? sameMetadata.first
                         if let match = match, let matchId = match.id {
+                            unmatchedPlans.removeAll { $0.id == matchId }
                             // Update existing plan with backup values
                             var updated = match
+                            updated.name = plan.name ?? match.name
+                            updated.displayOrder = plan.displayOrder ?? match.displayOrder
                             updated.strategy = record.strategy
                             updated.isEnabled = record.isEnabled
                             updated.withdrawalEnabled = record.withdrawalEnabled
@@ -59,33 +113,28 @@ final class BackupDataRestorer {
                             try updated.update(db)
                             planIdMap[plan.id] = matchId
                         } else {
-                            var newRecord = record
-                            try newRecord.insert(db)
-                            guard let newId = newRecord.id else {
-                                logger.error("Failed to get auto-incremented ID for restored plan (original id: \(plan.id))")
-                                continue
-                            }
-                            planIdMap[plan.id] = newId
+                            try record.insert(db)
+                            planIdMap[plan.id] = db.lastInsertedRowID
                         }
                     }
                 } else {
                     for plan in payload.plans {
-                        var record = Self.planRecord(from: plan)
+                        let record = Self.planRecord(from: plan)
                         try record.insert(db)
-                        guard let newId = record.id else {
-                            logger.error("Failed to get auto-incremented ID for restored plan (original id: \(plan.id))")
-                            continue
-                        }
-                        planIdMap[plan.id] = newId
+                        planIdMap[plan.id] = db.lastInsertedRowID
                     }
                 }
 
                 // 2. Transactions with remapped planId
                 for tx in payload.transactions {
-                    let remappedPlanId = planIdMap[tx.planId] ?? tx.planId
+                    guard let remappedPlanId = planIdMap[tx.planId] else {
+                        throw Self.missingPlanError
+                    }
                     if restoreMode == .merge, let orderId = tx.exchangeOrderId, !orderId.isEmpty {
                         let existing = try TransactionRecord
                             .filter(Column("exchangeOrderId") == orderId)
+                            .filter(Column("exchange") == tx.exchange)
+                            .filter(Column("crypto") == tx.crypto && Column("fiat") == tx.fiat)
                             .fetchOne(db)
                         if existing != nil { continue }
                     }
@@ -95,14 +144,16 @@ final class BackupDataRestorer {
 
                 // 3. Withdrawals with remapped planId
                 for w in payload.withdrawals {
-                    let remappedPlanId = planIdMap[w.planId] ?? w.planId
+                    guard let remappedPlanId = planIdMap[w.planId] else {
+                        throw Self.missingPlanError
+                    }
                     var record = Self.withdrawalRecord(from: w, remappedPlanId: remappedPlanId)
                     try record.insert(db)
                 }
 
                 // 4. Notifications with remapped planId
                 for n in payload.notifications {
-                    let remappedPlanId = n.planId.flatMap { planIdMap[$0] ?? $0 }
+                    let remappedPlanId = n.planId.flatMap { planIdMap[$0] }
                     var record = Self.notificationRecord(from: n, remappedPlanId: remappedPlanId)
                     try record.insert(db)
                 }
@@ -122,45 +173,29 @@ final class BackupDataRestorer {
                 userPreferences.purchaseNotifications = settings.purchaseNotifications
                 userPreferences.errorNotifications = settings.errorNotifications
                 userPreferences.weeklySummaryNotifications = settings.weeklySummaryNotifications
-                if !settings.languageTag.isEmpty {
-                    userPreferences.appLanguage = settings.languageTag
+                if let languageTag = settings.languageTag {
+                    userPreferences.appLanguage = languageTag
                 }
-                userPreferences.biometricLockEnabled = settings.biometricLockEnabled
                 userPreferences.lowBalanceThresholdDays = settings.lowBalanceThresholdDays
             }
 
-            // Outside transaction: restore credentials atomically
-            // Track successfully restored exchanges so we can roll back on failure
-            let isSandbox = userPreferences.sandboxMode
-            if restoreMode == .replace {
-                credentialsStore.clearAll(isSandbox: isSandbox)
-            }
-            var restoredExchanges: [Exchange] = []
+            // The database is durable and restored plans remain paused even if Keychain rejects a key.
+            var restoredExchanges = Set<Exchange>()
             do {
-                for cred in payload.credentials {
-                    guard let exchange = Exchange(rawValue: cred.exchange) else {
-                        logger.warning("Skipping unknown exchange '\(cred.exchange)' during credential restore")
-                        continue
-                    }
-                    try credentialsStore.save(
-                        ExchangeCredentials(
-                            exchange: exchange,
-                            apiKey: cred.apiKey,
-                            apiSecret: cred.apiSecret,
-                            passphrase: cred.passphrase,
-                            clientId: cred.clientId
-                        ),
-                        isSandbox: isSandbox
-                    )
-                    restoredExchanges.append(exchange)
+                for credential in credentialsToRestore {
+                    try credentialsStore.save(credential, isSandbox: isSandbox)
+                    restoredExchanges.insert(credential.exchange)
                 }
             } catch {
-                // Roll back: remove credentials that were already restored
                 for exchange in restoredExchanges {
-                    credentialsStore.delete(exchange: exchange, isSandbox: isSandbox)
+                    if let previous = previousCredentials[exchange] {
+                        try? credentialsStore.save(previous, isSandbox: isSandbox)
+                    } else {
+                        credentialsStore.delete(exchange: exchange, isSandbox: isSandbox)
+                    }
                 }
-                logger.error("Credential restore failed, rolled back \(restoredExchanges.count) exchanges: \(error.localizedDescription)")
-                return .error("Credential restore failed: \(error.localizedDescription)")
+                logger.error("Backup credentials could not be saved: \(error.localizedDescription)")
+                return .success(String(localized: "Data was restored. Check your API credentials before enabling plans."))
             }
 
             return .success("")
@@ -171,9 +206,23 @@ final class BackupDataRestorer {
 
     // MARK: - Backup -> Record mapping
 
+    private static var missingPlanError: NSError {
+        NSError(domain: "BackupRestore", code: 2, userInfo: [
+            NSLocalizedDescriptionKey: String(localized: "The backup contains transactions or withdrawals without their plans.")
+        ])
+    }
+
     private static func planRecord(from plan: BackupPlan) -> DcaPlanRecord {
-        DcaPlanRecord(
+        let now = Date()
+        let next = plan.nextExecutionAt.map { Date(timeIntervalSince1970: Double($0) / 1000.0) }
+        let frequency = DcaFrequency(rawValue: plan.frequency) ?? .daily
+        let futureExecution = next.flatMap { $0 > now ? $0 : nil }
+            ?? plan.cronExpression.flatMap { CronUtils.getNextExecution(cron: $0, from: now) }
+            ?? now.addingTimeInterval(TimeInterval(max(frequency.intervalMinutes, 1)) * 60)
+        return DcaPlanRecord(
             id: nil,
+            name: plan.name ?? "",
+            displayOrder: plan.displayOrder ?? 0,
             exchange: plan.exchange,
             crypto: plan.crypto,
             fiat: plan.fiat,
@@ -181,18 +230,24 @@ final class BackupDataRestorer {
             frequency: plan.frequency,
             cronExpression: plan.cronExpression,
             strategy: plan.strategy,
-            isEnabled: plan.isEnabled,
+            isEnabled: false,
             withdrawalEnabled: plan.withdrawalEnabled,
             withdrawalAddress: plan.withdrawalAddress,
             targetAmount: plan.targetAmount,
             createdAt: Double(plan.createdAt) / 1000.0,
             lastExecutedAt: plan.lastExecutedAt.map { Double($0) / 1000.0 },
-            nextExecutionAt: plan.nextExecutionAt.map { Double($0) / 1000.0 }
+            nextExecutionAt: futureExecution.timeIntervalSince1970
         )
     }
 
     private static func transactionRecord(from tx: BackupTransaction, remappedPlanId: Int64) -> TransactionRecord {
-        TransactionRecord(
+        let status: String
+        switch tx.status {
+        case "PARTIAL_CANCELLED": status = TransactionStatus.partial.rawValue
+        case "CANCELLED": status = TransactionStatus.failed.rawValue
+        default: status = tx.status
+        }
+        return TransactionRecord(
             id: nil,
             planId: remappedPlanId,
             exchange: tx.exchange,
@@ -203,7 +258,7 @@ final class BackupDataRestorer {
             price: tx.price,
             fee: tx.fee,
             feeAsset: tx.feeAsset,
-            status: tx.status,
+            status: status,
             exchangeOrderId: tx.exchangeOrderId,
             errorMessage: tx.errorMessage,
             warningMessage: tx.warningMessage,

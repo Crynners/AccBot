@@ -20,21 +20,21 @@ final class CreateBackupUseCase {
 
     func execute(options: BackupExportOptions) throws -> CreateBackupResult {
         do {
-            // Validate
-            if options.includeCredentials && options.password.isEmpty && options.seed.isEmpty {
+            let passphrase = crypto.resolvePassphrase(mode: options.encryptionMode, password: options.password, seed: options.seed)
+            let hasPassphrase = !passphrase.isEmpty
+            if options.includeCredentials && !hasPassphrase {
                 return .error("Encryption is required when including credentials")
             }
 
             // Collect data
             let payload = try collector.collect(options: options)
             let payloadData = try JSONEncoder().encode(payload)
+            guard payloadData.count <= BackupEnvelope.maxPayloadBytes else {
+                return .error(String(localized: "This backup exceeds the supported size limit."))
+            }
 
             // Compress
             let compressed = try gzipCompress(payloadData)
-
-            // Determine encryption
-            let passphrase = crypto.resolvePassphrase(mode: options.encryptionMode, password: options.password, seed: options.seed)
-            let hasPassphrase = !passphrase.isEmpty
 
             // Encrypt or encode
             let data: String
@@ -63,6 +63,9 @@ final class CreateBackupUseCase {
             )
 
             let envelopeJson = try JSONEncoder().encode(envelope)
+            guard envelopeJson.count <= BackupEnvelope.maxEnvelopeBytes else {
+                return .error(String(localized: "This backup exceeds the supported size limit."))
+            }
             let jsonString = String(data: envelopeJson, encoding: .utf8) ?? ""
 
             // Generate filename

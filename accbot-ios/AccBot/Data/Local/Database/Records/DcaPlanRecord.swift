@@ -9,6 +9,8 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
     static let databaseTableName = "dca_plans"
 
     var id: Int64?
+    var name: String
+    var displayOrder: Int
     var exchange: String
     var crypto: String
     var fiat: String
@@ -35,6 +37,8 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
         }
         return DcaPlan(
             id: id ?? 0,
+            name: name,
+            displayOrder: displayOrder,
             exchange: Exchange(rawValue: exchange) ?? .coinmate,
             crypto: crypto,
             fiat: fiat,
@@ -55,6 +59,8 @@ struct DcaPlanRecord: Codable, FetchableRecord, PersistableRecord, Identifiable 
     static func fromDomain(_ plan: DcaPlan) -> DcaPlanRecord {
         DcaPlanRecord(
             id: plan.id == 0 ? nil : plan.id,
+            name: plan.name,
+            displayOrder: plan.displayOrder,
             exchange: plan.exchange.rawValue,
             crypto: plan.crypto,
             fiat: plan.fiat,

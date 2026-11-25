@@ -36,7 +36,9 @@ final class BackupImportViewModel: ObservableObject {
     // Wizard
     @Published var wizardStep: ImportWizardStep = .selectSource
     @Published var isRestoring = false
+    @Published var isParsing = false
     @Published var restoreSuccess = false
+    @Published var restoreWarning: String?
     @Published var error: String?
 
     private var restoreBackupUseCase: RestoreBackupUseCase?
@@ -61,7 +63,7 @@ final class BackupImportViewModel: ObservableObject {
             credentialsStore: dependencies.credentialsStore,
             userPreferences: dependencies.userPreferences
         )
-        self.restoreBackupUseCase = RestoreBackupUseCase(restorer: restorer, crypto: crypto)
+        self.restoreBackupUseCase = RestoreBackupUseCase(restorer: restorer, crypto: crypto, userPreferences: dependencies.userPreferences)
         self.bip39 = bip39
     }
 
@@ -75,7 +77,13 @@ final class BackupImportViewModel: ObservableObject {
             }
             defer { url.stopAccessingSecurityScopedResource() }
 
-            let data = try Data(contentsOf: url)
+            let file = try FileHandle(forReadingFrom: url)
+            defer { try? file.close() }
+            let data = try file.read(upToCount: BackupEnvelope.maxEnvelopeBytes + 1) ?? Data()
+            guard data.count <= BackupEnvelope.maxEnvelopeBytes else {
+                error = String(localized: "This backup exceeds the supported size limit.")
+                return
+            }
             guard let json = String(data: data, encoding: .utf8) else {
                 error = String(localized: "Invalid file format")
                 return
@@ -91,6 +99,11 @@ final class BackupImportViewModel: ObservableObject {
     }
 
     private func processEnvelope(json: String) {
+        guard !isParsing else { return }
+        guard json.utf8.count <= BackupEnvelope.maxEnvelopeBytes else {
+            error = String(localized: "This backup exceeds the supported size limit.")
+            return
+        }
         error = nil
         envelopeJson = json
 
@@ -119,6 +132,7 @@ final class BackupImportViewModel: ObservableObject {
     }
 
     var canAttemptDecrypt: Bool {
+        guard !isParsing else { return false }
         switch inputMode {
         case .password: return passphrase.count >= 8
         case .seed: return seedWords.allSatisfy { !$0.isEmpty }
@@ -126,34 +140,42 @@ final class BackupImportViewModel: ObservableObject {
     }
 
     func attemptDecrypt() {
-        guard let json = envelopeJson else { return }
+        guard let json = envelopeJson, !isParsing else { return }
         error = nil
-
-        let result = deps.useCase.parseAndPreview(envelopeJson: json, passphrase: resolvedPassphrase)
-        switch result {
-        case .previewReady(let p, let pl):
-            preview = p
-            payload = pl
-            wizardStep = .preview
-        case .error(let msg):
-            error = msg
-        case .restoreComplete:
-            break
+        isParsing = true
+        let passphrase = resolvedPassphrase
+        let useCase = deps.useCase
+        Task {
+            let result = await Task.detached(priority: .userInitiated) {
+                useCase.parseAndPreview(envelopeJson: json, passphrase: passphrase)
+            }.value
+            isParsing = false
+            switch result {
+            case .previewReady(let p, let pl):
+                preview = p
+                payload = pl
+                wizardStep = .preview
+            case .error(let msg):
+                error = msg
+            case .restoreComplete:
+                break
+            }
         }
     }
 
     // MARK: - Restore
 
     func executeRestore() {
-        guard let payload = payload else { return }
+        guard let payload = payload, let environment = preview?.environment, !isRestoring else { return }
         isRestoring = true
         error = nil
 
         Task {
-            let result = deps.useCase.restore(payload: payload, restoreMode: restoreMode)
+            let result = deps.useCase.restore(payload: payload, environment: environment, restoreMode: restoreMode)
             switch result {
-            case .restoreComplete:
+            case .restoreComplete(let message):
                 restoreSuccess = true
+                restoreWarning = message.isEmpty ? nil : message
                 wizardStep = .result
             case .error(let msg):
                 error = msg

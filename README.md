@@ -18,7 +18,7 @@ Open-source, self-custody crypto DCA app for Android. iOS coming soon.
 Visit our **[website](https://crynners.github.io/AccBot/)** for screenshots and more.
 
 - **Self-custody** — API keys never leave your device
-- **7 exchanges** supported
+- **Five exchanges** for automated purchases
 - **3 DCA strategies** — Classic, ATH-Based, Fear & Greed
 - **Portfolio tracking** with interactive charts
 - **No registration, no cloud, no telemetry**
@@ -43,7 +43,7 @@ AccBot is different:
 # Features
 
 ### Supported Exchanges
-[Coinmate](https://coinmate.io/) | [Binance](https://www.binance.com/) | [Kraken](https://www.kraken.com/) | [KuCoin](https://www.kucoin.com/) | [Bitfinex](https://www.bitfinex.com/) | [Huobi](https://www.huobi.com/en-us/) | [Coinbase](https://www.coinbase.com/)
+[Coinmate](https://coinmate.io/) | [Binance](https://www.binance.com/) | [Kraken](https://www.kraken.com/) | [KuCoin](https://www.kucoin.com/) | [Coinbase](https://www.coinbase.com/)
 
 ### Supported Crypto
 BTC | ETH | SOL | ADA | DOT | LTC
@@ -65,8 +65,8 @@ Interactive line charts with drill-down by year/month, landscape mode, and fiat/
 ### Transaction History
 Full transaction log with filtering by crypto, exchange, and status. Sort, search, swipe-to-delete, and export to CSV.
 
-### Auto-Withdrawal
-Automatic withdrawal to your self-custody wallet after purchases when the fee is below your configured threshold.
+### Withdrawal Reminders
+Set a balance threshold. AccBot reminds you when you can withdraw crypto through your exchange.
 
 ### QR Scanner
 Scan API credentials and wallet addresses using QR code or OCR text recognition.

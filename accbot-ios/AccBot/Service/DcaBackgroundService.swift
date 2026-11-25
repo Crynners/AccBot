@@ -3,7 +3,6 @@ import BackgroundTasks
 import os
 
 /// BGTaskScheduler orchestration for iOS background DCA execution.
-/// Implements a 4-layer approach to ensure reliable execution.
 final class DcaBackgroundService {
     static let shared = DcaBackgroundService()
 
@@ -15,76 +14,49 @@ final class DcaBackgroundService {
 
     /// Handle a background app refresh task
     func handleAppRefresh(task: BGAppRefreshTask) async {
-        logger.info("BGAppRefreshTask started")
-
-        task.expirationHandler = {
-            self.logger.warning("BGAppRefreshTask expired")
-        }
-
-        // Schedule the next refresh first (self-perpetuating)
-        scheduleAppRefresh()
-
-        // Execute due plans (runtime ~30s, enough for 1-2 API calls)
-        let deps = await MainActor.run { AppDependencies.shared ?? AppDependencies() }
-        await deps.dcaExecutionEngine.executeDuePlans()
-
-        // Update last background run timestamp
-        await MainActor.run {
-            deps.userPreferences.lastBackgroundRun = Date()
-        }
-
-        task.setTaskCompleted(success: true)
-        logger.info("BGAppRefreshTask completed")
+        await run(task)
     }
 
     // MARK: - Layer 2: BGProcessingTask
 
     /// Handle a background processing task (longer runtime)
     func handleProcessing(task: BGProcessingTask) async {
-        logger.info("BGProcessingTask started")
+        await run(task)
+    }
 
-        task.expirationHandler = {
-            self.logger.warning("BGProcessingTask expired")
+    private func run(_ task: BGTask) async {
+        let work = Task { @MainActor in
+            let deps = AppDependencies.shared
+            scheduleNext(using: deps)
+            let finished = await deps.dcaExecutionEngine.executeDuePlans()
+            scheduleNext(using: deps)
+            if finished && !Task.isCancelled {
+                deps.userPreferences.lastBackgroundRun = Date()
+                return true
+            }
+            return false
         }
-
-        // Schedule next processing task
-        scheduleProcessingTask()
-
-        let deps = await MainActor.run { AppDependencies.shared ?? AppDependencies() }
-
-        // Resolve pending transactions
-        await deps.dcaExecutionEngine.executeDuePlans()
-
-        // Sync daily prices for portfolio charts
-        // await deps.marketDataService.syncDailyPrices(...)
-
-        await MainActor.run {
-            deps.userPreferences.lastBackgroundRun = Date()
-        }
-
-        task.setTaskCompleted(success: true)
-        logger.info("BGProcessingTask completed")
+        task.expirationHandler = { work.cancel() }
+        let finished = await work.value
+        task.expirationHandler = nil
+        task.setTaskCompleted(success: finished)
     }
 
     // MARK: - Scheduling
 
-    func scheduleAppRefresh() {
-        let request = BGAppRefreshTaskRequest(identifier: AppDelegate.bgRefreshIdentifier)
-
-        // Set earliest begin date to next plan's execution time
-        // If no plans, default to 1 hour
-        // The actual date should be fetched from the database
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 3600)
-
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            logger.info("Scheduled BGAppRefreshTask")
-        } catch {
-            logger.error("Failed to schedule BGAppRefreshTask: \(error.localizedDescription)")
-        }
+    @MainActor
+    func scheduleNext(using dependencies: AppDependencies) {
+        let db = dependencies.activeDatabase
+        let now = Date()
+        let nextPlan = try? db.planDao.getNextExecutionDate()
+        let nextCheck = nextPlan ?? now.addingTimeInterval(3600)
+        // Use a floor for overdue plans and revisit receipts within an hour.
+        let earliest = max(now.addingTimeInterval(15 * 60), min(nextCheck, now.addingTimeInterval(3600)))
+        scheduleAppRefresh(at: earliest)
+        scheduleProcessingTask()
     }
 
-    func scheduleAppRefresh(at date: Date) {
+    private func scheduleAppRefresh(at date: Date) {
         let request = BGAppRefreshTaskRequest(identifier: AppDelegate.bgRefreshIdentifier)
         request.earliestBeginDate = date
 
@@ -96,7 +68,7 @@ final class DcaBackgroundService {
         }
     }
 
-    func scheduleProcessingTask() {
+    private func scheduleProcessingTask() {
         let request = BGProcessingTaskRequest(identifier: AppDelegate.bgProcessingIdentifier)
         request.requiresNetworkConnectivity = true
         request.requiresExternalPower = false

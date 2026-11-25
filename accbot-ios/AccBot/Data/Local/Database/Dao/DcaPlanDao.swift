@@ -14,7 +14,7 @@ final class DcaPlanDao {
 
     func getAll() throws -> [DcaPlan] {
         try dbPool.read { db in
-            try DcaPlanRecord.fetchAll(db).map { $0.toDomain() }
+            try DcaPlanRecord.order(Column("displayOrder"), Column("id")).fetchAll(db).map { $0.toDomain() }
         }
     }
 
@@ -85,12 +85,14 @@ final class DcaPlanDao {
 
     func delete(id: Int64) throws {
         try dbPool.write { db in
+            try TransactionDao.checkPendingPurchases(in: db, for: id)
             _ = try DcaPlanRecord.deleteOne(db, key: id)
         }
     }
 
     func deleteAll() throws {
         try dbPool.write { db in
+            try TransactionDao.checkPendingPurchases(in: db)
             _ = try DcaPlanRecord.deleteAll(db)
         }
     }
@@ -121,11 +123,56 @@ final class DcaPlanDao {
         }
     }
 
+    /// Reserve the schedule and record the intent in one write before the order is sent.
+    func beginPurchase(_ intent: Transaction, for plan: DcaPlan, nextExecution: Date) throws -> PurchaseClaim {
+        try dbPool.write { db in
+            guard let current = try DcaPlanRecord.fetchOne(db, key: plan.id)?.toDomain(),
+                  current == plan, current.isEnabled else { return .blocked }
+
+            if try Self.pauseIfTargetReached(current, in: db) {
+                return .targetReached
+            }
+
+            let pending = TransactionRecord.filter(Column("planId") == plan.id)
+                .filter(Column("status") == TransactionStatus.pending.rawValue)
+            let blocksPurchase = if let target = plan.targetAmount, target > 0 {
+                try pending.fetchCount(db) > 0
+            } else {
+                try pending.filter(Column("exchangeOrderId") == nil || Column("exchangeOrderId") == "")
+                    .fetchCount(db) > 0
+            }
+            guard !blocksPurchase else { return .blocked }
+
+            try TransactionRecord.fromDomain(intent).insert(db)
+            let intentId = db.lastInsertedRowID
+            try db.execute(
+                sql: "UPDATE dca_plans SET lastExecutedAt = ?, nextExecutionAt = ? WHERE id = ?",
+                arguments: [intent.executedAt.timeIntervalSince1970, nextExecution.timeIntervalSince1970, plan.id]
+            )
+            return .started(intentId)
+        }
+    }
+
+    func pauseIfTargetReached(_ planId: Int64) throws -> DcaPlan? {
+        try dbPool.write { db in
+            guard let plan = try DcaPlanRecord.fetchOne(db, key: planId)?.toDomain(),
+                  try Self.pauseIfTargetReached(plan, in: db) else { return nil }
+            return plan
+        }
+    }
+
+    private static func pauseIfTargetReached(_ plan: DcaPlan, in db: Database) throws -> Bool {
+        guard plan.isEnabled, let target = plan.targetAmount, target > 0,
+              try TransactionDao.accumulatedCrypto(in: db, for: plan.id) >= target else { return false }
+        try db.execute(sql: "UPDATE dca_plans SET isEnabled = 0 WHERE id = ?", arguments: [plan.id])
+        return true
+    }
+
     // MARK: - Observation (reactive)
 
     func observeAll() -> DatabasePublishers.Value<[DcaPlan]> {
         ValueObservation.tracking { db in
-            try DcaPlanRecord.fetchAll(db).map { $0.toDomain() }
+            try DcaPlanRecord.order(Column("displayOrder"), Column("id")).fetchAll(db).map { $0.toDomain() }
         }
         .publisher(in: dbPool, scheduling: .immediate)
     }
@@ -139,4 +186,10 @@ final class DcaPlanDao {
         }
         .publisher(in: dbPool, scheduling: .immediate)
     }
+}
+
+enum PurchaseClaim: Equatable {
+    case started(Int64)
+    case targetReached
+    case blocked
 }

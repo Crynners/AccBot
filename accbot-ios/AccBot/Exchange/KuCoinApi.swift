@@ -1,7 +1,6 @@
 import Foundation
 
 /// KuCoin API implementation.
-/// Supports sandbox mode via openapi-sandbox.kucoin.com.
 ///
 /// Auth: HMAC-SHA256 with base64-decoded secret, base64-encoded result.
 /// Prehash: timestamp + method + path + body
@@ -11,15 +10,13 @@ final class KuCoinApi: ExchangeApi {
     let exchange = Exchange.kucoin
 
     private let credentials: ExchangeCredentials
-    private let isSandbox: Bool
     private let client: NetworkClient
     private let baseUrl: String
 
-    init(credentials: ExchangeCredentials, isSandbox: Bool, client: NetworkClient) {
+    init(credentials: ExchangeCredentials, baseUrl: String, client: NetworkClient) {
         self.credentials = credentials
-        self.isSandbox = isSandbox
         self.client = client
-        self.baseUrl = ExchangeConfig.baseUrl(for: .kucoin, isSandbox: isSandbox)
+        self.baseUrl = baseUrl
     }
 
     // MARK: - Authentication
@@ -104,6 +101,45 @@ final class KuCoinApi: ExchangeApi {
 
     func getBalance(currency: String) async -> Decimal? {
         nil
+    }
+
+    func getOrderStatus(orderId: String, crypto: String, fiat: String) async -> Transaction? {
+        guard !orderId.isEmpty,
+              orderId.range(of: "[^A-Za-z0-9-]", options: .regularExpression) == nil else { return nil }
+
+        do {
+            let path = "/api/v1/orders/\(orderId)"
+            let headers = authHeaders(method: "GET", path: path)
+            let (data, _) = try await client.get(url: "\(baseUrl)\(path)", headers: headers)
+            let json = try parseJson(data)
+            guard jsonString(json, key: "code") == "200000",
+                  let order = json["data"] as? [String: Any],
+                  jsonString(order, key: "id") == orderId,
+                  jsonString(order, key: "symbol") == "\(crypto)-\(fiat)",
+                  jsonString(order, key: "side") == "buy",
+                  (order["isActive"] as? Bool ?? order["active"] as? Bool) == false,
+                  let quantity = jsonDecimalOptional(order, key: "dealSize"),
+                  let cost = jsonDecimalOptional(order, key: "dealFunds") else { return nil }
+
+            let status: TransactionStatus
+            if quantity == 0 && cost == 0 {
+                status = .failed
+            } else if quantity > 0 && cost > 0 {
+                status = order["cancelExist"] as? Bool == true ? .partial : .completed
+            } else {
+                return nil
+            }
+            return Transaction(
+                planId: 0, exchange: .kucoin, crypto: crypto, fiat: fiat,
+                fiatAmount: cost, cryptoAmount: quantity, price: quantity > 0 ? cost / quantity : 0,
+                fee: jsonDecimal(order, key: "fee"), feeAsset: jsonString(order, key: "feeCurrency"),
+                status: status, exchangeOrderId: orderId,
+                errorMessage: status == .failed ? String(localized: "The order ended without a fill.") : nil,
+                executedAt: Date(timeIntervalSince1970: Double(jsonInt64(order, key: "createdAt")) / 1000)
+            )
+        } catch {
+            return nil
+        }
     }
 
     func getCurrentPrice(crypto: String, fiat: String) async -> Decimal? {

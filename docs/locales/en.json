@@ -1,6 +1,6 @@
 {
   "meta_title": "AccBot - Self-Custody Bitcoin DCA",
-  "meta_description": "Automated Dollar Cost Averaging for Bitcoin and crypto. Self-custody, open source, 7 exchanges supported.",
+  "meta_description": "Open-source automated Bitcoin and crypto purchases across five exchanges.",
 
   "nav_features": "Features",
   "nav_security": "Security",
@@ -38,10 +38,10 @@
   "features_history_desc": "Complete history of every DCA purchase with filtering by crypto, exchange, and status. Export to CSV for tax reporting or your own analysis.",
 
   "features_sandbox_title": "Sandbox Mode",
-  "features_sandbox_desc": "Test your strategies risk-free with exchange testnet environments. Sandbox uses a separate database so your production data stays safe.",
+  "features_sandbox_desc": "Try DCA with the Binance spot testnet. Sandbox keeps its plans, orders and credentials separate from production.",
 
-  "features_withdrawal_title": "Auto-Withdrawal",
-  "features_withdrawal_desc": "Automatically send purchased crypto to your own wallet address after each purchase. True self-custody.",
+  "features_withdrawal_title": "Withdrawal reminders",
+  "features_withdrawal_desc": "Set a balance threshold and get a reminder to withdraw your crypto through your exchange.",
 
   "features_qr_title": "QR Code Setup",
   "features_qr_desc": "Scan your API keys and wallet addresses with your camera. No more error-prone manual entry of long alphanumeric strings.",
@@ -50,7 +50,14 @@
   "features_backup_desc": "Back up your DCA plans, transaction history, and optionally API credentials with a single tap. Backups are encrypted with your password using AES-256-GCM. Restore on a new phone in seconds — no account needed, no data lost.",
 
   "exchanges_title": "Supported Exchanges",
-  "exchanges_subtitle": "Connect to any of 7 major exchanges. Create multiple DCA plans across different exchanges and trading pairs.",
+  "exchanges_subtitle": "Create DCA plans across five exchanges. Android supports limit sells on Coinmate and Binance.",
+  "exchanges_capabilities": "Features by exchange",
+  "exchanges_col_exchange": "Exchange",
+  "exchanges_col_sandbox": "Spot testnet",
+  "exchanges_col_sells": "Limit sells (Android)",
+  "exchanges_col_import": "Trade import",
+  "exchanges_yes": "Yes",
+  "exchanges_no": "No",
 
   "security_title": "Security First",
   "security_subtitle": "AccBot is built on a decentralized, security-first architecture. Your data stays on your device.",
@@ -99,11 +106,13 @@
   "compare_chart_title": "Cumulative BTC accumulation",
   "compare_error": "Failed to load price data. Please try again later.",
   "compare_legend_price": "BTC/CZK price",
-  "compare_summary_tpl": "{0} purchases · {1} invested · BTC price: {2}",
+  "compare_summary_tpl": "Purchases {0} · invested {1} · BTC price {2}",
+  "compare_table_label": "Show values for each purchase",
+  "compare_table_date": "Purchase date",
   "compare_savings_tpl": "With AccBot you accumulate <strong>{0}</strong> more (<strong>{1}</strong> in current value) and save <strong>{2}</strong> in fees.",
   "compare_diff_chart_label": "AccBot savings (sats)",
   "compare_diff_row": "Difference",
-  "compare_disclaimer": "* Simulation based on historical BTC/CZK prices from CryptoCompare. Past performance does not indicate future results.",
+  "compare_disclaimer": "This simulation uses historical BTC/CZK prices from CryptoCompare and fixed fee assumptions of 0.6% and 1.5%. Exchange spreads, withdrawal costs and taxes are excluded.",
 
   "footer_made": "Made with love by Crynners",
   "footer_license": "MIT License",

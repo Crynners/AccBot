@@ -5,31 +5,46 @@ on:
     types: [closed]
     branches: [main]
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   create-tag:
+    permissions:
+      contents: write
     if: >
       github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
       startsWith(github.event.pull_request.head.ref, 'release/v')
     runs-on: ubuntu-latest
 
     steps:
       - name: Extract version from branch name
         id: version
+        env:
+          RELEASE_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          BRANCH="${{ github.event.pull_request.head.ref }}"
-          TAG="${BRANCH#release/}"
-          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          if [[ ! "$RELEASE_BRANCH" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo '::error::Invalid release branch version'
+            exit 1
+          fi
+          printf 'TAG=%s\n' "${RELEASE_BRANCH#release/}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Create and push tag
+      - name: Create release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.TAG }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
-          git tag ${{ steps.version.outputs.TAG }} ${{ github.event.pull_request.merge_commit_sha }}
-          git push origin ${{ steps.version.outputs.TAG }}
+          if [[ ! "$MERGE_SHA" =~ ^[0-9a-f]{40}$ ]] || ! git merge-base --is-ancestor "$MERGE_SHA" HEAD; then
+            echo '::error::Release commit is not in main'
+            exit 1
+          fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/$RELEASE_TAG" -f sha="$MERGE_SHA"

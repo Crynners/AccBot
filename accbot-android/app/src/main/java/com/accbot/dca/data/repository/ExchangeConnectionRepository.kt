@@ -1,6 +1,8 @@
 package com.accbot.dca.data.repository
 
+import androidx.room.withTransaction
 import com.accbot.dca.data.local.CredentialsStore
+import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.DcaPlanDao
 import com.accbot.dca.data.local.ExchangeBalanceDao
 import com.accbot.dca.data.local.ExchangeConnectionDao
@@ -32,7 +34,8 @@ class ExchangeConnectionRepository @Inject constructor(
     private val exchangeBalanceDao: ExchangeBalanceDao,
     private val withdrawalThresholdDao: WithdrawalThresholdDao,
     private val credentialsStore: CredentialsStore,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val database: DcaDatabase
 ) {
     fun observeAll(): Flow<List<ExchangeConnectionEntity>> = connectionDao.getAllFlow()
 
@@ -88,23 +91,22 @@ class ExchangeConnectionRepository @Inject constructor(
      *  plans (which would loop in DcaWorker with "no credentials" errors).
      * @throws IllegalStateException when [deletePlans] is false but active plans exist.
      */
-    suspend fun delete(connectionId: Long, deletePlans: Boolean) {
-        val planCount = dcaPlanDao.countPlansByConnection(connectionId)
-        if (planCount > 0 && !deletePlans) {
-            throw IllegalStateException(
-                "Cannot delete connection $connectionId: $planCount active plan(s) reference it. " +
-                    "Pass deletePlans=true to remove them, or delete the plans first."
-            )
+    suspend fun delete(connectionId: Long, deletePlans: Boolean): Boolean {
+        val removed = database.withTransaction {
+            if (database.transactionDao().hasOpenTransactionsForConnection(connectionId)) {
+                return@withTransaction false
+            }
+            check(deletePlans || dcaPlanDao.countPlansByConnection(connectionId) == 0) {
+                "Remove the plans using this connection before deleting it."
+            }
+            if (deletePlans) dcaPlanDao.deletePlansByConnection(connectionId)
+            withdrawalThresholdDao.deleteByConnection(connectionId)
+            exchangeBalanceDao.deleteBalancesByConnection(connectionId)
+            connectionDao.deleteById(connectionId)
+            true
         }
-        val isSandbox = userPreferences.isSandboxMode()
-        if (deletePlans && planCount > 0) {
-            dcaPlanDao.deletePlansByConnection(connectionId)
-        }
-        // Manual cascade - FK enforcement is currently disabled.
-        withdrawalThresholdDao.deleteByConnection(connectionId)
-        exchangeBalanceDao.deleteBalancesByConnection(connectionId)
-        credentialsStore.deleteCredentials(connectionId, isSandbox)
-        connectionDao.deleteById(connectionId)
+        if (removed) credentialsStore.deleteCredentials(connectionId, userPreferences.processSandboxMode)
+        return removed
     }
 
     /**

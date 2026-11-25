@@ -24,7 +24,7 @@ protocol ExchangeApi {
     func validateCredentials() async throws -> Bool
 
     /// Query the status and fill details of a previously placed order
-    func getOrderStatus(orderId: String) async -> Transaction?
+    func getOrderStatus(orderId: String, crypto: String, fiat: String) async -> Transaction?
 
     /// Get trade history for a currency pair
     func getTradeHistory(
@@ -33,11 +33,22 @@ protocol ExchangeApi {
         since: Date?,
         limit: Int
     ) async throws -> TradeHistoryPage
+
+    /// What the current API key may do, or nil when the exchange cannot report it.
+    func getKeyPermissions() async throws -> ApiKeyPermissions?
+}
+
+/// Permissions of an API key as reported by the exchange.
+struct ApiKeyPermissions: Equatable {
+    let canTrade: Bool
+    let canWithdraw: Bool
+
+    var isReadOnly: Bool { !canTrade && !canWithdraw }
 }
 
 /// Default implementations for optional methods
 extension ExchangeApi {
-    func getOrderStatus(orderId: String) async -> Transaction? {
+    func getOrderStatus(orderId: String, crypto: String, fiat: String) async -> Transaction? {
         nil
     }
 
@@ -48,6 +59,10 @@ extension ExchangeApi {
         limit: Int = 100
     ) async throws -> TradeHistoryPage {
         throw ExchangeError.unsupportedOperation("\(exchange.displayName) does not support API trade history import")
+    }
+
+    func getKeyPermissions() async throws -> ApiKeyPermissions? {
+        nil
     }
 }
 

@@ -226,7 +226,7 @@ class HistoryViewModel @Inject constructor(
 
     fun deleteTransaction(transaction: TransactionEntity) {
         viewModelScope.launch {
-            transactionDao.deleteTransaction(transaction)
+            transactionDao.deleteClosedTransaction(transaction.id)
         }
     }
 

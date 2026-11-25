@@ -1,7 +1,5 @@
 package com.accbot.dca.presentation.screens.backup
 
-import android.content.Context
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -13,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -23,6 +20,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.accbot.dca.R
 import com.accbot.dca.domain.model.EncryptionMode
+import com.accbot.dca.domain.model.RestoreMode
+import com.accbot.dca.domain.usecase.RestoreBackupUseCase
 import com.accbot.dca.presentation.components.AccBotTopAppBar
 import com.accbot.dca.presentation.components.QrScannerDialog
 import com.accbot.dca.presentation.components.SeedPhraseGrid
@@ -37,18 +36,12 @@ fun BackupImportScreen(
     viewModel: BackupImportViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     var showQrScanner by remember { mutableStateOf(false) }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
-        if (uri != null) {
-            val content = readTextFromUri(context, uri)
-            if (content != null) {
-                viewModel.onFileSelected(content)
-            }
-        }
+        if (uri != null) viewModel.onFileSelected(uri)
     }
 
     if (showQrScanner) {
@@ -97,7 +90,7 @@ fun BackupImportScreen(
                 )
                 ImportWizardStep.ENTER_PASSWORD -> EnterPasswordStep(uiState, viewModel)
                 ImportWizardStep.PREVIEW -> PreviewStep(uiState, viewModel)
-                ImportWizardStep.RESULT -> ImportResultStep()
+                ImportWizardStep.RESULT -> ImportResultStep(uiState.restoreMessage, viewModel::restartApp)
             }
 
             // Error display
@@ -107,6 +100,10 @@ fun BackupImportScreen(
                     "Password required" -> stringResource(R.string.backup_step_enter_password)
                     "Invalid backup file" -> stringResource(R.string.backup_invalid_file)
                     "Invalid backup format" -> stringResource(R.string.backup_invalid_file)
+                    RestoreBackupUseCase.SIZE_ERROR -> stringResource(R.string.backup_too_large)
+                    RestoreBackupUseCase.ENVIRONMENT_ERROR -> stringResource(R.string.backup_wrong_environment)
+                    RestoreBackupUseCase.CREDENTIALS_ERROR -> stringResource(R.string.backup_credentials_require_encryption)
+                    "backup_open_orders" -> stringResource(R.string.backup_open_orders)
                     "backup_seed_incomplete" -> stringResource(R.string.backup_seed_incomplete)
                     "backup_invalid_seed" -> stringResource(R.string.backup_invalid_seed)
                     else -> error
@@ -300,6 +297,23 @@ private fun PreviewStep(
     viewModel: BackupImportViewModel
 ) {
     val preview = uiState.preview ?: return
+    var confirmReplace by remember { mutableStateOf(false) }
+    if (confirmReplace) {
+        AlertDialog(
+            onDismissRequest = { confirmReplace = false },
+            title = { Text(stringResource(R.string.backup_restore_replace)) },
+            text = { Text(stringResource(R.string.backup_restore_warning_replace)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmReplace = false
+                    viewModel.confirmRestore()
+                }) { Text(stringResource(R.string.backup_restore_replace)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmReplace = false }) { Text(stringResource(R.string.common_cancel)) }
+            }
+        )
+    }
 
     Text(
         text = stringResource(R.string.backup_step_preview),
@@ -318,6 +332,10 @@ private fun PreviewStep(
         ) {
             PreviewRow(stringResource(R.string.backup_preview_created), DateFormatters.transactionDateTime.format(Instant.ofEpochMilli(preview.createdAt)))
             PreviewRow(stringResource(R.string.backup_preview_version), preview.appVersion)
+            PreviewRow(
+                stringResource(R.string.backup_environment),
+                stringResource(if (preview.environment == "sandbox") R.string.backup_environment_test else R.string.backup_environment_live)
+            )
             HorizontalDivider()
             PreviewRow(stringResource(R.string.backup_preview_plans, preview.planCount), "")
             if (preview.hasSettings) {
@@ -341,7 +359,14 @@ private fun PreviewStep(
         }
     }
 
-    // Info card
+    for (mode in RestoreMode.entries) {
+        val label = if (mode == RestoreMode.Merge) R.string.backup_restore_merge else R.string.backup_restore_replace
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = mode == uiState.restoreMode, onClick = { viewModel.setRestoreMode(mode) }, enabled = !uiState.isRestoring)
+            Text(stringResource(label))
+        }
+    }
+
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -355,7 +380,10 @@ private fun PreviewStep(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = stringResource(R.string.backup_restore_warning_replace),
+                text = stringResource(
+                    if (uiState.restoreMode == RestoreMode.Merge) R.string.backup_restore_paused
+                    else R.string.backup_restore_warning_replace
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer
             )
@@ -374,7 +402,10 @@ private fun PreviewStep(
             Text(stringResource(R.string.common_previous))
         }
         Button(
-            onClick = { viewModel.confirmRestore() },
+            onClick = {
+                if (uiState.restoreMode == RestoreMode.Replace) confirmReplace = true
+                else viewModel.confirmRestore()
+            },
             modifier = Modifier.weight(1f),
             enabled = !uiState.isRestoring
         ) {
@@ -419,7 +450,7 @@ private fun PreviewRow(label: String, value: String) {
 }
 
 @Composable
-private fun ImportResultStep() {
+private fun ImportResultStep(message: String, onRestart: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -437,17 +468,11 @@ private fun ImportResultStep() {
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center
         )
+        if (message.isNotBlank()) Text(message)
+        Button(onClick = onRestart) { Text(stringResource(R.string.backup_restart)) }
         CircularProgressIndicator(
             modifier = Modifier.size(24.dp),
             strokeWidth = 2.dp
         )
-    }
-}
-
-private fun readTextFromUri(context: Context, uri: Uri): String? {
-    return try {
-        context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-    } catch (_: Exception) {
-        null
     }
 }

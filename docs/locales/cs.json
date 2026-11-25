@@ -1,6 +1,6 @@
 {
   "meta_title": "AccBot - Bitcoin DCA bez prostředníků",
-  "meta_description": "Automatické pravidelné nákupy Bitcoinu a kryptoměn. Bez cloudu, open source, 7 podporovaných burz.",
+  "meta_description": "Open-source aplikace pro pravidelné nákupy bitcoinu a kryptoměn na pěti burzách.",
 
   "nav_features": "Funkce",
   "nav_security": "Bezpečnost",
@@ -38,10 +38,10 @@
   "features_history_desc": "Kompletní historie každého DCA nákupu s filtrováním podle kryptoměny, burzy a stavu. Export do CSV pro daňové přiznání nebo vlastní analýzu.",
 
   "features_sandbox_title": "Sandbox režim",
-  "features_sandbox_desc": "Testujte strategie bez rizika s testovacími prostředími burz. Sandbox používá oddělenou databázi, takže vaše produkční data zůstanou v bezpečí.",
+  "features_sandbox_desc": "Vyzkoušejte DCA na testovací spotové burze Binance. Testovací plány, objednávky a přihlašovací údaje jsou oddělené od produkce.",
 
-  "features_withdrawal_title": "Automatický výběr",
-  "features_withdrawal_desc": "Automaticky odesílejte nakoupené krypto na adresu vlastní peněženky po každém nákupu. Skutečná vlastní správa.",
+  "features_withdrawal_title": "Připomenutí výběru",
+  "features_withdrawal_desc": "Nastavte hranici zůstatku a aplikace vám připomene, že můžete vybrat kryptoměnu přímo na burze.",
 
   "features_qr_title": "Nastavení přes QR kód",
   "features_qr_desc": "Skenujte API klíče a adresy peněženek fotoaparátem. Žádné ruční zadávání dlouhých alfanumerických řetězců.",
@@ -50,7 +50,14 @@
   "features_backup_desc": "Zálohujte DCA plány, historii transakcí a volitelně i API přihlašovací údaje jedním klepnutím. Zálohy jsou šifrovány vaším heslem pomocí AES-256-GCM. Obnovení na novém telefonu je otázka pár sekund — žádný účet, žádná ztráta dat.",
 
   "exchanges_title": "Podporované burzy",
-  "exchanges_subtitle": "Připojte se k libovolné ze 7 hlavních burz. Vytvořte více DCA plánů napříč různými burzami a obchodními páry.",
+  "exchanges_subtitle": "Vytvářejte DCA plány na pěti burzách. Android podporuje limitní prodeje na Coinmate a Binance.",
+  "exchanges_capabilities": "Funkce podle burzy",
+  "exchanges_col_exchange": "Burza",
+  "exchanges_col_sandbox": "Testovací spotový trh",
+  "exchanges_col_sells": "Limitní prodej (Android)",
+  "exchanges_col_import": "Import obchodů",
+  "exchanges_yes": "Ano",
+  "exchanges_no": "Ne",
 
   "security_title": "Bezpečnost na prvním místě",
   "security_subtitle": "AccBot je postaven na decentralizované architektuře zaměřené na bezpečnost. Vaše data zůstávají na vašem zařízení.",
@@ -99,11 +106,13 @@
   "compare_chart_title": "Kumulativní akumulace BTC v čase",
   "compare_error": "Nepodařilo se načíst cenová data. Zkuste to prosím později.",
   "compare_legend_price": "Cena BTC/CZK",
-  "compare_summary_tpl": "{0} nákupů · {1} investováno · kurz BTC: {2}",
+  "compare_summary_tpl": "Počet nákupů {0} · investováno {1} · kurz BTC {2}",
+  "compare_table_label": "Zobrazit hodnoty po jednotlivých nákupech",
+  "compare_table_date": "Datum nákupu",
   "compare_savings_tpl": "S AccBotem nastřádáte o <strong>{0}</strong> více (<strong>{1}</strong> v aktuální hodnotě) a ušetříte <strong>{2}</strong> na poplatcích.",
   "compare_diff_chart_label": "Úspora AccBot (sats)",
   "compare_diff_row": "Rozdíl",
-  "compare_disclaimer": "* Simulace na základě historických cen BTC/CZK z CryptoCompare. Minulá výkonnost nezaručuje budoucí výsledky.",
+  "compare_disclaimer": "Simulace používá historické ceny BTC/CZK z CryptoCompare a pevné předpoklady poplatků 0,6 % a 1,5 %. Nezahrnuje rozpětí burzy, poplatky za výběr ani daně.",
 
   "footer_made": "Vytvořeno s láskou od Crynners",
   "footer_license": "Licence MIT",

@@ -172,6 +172,19 @@ fun FirstPlanScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            uiState.credentialForm.selectedExchange?.let { exchange ->
+                Text(
+                    text = stringResource(
+                        if (uiState.credentialForm.isSandboxMode) R.string.first_plan_schedules_test_orders
+                        else R.string.first_plan_schedules_real_orders,
+                        exchange.displayName
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             Button(
                 onClick = {
                     viewModel.createFirstPlan(onSuccess = onContinue)

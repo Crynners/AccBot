@@ -38,7 +38,7 @@ object AppModule {
     ): DcaDatabase {
         // Database is selected based on sandbox mode at app startup
         // Switching modes requires app restart to use correct database
-        return DcaDatabase.getInstance(context, userPreferences.isSandboxMode())
+        return DcaDatabase.getInstance(context, userPreferences.processSandboxMode)
     }
 
     @Provides

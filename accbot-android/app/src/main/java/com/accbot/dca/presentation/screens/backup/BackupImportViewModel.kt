@@ -2,6 +2,7 @@ package com.accbot.dca.presentation.screens.backup
 
 import android.app.Application
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -34,11 +36,12 @@ data class BackupImportUiState(
     val seedWords: List<String> = List(12) { "" },
     val preview: BackupPreview? = null,
     val payload: BackupPayload? = null,
-    val restoreMode: RestoreMode = RestoreMode.Replace,
+    val restoreMode: RestoreMode = RestoreMode.Merge,
     val isParsing: Boolean = false,
     val isRestoring: Boolean = false,
     val restoreSuccess: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val restoreMessage: String = ""
 )
 
 @HiltViewModel
@@ -52,9 +55,23 @@ class BackupImportViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(BackupImportUiState())
     val uiState: StateFlow<BackupImportUiState> = _uiState.asStateFlow()
 
-    fun onFileSelected(content: String) {
-        _uiState.update { it.copy(envelopeJson = content, error = null) }
-        tryParsePreview(content, "")
+    fun onFileSelected(uri: Uri) {
+        _uiState.update { it.copy(isParsing = true, error = null) }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val content = application.contentResolver.openInputStream(uri)?.use {
+                    RestoreBackupUseCase.readBounded(it, RestoreBackupUseCase.MAX_ENVELOPE_BYTES)
+                        .toString(Charsets.UTF_8)
+                } ?: error("Invalid backup file")
+                onQrScanned(content)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val message = e.message?.takeIf { it == RestoreBackupUseCase.SIZE_ERROR }
+                    ?: "Invalid backup file"
+                _uiState.update { it.copy(isParsing = false, error = message) }
+            }
+        }
     }
 
     fun onQrScanned(content: String) {
@@ -149,22 +166,22 @@ class BackupImportViewModel @Inject constructor(
     fun confirmRestore() {
         val state = _uiState.value
         val payload = state.payload ?: return
+        val environment = state.preview?.environment ?: return
+        if (state.isRestoring) return
 
         _uiState.update { it.copy(isRestoring = true, error = null) }
 
         viewModelScope.launch {
-            when (val result = restoreBackupUseCase.restore(payload, state.restoreMode)) {
+            when (val result = restoreBackupUseCase.restore(payload, environment, state.restoreMode)) {
                 is RestoreBackupResult.RestoreComplete -> {
                     _uiState.update {
                         it.copy(
                             isRestoring = false,
                             restoreSuccess = true,
+                            restoreMessage = result.message,
                             wizardStep = ImportWizardStep.RESULT
                         )
                     }
-                    // Delay briefly then restart
-                    kotlinx.coroutines.delay(1500)
-                    restartApp()
                 }
                 is RestoreBackupResult.Error -> {
                     _uiState.update { it.copy(isRestoring = false, error = result.message) }
@@ -176,6 +193,10 @@ class BackupImportViewModel @Inject constructor(
         }
     }
 
+    fun setRestoreMode(mode: RestoreMode) {
+        _uiState.update { it.copy(restoreMode = mode) }
+    }
+
     fun goToStep(step: ImportWizardStep) {
         _uiState.update { it.copy(wizardStep = step, error = null) }
     }
@@ -184,10 +205,10 @@ class BackupImportViewModel @Inject constructor(
         _uiState.update { it.copy(error = null) }
     }
 
-    private fun restartApp() {
+    fun restartApp() {
         val packageManager = application.packageManager
-        val intent = packageManager.getLaunchIntentForPackage(application.packageName)
-        intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = packageManager.getLaunchIntentForPackage(application.packageName) ?: return
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
         application.startActivity(intent)
         Runtime.getRuntime().exit(0)
     }

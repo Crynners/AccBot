@@ -9,6 +9,8 @@ struct PlanDetailsView: View {
 
     @State private var showDeleteConfirmation = false
     @State private var showDeleteTransactionsConfirmation = false
+    @State private var showShareSheet = false
+    @State private var showBuyNowConfirmation = false
 
     @Environment(\.accBotColors) private var colors
 
@@ -52,6 +54,12 @@ struct PlanDetailsView: View {
                             Label(String(localized: "Delete All Transactions"), systemImage: "trash")
                         }
 
+                        Button {
+                            showShareSheet = true
+                        } label: {
+                            Label(String(localized: "Share plan (read-only)"), systemImage: "square.and.arrow.up")
+                        }
+
                         if plan.exchange.supportsApiImport {
                             Button {
                                 router.navigate(to: .importCsv(planId))
@@ -79,6 +87,12 @@ struct PlanDetailsView: View {
         }
         .onAppear {
             viewModel.setup(dependencies)
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let plan = viewModel.plan {
+                SharePlanSheet(planId: plan.id, exchange: plan.exchange)
+                    .environmentObject(dependencies)
+            }
         }
         .sheet(isPresented: $showDeleteConfirmation) {
             DestructiveConfirmSheet(
@@ -152,6 +166,62 @@ struct PlanDetailsView: View {
             .maxFormWidth()
         }
         .background(colors.background)
+        .safeAreaInset(edge: .bottom) {
+            actionBar(plan)
+        }
+        .confirmationDialog(
+            String(localized: "Buy now?"),
+            isPresented: $showBuyNowConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Buy now")) { viewModel.buyNow() }
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "AccBot sends a purchase of \(plan.crypto) for \(AccBotFormatters.formatFiat(plan.amount, symbol: plan.fiat)) to \(plan.exchange.displayName) right away."))
+        }
+        .alert(String(localized: "Execution Complete"), isPresented: Binding(
+            get: { viewModel.buyResultMessage != nil },
+            set: { if !$0 { viewModel.buyResultMessage = nil } }
+        )) {
+            Button(String(localized: "OK"), role: .cancel) {}
+        } message: {
+            Text(viewModel.buyResultMessage ?? "")
+        }
+    }
+
+    // MARK: - Action Bar
+
+    /// Sticky plan actions, reachable without scrolling past stats and history.
+    private func actionBar(_ plan: DcaPlan) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Button {
+                viewModel.toggleEnabled()
+            } label: {
+                Label(plan.isEnabled ? String(localized: "Pause") : String(localized: "Resume"),
+                      systemImage: plan.isEnabled ? "pause.fill" : "play.fill")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.bordered)
+
+            Button {
+                showBuyNowConfirmation = true
+            } label: {
+                Group {
+                    if viewModel.isBuying {
+                        ProgressView()
+                    } else {
+                        Label(String(localized: "Buy now"), systemImage: "cart.fill")
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!plan.isEnabled || viewModel.isBuying)
+        }
+        .tint(colors.primary)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.sm)
+        .background(.bar)
     }
 
     // MARK: - Plan Header
@@ -163,7 +233,7 @@ struct PlanDetailsView: View {
 
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     HStack(spacing: Spacing.sm) {
-                        Text(plan.pair)
+                        Text(plan.displayName)
                             .font(AccBotFonts.titleMedium)
                             .foregroundStyle(colors.onSurface)
                         Text(plan.strategy.displayName)
@@ -225,13 +295,6 @@ struct PlanDetailsView: View {
             }
 
             Spacer()
-
-            Toggle(String(localized: "Enable plan"), isOn: Binding(
-                get: { plan.isEnabled },
-                set: { _ in viewModel.toggleEnabled() }
-            ))
-            .labelsHidden()
-            .tint(colors.primary)
         }
         .padding(Spacing.lg)
         .background(colors.surface)

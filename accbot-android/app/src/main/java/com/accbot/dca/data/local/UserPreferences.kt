@@ -31,6 +31,16 @@ class UserPreferences @Inject constructor(
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
+    /**
+     * Sandbox mode the process started in. The injected Room database and API factory are
+     * bound to it, so it is read once per process and shared by every instance (the worker
+     * and alarm scheduler create their own). Switching modes restarts the process.
+     */
+    val processSandboxMode: Boolean
+        get() = processSandbox ?: synchronized(Companion) {
+            processSandbox ?: isSandboxMode().also { processSandbox = it }
+        }
+
     // ==================== Theme ====================
 
     private val _appThemeFlow = MutableStateFlow(readAppTheme())
@@ -147,12 +157,16 @@ class UserPreferences @Inject constructor(
 
     // ==================== Biometric Lock ====================
 
+    private val _biometricLockEnabledFlow = MutableStateFlow(isBiometricLockEnabled())
+    val biometricLockEnabledFlow = _biometricLockEnabledFlow.asStateFlow()
+
     fun isBiometricLockEnabled(): Boolean {
         return prefs.getBoolean(KEY_BIOMETRIC_LOCK_ENABLED, false)
     }
 
     fun setBiometricLockEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_BIOMETRIC_LOCK_ENABLED, enabled).apply()
+        _biometricLockEnabledFlow.value = enabled
     }
 
     // ==================== Changelog ====================
@@ -225,6 +239,27 @@ class UserPreferences @Inject constructor(
 
     fun setPortfolioSelectedPageId(pageId: String) {
         prefs.edit().putString(KEY_PORTFOLIO_SELECTED_PAGE, pageId).apply()
+    }
+
+    // ==================== Dashboard hints ====================
+
+    /** The "what happens next" card after the first plan was dismissed. */
+    fun isFirstPlanGuideDismissed(): Boolean = prefs.getBoolean(KEY_FIRST_PLAN_GUIDE_DISMISSED, false)
+
+    fun setFirstPlanGuideDismissed(dismissed: Boolean) {
+        prefs.edit().putBoolean(KEY_FIRST_PLAN_GUIDE_DISMISSED, dismissed).apply()
+    }
+
+    /**
+     * Background-automation problems the user chose to ignore, as a sorted comma-separated
+     * list of issue keys. The dashboard warns again only when a new problem appears.
+     */
+    fun getDismissedAutomationIssues(): Set<String> =
+        prefs.getString(KEY_DISMISSED_AUTOMATION_ISSUES, "").orEmpty()
+            .split(',').filter { it.isNotBlank() }.toSet()
+
+    fun setDismissedAutomationIssues(issues: Set<String>) {
+        prefs.edit().putString(KEY_DISMISSED_AUTOMATION_ISSUES, issues.sorted().joinToString(",")).apply()
     }
 
     // ==================== Trading (Sell Extension) ====================
@@ -309,6 +344,15 @@ class UserPreferences @Inject constructor(
     }
 
     companion object {
+        @Volatile
+        private var processSandbox: Boolean? = null
+
+        /** Tests that simulate a new process start call this first. */
+        @androidx.annotation.VisibleForTesting
+        internal fun resetProcessSandboxModeForTests() {
+            processSandbox = null
+        }
+
         private const val PREFS_NAME = "accbot_user_prefs"
         private const val KEY_APP_THEME = "app_theme"
         private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
@@ -329,5 +373,7 @@ class UserPreferences @Inject constructor(
         private const val KEY_SELL_POLLING_FREQUENCY = "sell_polling_frequency"
         private const val KEY_SELL_POLLING_CRON = "sell_polling_cron"
         private const val KEY_SELL_POLLING_SCHEDULE_CONFIG = "sell_polling_schedule_config"
+        private const val KEY_FIRST_PLAN_GUIDE_DISMISSED = "first_plan_guide_dismissed"
+        private const val KEY_DISMISSED_AUTOMATION_ISSUES = "dismissed_automation_issues"
     }
 }

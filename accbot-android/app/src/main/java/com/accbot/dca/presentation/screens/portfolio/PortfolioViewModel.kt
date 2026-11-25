@@ -18,7 +18,10 @@ import com.accbot.dca.domain.usecase.ChartDataPoint
 import com.accbot.dca.domain.usecase.ChartZoomLevel
 import com.accbot.dca.domain.usecase.SyncDailyPricesUseCase
 import androidx.compose.runtime.Immutable
+import android.content.Context
+import com.accbot.dca.R
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -119,7 +122,8 @@ class PortfolioViewModel @Inject constructor(
     private val syncDailyPricesUseCase: SyncDailyPricesUseCase,
     private val calculateChartDataUseCase: CalculateChartDataUseCase,
     private val userPreferences: UserPreferences,
-    private val cancelSellOrderUseCase: CancelSellOrderUseCase
+    private val cancelSellOrderUseCase: CancelSellOrderUseCase,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     // Consumed once on first loadPortfolio() and then nulled out so a process-death
@@ -487,7 +491,10 @@ class PortfolioViewModel @Inject constructor(
             val result = cancelSellOrderUseCase(txId)
             if (result.isFailure) {
                 _snackbar.emit(
-                    "Zruseni orderu selhalo: ${result.exceptionOrNull()?.message ?: "neznama chyba"}"
+                    context.getString(
+                        R.string.sell_cancel_failed,
+                        result.exceptionOrNull()?.message ?: context.getString(R.string.sell_cancel_failed_unknown)
+                    )
                 )
             }
         }

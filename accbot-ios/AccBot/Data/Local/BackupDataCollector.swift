@@ -114,7 +114,9 @@ private extension DcaPlan {
             targetAmount: targetAmount.map { "\($0)" },
             createdAt: Int64(createdAt.timeIntervalSince1970 * 1000),
             lastExecutedAt: lastExecutedAt.map { Int64($0.timeIntervalSince1970 * 1000) },
-            nextExecutionAt: nextExecutionAt.map { Int64($0.timeIntervalSince1970 * 1000) }
+            nextExecutionAt: nextExecutionAt.map { Int64($0.timeIntervalSince1970 * 1000) },
+            name: name,
+            displayOrder: displayOrder
         )
     }
 }
@@ -132,7 +134,7 @@ private extension Transaction {
             price: "\(price)",
             fee: "\(fee)",
             feeAsset: feeAsset,
-            status: status.rawValue,
+            status: status == .partial ? "PARTIAL_CANCELLED" : status.rawValue,
             exchangeOrderId: exchangeOrderId,
             errorMessage: errorMessage,
             warningMessage: warningMessage,

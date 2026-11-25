@@ -11,10 +11,10 @@ import java.time.Instant
  * Sandbox support levels for exchanges
  */
 enum class SandboxSupport {
-    FULL,           // Full sandbox/testnet available (Binance, KuCoin, Coinbase)
+    FULL,           // Supported spot testnet (Binance)
     PAPER_TRADING,  // Paper trading mode (Bitfinex)
     FUTURES_ONLY,   // Only futures demo available (Kraken)
-    NONE            // No sandbox available (Coinmate, Huobi)
+    NONE            // No supported spot sandbox
 }
 
 /**
@@ -58,7 +58,7 @@ enum class Exchange(
         supportedFiats = listOf("USDT"),
         supportedCryptos = listOf("BTC", "ETH", "SOL", "ADA"),
         minOrderSize = mapOf("USDT" to BigDecimal("10")),
-        sandboxSupport = SandboxSupport.FULL
+        sandboxSupport = SandboxSupport.NONE
     ),
     BITFINEX(
         displayName = "Bitfinex",
@@ -82,7 +82,7 @@ enum class Exchange(
         supportedFiats = listOf("EUR", "USD", "GBP"),
         supportedCryptos = listOf("BTC", "ETH", "SOL", "ADA"),
         minOrderSize = mapOf("EUR" to BigDecimal("1"), "USD" to BigDecimal("1")),
-        sandboxSupport = SandboxSupport.FULL
+        sandboxSupport = SandboxSupport.NONE
     );
 
     companion object {
@@ -124,7 +124,7 @@ object ExchangeFilter {
     }
 
     private val allExchanges: List<Exchange> by lazy {
-        Exchange.entries.toList()
+        Exchange.entries.filter { it != Exchange.BITFINEX && it != Exchange.HUOBI }
     }
 
     fun getAvailableExchanges(isSandboxMode: Boolean): List<Exchange> =
@@ -238,10 +238,25 @@ enum class TransactionStatus {
     COMPLETED,
     FAILED,
     PARTIAL,
+    /** Terminal partial fill: the order was cancelled, expired, or rejected after
+     * some fills had already executed. Unlike [PARTIAL], no unfilled remainder stays
+     * open on the exchange and its reservation is released. */
+    PARTIAL_CANCELLED,
     /** User or exchange-side cancellation with no fills. Distinct from FAILED (which
-     * means the exchange rejected the order outright). PARTIAL covers cancellation
-     * after some fills happened. */
-    CANCELLED
+     * means the exchange rejected the order outright). */
+    CANCELLED;
+
+    /** True while the order is still open on the exchange (reserves unfilled remainder). */
+    val isOpen: Boolean
+        get() = this == PENDING || this == PARTIAL
+
+    /** True when the transaction has executed fills that count toward holdings, PnL, and proceeds. */
+    val hasFilledPortion: Boolean
+        get() = this == COMPLETED || this == PARTIAL || this == PARTIAL_CANCELLED
+
+    /** True when the order is finalized and will receive no further fills on the exchange. */
+    val isTerminal: Boolean
+        get() = !isOpen
 }
 
 /**
@@ -294,7 +309,8 @@ sealed class DcaResult {
 
     data class Error(
         val message: String,
-        val retryable: Boolean = true
+        val retryable: Boolean = true,
+        val confirmedRejection: Boolean = false
     ) : DcaResult()
 }
 

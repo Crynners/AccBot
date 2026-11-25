@@ -1,5 +1,63 @@
 [
   {
+    "versionCode": 29100,
+    "version": "2.9.1",
+    "title": {
+      "en": "Plan Sharing & a Clearer App",
+      "cs": "Sdílení plánů a přehlednější aplikace"
+    },
+    "features": {
+      "en": [
+        "New \"Needs attention\" section on the dashboard: tasks disappear once resolved, notices can be dismissed. Plan cards show the last purchase and open sells.",
+        "Share a plan read-only: send a snapshot, or live updates with a separate read-only exchange key in a password-protected file.",
+        "Review an unconfirmed purchase with two clear choices, including verification by order ID.",
+        "Clear error messages that say what happened and what to do.",
+        "Automatic purchases are monitored: battery optimization, exact alarms and notifications, with a Fix button.",
+        "Plan details with an action bar, a simpler sell wizard and settings grouped into sections.",
+        "After a network outage AccBot retries the purchase itself and looks up uncertain purchases in the exchange history.",
+        "Backups keep plan names and order. Restored plans stay paused for review."
+      ],
+      "cs": [
+        "Nová sekce Vyžaduje pozornost v Přehledu: úkoly zmizí po vyřešení, upozornění jde zavřít. Karta plánu ukazuje poslední nákup a otevřené prodeje.",
+        "Sdílení plánu jen pro čtení: pošlete snímek, nebo živé aktualizace se samostatným klíčem jen pro čtení v souboru chráněném heslem.",
+        "Nepotvrzený nákup zkontrolujete dvěma jasnými volbami, včetně ověření podle čísla příkazu.",
+        "Srozumitelné chybové hlášky, které řeknou, co se stalo a co dělat.",
+        "AccBot hlídá automatické nákupy: úsporu baterie, přesné budíky a oznámení, s tlačítkem Opravit.",
+        "Detail plánu s panelem akcí, jednodušší prodej a nastavení rozdělené do skupin.",
+        "Při výpadku sítě AccBot nákup sám zopakuje a nejisté nákupy dohledá v historii burzy.",
+        "Zálohy zachovávají názvy a pořadí plánů. Obnovené plány zůstávají pozastavené ke kontrole."
+      ]
+    }
+  },
+  {
+    "versionCode": 28000,
+    "version": "2.8.0",
+    "title": {
+      "en": "Sell Your Crypto & Portfolio P&L",
+      "cs": "Prodej kryptoměn a zisk portfolia"
+    },
+    "features": {
+      "en": [
+        "Sell crypto right from the app - a single sell at your target price, or a ladder of sell orders",
+        "Track open sell orders and cancel them anytime",
+        "Portfolio now shows realized and total profit/loss",
+        "Filter transaction history by plan",
+        "Cleaner portfolio chart",
+        "More reliable scheduled and manual purchases",
+        "Various bug fixes and stability improvements"
+      ],
+      "cs": [
+        "Prodávejte krypto přímo z aplikace - jednorázový prodej za vaši cílovou cenu, nebo žebříček prodejních příkazů",
+        "Přehled otevřených prodejních příkazů s možností je kdykoliv zrušit",
+        "Portfolio nově zobrazuje realizovaný a celkový zisk/ztrátu",
+        "Filtrování historie transakcí podle plánu",
+        "Přehlednější graf portfolia",
+        "Spolehlivější naplánované i ruční nákupy",
+        "Různé opravy chyb a vylepšení stability"
+      ]
+    }
+  },
+  {
     "versionCode": 27000,
     "version": "2.7.0",
     "title": {
