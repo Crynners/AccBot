@@ -6,9 +6,8 @@ import SwiftUI
 /// Injected via @EnvironmentObject from the root AccBotApp.
 @MainActor
 final class AppDependencies: ObservableObject {
-    /// Shared instance for background tasks (avoids creating duplicate DatabasePools).
-    /// Set by AccBotApp on launch, read by DcaBackgroundService.
-    static var shared: AppDependencies?
+    /// A single set of database pools and one execution gate for all entry points.
+    static let shared = AppDependencies()
 
     let database: DcaDatabase
     let sandboxDatabase: DcaDatabase
@@ -76,6 +75,10 @@ final class AppDependencies: ObservableObject {
         // Forward onboardingPreferences changes so RootView re-renders
         // when onboarding completes (rare event, no perf concern).
         onboardingPreferences.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        userPreferences.$biometricLockEnabled.dropFirst()
+            .merge(with: userPreferences.$sandboxMode.dropFirst())
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
     }

@@ -20,6 +20,8 @@ class PlanDetailsViewModel: ObservableObject {
     @Published var totalAccumulated: Decimal = 0
     @Published var avgPrice: Decimal = 0
     @Published var totalTransactionCount: Int = 0
+    @Published var isBuying = false
+    @Published var buyResultMessage: String?
 
     private let planId: Int64
     private(set) var dependencies: AppDependencies?
@@ -147,6 +149,20 @@ class PlanDetailsViewModel: ObservableObject {
             self.plan = try deps.activeDatabase.planDao.getById(planId)
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    /// One extra purchase right now (same path as the dashboard "Run Now" for one plan).
+    func buyNow() {
+        guard let plan, plan.isEnabled, !isBuying else { return }
+        isBuying = true
+        Task {
+            let handled = await deps.dcaExecutionEngine.executePlans([plan.id])
+            buyResultMessage = handled
+                ? String(localized: "Check History for purchase outcomes.")
+                : String(localized: "Some plans could not run. Check History and exchange settings.")
+            isBuying = false
+            loadData()
         }
     }
 

@@ -9,13 +9,17 @@ struct SettingsView: View {
     @State private var showWithdrawalSheet = false
     @State private var showChangelog = false
     @State private var showNotificationInfo = false
+    @StateObject private var automation = AutomationHealthMonitor()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Form {
-            generalSection
-            alertsAndSecuritySection
-            dataSection
+            exchangesSection
+            automationSection
+            appearanceSection
+            securityDataSection
             aboutSection
+            developerSection
             dangerZoneSection
         }
         .scrollContentBackground(.hidden)
@@ -36,7 +40,13 @@ struct SettingsView: View {
                 Button(String(localized: "Delete"), role: .destructive) {
                     viewModel.executeDelete()
                 }
-            case .languageRestart, .sandboxRestart, .deleteAllDataComplete, .error:
+            case .sandboxRestart(let isSandbox):
+                Button(String(localized: "Cancel"), role: .cancel) {}
+                Button(String(localized: "Switch environment")) {
+                    router.popToRoot()
+                    dependencies.userPreferences.sandboxMode = isSandbox
+                }
+            case .languageRestart, .deleteAllDataComplete, .error:
                 Button(String(localized: "OK")) {}
             }
         } message: { alertType in
@@ -47,8 +57,8 @@ struct SettingsView: View {
                 Text(String(localized: "Please restart the app for the language change to take effect."))
             case .sandboxRestart(let isSandbox):
                 Text(isSandbox
-                     ? String(localized: "Sandbox mode enabled. Using testnet APIs. Please close and reopen the app for changes to take effect.")
-                     : String(localized: "Sandbox mode disabled. Using production APIs. Please close and reopen the app for changes to take effect."))
+                     ? String(localized: "Switch to the test environment? It uses separate plans, credentials, and supported testnet APIs.")
+                     : String(localized: "Switch to production? Enabled production plans can place real orders."))
             case .deleteAllDataComplete:
                 Text(String(localized: "All data has been deleted."))
             case .error(let msg):
@@ -57,6 +67,12 @@ struct SettingsView: View {
         }
         .onAppear {
             viewModel.setup(dependencies)
+        }
+        .task { await automation.refresh() }
+        .onChange(of: scenePhase) { phase in
+            if phase == .active {
+                Task { await automation.refresh() }
+            }
         }
         .sheet(isPresented: $showWithdrawalSheet) {
             WithdrawalThresholdsSheet(viewModel: viewModel)
@@ -69,9 +85,9 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - General
+    // MARK: - Exchanges
 
-    private var generalSection: some View {
+    private var exchangesSection: some View {
         Section {
             // Manage Exchanges
             Button {
@@ -90,40 +106,37 @@ struct SettingsView: View {
             }
             .listRowBackground(colors.surface)
 
-            // Theme
-            Picker(String(localized: "Theme"), selection: $dependencies.userPreferences.appTheme) {
-                ForEach(AppTheme.allCases, id: \.self) { theme in
-                    Text(theme.displayName).tag(theme)
-                }
+        } header: {
+            Text(String(localized: "Exchanges"))
+                .accessibilityAddTraits(.isHeader)
+        }
+    }
+
+    // MARK: - Automatic purchases & alerts
+
+    private var automationSection: some View {
+        Section {
+            // Automatic purchases status (Background App Refresh, notifications)
+            AutomationStatusRow(monitor: automation)
+                .listRowBackground(colors.surface)
+
+            // Background execution info
+            HStack {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(colors.warning)
+                    .accessibilityHidden(true)
+                Text(String(localized: "iOS executes DCA plans approximately. Open the app daily for reliable execution."))
+                    .font(AccBotFonts.bodySmall)
+                    .foregroundStyle(colors.onSurfaceVariant)
             }
             .listRowBackground(colors.surface)
 
-            // Market Pulse
-            Toggle(isOn: $dependencies.userPreferences.marketPulseEnabled) {
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text(String(localized: "Market Pulse"))
-                    Text(String(localized: "Show market indicators on dashboard"))
-                        .font(AccBotFonts.captionSmall)
-                        .foregroundStyle(colors.onSurfaceVariant)
-                }
+            HStack {
+                Text(String(localized: "Last Background Run"))
+                Spacer()
+                Text(viewModel.lastBackgroundRunText)
+                    .foregroundStyle(colors.onSurfaceVariant)
             }
-            .listRowBackground(colors.surface)
-
-            // Language
-            Menu {
-                Button(String(localized: "System Default")) { viewModel.setLanguage("") }
-                Button(String(localized: "English")) { viewModel.setLanguage("en") }
-                Button(String(localized: "Czech")) { viewModel.setLanguage("cs") }
-            } label: {
-                HStack {
-                    Text(String(localized: "Language"))
-                    Spacer()
-                    Text(languageDisplayName)
-                        .foregroundStyle(colors.onSurfaceVariant)
-                }
-            }
-            .accessibilityLabel(String(localized: "Select language"))
-            .accessibilityValue(languageDisplayName)
             .listRowBackground(colors.surface)
 
             // Notifications toggle + info + system settings
@@ -154,52 +167,6 @@ struct SettingsView: View {
             }
             .listRowBackground(colors.surface)
 
-            // Background execution info
-            HStack {
-                Image(systemName: "info.circle")
-                    .foregroundStyle(colors.warning)
-                    .accessibilityHidden(true)
-                Text(String(localized: "iOS executes DCA plans approximately. Open the app daily for reliable execution."))
-                    .font(AccBotFonts.bodySmall)
-                    .foregroundStyle(colors.onSurfaceVariant)
-            }
-            .listRowBackground(colors.surface)
-
-            HStack {
-                Text(String(localized: "Last Background Run"))
-                Spacer()
-                Text(viewModel.lastBackgroundRunText)
-                    .foregroundStyle(colors.onSurfaceVariant)
-            }
-            .listRowBackground(colors.surface)
-        } header: {
-            Text(String(localized: "General"))
-                .accessibilityAddTraits(.isHeader)
-        }
-    }
-
-    private var languageDisplayName: String {
-        switch dependencies.userPreferences.appLanguage {
-        case "en": return String(localized: "English")
-        case "cs": return String(localized: "Czech")
-        default: return String(localized: "System")
-        }
-    }
-
-    private var buildDateString: String {
-        if let dateString = Bundle.main.infoDictionary?["CFBundleBuildDate"] as? String {
-            return dateString
-        }
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: Date())
-    }
-
-    // MARK: - Alerts & Security
-
-    private var alertsAndSecuritySection: some View {
-        Section {
             // Notification sub-toggles (only when notifications enabled)
             if dependencies.userPreferences.notificationsEnabled {
                 Toggle(isOn: $dependencies.userPreferences.purchaseNotifications) {
@@ -271,6 +238,62 @@ struct SettingsView: View {
             }
             .listRowBackground(colors.surface)
 
+        } header: {
+            Text(String(localized: "Automatic purchases & alerts"))
+                .accessibilityAddTraits(.isHeader)
+        }
+    }
+
+    // MARK: - Appearance
+
+    private var appearanceSection: some View {
+        Section {
+            // Language
+            Menu {
+                Button(String(localized: "System Default")) { viewModel.setLanguage("") }
+                Button(String(localized: "English")) { viewModel.setLanguage("en") }
+                Button(String(localized: "Czech")) { viewModel.setLanguage("cs") }
+            } label: {
+                HStack {
+                    Text(String(localized: "Language"))
+                    Spacer()
+                    Text(languageDisplayName)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
+            }
+            .accessibilityLabel(String(localized: "Select language"))
+            .accessibilityValue(languageDisplayName)
+            .listRowBackground(colors.surface)
+
+            // Theme
+            Picker(String(localized: "Theme"), selection: $dependencies.userPreferences.appTheme) {
+                ForEach(AppTheme.allCases, id: \.self) { theme in
+                    Text(theme.displayName).tag(theme)
+                }
+            }
+            .listRowBackground(colors.surface)
+
+            // Market Pulse
+            Toggle(isOn: $dependencies.userPreferences.marketPulseEnabled) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text(String(localized: "Market Pulse"))
+                    Text(String(localized: "Show market indicators on dashboard"))
+                        .font(AccBotFonts.captionSmall)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
+            }
+            .listRowBackground(colors.surface)
+
+        } header: {
+            Text(String(localized: "Appearance"))
+                .accessibilityAddTraits(.isHeader)
+        }
+    }
+
+    // MARK: - Security & data
+
+    private var securityDataSection: some View {
+        Section {
             // Biometric Lock
             if viewModel.biometricType != .none {
                 Toggle(isOn: Binding(
@@ -298,16 +321,7 @@ struct SettingsView: View {
                 }
                 .listRowBackground(colors.surface)
             }
-        } header: {
-            Text(String(localized: "Alerts & Security"))
-                .accessibilityAddTraits(.isHeader)
-        }
-    }
 
-    // MARK: - Data
-
-    private var dataSection: some View {
-        Section {
             Button {
                 router.navigate(to: .backupExport)
             } label: {
@@ -333,10 +347,41 @@ struct SettingsView: View {
                 }
             }
             .listRowBackground(colors.surface)
+
+            Button {
+                router.navigate(to: .sharedPlans)
+            } label: {
+                HStack {
+                    Label(String(localized: "Shared with me"), systemImage: "eye")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .font(AccBotFonts.captionSmall)
+                }
+            }
+            .listRowBackground(colors.surface)
         } header: {
-            Text(String(localized: "Data"))
+            Text(String(localized: "Security & data"))
                 .accessibilityAddTraits(.isHeader)
         }
+    }
+
+    private var languageDisplayName: String {
+        switch dependencies.userPreferences.appLanguage {
+        case "en": return String(localized: "English")
+        case "cs": return String(localized: "Czech")
+        default: return String(localized: "System")
+        }
+    }
+
+    private var buildDateString: String {
+        if let dateString = Bundle.main.infoDictionary?["CFBundleBuildDate"] as? String {
+            return dateString
+        }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: Date())
     }
 
     // MARK: - About
@@ -382,23 +427,6 @@ struct SettingsView: View {
             }
             .listRowBackground(colors.surface)
 
-            Toggle(String(localized: "Sandbox Mode"), isOn: Binding(
-                get: { dependencies.userPreferences.sandboxMode },
-                set: { newValue in
-                    dependencies.userPreferences.sandboxMode = newValue
-                    viewModel.activeAlert = .sandboxRestart(isSandbox: newValue)
-                }
-            ))
-            .tint(colors.warning)
-            .listRowBackground(colors.surface)
-
-            if dependencies.userPreferences.sandboxMode {
-                Text(String(localized: "Using testnet APIs. No real funds will be used."))
-                    .font(AccBotFonts.caption)
-                    .foregroundStyle(colors.warning)
-                    .listRowBackground(colors.surface)
-            }
-
             HStack {
                 Text(String(localized: "Version"))
                 Spacer()
@@ -431,6 +459,31 @@ struct SettingsView: View {
                 .listRowBackground(colors.surface)
         } header: {
             Text(String(localized: "About"))
+                .accessibilityAddTraits(.isHeader)
+        }
+    }
+
+    // MARK: - For developers
+
+    private var developerSection: some View {
+        Section {
+            Toggle(String(localized: "Sandbox Mode"), isOn: Binding(
+                get: { dependencies.userPreferences.sandboxMode },
+                set: { newValue in
+                    viewModel.activeAlert = .sandboxRestart(isSandbox: newValue)
+                }
+            ))
+            .tint(colors.warning)
+            .listRowBackground(colors.surface)
+
+            if dependencies.userPreferences.sandboxMode {
+                Text(String(localized: "Using testnet APIs. No real funds will be used."))
+                    .font(AccBotFonts.caption)
+                    .foregroundStyle(colors.warning)
+                    .listRowBackground(colors.surface)
+            }
+        } header: {
+            Text(String(localized: "For developers"))
                 .accessibilityAddTraits(.isHeader)
         }
     }

@@ -2,6 +2,8 @@ package com.accbot.dca.exchange
 
 import com.accbot.dca.domain.model.TransactionStatus
 import java.math.BigDecimal
+import java.time.Instant
+import com.accbot.dca.domain.model.TransactionSide
 
 /**
  * Result of an order status query.
@@ -23,5 +25,15 @@ data class OrderStatusResult(
     val filledFiatAmount: BigDecimal,
     val avgFillPrice: BigDecimal?,
     val fee: BigDecimal?,
-    val feeAsset: String?
+    val feeAsset: String?,
+    val identity: OrderIdentity? = null
+)
+
+data class OrderIdentity(
+    val id: String,
+    val side: TransactionSide,
+    val pair: String,
+    val createdAt: Instant,
+    val amount: BigDecimal,
+    val limitPrice: BigDecimal
 )

@@ -29,6 +29,9 @@ struct AddPlanView: View {
                     // Fiat selection
                     fiatSection
 
+                    TextField(String(localized: "Plan name (optional)"), text: $viewModel.name)
+                        .textFieldStyle(.roundedBorder)
+
                     // Amount input
                     amountSection
 

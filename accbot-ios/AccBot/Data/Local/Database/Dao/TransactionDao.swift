@@ -48,6 +48,62 @@ final class TransactionDao {
         }
     }
 
+    func hasUnidentifiedPurchase(for planId: Int64) throws -> Bool {
+        try dbPool.read { db in
+            try TransactionRecord.filter(Column("planId") == planId)
+                .filter(Column("status") == TransactionStatus.pending.rawValue)
+                .filter(Column("exchangeOrderId") == nil || Column("exchangeOrderId") == "")
+                .fetchCount(db) > 0
+        }
+    }
+
+    /// Keep an exact confirmed trade from an import, or retain a failed attempt when
+    /// the user verified independently that no order was placed.
+    func resolvePurchaseReview(_ transaction: Transaction, confirmedOrderId: String?, confirmedPurchase: Transaction? = nil) throws {
+        try dbPool.write { db in
+            guard let pending = try TransactionRecord.fetchOne(db, key: transaction.id)?.toDomain(),
+                  pending == transaction, pending.status == .pending else {
+                throw PurchaseReviewError.noPendingPurchase
+            }
+
+            if let confirmedOrderId {
+                guard pending.needsPurchaseReview || pending.exchangeOrderId == confirmedOrderId else {
+                    throw PurchaseReviewError.noPendingPurchase
+                }
+                let earliest = pending.executedAt.addingTimeInterval(-60).timeIntervalSince1970
+                let latest = pending.executedAt.addingTimeInterval(5 * 60).timeIntervalSince1970
+                let recentPurchases = TransactionRecord.filter(Column("planId") == pending.planId)
+                    .filter(Column("status") == TransactionStatus.completed.rawValue || Column("status") == TransactionStatus.partial.rawValue)
+                    .filter(Column("executedAt") >= earliest && Column("executedAt") <= latest)
+                if try recentPurchases.filter(Column("exchangeOrderId") == confirmedOrderId).fetchCount(db) > 0 {
+                    _ = try TransactionRecord.deleteOne(db, key: pending.id)
+                } else if let confirmedPurchase {
+                    // Imports may identify individual fills separately from their order. Avoid
+                    // recording a second purchase when nearby imported fills cannot be matched.
+                    guard confirmedPurchase.id == pending.id, confirmedPurchase.planId == pending.planId,
+                          confirmedPurchase.exchangeOrderId == confirmedOrderId,
+                          (confirmedPurchase.status == .completed || confirmedPurchase.status == .partial),
+                          try recentPurchases.fetchCount(db) == 0 else {
+                        throw PurchaseReviewError.orderNotInHistory
+                    }
+                    let alreadyRecorded = try TransactionRecord.filter(Column("exchange") == pending.exchange.rawValue)
+                        .filter(Column("crypto") == pending.crypto && Column("fiat") == pending.fiat)
+                        .filter(Column("exchangeOrderId") == confirmedOrderId && Column("id") != pending.id)
+                        .fetchCount(db) > 0
+                    guard !alreadyRecorded else { throw PurchaseReviewError.orderNotInHistory }
+                    try TransactionRecord.fromDomain(confirmedPurchase).update(db)
+                } else {
+                    throw PurchaseReviewError.orderNotInHistory
+                }
+            } else {
+                try db.execute(
+                    sql: "UPDATE transactions SET status = ?, errorMessage = ?, warningMessage = NULL WHERE id = ?",
+                    arguments: [TransactionStatus.failed.rawValue, String(localized: "No fill was confirmed on the exchange."), pending.id]
+                )
+            }
+        }
+    }
+
     func getFiltered(
         crypto: String? = nil,
         fiat: String? = nil,
@@ -162,13 +218,17 @@ final class TransactionDao {
 
     func getAccumulatedCryptoByPlan(_ planId: Int64) throws -> Decimal {
         try dbPool.read { db in
-            let rows = try Row.fetchAll(db, sql: """
-                SELECT cryptoAmount FROM transactions
-                WHERE planId = ? AND status = 'COMPLETED'
-                """, arguments: [planId])
-            return rows.reduce(Decimal.zero) { sum, row in
-                sum + (Decimal(string: row["cryptoAmount"] as String? ?? "0") ?? 0)
-            }
+            try Self.accumulatedCrypto(in: db, for: planId)
+        }
+    }
+
+    static func accumulatedCrypto(in db: Database, for planId: Int64) throws -> Decimal {
+        let rows = try Row.fetchAll(db, sql: """
+            SELECT cryptoAmount FROM transactions
+            WHERE planId = ? AND status IN ('COMPLETED', 'PARTIAL')
+            """, arguments: [planId])
+        return rows.reduce(Decimal.zero) { sum, row in
+            sum + (Decimal(string: row["cryptoAmount"] as String? ?? "0") ?? 0)
         }
     }
 
@@ -192,18 +252,23 @@ final class TransactionDao {
 
     func delete(id: Int64) throws {
         try dbPool.write { db in
+            if try TransactionRecord.fetchOne(db, key: id)?.status == TransactionStatus.pending.rawValue {
+                throw PurchaseReviewError.pendingPurchase
+            }
             _ = try TransactionRecord.deleteOne(db, key: id)
         }
     }
 
     func deleteAll() throws {
         try dbPool.write { db in
+            try Self.checkPendingPurchases(in: db)
             _ = try TransactionRecord.deleteAll(db)
         }
     }
 
     func deleteByPlanId(_ planId: Int64) throws {
         try dbPool.write { db in
+            try Self.checkPendingPurchases(in: db, for: planId)
             _ = try TransactionRecord
                 .filter(Column("planId") == planId)
                 .deleteAll(db)
@@ -232,11 +297,18 @@ final class TransactionDao {
     func getLatestTransactionTimestamp(_ planId: Int64) throws -> Date? {
         try dbPool.read { db in
             let row = try Row.fetchOne(db, sql: """
-                SELECT MAX(executedAt) as maxDate FROM transactions WHERE planId = ?
+                SELECT MAX(executedAt) as maxDate FROM transactions
+                WHERE planId = ? AND status IN ('COMPLETED', 'PARTIAL')
                 """, arguments: [planId])
             guard let epoch = row?["maxDate"] as? Double else { return nil }
             return Date(timeIntervalSince1970: epoch)
         }
+    }
+
+    static func checkPendingPurchases(in db: Database, for planId: Int64? = nil) throws {
+        var request = TransactionRecord.filter(Column("status") == TransactionStatus.pending.rawValue)
+        if let planId { request = request.filter(Column("planId") == planId) }
+        if try request.fetchCount(db) > 0 { throw PurchaseReviewError.pendingPurchase }
     }
 
     func getHoldingsByPair() throws -> [(crypto: String, fiat: String)] {
@@ -276,6 +348,27 @@ final class TransactionDao {
 
     // MARK: - Observation
 
+    /// Latest filled purchase of every plan, and the pending purchases (oldest first).
+    func observePurchaseOverview() -> DatabasePublishers.Value<(lastByPlan: [Int64: Transaction], pending: [Transaction])> {
+        ValueObservation.tracking { db in
+            let lastRows = try TransactionRecord.fetchAll(db, sql: """
+                SELECT * FROM transactions t WHERE t.status IN ('COMPLETED', 'PARTIAL')
+                  AND t.executedAt = (
+                    SELECT MAX(t2.executedAt) FROM transactions t2
+                    WHERE t2.planId = t.planId AND t2.status IN ('COMPLETED', 'PARTIAL')
+                  )
+                """)
+            var lastByPlan: [Int64: Transaction] = [:]
+            for row in lastRows { lastByPlan[row.planId] = row.toDomain() }
+            let pending = try TransactionRecord.filter(Column("status") == TransactionStatus.pending.rawValue)
+                .order(Column("executedAt").asc)
+                .fetchAll(db)
+                .map { $0.toDomain() }
+            return (lastByPlan: lastByPlan, pending: pending)
+        }
+        .publisher(in: dbPool, scheduling: .immediate)
+    }
+
     func observeCount() -> DatabasePublishers.Value<Int> {
         ValueObservation.tracking { db in
             try TransactionRecord.fetchCount(db)
@@ -303,5 +396,25 @@ final class TransactionDao {
                 .map { $0.toDomain() }
         }
         .publisher(in: dbPool, scheduling: .immediate)
+    }
+}
+
+enum PurchaseReviewError: LocalizedError {
+    case purchaseInProgress
+    case pendingPurchase
+    case noPendingPurchase
+    case orderNotInHistory
+
+    var errorDescription: String? {
+        switch self {
+        case .purchaseInProgress:
+            return String(localized: "A purchase check is in progress. Try again when it finishes.")
+        case .pendingPurchase:
+            return String(localized: "Review pending purchases before deleting their history.")
+        case .noPendingPurchase:
+            return String(localized: "This purchase is no longer awaiting review.")
+        case .orderNotInHistory:
+            return String(localized: "The purchase could not be matched. Check the order ID or use the ID shown in this plan’s imported history.")
+        }
     }
 }

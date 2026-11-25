@@ -129,6 +129,9 @@ struct HistoryView: View {
         .onAppear {
             viewModel.setup(dependencies)
         }
+        .onChange(of: dependencies.userPreferences.sandboxMode) { _ in
+            viewModel.setup(dependencies)
+        }
     }
 
     // MARK: - Active Filter Chips
@@ -202,6 +205,7 @@ struct HistoryView: View {
                 }
                 .buttonStyle(.plain)
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    if tx.status != .pending {
                         Button(role: .destructive) {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             viewModel.deleteTransaction(tx)
@@ -209,12 +213,13 @@ struct HistoryView: View {
                             Label(String(localized: "Delete"), systemImage: "trash")
                         }
                     }
-                    .listRowBackground(colors.surface)
-                    .onAppear {
-                        if tx.id == viewModel.filteredTransactions.last?.id {
-                            viewModel.loadNextPage()
-                        }
+                }
+                .listRowBackground(colors.surface)
+                .onAppear {
+                    if tx.id == viewModel.filteredTransactions.last?.id {
+                        viewModel.loadNextPage()
                     }
+                }
             }
 
             if viewModel.hasMore {

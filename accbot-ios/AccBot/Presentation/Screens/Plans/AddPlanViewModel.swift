@@ -10,6 +10,7 @@ class AddPlanViewModel: ObservableObject {
     @Published var selectedCrypto: String = "BTC"
     @Published var selectedFiat: String = "EUR"
     @Published var amount: String = ""
+    @Published var name: String = ""
     @Published var selectedFrequency: DcaFrequency = .daily
     @Published var cronExpression: String = ""
     @Published var selectedStrategy: DcaStrategy = .classic
@@ -192,6 +193,7 @@ class AddPlanViewModel: ObservableObject {
             }
 
             let plan = DcaPlan(
+                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
                 exchange: exchange,
                 crypto: selectedCrypto,
                 fiat: selectedFiat,

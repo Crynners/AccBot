@@ -4,8 +4,15 @@ struct TransactionDetailsView: View {
     let transactionId: Int64
     @EnvironmentObject var dependencies: AppDependencies
     @Environment(\.accBotColors) private var colors
+    @Environment(\.dismiss) private var dismiss
     @State private var transaction: Transaction?
     @State private var loadFailed = false
+    @State private var loadedSandboxMode = false
+    @State private var showConfirmNoOrder = false
+    @State private var showMatchOrder = false
+    @State private var orderIdToMatch = ""
+    @State private var reviewError: String?
+    @State private var isReviewing = false
 
     var body: some View {
         ScrollView {
@@ -22,9 +29,22 @@ struct TransactionDetailsView: View {
                     // Details card
                     detailsCard(tx)
 
+                    if tx.status == .pending {
+                        purchaseReviewCard(tx)
+                    }
+
                     // Error/Warning
                     if let error = tx.errorMessage {
-                        infoCard(title: "Error", message: error, color: colors.error)
+                        let category = ErrorCategory.of(error)
+                        if let title = category.title, let advice = category.advice {
+                            infoCard(
+                                title: LocalizedStringKey(title),
+                                message: advice + "\n" + String(localized: "Technical detail: \(error)"),
+                                color: colors.error
+                            )
+                        } else {
+                            infoCard(title: "Error", message: error, color: colors.error)
+                        }
                     }
                     if let warning = tx.warningMessage {
                         infoCard(title: "Warning", message: warning, color: colors.warning)
@@ -46,6 +66,83 @@ struct TransactionDetailsView: View {
         .navigationTitle(String(localized: "Transaction Details"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadTransaction() }
+        .onChange(of: dependencies.userPreferences.sandboxMode) { _ in dismiss() }
+        .alert("Mark as not executed?", isPresented: $showConfirmNoOrder) {
+            Button("Cancel", role: .cancel) {}
+            Button("Mark as not executed", role: .destructive) { resolveReview(confirmedOrderId: nil) }
+        } message: {
+            Text("The purchase will be marked as not executed and the plan continues on schedule. Confirm only if the exchange shows no open order and nothing was bought.")
+        }
+        .alert("Enter the order ID", isPresented: $showMatchOrder) {
+            TextField("Order ID", text: $orderIdToMatch)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            Button("Cancel", role: .cancel) {}
+            Button("Verify and save") {
+                let orderId = orderIdToMatch.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !orderId.isEmpty { resolveReview(confirmedOrderId: orderId) }
+            }
+        } message: {
+            Text("Copy the order ID from the exchange. AccBot verifies it and records the amount actually bought. If you already imported the purchase, use its ID from History.")
+        }
+    }
+
+    private func purchaseReviewCard(_ tx: Transaction) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Label("Review purchase", systemImage: "exclamationmark.triangle")
+                .font(AccBotFonts.headline)
+                .foregroundStyle(colors.warning)
+            Text(tx.needsPurchaseReview
+                 ? String(localized: "Open the order history for \(tx.pair) on \(tx.exchange.displayName) around \(formatDate(tx.executedAt)). What did you find? The plan is on hold until you answer.")
+                 : String(localized: "The exchange accepted the order. Fill details are pending."))
+                .font(AccBotFonts.bodySmall)
+                .foregroundStyle(colors.onSurfaceVariant)
+            Button {
+                orderIdToMatch = tx.exchangeOrderId ?? ""
+                showMatchOrder = true
+            } label: {
+                Text("The purchase is there, I'll enter the order ID")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.borderedProminent)
+            Button {
+                showConfirmNoOrder = true
+            } label: {
+                Text("There is nothing on the exchange")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.bordered)
+            if isReviewing { ProgressView() }
+            if let reviewError {
+                Text(reviewError)
+                    .font(AccBotFonts.bodySmall)
+                    .foregroundStyle(colors.error)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.lg)
+        .background(colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+        .tint(colors.primary)
+        .disabled(isReviewing)
+    }
+
+    private func resolveReview(confirmedOrderId: String?) {
+        guard let transaction, !isReviewing else { return }
+        isReviewing = true
+        reviewError = nil
+        Task {
+            defer { isReviewing = false }
+            do {
+                try await dependencies.dcaExecutionEngine.resolvePurchaseReview(
+                    transaction, confirmedOrderId: confirmedOrderId, isSandbox: loadedSandboxMode
+                )
+                loadTransaction()
+                if self.transaction == nil { dismiss() }
+            } catch {
+                reviewError = error.localizedDescription
+            }
+        }
     }
 
     private func statusHeader(_ tx: Transaction) -> some View {
@@ -197,9 +294,10 @@ struct TransactionDetailsView: View {
     }
 
     private func loadTransaction() {
+        loadedSandboxMode = dependencies.userPreferences.sandboxMode
         do {
             transaction = try dependencies.activeDatabase.transactionDao.getById(transactionId)
-            if transaction == nil { loadFailed = true }
+            loadFailed = transaction == nil
         } catch {
             loadFailed = true
         }

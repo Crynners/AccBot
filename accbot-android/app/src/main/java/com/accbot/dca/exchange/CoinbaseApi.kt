@@ -17,7 +17,6 @@ import java.time.Instant
  *
  * Uses legacy API keys with HMAC-SHA256 authentication.
  * Production: https://api.coinbase.com
- * Sandbox: https://api-public.sandbox.exchange.coinbase.com
  *
  * Auth headers: CB-ACCESS-KEY, CB-ACCESS-SIGN, CB-ACCESS-TIMESTAMP, CB-ACCESS-PASSPHRASE
  * Prehash: timestamp + method + requestPath + body
@@ -95,6 +94,19 @@ class CoinbaseApi(
         }
     }
 
+    /** Reads `/api/v3/brokerage/key_permissions` (can_view / can_trade / can_transfer). */
+    override suspend fun getKeyPermissions(): ApiKeyPermissions = withContext(Dispatchers.IO) {
+        client.newCall(buildGetRequest("/api/v3/brokerage/key_permissions")).execute().use { response ->
+            val body = response.body?.string() ?: throw java.io.IOException("Empty response")
+            if (!response.isSuccessful) throw IllegalStateException("HTTP ${response.code}")
+            val json = JSONObject(body)
+            ApiKeyPermissions(
+                canTrade = json.optBoolean("can_trade", true),
+                canWithdraw = json.optBoolean("can_transfer", true)
+            )
+        }
+    }
+
     override suspend fun marketBuy(
         crypto: String,
         fiat: String,
@@ -138,7 +150,7 @@ class CoinbaseApi(
             if (errorResponse != null) {
                 val error = errorResponse.optString("error", "Order failed")
                 val message = errorResponse.optString("message", error)
-                return@withContext DcaResult.Error(message, retryable = false)
+                return@withContext DcaResult.Error(message, retryable = false, confirmedRejection = successResponse == null)
             }
 
             if (successResponse != null) {
@@ -184,7 +196,7 @@ class CoinbaseApi(
 
             DcaResult.Error("Unexpected response format", retryable = false)
         } catch (e: java.io.IOException) {
-            DcaResult.Error(e.message ?: "Network error", retryable = true)
+            DcaResult.Error(e.message ?: "Network error", retryable = true, confirmedRejection = isPreSendFailure(e))
         } catch (e: Exception) {
             DcaResult.Error(e.message ?: "Unknown error", retryable = false)
         }
@@ -256,15 +268,15 @@ class CoinbaseApi(
 
                 val mappedStatus = when (status) {
                     "FILLED" -> TransactionStatus.COMPLETED
-                    "OPEN", "PENDING" -> if (filledSize > BigDecimal.ZERO) {
+                    "OPEN", "PENDING", "CANCEL_QUEUED" -> if (filledSize > BigDecimal.ZERO) {
                         TransactionStatus.PARTIAL
                     } else TransactionStatus.PENDING
                     "PARTIALLY_FILLED" -> TransactionStatus.PARTIAL
-                    "CANCELLED", "CANCEL_QUEUED", "EXPIRED" ->
-                        if (filledSize > BigDecimal.ZERO) TransactionStatus.PARTIAL
+                    "CANCELLED", "EXPIRED" ->
+                        if (filledSize > BigDecimal.ZERO) TransactionStatus.PARTIAL_CANCELLED
                         else TransactionStatus.CANCELLED
                     "FAILED", "REJECTED" ->
-                        if (filledSize > BigDecimal.ZERO) TransactionStatus.PARTIAL
+                        if (filledSize > BigDecimal.ZERO) TransactionStatus.PARTIAL_CANCELLED
                         else TransactionStatus.FAILED
                     else -> return@withContext null
                 }

@@ -204,6 +204,13 @@ final class DcaDatabase {
             }
         }
 
+        migrator.registerMigration("v4_add_plan_metadata") { db in
+            try db.alter(table: "dca_plans") { t in
+                t.add(column: "name", .text).notNull().defaults(to: "")
+                t.add(column: "displayOrder", .integer).notNull().defaults(to: 0)
+            }
+        }
+
         try migrator.migrate(dbPool)
     }
 }

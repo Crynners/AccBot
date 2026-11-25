@@ -20,6 +20,10 @@ enum AppRoute: Hashable {
     // Backup screens
     case backupExport
     case backupImport
+
+    // Read-only plans shared with this user
+    case sharedPlans
+    case sharedPlanDetail(String)
 }
 
 /// Bottom navigation tab items

@@ -25,9 +25,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
+import com.accbot.dca.presentation.utils.writeSharedExport
+import com.accbot.dca.presentation.utils.FriendlyErrors
 import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.model.TransactionStatus
@@ -40,8 +41,6 @@ import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.DateFormatters
 import com.accbot.dca.presentation.utils.NumberFormatters
-import java.io.File
-import java.io.FileWriter
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -62,16 +61,7 @@ fun HistoryScreen(
     LaunchedEffect(uiState.exportData) {
         uiState.exportData?.let { exportData ->
             try {
-                val file = File(context.cacheDir, exportData.fileName)
-                FileWriter(file).use { writer ->
-                    writer.write(exportData.content)
-                }
-
-                val uri = FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.fileprovider",
-                    file
-                )
+                val uri = writeSharedExport(context, exportData.fileName, exportData.content)
 
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/csv"
@@ -482,7 +472,8 @@ private fun SwipeableTransactionCard(
             }
         },
         enableDismissFromStartToEnd = false,
-        enableDismissFromEndToStart = true
+        enableDismissFromEndToStart = transaction.status != TransactionStatus.PENDING &&
+            transaction.status != TransactionStatus.PARTIAL
     ) {
         TransactionCard(
             transaction = transaction,
@@ -825,12 +816,14 @@ internal fun TransactionCard(
                             TransactionStatus.FAILED -> Icons.Default.Error
                             TransactionStatus.PENDING -> Icons.Default.Schedule
                             TransactionStatus.PARTIAL -> Icons.Default.Warning
+                            TransactionStatus.PARTIAL_CANCELLED -> Icons.Default.Cancel
                             TransactionStatus.CANCELLED -> Icons.Default.Cancel
                         },
                         contentDescription = null,
                         tint = when (transaction.status) {
                             TransactionStatus.COMPLETED -> successColor()
                             TransactionStatus.FAILED -> Error
+                            TransactionStatus.PARTIAL, TransactionStatus.PARTIAL_CANCELLED -> WarningOrange
                             else -> MaterialTheme.colorScheme.onSurfaceVariant
                         },
                         modifier = Modifier.size(20.dp)
@@ -859,7 +852,7 @@ internal fun TransactionCard(
                 if (transaction.status == TransactionStatus.FAILED && transaction.errorMessage != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = transaction.errorMessage,
+                        text = FriendlyErrors.shortText(LocalContext.current, transaction.errorMessage),
                         style = MaterialTheme.typography.bodySmall,
                         color = Error,
                         maxLines = 1
@@ -879,9 +872,11 @@ internal fun TransactionCard(
 
             Column(horizontalAlignment = Alignment.End) {
                 // Amount signs: BUY = +crypto/-fiat, SELL = -crypto/+fiat.
-                // Only show filled crypto for COMPLETED and PARTIAL (in-flight PENDING has 0).
+                // Only show filled crypto for COMPLETED, PARTIAL, and PARTIAL_CANCELLED (in-flight PENDING has 0).
                 val showCryptoLine = transaction.status == TransactionStatus.COMPLETED ||
-                    (transaction.status == TransactionStatus.PARTIAL && transaction.cryptoAmount.signum() > 0)
+                    ((transaction.status == TransactionStatus.PARTIAL ||
+                        transaction.status == TransactionStatus.PARTIAL_CANCELLED) &&
+                        transaction.cryptoAmount.signum() > 0)
                 if (showCryptoLine) {
                     val cryptoSign = if (isSell) "-" else "+"
                     Text(

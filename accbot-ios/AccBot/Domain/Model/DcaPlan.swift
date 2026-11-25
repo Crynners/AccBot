@@ -3,6 +3,8 @@ import Foundation
 /// DCA Plan configuration - stored locally only
 struct DcaPlan: Identifiable, Equatable, Sendable {
     let id: Int64
+    let name: String
+    let displayOrder: Int
     let exchange: Exchange
     let crypto: String
     let fiat: String
@@ -20,6 +22,8 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
 
     init(
         id: Int64 = 0,
+        name: String = "",
+        displayOrder: Int = 0,
         exchange: Exchange,
         crypto: String,
         fiat: String,
@@ -36,6 +40,8 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
         nextExecutionAt: Date? = nil
     ) {
         self.id = id
+        self.name = name
+        self.displayOrder = displayOrder
         self.exchange = exchange
         self.crypto = crypto
         self.fiat = fiat
@@ -54,4 +60,5 @@ struct DcaPlan: Identifiable, Equatable, Sendable {
 
     /// Display string for the trading pair (e.g., "BTC/EUR")
     var pair: String { "\(crypto)/\(fiat)" }
+    var displayName: String { name.isEmpty ? pair : name }
 }

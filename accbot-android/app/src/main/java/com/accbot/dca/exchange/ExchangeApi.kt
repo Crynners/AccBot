@@ -99,7 +99,7 @@ interface ExchangeApi {
         cryptoAmount: BigDecimal,
         limitPrice: BigDecimal
     ): DcaResult = throw UnsupportedOperationException(
-        "AccBot zatim nepodporuje limit sell pro ${exchange.displayName}"
+        "AccBot does not support limit sells on ${exchange.displayName} yet"
     )
 
     /**
@@ -111,7 +111,7 @@ interface ExchangeApi {
      */
     suspend fun cancelOrder(orderId: String, crypto: String, fiat: String): Result<Unit> =
         Result.failure(UnsupportedOperationException(
-            "AccBot zatim nepodporuje cancel order pro ${exchange.displayName}"
+            "AccBot does not support cancelling orders on ${exchange.displayName} yet"
         ))
 
     /**
@@ -144,6 +144,18 @@ interface ExchangeApi {
     ): TradeHistoryPage = throw UnsupportedOperationException(
         "${exchange.displayName} does not support API trade history import"
     )
+
+    /**
+     * What the API key is allowed to do, as reported by the exchange.
+     * Returns null when the exchange offers no way to query key permissions.
+     * Throws when the exchange supports the query but it failed (network, invalid key).
+     */
+    suspend fun getKeyPermissions(): ApiKeyPermissions? = null
+}
+
+/** Permissions of an exchange API key relevant to read-only plan sharing. */
+data class ApiKeyPermissions(val canTrade: Boolean, val canWithdraw: Boolean) {
+    val isReadOnly: Boolean get() = !canTrade && !canWithdraw
 }
 
 /**
@@ -155,6 +167,10 @@ class ExchangeApiFactory @Inject constructor(
     private val userPreferences: UserPreferences,
     private val okHttpClient: OkHttpClient
 ) {
+    private val sandboxClient by lazy {
+        okHttpClient.newBuilder().followRedirects(false).followSslRedirects(false).build()
+    }
+
     /**
      * Create an exchange API instance.
      * @param credentials The credentials for the exchange
@@ -162,14 +178,59 @@ class ExchangeApiFactory @Inject constructor(
      */
     fun create(credentials: ExchangeCredentials, isSandbox: Boolean? = null): ExchangeApi {
         val sandboxMode = isSandbox ?: userPreferences.isSandboxMode()
+        if (sandboxMode != userPreferences.processSandboxMode || sandboxMode != userPreferences.isSandboxMode()) {
+            return UnavailableExchangeApi(credentials.exchange, "Restart the app before using the new environment")
+        }
+        if (sandboxMode && !ExchangeConfig.hasSandboxEndpoint(credentials.exchange)) {
+            return UnavailableExchangeApi(credentials.exchange, "${credentials.exchange.displayName} has no spot sandbox endpoint")
+        }
+        val client = if (sandboxMode) sandboxClient else okHttpClient
         return when (credentials.exchange) {
-            Exchange.COINMATE -> CoinmateApi(credentials, sandboxMode, okHttpClient)
-            Exchange.BINANCE -> BinanceApi(credentials, sandboxMode, okHttpClient)
-            Exchange.KRAKEN -> KrakenApi(credentials, sandboxMode, okHttpClient)
-            Exchange.KUCOIN -> KuCoinApi(credentials, sandboxMode, okHttpClient)
+            Exchange.COINMATE -> CoinmateApi(credentials, sandboxMode, client)
+            Exchange.BINANCE -> BinanceApi(credentials, sandboxMode, client)
+            Exchange.KRAKEN -> KrakenApi(credentials, sandboxMode, client)
+            Exchange.KUCOIN -> KuCoinApi(credentials, sandboxMode, client)
             Exchange.BITFINEX -> BitfinexApi(credentials, sandboxMode)
             Exchange.HUOBI -> HuobiApi(credentials, sandboxMode)
-            Exchange.COINBASE -> CoinbaseApi(credentials, sandboxMode, okHttpClient)
+            Exchange.COINBASE -> CoinbaseApi(credentials, sandboxMode, client)
         }
     }
+}
+
+private class UnavailableExchangeApi(override val exchange: Exchange, private val message: String) : ExchangeApi {
+    override suspend fun marketBuy(crypto: String, fiat: String, fiatAmount: BigDecimal) =
+        DcaResult.Error(message, retryable = false, confirmedRejection = true)
+
+    override suspend fun getBalance(currency: String): BigDecimal? = null
+    override suspend fun getCurrentPrice(crypto: String, fiat: String): BigDecimal? = null
+    override suspend fun withdraw(crypto: String, amount: BigDecimal, address: String): Result<String> =
+        Result.failure(UnsupportedOperationException(message))
+
+    override suspend fun getWithdrawalFee(crypto: String): BigDecimal? = null
+    override suspend fun validateCredentials() = false
+}
+
+/**
+ * True when [e] proves the request never reached the exchange: the host could not be
+ * resolved, the TCP connection or TLS handshake failed, or connecting timed out. An order
+ * that failed this way was not placed, so it can be recorded as rejected instead of
+ * waiting for manual review. Read timeouts and dropped connections stay uncertain.
+ * Relies on the OkHttp client not retrying (`retryOnConnectionFailure(false)`), so a
+ * connect failure cannot hide an earlier attempt that was already sent.
+ */
+internal fun isPreSendFailure(e: Throwable): Boolean {
+    var current: Throwable? = e
+    repeat(4) {
+        when (val error = current ?: return false) {
+            is java.net.UnknownHostException,
+            is java.net.ConnectException,
+            is java.net.NoRouteToHostException,
+            is java.net.PortUnreachableException,
+            is javax.net.ssl.SSLHandshakeException -> return true
+            is java.net.SocketTimeoutException ->
+                return error.message?.contains("connect timed out", ignoreCase = true) == true
+        }
+        current = current?.cause
+    }
+    return false
 }

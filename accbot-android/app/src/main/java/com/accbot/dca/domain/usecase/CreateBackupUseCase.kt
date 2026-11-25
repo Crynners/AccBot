@@ -33,8 +33,9 @@ class CreateBackupUseCase @Inject constructor(
 
     suspend fun execute(options: BackupExportOptions): CreateBackupResult {
         return try {
-            // Validate
-            if (options.includeCredentials && options.password.isEmpty() && options.seed.isEmpty()) {
+            val passphrase = crypto.resolvePassphrase(options.encryptionMode, options.password, options.seed)
+            val hasPassphrase = passphrase.isNotEmpty()
+            if (options.includeCredentials && !hasPassphrase) {
                 return CreateBackupResult.Error("Encryption is required when including credentials")
             }
 
@@ -43,11 +44,9 @@ class CreateBackupUseCase @Inject constructor(
             val payloadJson = gson.toJson(payload)
 
             // Compress
-            val compressed = compress(payloadJson.toByteArray(Charsets.UTF_8))
-
-            // Determine encryption
-            val passphrase = crypto.resolvePassphrase(options.encryptionMode, options.password, options.seed)
-            val hasPassphrase = passphrase.isNotEmpty()
+            val payloadBytes = payloadJson.toByteArray(Charsets.UTF_8)
+            require(payloadBytes.size <= RestoreBackupUseCase.MAX_PAYLOAD_BYTES) { RestoreBackupUseCase.SIZE_ERROR }
+            val compressed = compress(payloadBytes)
 
             // Encrypt or encode
             val data = if (hasPassphrase) {
@@ -77,6 +76,8 @@ class CreateBackupUseCase @Inject constructor(
             )
 
             val envelopeJson = gson.toJson(envelope)
+            val envelopeSize = envelopeJson.toByteArray(Charsets.UTF_8).size
+            require(envelopeSize <= RestoreBackupUseCase.MAX_ENVELOPE_BYTES) { RestoreBackupUseCase.SIZE_ERROR }
 
             // Generate filename
             val timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
@@ -87,7 +88,7 @@ class CreateBackupUseCase @Inject constructor(
             CreateBackupResult.Success(
                 envelopeJson = envelopeJson,
                 suggestedFileName = fileName,
-                payloadSizeBytes = envelopeJson.toByteArray().size
+                payloadSizeBytes = envelopeSize
             )
         } catch (e: Exception) {
             CreateBackupResult.Error(e.message ?: "Unknown error creating backup")

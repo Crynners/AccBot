@@ -5,7 +5,7 @@ enum CsvExportResult {
     case error(String)
 }
 
-/// Exports all transactions to CSV format with proper escaping.
+/// Exports confirmed fills to CSV.
 final class ExportTransactionsToCsvUseCase {
     private let transactionDao: TransactionDao
 
@@ -13,11 +13,14 @@ final class ExportTransactionsToCsvUseCase {
         self.transactionDao = transactionDao
     }
 
-    func execute() throws -> CsvExportResult {
-        let transactions = try transactionDao.getAllTransactionsOnce()
+    func execute(transactions: [Transaction]? = nil) throws -> CsvExportResult {
+        let source = try transactions ?? transactionDao.getAllTransactionsOnce()
+        let transactions = source.filter {
+            ($0.status == .completed || $0.status == .partial) && $0.cryptoAmount > 0 && $0.fiatAmount > 0
+        }
 
         guard !transactions.isEmpty else {
-            return .error("No transactions to export")
+            return .error(String(localized: "No confirmed fills to export."))
         }
 
         let csvContent = generateCsv(transactions)
@@ -67,9 +70,11 @@ final class ExportTransactionsToCsvUseCase {
     }
 
     private func escapeCsvField(_ value: String) -> String {
-        if value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r") {
-            return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
+        let first = value.trimmingCharacters(in: .whitespacesAndNewlines).first
+        let safe = first.map { "=+-@".contains($0) } == true ? "'" + value : value
+        if safe.contains(",") || safe.contains("\"") || safe.contains("\n") || safe.contains("\r") {
+            return "\"\(safe.replacingOccurrences(of: "\"", with: "\"\""))\""
         }
-        return value
+        return safe
     }
 }

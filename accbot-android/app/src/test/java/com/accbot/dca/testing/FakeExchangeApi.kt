@@ -23,6 +23,10 @@ class FakeExchangeApi(
         { _, _, _, _ -> TradeHistoryPage(emptyList(), hasMore = false) },
     var limitSellHandler: suspend (crypto: String, fiat: String, cryptoAmount: BigDecimal, limitPrice: BigDecimal) -> DcaResult =
         { _, _, _, _ -> DcaResult.Error("not configured", retryable = false) },
+    var cancelOrderHandler: suspend (orderId: String, crypto: String, fiat: String) -> Result<Unit> =
+        { _, _, _ -> Result.success(Unit) },
+    var orderStatusHandler: suspend (orderId: String, crypto: String, fiat: String) -> OrderStatusResult? =
+        { _, _, _ -> null },
     var balance: BigDecimal? = BigDecimal("1000"),
     var price: BigDecimal? = BigDecimal("1500000")
 ) : ExchangeApi {
@@ -33,6 +37,14 @@ class FakeExchangeApi(
 
     /** Number of times [limitSell] was invoked. */
     var limitSellCallCount: Int = 0
+        private set
+
+    /** Number of times [cancelOrder] was invoked. */
+    var cancelOrderCallCount: Int = 0
+        private set
+
+    /** Number of times [getOrderStatus] was invoked. */
+    var orderStatusCallCount: Int = 0
         private set
 
     override suspend fun marketBuy(crypto: String, fiat: String, fiatAmount: BigDecimal): DcaResult {
@@ -50,6 +62,11 @@ class FakeExchangeApi(
         return limitSellHandler(crypto, fiat, cryptoAmount, limitPrice)
     }
 
+    override suspend fun cancelOrder(orderId: String, crypto: String, fiat: String): Result<Unit> {
+        cancelOrderCallCount++
+        return cancelOrderHandler(orderId, crypto, fiat)
+    }
+
     override suspend fun getTradeHistory(
         crypto: String,
         fiat: String,
@@ -63,5 +80,8 @@ class FakeExchangeApi(
         Result.success("fake-withdrawal")
     override suspend fun getWithdrawalFee(crypto: String): BigDecimal? = BigDecimal.ZERO
     override suspend fun validateCredentials(): Boolean = true
-    override suspend fun getOrderStatus(orderId: String, crypto: String, fiat: String): OrderStatusResult? = null
+    override suspend fun getOrderStatus(orderId: String, crypto: String, fiat: String): OrderStatusResult? {
+        orderStatusCallCount++
+        return orderStatusHandler(orderId, crypto, fiat)
+    }
 }

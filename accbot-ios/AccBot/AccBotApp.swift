@@ -1,16 +1,12 @@
 import SwiftUI
+import UIKit
 
 /// App entry point
 @main
 struct AccBotApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var dependencies = {
-        let deps = AppDependencies()
-        AppDependencies.shared = deps
-        return deps
-    }()
+    @StateObject private var dependencies = AppDependencies.shared
     @StateObject private var router = AppRouter()
-    @Environment(\.scenePhase) var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -23,23 +19,6 @@ struct AccBotApp: App {
             .preferredColorScheme(colorScheme)
             .onOpenURL { url in
                 router.handleDeepLink(url)
-            }
-            .onChange(of: scenePhase) { newPhase in
-                if newPhase == .active {
-                    // Layer 4: Foreground catch-up - execute due plans on app open
-                    // Throttle: skip if last execution was less than 5 minutes ago
-                    let now = Date()
-                    if let last = dependencies.userPreferences.lastBackgroundRun,
-                       now.timeIntervalSince(last) < 300 {
-                        return
-                    }
-                    Task {
-                        await dependencies.dcaExecutionEngine.executeDuePlans()
-                        await MainActor.run {
-                            dependencies.userPreferences.lastBackgroundRun = now
-                        }
-                    }
-                }
             }
         }
     }
@@ -71,7 +50,15 @@ struct ColorSchemeResolver<Content: View>: View {
 /// Root view that decides between onboarding and main app
 struct RootView: View {
     @EnvironmentObject var dependencies: AppDependencies
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showSplash = true
+    @State private var isUnlocked = false
+
+    private var foregroundExecutionMode: Bool? {
+        guard scenePhase == .active, !showSplash, dependencies.onboardingPreferences.onboardingCompleted,
+              !dependencies.userPreferences.biometricLockEnabled || isUnlocked else { return nil }
+        return dependencies.userPreferences.sandboxMode
+    }
 
     var body: some View {
         ZStack {
@@ -83,16 +70,67 @@ struct RootView: View {
                 })
             } else if dependencies.onboardingPreferences.onboardingCompleted {
                 if dependencies.userPreferences.biometricLockEnabled {
-                    BiometricLockView {
+                    BiometricLockView(isUnlocked: $isUnlocked) {
                         MainTabView()
+                            .id(dependencies.userPreferences.sandboxMode)
                     }
                 } else {
                     MainTabView()
+                        .id(dependencies.userPreferences.sandboxMode)
                 }
             } else {
                 OnboardingFlowView()
             }
         }
+        .background { AppSnapshotCover() }
+        .onChange(of: scenePhase) { phase in
+            if phase == .background {
+                isUnlocked = false
+                DcaBackgroundService.shared.scheduleNext(using: dependencies)
+            }
+        }
+        .onChange(of: dependencies.userPreferences.biometricLockEnabled) { _ in
+            isUnlocked = false
+        }
+        .task(id: foregroundExecutionMode) {
+            if foregroundExecutionMode != nil {
+                await dependencies.dcaExecutionEngine.executeDuePlans()
+            }
+        }
+    }
+}
+
+/// Hides the window, including any presented sheets, in the app switcher snapshot.
+private struct AppSnapshotCover: UIViewRepresentable {
+    func makeUIView(context: Context) -> WindowObserver { WindowObserver() }
+    func updateUIView(_ view: WindowObserver, context: Context) {}
+
+    final class WindowObserver: UIView {
+        private let cover = UIView()
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            NotificationCenter.default.removeObserver(self)
+            cover.removeFromSuperview()
+            guard let scene = window?.windowScene else { return }
+
+            NotificationCenter.default.addObserver(self, selector: #selector(showCover(_:)),
+                                                   name: UIScene.willDeactivateNotification, object: scene)
+            NotificationCenter.default.addObserver(self, selector: #selector(hideCover(_:)),
+                                                   name: UIScene.didActivateNotification, object: scene)
+            if scene.activationState != .foregroundActive { showCover() }
+        }
+
+        @objc private func showCover(_ notification: Notification? = nil) {
+            guard let window else { return }
+            cover.frame = window.bounds
+            cover.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            cover.backgroundColor = .systemBackground
+            cover.accessibilityViewIsModal = true
+            window.addSubview(cover)
+        }
+
+        @objc private func hideCover(_ notification: Notification) { cover.removeFromSuperview() }
     }
 }
 

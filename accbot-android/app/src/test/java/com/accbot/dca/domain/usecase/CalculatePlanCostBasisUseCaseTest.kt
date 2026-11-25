@@ -141,6 +141,34 @@ class CalculatePlanCostBasisUseCaseTest {
     }
 
     @Test
+    fun `PARTIAL_CANCELLED sell uvolni zrusenou cast a konzumuje jen vyplnene`() {
+        val txs = listOf(
+            buy(1, BigDecimal("1"), BigDecimal("1000000"), ts(0)),
+            sell(
+                2, BigDecimal("0.2"), BigDecimal("3000000"), ts(1),
+                status = TransactionStatus.PARTIAL_CANCELLED, requested = BigDecimal("0.8")
+            )
+        )
+        val result = CalculatePlanCostBasisUseCase.computeCostBasis(txs)
+        // Only 0.2 BTC filled; the cancelled 0.6 BTC reservation is released -> 0.8 available.
+        assertEquals(0, BigDecimal("0.8").compareTo(result.available))
+        assertEquals(0, BigDecimal("1000000").compareTo(result.weightedAvgPrice!!))
+    }
+
+    @Test
+    fun `CANCELLED sell uvolni celou rezervaci`() {
+        val txs = listOf(
+            buy(1, BigDecimal("1"), BigDecimal("1000000"), ts(0)),
+            sell(
+                2, BigDecimal.ZERO, BigDecimal("3000000"), ts(1),
+                status = TransactionStatus.CANCELLED, requested = BigDecimal("0.8")
+            )
+        )
+        val result = CalculatePlanCostBasisUseCase.computeCostBasis(txs)
+        assertEquals(0, BigDecimal("1").compareTo(result.available))
+    }
+
+    @Test
     fun `FAILED sell se ignoruje`() {
         val txs = listOf(
             buy(1, BigDecimal("1"), BigDecimal("1000000"), ts(0)),

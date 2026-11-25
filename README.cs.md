@@ -18,7 +18,7 @@ Open-source aplikace pro DCA do kryptoměn s plnou kontrolou nad klíči pro And
 Navštivte naše **[webové stránky](https://crynners.github.io/AccBot/)** pro screenshoty a více informací.
 
 - **Plná kontrola** — API klíče nikdy neopustí vaše zařízení
-- **7 podporovaných burz**
+- **Pět burz** pro automatické nákupy
 - **3 DCA strategie** — Klasická, ATH, Fear & Greed
 - **Sledování portfolia** s interaktivními grafy
 - **Žádná registrace, žádný cloud, žádná telemetrie**
@@ -43,7 +43,7 @@ AccBot je jiný:
 # Funkce
 
 ### Podporované burzy
-[Coinmate](https://coinmate.io/) | [Binance](https://www.binance.com/) | [Kraken](https://www.kraken.com/) | [KuCoin](https://www.kucoin.com/) | [Bitfinex](https://www.bitfinex.com/) | [Huobi](https://www.huobi.com/en-us/) | [Coinbase](https://www.coinbase.com/)
+[Coinmate](https://coinmate.io/) | [Binance](https://www.binance.com/) | [Kraken](https://www.kraken.com/) | [KuCoin](https://www.kucoin.com/) | [Coinbase](https://www.coinbase.com/)
 
 ### Podporované kryptoměny
 BTC | ETH | SOL | ADA | DOT | LTC
@@ -65,8 +65,8 @@ Interaktivní čárové grafy s rozpadem dle roku/měsíce, režim na šířku a
 ### Historie transakcí
 Kompletní přehled transakcí s filtrováním dle kryptoměny, burzy a stavu. Řazení, vyhledávání, smazání swipem a export do CSV.
 
-### Automatický výběr
-Automatický výběr na vaši vlastní peněženku po nákupu, pokud je poplatek pod nastaveným limitem.
+### Připomenutí výběru
+Nastavte hranici zůstatku. AccBot vám připomene, že můžete vybrat kryptoměnu přímo na burze.
 
 ### QR skener
 Skenování API přihlašovacích údajů a adres peněženek pomocí QR kódu nebo OCR rozpoznávání textu.

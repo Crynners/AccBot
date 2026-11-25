@@ -5,14 +5,17 @@ import LocalAuthentication
 struct BiometricLockView<Content: View>: View {
     let content: Content
     @Environment(\.accBotColors) private var colors
-    @State private var isUnlocked = false
+    @Environment(\.scenePhase) private var scenePhase
+    @Binding private var isUnlocked: Bool
+    @State private var authenticationContext: LAContext?
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var biometricIconName = "lock.fill"
     @State private var retryCount = 0
     private let maxRetries = 5
 
-    init(@ViewBuilder content: () -> Content) {
+    init(isUnlocked: Binding<Bool>, @ViewBuilder content: () -> Content) {
+        self._isUnlocked = isUnlocked
         self.content = content()
     }
 
@@ -26,8 +29,22 @@ struct BiometricLockView<Content: View>: View {
         }
         .task {
             resolveBiometricIcon()
-            authenticate()
+            if scenePhase == .active { authenticate() }
         }
+        .onChange(of: scenePhase) { phase in
+            switch phase {
+            case .background:
+                cancelAuthentication()
+                isUnlocked = false
+                showError = false
+                retryCount = 0
+            case .active:
+                if !showError { authenticate() }
+            default:
+                break
+            }
+        }
+        .onDisappear { cancelAuthentication() }
     }
 
     private var lockScreen: some View {
@@ -124,20 +141,26 @@ struct BiometricLockView<Content: View>: View {
     }
 
     private func authenticate() {
+        guard !isUnlocked, authenticationContext == nil, scenePhase == .active else { return }
         let context = LAContext()
         var error: NSError?
 
-        // After exhausting biometric retries, fall back to device passcode
-        let policy: LAPolicy = retryCount >= maxRetries
-            ? .deviceOwnerAuthentication
-            : .deviceOwnerAuthenticationWithBiometrics
+        let biometricsAvailable = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+        let policy: LAPolicy = biometricsAvailable && retryCount < maxRetries
+            ? .deviceOwnerAuthenticationWithBiometrics
+            : .deviceOwnerAuthentication
 
         if context.canEvaluatePolicy(policy, error: &error) {
+            if policy == .deviceOwnerAuthentication { retryCount = maxRetries }
+            authenticationContext = context
             context.evaluatePolicy(
                 policy,
                 localizedReason: String(localized: "Unlock AccBot to access your DCA plans")
             ) { success, authError in
                 DispatchQueue.main.async {
+                    guard authenticationContext === context else { return }
+                    authenticationContext = nil
+                    guard scenePhase != .background else { return }
                     if success {
                         withAnimation {
                             isUnlocked = true
@@ -150,11 +173,15 @@ struct BiometricLockView<Content: View>: View {
                 }
             }
         } else {
-            // Neither biometrics nor passcode available — show error with actionable guidance
-            DispatchQueue.main.async {
-                showError = true
-                errorMessage = String(localized: "Authentication is not available. Set up Face ID, Touch ID, or a device passcode in Settings to unlock AccBot.")
-            }
+            showError = true
+            retryCount = maxRetries
+            errorMessage = String(localized: "Authentication is not available. Set up Face ID, Touch ID, or a device passcode in Settings to unlock AccBot.")
         }
+    }
+
+    private func cancelAuthentication() {
+        let context = authenticationContext
+        authenticationContext = nil
+        context?.invalidate()
     }
 }

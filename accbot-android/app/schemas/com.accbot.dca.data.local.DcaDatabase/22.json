@@ -1,0 +1,936 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 22,
+    "identityHash": "7e263fcf0ed3970c8b996331f68b88fd",
+    "entities": [
+      {
+        "tableName": "dca_plans",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `exchange` TEXT NOT NULL, `connectionId` INTEGER NOT NULL, `name` TEXT NOT NULL, `crypto` TEXT NOT NULL, `fiat` TEXT NOT NULL, `amount` TEXT NOT NULL, `frequency` TEXT NOT NULL, `cronExpression` TEXT, `strategy` TEXT NOT NULL, `isEnabled` INTEGER NOT NULL, `withdrawalEnabled` INTEGER NOT NULL, `withdrawalAddress` TEXT, `createdAt` INTEGER NOT NULL, `lastExecutedAt` INTEGER, `nextExecutionAt` INTEGER, `targetAmount` TEXT, `networkRetryCount` INTEGER NOT NULL, `nextNetworkRetryAt` INTEGER, `originalScheduledAt` INTEGER, `missedPurchaseCount` INTEGER NOT NULL, `displayOrder` INTEGER NOT NULL, `allowSells` INTEGER NOT NULL DEFAULT 0, `targetProfitAmount` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exchange",
+            "columnName": "exchange",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "connectionId",
+            "columnName": "connectionId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "crypto",
+            "columnName": "crypto",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fiat",
+            "columnName": "fiat",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amount",
+            "columnName": "amount",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "frequency",
+            "columnName": "frequency",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cronExpression",
+            "columnName": "cronExpression",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "strategy",
+            "columnName": "strategy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isEnabled",
+            "columnName": "isEnabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "withdrawalEnabled",
+            "columnName": "withdrawalEnabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "withdrawalAddress",
+            "columnName": "withdrawalAddress",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastExecutedAt",
+            "columnName": "lastExecutedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "nextExecutionAt",
+            "columnName": "nextExecutionAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "targetAmount",
+            "columnName": "targetAmount",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "networkRetryCount",
+            "columnName": "networkRetryCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextNetworkRetryAt",
+            "columnName": "nextNetworkRetryAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "originalScheduledAt",
+            "columnName": "originalScheduledAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "missedPurchaseCount",
+            "columnName": "missedPurchaseCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayOrder",
+            "columnName": "displayOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "allowSells",
+            "columnName": "allowSells",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "targetProfitAmount",
+            "columnName": "targetProfitAmount",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_dca_plans_isEnabled",
+            "unique": false,
+            "columnNames": [
+              "isEnabled"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_dca_plans_isEnabled` ON `${TABLE_NAME}` (`isEnabled`)"
+          },
+          {
+            "name": "index_dca_plans_exchange",
+            "unique": false,
+            "columnNames": [
+              "exchange"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_dca_plans_exchange` ON `${TABLE_NAME}` (`exchange`)"
+          },
+          {
+            "name": "index_dca_plans_connectionId",
+            "unique": false,
+            "columnNames": [
+              "connectionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_dca_plans_connectionId` ON `${TABLE_NAME}` (`connectionId`)"
+          },
+          {
+            "name": "index_dca_plans_nextExecutionAt",
+            "unique": false,
+            "columnNames": [
+              "nextExecutionAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_dca_plans_nextExecutionAt` ON `${TABLE_NAME}` (`nextExecutionAt`)"
+          },
+          {
+            "name": "index_dca_plans_isEnabled_nextExecutionAt",
+            "unique": false,
+            "columnNames": [
+              "isEnabled",
+              "nextExecutionAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_dca_plans_isEnabled_nextExecutionAt` ON `${TABLE_NAME}` (`isEnabled`, `nextExecutionAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "transactions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `planId` INTEGER NOT NULL, `exchange` TEXT NOT NULL, `connectionId` INTEGER, `crypto` TEXT NOT NULL, `fiat` TEXT NOT NULL, `fiatAmount` TEXT NOT NULL, `cryptoAmount` TEXT NOT NULL, `price` TEXT NOT NULL, `fee` TEXT NOT NULL, `feeAsset` TEXT NOT NULL, `status` TEXT NOT NULL, `exchangeOrderId` TEXT, `errorMessage` TEXT, `warningMessage` TEXT, `executedAt` INTEGER NOT NULL, `side` TEXT NOT NULL DEFAULT 'BUY', `limitPrice` TEXT, `requestedCryptoAmount` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "planId",
+            "columnName": "planId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exchange",
+            "columnName": "exchange",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "connectionId",
+            "columnName": "connectionId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "crypto",
+            "columnName": "crypto",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fiat",
+            "columnName": "fiat",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fiatAmount",
+            "columnName": "fiatAmount",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cryptoAmount",
+            "columnName": "cryptoAmount",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "price",
+            "columnName": "price",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fee",
+            "columnName": "fee",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "feeAsset",
+            "columnName": "feeAsset",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exchangeOrderId",
+            "columnName": "exchangeOrderId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "errorMessage",
+            "columnName": "errorMessage",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "warningMessage",
+            "columnName": "warningMessage",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "executedAt",
+            "columnName": "executedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "side",
+            "columnName": "side",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'BUY'"
+          },
+          {
+            "fieldPath": "limitPrice",
+            "columnName": "limitPrice",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "requestedCryptoAmount",
+            "columnName": "requestedCryptoAmount",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_transactions_planId",
+            "unique": false,
+            "columnNames": [
+              "planId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_planId` ON `${TABLE_NAME}` (`planId`)"
+          },
+          {
+            "name": "index_transactions_exchange",
+            "unique": false,
+            "columnNames": [
+              "exchange"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_exchange` ON `${TABLE_NAME}` (`exchange`)"
+          },
+          {
+            "name": "index_transactions_connectionId",
+            "unique": false,
+            "columnNames": [
+              "connectionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_connectionId` ON `${TABLE_NAME}` (`connectionId`)"
+          },
+          {
+            "name": "index_transactions_crypto",
+            "unique": false,
+            "columnNames": [
+              "crypto"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_crypto` ON `${TABLE_NAME}` (`crypto`)"
+          },
+          {
+            "name": "index_transactions_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_transactions_executedAt",
+            "unique": false,
+            "columnNames": [
+              "executedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_executedAt` ON `${TABLE_NAME}` (`executedAt`)"
+          },
+          {
+            "name": "index_transactions_planId_status",
+            "unique": false,
+            "columnNames": [
+              "planId",
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_planId_status` ON `${TABLE_NAME}` (`planId`, `status`)"
+          },
+          {
+            "name": "index_transactions_crypto_fiat_status",
+            "unique": false,
+            "columnNames": [
+              "crypto",
+              "fiat",
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_crypto_fiat_status` ON `${TABLE_NAME}` (`crypto`, `fiat`, `status`)"
+          },
+          {
+            "name": "index_transactions_fiat_status",
+            "unique": false,
+            "columnNames": [
+              "fiat",
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_fiat_status` ON `${TABLE_NAME}` (`fiat`, `status`)"
+          },
+          {
+            "name": "index_transactions_planId_side_status",
+            "unique": false,
+            "columnNames": [
+              "planId",
+              "side",
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_planId_side_status` ON `${TABLE_NAME}` (`planId`, `side`, `status`)"
+          }
+        ]
+      },
+      {
+        "tableName": "withdrawals",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `planId` INTEGER NOT NULL, `exchange` TEXT NOT NULL, `connectionId` INTEGER, `crypto` TEXT NOT NULL, `amount` TEXT NOT NULL, `address` TEXT NOT NULL, `txHash` TEXT, `fee` TEXT NOT NULL, `status` TEXT NOT NULL, `errorMessage` TEXT, `createdAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "planId",
+            "columnName": "planId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exchange",
+            "columnName": "exchange",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "connectionId",
+            "columnName": "connectionId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "crypto",
+            "columnName": "crypto",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amount",
+            "columnName": "amount",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address",
+            "columnName": "address",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "txHash",
+            "columnName": "txHash",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "fee",
+            "columnName": "fee",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "errorMessage",
+            "columnName": "errorMessage",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_withdrawals_planId",
+            "unique": false,
+            "columnNames": [
+              "planId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_withdrawals_planId` ON `${TABLE_NAME}` (`planId`)"
+          },
+          {
+            "name": "index_withdrawals_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_withdrawals_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_withdrawals_createdAt",
+            "unique": false,
+            "columnNames": [
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_withdrawals_createdAt` ON `${TABLE_NAME}` (`createdAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "exchange_balances",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`connectionId` INTEGER NOT NULL, `currency` TEXT NOT NULL, `exchange` TEXT NOT NULL, `balance` TEXT NOT NULL, `lastUpdated` INTEGER NOT NULL, PRIMARY KEY(`connectionId`, `currency`))",
+        "fields": [
+          {
+            "fieldPath": "connectionId",
+            "columnName": "connectionId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currency",
+            "columnName": "currency",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exchange",
+            "columnName": "exchange",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "balance",
+            "columnName": "balance",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastUpdated",
+            "columnName": "lastUpdated",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "connectionId",
+            "currency"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_exchange_balances_connectionId",
+            "unique": false,
+            "columnNames": [
+              "connectionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exchange_balances_connectionId` ON `${TABLE_NAME}` (`connectionId`)"
+          },
+          {
+            "name": "index_exchange_balances_exchange",
+            "unique": false,
+            "columnNames": [
+              "exchange"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exchange_balances_exchange` ON `${TABLE_NAME}` (`exchange`)"
+          }
+        ]
+      },
+      {
+        "tableName": "monthly_summaries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `year` INTEGER NOT NULL, `month` INTEGER NOT NULL, `totalInvestedEur` TEXT NOT NULL, `totalBtcAccumulated` TEXT NOT NULL, `transactionCount` INTEGER NOT NULL, `averageBtcPrice` TEXT NOT NULL, `lastUpdated` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "year",
+            "columnName": "year",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "month",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalInvestedEur",
+            "columnName": "totalInvestedEur",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalBtcAccumulated",
+            "columnName": "totalBtcAccumulated",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "transactionCount",
+            "columnName": "transactionCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "averageBtcPrice",
+            "columnName": "averageBtcPrice",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastUpdated",
+            "columnName": "lastUpdated",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "daily_prices",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`crypto` TEXT NOT NULL, `fiat` TEXT NOT NULL, `dateEpochDay` INTEGER NOT NULL, `price` TEXT NOT NULL, `fetchedAt` INTEGER NOT NULL, PRIMARY KEY(`crypto`, `fiat`, `dateEpochDay`))",
+        "fields": [
+          {
+            "fieldPath": "crypto",
+            "columnName": "crypto",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fiat",
+            "columnName": "fiat",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateEpochDay",
+            "columnName": "dateEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "price",
+            "columnName": "price",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fetchedAt",
+            "columnName": "fetchedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "crypto",
+            "fiat",
+            "dateEpochDay"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_daily_prices_crypto_fiat",
+            "unique": false,
+            "columnNames": [
+              "crypto",
+              "fiat"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_daily_prices_crypto_fiat` ON `${TABLE_NAME}` (`crypto`, `fiat`)"
+          }
+        ]
+      },
+      {
+        "tableName": "notifications",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `type` TEXT NOT NULL, `title` TEXT NOT NULL, `message` TEXT NOT NULL, `planId` INTEGER, `crypto` TEXT, `exchange` TEXT, `connectionId` INTEGER, `isRead` INTEGER NOT NULL, `isArchived` INTEGER NOT NULL, `systemNotificationId` INTEGER, `templateArgs` TEXT, `createdAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "message",
+            "columnName": "message",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "planId",
+            "columnName": "planId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "crypto",
+            "columnName": "crypto",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "exchange",
+            "columnName": "exchange",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "connectionId",
+            "columnName": "connectionId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isRead",
+            "columnName": "isRead",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isArchived",
+            "columnName": "isArchived",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "systemNotificationId",
+            "columnName": "systemNotificationId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "templateArgs",
+            "columnName": "templateArgs",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_notifications_isRead",
+            "unique": false,
+            "columnNames": [
+              "isRead"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_isRead` ON `${TABLE_NAME}` (`isRead`)"
+          },
+          {
+            "name": "index_notifications_isArchived",
+            "unique": false,
+            "columnNames": [
+              "isArchived"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_isArchived` ON `${TABLE_NAME}` (`isArchived`)"
+          },
+          {
+            "name": "index_notifications_createdAt",
+            "unique": false,
+            "columnNames": [
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_createdAt` ON `${TABLE_NAME}` (`createdAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "withdrawal_thresholds",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`crypto` TEXT NOT NULL, `connectionId` INTEGER NOT NULL, `thresholdAmount` TEXT NOT NULL, PRIMARY KEY(`crypto`, `connectionId`))",
+        "fields": [
+          {
+            "fieldPath": "crypto",
+            "columnName": "crypto",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "connectionId",
+            "columnName": "connectionId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "thresholdAmount",
+            "columnName": "thresholdAmount",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "crypto",
+            "connectionId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_withdrawal_thresholds_connectionId",
+            "unique": false,
+            "columnNames": [
+              "connectionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_withdrawal_thresholds_connectionId` ON `${TABLE_NAME}` (`connectionId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "exchange_connections",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `exchange` TEXT NOT NULL, `name` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `displayOrder` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exchange",
+            "columnName": "exchange",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayOrder",
+            "columnName": "displayOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_exchange_connections_exchange",
+            "unique": false,
+            "columnNames": [
+              "exchange"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exchange_connections_exchange` ON `${TABLE_NAME}` (`exchange`)"
+          },
+          {
+            "name": "index_exchange_connections_exchange_name",
+            "unique": true,
+            "columnNames": [
+              "exchange",
+              "name"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_exchange_connections_exchange_name` ON `${TABLE_NAME}` (`exchange`, `name`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7e263fcf0ed3970c8b996331f68b88fd')"
+    ]
+  }
+}

@@ -62,7 +62,6 @@
 
     <!-- Dashboard Screen -->
     <string name="dashboard_add_plan">Add Plan</string>
-    <string name="dashboard_sandbox_banner">SANDBOX MODE - Test trades only</string>
     <string name="dashboard_total_accumulated">Total Accumulated</string>
     <string name="dashboard_no_transactions">No transactions yet</string>
     <string name="dashboard_start_plan_hint">Start a DCA plan to see your holdings</string>
@@ -110,11 +109,8 @@
     <string name="settings_manage_exchanges">Manage Exchanges</string>
     <string name="settings_exchanges_connected">%1$d connection(s)</string>
     <string name="settings_system">SYSTEM SETTINGS</string>
-    <string name="settings_battery_optimization">Battery Optimization</string>
-    <string name="settings_battery_disabled">Disabled - tap to enable unrestricted background</string>
-    <string name="settings_battery_unrestricted">Unrestricted - DCA runs reliably in background</string>
     <string name="settings_battery_already_disabled">Battery optimization already disabled</string>
-    <string name="settings_battery_open_failed">Could not open battery settings</string>
+    <string name="settings_battery_open_failed">Could not open the system settings</string>
     <string name="settings_low_balance_warning">Low Balance Warning</string>
     <string name="settings_low_balance_subtitle">Warn when balance covers &lt; %1$d days</string>
     <string name="settings_low_balance_dialog_title">Low Balance Warning</string>
@@ -128,6 +124,98 @@
     <string name="backup_export_subtitle">Save your data to a file</string>
     <string name="backup_import_title">Import Backup</string>
     <string name="backup_import_subtitle">Restore data from a file</string>
+    <!-- Read-only plan sharing -->
+    <string name="share_plan_title">Share plan (read-only)</string>
+    <string name="share_plan_subject">AccBot DCA plan</string>
+    <string name="share_plan_description">Creates a snapshot file of this plan. The recipient opens it in AccBot and can only view it. To share the current state later, send the file again and it replaces the previous version.</string>
+    <string name="share_plan_include_amounts">Include amounts</string>
+    <string name="share_plan_include_amounts_on">Purchase amounts, invested total and holdings are included.</string>
+    <string name="share_plan_include_amounts_off">Only dates, prices, average buy price and performance in percent are shared.</string>
+    <string name="share_plan_never_included">Never shared: API keys, order IDs, connection names and withdrawal addresses. The file cannot be used to run the plan.</string>
+    <string name="share_plan_confirm">Share</string>
+    <string name="share_plan_failed">Could not create the share file.</string>
+    <string name="shared_plans_title">Shared with me</string>
+    <string name="shared_plans_settings_subtitle">Read-only plans other people sent you</string>
+    <string name="shared_plans_import">Import shared plan</string>
+    <string name="shared_plans_intro">Snapshots of plans other people shared with you. They are read-only, never run and are not part of your portfolio.</string>
+    <string name="shared_plans_empty_title">No shared plans yet</string>
+    <string name="shared_plans_empty_description">When someone shares a plan with you from AccBot, save the file and import it here.</string>
+    <string name="shared_plans_snapshot_from">Snapshot from %1$s</string>
+    <string name="shared_plans_sandbox_badge">Test environment data</string>
+    <string name="shared_plans_import_added">Added “%1$s”</string>
+    <string name="shared_plans_import_updated">Updated “%1$s”</string>
+    <string name="shared_plans_import_outdated">A newer snapshot of “%1$s” is already saved.</string>
+    <string name="shared_plans_import_failed">The file could not be read.</string>
+    <string name="shared_plans_error_not_share">This file is not an AccBot shared plan.</string>
+    <string name="shared_plans_error_version">This shared plan needs a newer version of AccBot.</string>
+    <string name="shared_plans_error_too_large">The file is too large.</string>
+    <string name="shared_plans_error_invalid">The shared plan is damaged or incomplete.</string>
+    <string name="shared_plan_title">Shared plan</string>
+    <string name="shared_plan_read_only">Read-only</string>
+    <string name="shared_plan_read_only_text">Snapshot from %1$s. It does not update by itself and cannot be edited or run.</string>
+    <string name="shared_plan_not_found">This shared plan is no longer available.</string>
+    <string name="shared_plan_delete_title">Remove shared plan?</string>
+    <string name="shared_plan_delete_text">The snapshot is removed from this device. The sender’s plan is not affected.</string>
+    <string name="shared_plan_amount">Amount per purchase</string>
+    <string name="shared_plan_schedule">Schedule</string>
+    <string name="shared_plan_schedule_unknown">Unknown</string>
+    <string name="shared_plan_strategy">Strategy</string>
+    <string name="shared_plan_state">State when shared</string>
+    <string name="shared_plan_state_active">Active</string>
+    <string name="shared_plan_state_paused">Paused</string>
+    <string name="shared_plan_created">Created</string>
+    <string name="shared_plan_summary">Summary</string>
+    <string name="shared_plan_buys">Purchases</string>
+    <string name="shared_plan_sells">Sells</string>
+    <string name="shared_plan_first_buy">First purchase</string>
+    <string name="shared_plan_invested">Invested</string>
+    <string name="shared_plan_held">Held</string>
+    <string name="shared_plan_sold">Sold for</string>
+    <string name="shared_plan_avg_price">Average buy price</string>
+    <string name="shared_plan_current_price">Current price</string>
+    <string name="shared_plan_current_value">Current value</string>
+    <string name="shared_plan_performance">Performance vs. average</string>
+    <string name="shared_plan_amounts_hidden">The sender chose not to share amounts.</string>
+    <string name="shared_plan_trades">Trades (%1$d)</string>
+    <string name="shared_plan_no_trades">No confirmed trades yet.</string>
+    <string name="shared_plan_side_buy">Purchase</string>
+    <string name="shared_plan_side_sell">Sell</string>
+    <string name="shared_plan_at_price">at %1$s</string>
+    <string name="share_plan_live_updates">Live updates</string>
+    <string name="share_plan_live_updates_subtitle">The recipient can fetch new trades with a separate read-only API key.</string>
+    <string name="share_plan_never_included_live">Never shared: the key this plan trades with, order IDs, connection names and withdrawal addresses. The file is encrypted with your password.</string>
+    <string name="share_plan_live_key_instructions">Create a new API key on %1$s with read-only access: no trading and no withdrawals. Do not use the key this plan buys with. Anyone with the file and password can use this key outside AccBot, so only its exchange permissions protect you.</string>
+    <string name="share_plan_live_api_key">Read-only API key</string>
+    <string name="share_plan_live_api_secret">Read-only API secret</string>
+    <string name="share_plan_live_client_id">Client ID</string>
+    <string name="share_plan_live_passphrase">Passphrase</string>
+    <string name="share_plan_live_verify">Check key</string>
+    <string name="share_plan_live_verified">The exchange confirmed this key cannot trade or withdraw.</string>
+    <string name="share_plan_live_unverifiable">%1$s cannot report key permissions. I confirm this key is read-only, without trading or withdrawals.</string>
+    <string name="share_plan_key_unsupported">Live updates are not available for this exchange.</string>
+    <string name="share_plan_key_wrong_exchange">The key must belong to the plan’s exchange.</string>
+    <string name="share_plan_key_same_as_plan">This is the key the plan trades with. Create a separate read-only key.</string>
+    <string name="share_plan_key_not_read_only">This key can trade or withdraw. Create a key with read-only access.</string>
+    <string name="share_plan_key_check_failed">The key could not be checked. Make sure it is correct and try again.</string>
+    <string name="share_plan_live_password_info">The file will be encrypted. Send the password to the recipient another way than the file.</string>
+    <string name="share_plan_live_password">File password</string>
+    <string name="share_plan_live_password_confirm">Confirm password</string>
+    <string name="share_plan_live_password_invalid">Use at least %1$d characters and type the same password twice.</string>
+    <string name="shared_plans_password_title">Encrypted shared plan</string>
+    <string name="shared_plans_password_text">This plan includes live updates. Enter the password you got from the sender.</string>
+    <string name="shared_plans_password_open">Open</string>
+    <string name="shared_plans_wrong_password">Wrong password.</string>
+    <string name="shared_plans_key_not_read_only">The shared key can trade or withdraw, so AccBot refused it. Ask the sender for a read-only key.</string>
+    <string name="shared_plans_live_badge">Live updates</string>
+    <string name="shared_plan_refresh">Refresh</string>
+    <string name="shared_plan_refresh_new">%1$d new trades</string>
+    <string name="shared_plan_key_revoked_not_read_only">The shared key now allows trading or withdrawals. AccBot removed it and stopped live updates.</string>
+    <string name="shared_plan_live_text">Live updates · last refreshed %1$s. Cannot be edited or run.</string>
+    <string name="shared_plan_live_text_never">Live updates · not refreshed yet. Cannot be edited or run.</string>
+    <string name="shared_plan_refresh_failed">The last refresh failed. The key may have been revoked or the exchange is unreachable.</string>
+    <string name="shared_plan_key_verified">Key checked by the exchange as read-only.</string>
+    <string name="shared_plan_key_unverified">The exchange cannot confirm the key is read-only; the sender confirmed it.</string>
+    <string name="shared_plan_account_scope">New trades include all trades of this pair on the sender’s exchange account.</string>
     <string name="backup_step_select_data">Select Data</string>
     <string name="backup_step_encryption">Encryption</string>
     <string name="backup_step_result">Result</string>
@@ -175,19 +263,26 @@
     <string name="backup_preview_withdrawals">Withdrawals: %1$d</string>
     <string name="backup_preview_thresholds">Withdrawal Thresholds: %1$d</string>
     <string name="backup_restore_button">Restore</string>
-    <string name="backup_restore_warning">This will add data from the backup to your current data. Existing data will not be deleted.</string>
-    <string name="backup_restore_warning_replace">Restoring will replace all existing data with the backup contents.</string>
+    <string name="backup_restore_merge">Merge with current data</string>
+    <string name="backup_restore_replace">Replace current data</string>
+    <string name="backup_restore_paused">Restored plans are paused until you review and enable them.</string>
+    <string name="backup_environment">Environment</string>
+    <string name="backup_environment_test">Sandbox</string>
+    <string name="backup_environment_live">Live</string>
+    <string name="backup_wrong_environment">This backup belongs to a different environment. Switch to that environment before restoring it.</string>
+    <string name="backup_too_large">This backup exceeds the supported size limit.</string>
+    <string name="backup_open_orders">Resolve pending orders before replacing current data.</string>
+    <string name="backup_restart">Restart app</string>
+    <string name="backup_restore_warning">This adds data from the backup to your current data and deletes nothing. Plans from the backup, and your existing plans on connections whose API keys come from the backup, are paused until you enable them again.</string>
+    <string name="backup_restore_warning_replace">This will replace current plans, history and API keys with the backup contents. Restored plans will be paused.</string>
     <string name="backup_restoring">Restoring backup…</string>
     <string name="backup_decrypting">Decrypting…</string>
-    <string name="backup_restore_success">Backup restored successfully. The app will restart.</string>
+    <string name="backup_restore_success">Backup restored</string>
     <string name="backup_restore_error">Failed to restore backup</string>
-    <string name="backup_credentials_require_encryption">Encryption is required when including credentials</string>
+    <string name="backup_credentials_require_encryption">A backup that includes API credentials must be encrypted.</string>
     <string name="backup_no_passphrase">Please enter a password or generate a seed</string>
     <string name="backup_items_count">%1$d items</string>
 
-    <string name="settings_general">GENERAL</string>
-    <string name="settings_alerts_security">ALERTS &amp; SECURITY</string>
-    <string name="settings_data">DATA</string>
     <string name="settings_about">ABOUT</string>
     <string name="settings_documentation">Documentation</string>
     <string name="settings_documentation_subtitle">View setup guides and API docs</string>
@@ -264,8 +359,7 @@
     <string name="history_side_sell_label">Sell</string>
 
     <!-- Dashboard - open sells -->
-    <string name="dashboard_open_sells_title">%1$s: %2$d open sell order(s)</string>
-    <string name="dashboard_plan_open_sells">%1$d open sell order(s)</string>
+    <string name="dashboard_open_sells_title">%1$s: open sell orders %2$d</string>
 
     <!-- Add Plan Screen -->
     <string name="add_plan_title">Create DCA Plan</string>
@@ -318,14 +412,13 @@
     <string name="plan_details_days_remaining">~%1$d days (%2$d executions)</string>
     <string name="plan_details_delete_subtitle">Permanently delete this plan and all its transactions</string>
     <string name="plan_details_delete_confirm_hint">Type %1$s to confirm</string>
-    <string name="plan_details_delete_transactions_title">Delete All Transactions</string>
-    <string name="plan_details_delete_transactions_text">This will permanently delete all %1$d transactions for this plan. This action cannot be undone.\n\nTo confirm, type the number of transactions below:</string>
+    <string name="plan_details_delete_transactions_title">Delete closed transactions</string>
+    <string name="plan_details_delete_transactions_text">This permanently deletes %1$d closed transactions for this plan.\n\nType the number of transactions to confirm.</string>
     <string name="plan_details_delete_transactions_hint">Type %1$d to confirm</string>
-    <string name="plan_details_delete_transactions_button">Delete All Transactions</string>
+    <string name="plan_details_delete_transactions_button">Delete closed transactions</string>
     <string name="plan_details_delete_transactions_success">%1$d transactions deleted</string>
-    <string name="plan_details_create_sell_order">+ Create sell order</string>
     <string name="plan_details_delete_blocked_title">Cannot delete plan</string>
-    <string name="plan_details_delete_blocked_text">This plan has %1$d open sell order(s). Cancel them first before deleting the plan.</string>
+    <string name="plan_details_delete_blocked_text">Resolve this plan’s pending orders or orders awaiting review before deleting it.</string>
 
     <!-- Edit Plan Screen -->
     <string name="edit_plan_title">Edit Plan</string>
@@ -340,7 +433,7 @@
     <string name="portfolio_transactions">Transactions</string>
     <string name="portfolio_loading">Loading positions…</string>
     <string name="portfolio_realized">Realized</string>
-    <string name="portfolio_net_pnl">Net P&amp;L</string>
+    <string name="portfolio_net_pnl">Net profit / loss</string>
     <string name="portfolio_open_sells_section_title">Open sell orders (%1$d)</string>
     <string name="portfolio_new_sell_order">New sell order</string>
 
@@ -449,6 +542,7 @@
     <string name="transaction_status_cancelled">Cancelled</string>
     <string name="transaction_status_pending">Pending</string>
     <string name="transaction_status_partial">Partially Filled</string>
+    <string name="transaction_status_partial_cancelled">Partially Filled (Cancelled)</string>
     <string name="transaction_details_at">at</string>
     <string name="transaction_details_sell_section">Sell order</string>
     <string name="transaction_details_limit_price">Limit price</string>
@@ -611,6 +705,20 @@
     <string name="notification_dca_failed">DCA Failed</string>
     <string name="notification_dca_failed_text">Failed to buy %1$s: %2$s</string>
     <string name="notification_dca_error">DCA Error</string>
+    <string name="notification_purchase_needs_review">The exchange hasn’t confirmed this purchase. This plan will wait for your review.</string>
+    <string name="run_now_sandbox">The selected plans will submit test orders.</string>
+    <string name="run_now_production">The selected plans will submit real orders.</string>
+    <string name="first_plan_schedules_test_orders">This plan schedules test purchases on %1$s.</string>
+    <string name="first_plan_schedules_real_orders">This plan schedules real purchases on %1$s.</string>
+    <string name="transaction_review_purchase">Review purchase</string>
+    <string name="transaction_purchase_in_progress">AccBot is still processing a purchase. Wait for it to finish and check the exchange before confirming.</string>
+    <string name="transaction_review_sell">Review sell</string>
+    <string name="transaction_sell_needs_review">The exchange hasn’t confirmed this sell. Its quantity stays reserved until you review it.</string>
+    <string name="transaction_sell_in_progress">AccBot is still processing a sell. Wait for it to finish and check the exchange before confirming.</string>
+    <string name="transaction_sell_order_unverified">The order ID could not be verified. The quantity remains reserved.</string>
+    <string name="notification_purchase_without_fill">The exchange closed the order without a fill.</string>
+    <string name="exchange_connection_open_orders">Resolve pending orders for this connection before removing it.</string>
+    <string name="transaction_purchase_order_unverified">The order ID could not be verified. Check that it is a purchase of this pair made at that time.</string>
     <string name="notification_runaway_disabled">Plan paused: an unusually high number of purchases was detected. Check your account and re-enable once resolved.</string>
     <string name="notification_low_balance_title">Low balance on %1$s</string>
     <string name="notification_low_balance_text">%1$s of %2$s remaining for DCA</string>
@@ -818,7 +926,6 @@
     <string name="notification_network_retry_banner_next">Next retry at %1$s</string>
     <string name="notification_missed_purchases_title">AccBot: Missed Purchases</string>
     <string name="notification_missed_purchases_text">%1$d %2$s purchase(s) on %3$s were missed while offline.</string>
-    <string name="notification_missed_purchases_banner">%1$d missed %2$s purchase(s) on %3$s while offline.</string>
     <string name="notification_missing_credentials_title">AccBot: Missing API Keys</string>
     <string name="notification_missing_credentials_text">%1$s plan on %2$s cannot run - API credentials are missing. Open Exchange Management to re-enter keys.</string>
     <string name="missed_purchases_buy">Buy now</string>
@@ -850,7 +957,7 @@
     <string name="settings_delete_plans_dialog_title">Delete All DCA Plans?</string>
     <string name="settings_delete_plans_dialog_text">This will permanently delete all %1$d DCA plans. Active plans will stop executing. This action cannot be undone.</string>
     <string name="settings_delete_transactions_dialog_title">Delete Transaction History?</string>
-    <string name="settings_delete_transactions_dialog_text">This will permanently delete all %1$d transactions. Your portfolio data will be lost. This action cannot be undone.</string>
+    <string name="settings_delete_transactions_dialog_text">This permanently deletes %1$d closed transactions and their portfolio data.</string>
     <string name="settings_delete_notifications_dialog_title">Delete Notification History?</string>
     <string name="settings_delete_notifications_dialog_text">This will permanently delete all %1$d notifications. This action cannot be undone.</string>
 
@@ -950,9 +1057,8 @@
     <string name="a11y_retry">Retry</string>
 
     <!-- Settings: Advanced (Sell extension) -->
-    <string name="settings_advanced">ADVANCED</string>
     <string name="settings_trading_enabled_title">Enable sell orders</string>
-    <string name="settings_trading_enabled_subtitle">Allow selected plans to place limit sell orders and track P&amp;L.</string>
+    <string name="settings_trading_enabled_subtitle">Lets selected plans place limit sell orders and shows profit and loss.</string>
     <string name="settings_sell_polling_title">Check sell orders in background</string>
     <string name="settings_sell_polling_subtitle">Periodically check order status. Increases battery usage.</string>
     <string name="settings_sell_polling_frequency">Frequency</string>
@@ -970,13 +1076,13 @@
 
     <!-- Edit plan: Disable sells dialog -->
     <string name="edit_plan_disable_sells_dialog_title">Turn off sells?</string>
-    <string name="edit_plan_disable_sells_dialog_text">You have %1$d open sell order(s). Turning sells off will hide the sell section, but the orders remain on the exchange. You must cancel them manually on the exchange, or by turning sells back on and clicking Cancel.</string>
+    <string name="edit_plan_disable_sells_dialog_text">Open sell orders: %1$d. Turning sells off hides the sell section, but the orders stay on the exchange. Cancel them on the exchange, or turn sells back on and cancel them in the app.</string>
     <string name="edit_plan_disable_sells_confirm">Turn off</string>
 
     <!-- Sell Wizard -->
     <string name="sell_wizard_title">Limit sell %1$s/%2$s</string>
     <string name="sell_wizard_spot_price">Current price:</string>
-    <string name="sell_wizard_avg_buy">Avg buy price:</string>
+    <string name="sell_wizard_avg_buy">Average buy price</string>
     <string name="sell_wizard_available">Available:</string>
     <string name="sell_wizard_amount">Amount to sell</string>
     <string name="sell_wizard_amount_all">All</string>
@@ -984,7 +1090,7 @@
     <string name="sell_wizard_chip_spot">Market</string>
     <string name="sell_wizard_summary">Summary</string>
     <string name="sell_wizard_proceeds">Proceeds:</string>
-    <string name="sell_wizard_instant_fill_warning">The sell will execute immediately. The limit price is below the current market price (%1$s %2$s). The order will fill at the highest bid on the exchange (usually close to market price minus spread). This is not an error.</string>
+    <string name="sell_wizard_instant_fill_warning">The sell will execute immediately. The limit price is below the current market price (%1$s %2$s), so the order fills right away at the best offer on the exchange, usually a little below the market price. This is not an error.</string>
     <string name="sell_wizard_far_from_market_warning">The price is far above market - the order may take a long time to fill.</string>
     <string name="sell_wizard_proceed">Continue</string>
     <string name="sell_wizard_confirm_title">Confirm sell</string>
@@ -1004,15 +1110,15 @@
     <string name="sell_wizard_avg_buy_helper_manual">Manually entered</string>
     <string name="sell_wizard_avg_buy_helper_required">No buys yet (or all sold) - enter manually</string>
     <string name="sell_wizard_avg_buy_reset">Calc from plan</string>
-    <string name="sell_wizard_net_fiat">Net proceeds (after fee)</string>
+    <string name="sell_wizard_net_fiat">Net proceeds (after fees)</string>
     <string name="sell_wizard_net_preset_label">Profit on this transaction:</string>
     <string name="sell_wizard_summary_fee">Estimated fee</string>
-    <string name="sell_wizard_summary_net_profit">Net profit (after fee)</string>
+    <string name="sell_wizard_summary_net_profit">Net profit (after fees)</string>
     <string name="sell_wizard_summary_remaining_after">After this sell</string>
     <string name="sell_wizard_summary_target_progress">Plan target progress</string>
     <string name="sell_wizard_loss_below_buy">Selling below buy price: %1$s %2$s loss</string>
     <string name="sell_wizard_loss_after_fee">After fee, this is a loss: %1$s %2$s</string>
-    <string name="sell_wizard_inventory_deficit">Inventory mismatch (%1$s missing) - enter avg buy price manually</string>
+    <string name="sell_wizard_inventory_deficit">The available amount doesn\'t match your purchases (%1$s missing). Enter the average buy price manually.</string>
     <string name="sell_wizard_ladder_enable">Split into multiple orders</string>
     <string name="sell_wizard_ladder_from">From</string>
     <string name="sell_wizard_ladder_to">To</string>
@@ -1041,14 +1147,150 @@
     <string name="sell_validation_price_must_be_positive">Limit price must be greater than 0</string>
     <string name="sell_validation_min_order_too_low">Minimum order value is %1$s (raise amount or price)</string>
     <string name="sell_validation_insufficient_inventory">Not enough available (available %1$s)</string>
-    <string name="sell_wizard_ladder_error_avg_required">Profit %% requires the average buy price to be set</string>
+    <string name="sell_wizard_ladder_error_avg_required">Profit in %% needs the average buy price</string>
     <string name="sell_wizard_ladder_error_amount_positive">Amount must be greater than 0</string>
     <string name="sell_wizard_ladder_error_count_min2">Order count must be at least 2</string>
+    <string name="sell_wizard_ladder_error_count_max">Order count can be at most %1$d</string>
     <string name="sell_wizard_ladder_error_to_must_exceed_from">To must be greater than From (both positive)</string>
     <string name="sell_wizard_ladder_error_insufficient">Not enough available</string>
     <string name="sell_wizard_ladder_error_below_min">Smallest order (%1$s %2$s) is below the minimum %3$s %2$s</string>
+    <string name="sell_wizard_ladder_error_net_unreachable_max">Target net proceeds are unreachable in equal-fiat mode (must be below %1$s %2$s for this starting price and order count)</string>
+    <string name="sell_wizard_ladder_error_net_unreachable_min">Target net proceeds must exceed %1$s %2$s</string>
+    <string name="sell_wizard_ladder_error_invalid_order">One or more generated orders have invalid amount or price</string>
+    <string name="sell_validation_sells_disabled">Sells are disabled for this plan</string>
+    <string name="sell_wizard_ladder_instant_fill_warning">Orders at or below the market price (%2$s %3$s): %1$d. They will fill immediately.</string>
+    <string name="sell_wizard_ladder_far_from_market_warning">Orders far above the market price: %1$d. They may take a long time to fill.</string>
+    <string name="sell_wizard_ladder_loss_warning">Orders that would sell at a loss after fees: %1$d (total loss %2$s %3$s).</string>
+    <string name="sell_wizard_uncertain_single_text">Order status is uncertain (%1$s). The order may have been placed on %2$s. Submission is blocked until you verify open orders on the exchange and confirm.</string>
+    <string name="sell_wizard_uncertain_ladder_text">Placed %1$d of %2$d orders. Order #%3$d is uncertain (%4$s) and may have been placed on %5$s. Remaining orders were not sent. Resubmission is blocked until you check the exchange.</string>
+    <string name="sell_wizard_uncertain_resolve_action">I checked the exchange — refresh &amp; unlock</string>
+    <string name="sell_wizard_uncertain_keep_locked">Close warning</string>
+    <string name="sell_wizard_submitting_progress">Placing %1$d / %2$d…</string>
+    <string name="sell_wizard_validation_failed">Could not check the order against the plan\'s available amount. Try again.</string>
     <string name="sell_wizard_amount_pct_hint">= %1$s %% of available</string>
     <string name="sell_wizard_submit_error_unknown">Unknown error</string>
     <string name="notification_sell_filled_title">Sell filled ✓</string>
     <string name="notification_sell_filled_text">Sold %1$s %2$s for %3$s %4$s @&#160;%5$s %4$s</string>
+    <!-- Sell errors -->
+    <string name="sell_error_plan_not_found">This plan no longer exists.</string>
+    <string name="sell_error_sells_disabled">Sells are disabled for this plan.</string>
+    <string name="sell_error_missing_credentials">API credentials for this exchange connection are missing.</string>
+    <string name="sell_error_limit_unsupported">%1$s does not support limit sells.</string>
+    <string name="sell_error_plan_changed">The plan changed in the meantime. Review the sell again.</string>
+    <string name="sell_error_review_pending">Review the pending sell in History before submitting a new one.</string>
+    <string name="sell_uncertain_unreadable">The exchange response could not be read.</string>
+    <string name="sell_uncertain_no_order_id">The exchange did not return an order ID.</string>
+    <string name="sell_uncertain_id_not_saved">The exchange accepted the order, but AccBot could not save its ID.</string>
+    <string name="sell_uncertain_timeout">The exchange did not confirm the sell in time.</string>
+    <string name="sell_error_ladder_count">The number of orders must be between %1$d and %2$d.</string>
+    <string name="sell_error_ladder_leg_min">The smallest order (%1$s) is below the minimum (%2$s).</string>
+    <string name="sell_error_transaction_not_found">The transaction no longer exists.</string>
+    <string name="sell_error_order_closed">The order is already closed.</string>
+    <string name="sell_error_no_exchange_id">The order has no exchange ID, so it cannot be cancelled.</string>
+    <string name="sell_cancel_sent_unverified">The cancellation was sent, but the final fills could not be verified. Refresh the status.</string>
+    <string name="sell_cancel_not_confirmed">The exchange has not confirmed that the cancelled order is closed yet. Refresh the status.</string>
+    <string name="sell_cancel_failed">Cancelling the order failed: %1$s</string>
+    <string name="sell_cancel_failed_unknown">unknown error</string>
+
+    <!-- Dashboard: needs attention, automation status, first plan guide -->
+    <string name="dashboard_last_purchase_line">Last: %1$s %2$s · %3$s</string>
+    <string name="dashboard_plan_review_blocked">Purchases on hold until you review the last one</string>
+    <plurals name="dashboard_plan_open_sells_count">
+        <item quantity="one">%1$d open sell order</item>
+        <item quantity="other">%1$d open sell orders</item>
+    </plurals>
+    <string name="time_ago_just_now">just now</string>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">%1$d minute ago</item>
+        <item quantity="other">%1$d minutes ago</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">%1$d hour ago</item>
+        <item quantity="other">%1$d hours ago</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+    <string name="attention_title">Needs attention</string>
+    <string name="attention_dismiss">Dismiss</string>
+    <string name="attention_dont_remind">Don\'t remind me</string>
+    <plurals name="attention_review_title">
+        <item quantity="one">A purchase needs your review</item>
+        <item quantity="other">%1$d purchases need your review</item>
+    </plurals>
+    <string name="attention_review_message">AccBot sent a %1$s purchase to %2$s but doesn\'t know whether the exchange executed it. The plan won\'t buy again until you check it.</string>
+    <string name="attention_review_action">Review</string>
+    <string name="attention_network_title">Purchase failed: no connection</string>
+    <string name="attention_retry_now">Try again now</string>
+    <string name="attention_missed_title">Missed purchases</string>
+    <plurals name="attention_missed_message">
+        <item quantity="one">%1$d %2$s purchase on %3$s was missed while the phone was offline.</item>
+        <item quantity="other">%1$d %2$s purchases on %3$s were missed while the phone was offline.</item>
+    </plurals>
+    <string name="attention_sandbox_title">Sandbox mode</string>
+    <string name="attention_sandbox_message">Orders go to the exchanges\' test accounts only. No real money is used.</string>
+    <string name="automation_status_title">Automatic purchases</string>
+    <string name="automation_status_ok">Working: purchases run on time in the background</string>
+    <string name="automation_status_limited">Automatic purchases may be limited</string>
+    <string name="automation_status_limited_message">Android may postpone purchases or hide a failure from you:</string>
+    <string name="automation_issue_battery">Battery optimization can delay purchases by hours.</string>
+    <string name="automation_issue_exact_alarms">Exact alarms are off, so purchases may run late.</string>
+    <string name="automation_issue_notifications">Notifications are off, so you won\'t hear about a failed purchase.</string>
+    <string name="automation_fix">Fix</string>
+    <string name="first_plan_guide_title">What happens next</string>
+    <string name="first_plan_guide_first_purchase">First purchase %1$s: %2$s on %3$s.</string>
+    <string name="first_plan_guide_funds">Keep enough %1$s on %2$s for several purchases.</string>
+    <string name="first_plan_guide_low_balance">You have only %1$s there now, which is not enough for the next purchase.</string>
+    <string name="first_plan_guide_background">AccBot buys in the background even with the app closed and notifies you after each purchase.</string>
+    <string name="first_plan_guide_got_it">Got it</string>
+
+    <!-- Review of an uncertain order -->
+    <string name="review_question">Open the order history for %1$s on %2$s around %3$s. What did you find?</string>
+    <string name="review_choice_found_purchase">The purchase is there</string>
+    <string name="review_choice_found_sell">The order is there</string>
+    <string name="review_choice_not_found">There is nothing on the exchange</string>
+    <string name="review_enter_id_purchase">Copy the order ID from the exchange. AccBot verifies it and records the amount actually bought.</string>
+    <string name="review_enter_id_sell">Copy the order ID from the exchange. AccBot verifies it and keeps tracking the order.</string>
+    <string name="review_import_first">%1$s can\'t look up an order by ID. Import your trade history (Manage Exchanges → connection → Import via API) so the purchase is counted, then finish the review here.</string>
+    <string name="review_import_done">History imported</string>
+    <string name="review_not_found_purchase">The purchase will be marked as not executed and the plan continues on schedule.</string>
+    <string name="review_not_found_sell">The sell will be marked as not executed and the reserved amount is released.</string>
+    <string name="review_mark_not_executed">Mark as not executed</string>
+    <string name="review_verify_save">Verify and save</string>
+    <string name="review_back">Back</string>
+
+    <!-- Friendly error messages -->
+    <string name="error_network_title">No connection to the exchange</string>
+    <string name="error_network_advice">Check your internet connection. AccBot tries again automatically.</string>
+    <string name="error_auth_title">The exchange rejected the API key</string>
+    <string name="error_auth_advice">The key may have expired, lack trading permission or be limited to other IP addresses. Check it on the exchange and enter it again in Manage Exchanges.</string>
+    <string name="error_funds_title">Not enough money on the exchange</string>
+    <string name="error_funds_advice">Check your balance on the exchange and top it up if needed.</string>
+    <string name="error_limit_title">The order is below the exchange limit</string>
+    <string name="error_limit_advice">Raise the order amount so it meets the exchange minimum (for purchases, in the plan settings).</string>
+    <string name="error_rate_limit_title">The exchange is limiting requests</string>
+    <string name="error_rate_limit_advice">Too many requests in a short time. Wait a few minutes; AccBot will try again.</string>
+    <string name="error_unavailable_title">The exchange is unavailable</string>
+    <string name="error_unavailable_advice">The exchange is probably under maintenance. Try again later.</string>
+    <string name="error_technical_detail">Technical detail: %1$s</string>
+
+    <!-- Settings groups -->
+    <string name="settings_section_exchanges">EXCHANGES &amp; SELLING</string>
+    <string name="settings_section_automation">AUTOMATIC PURCHASES &amp; ALERTS</string>
+    <string name="settings_section_appearance">APPEARANCE</string>
+    <string name="settings_section_security_data">SECURITY &amp; DATA</string>
+    <string name="settings_section_developers">FOR DEVELOPERS</string>
+
+    <!-- Sell wizard advanced section -->
+    <string name="sell_wizard_advanced">Advanced</string>
+    <string name="sell_wizard_advanced_hint">Split into several orders, own average buy price, net proceeds target</string>
+
+    <!-- Plan details action bar -->
+    <string name="plan_details_pause">Pause</string>
+    <string name="plan_details_resume">Resume</string>
+    <string name="plan_details_buy_now">Buy now</string>
+    <string name="plan_details_sell">Sell</string>
+    <string name="plan_details_buy_now_title">Buy now?</string>
+    <string name="plan_details_buy_now_message">AccBot sends a purchase of %2$s for %1$s to %3$s right away. The next purchase is then scheduled from the plan\'s frequency.</string>
 </resources>

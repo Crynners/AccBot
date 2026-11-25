@@ -5,6 +5,9 @@ enum TransactionStatus: String, Codable, Sendable {
     case pending = "PENDING"
     case completed = "COMPLETED"
     case failed = "FAILED"
+    /// Partially filled and finished: iOS places market buys only, so a partial fill is
+    /// terminal and is never re-queried (unlike Android's open `PARTIAL`). Backups export it
+    /// as `PARTIAL_CANCELLED`, Android's terminal partial status.
     case partial = "PARTIAL"
 
     var displayName: String {
@@ -71,4 +74,8 @@ struct Transaction: Identifiable, Equatable, Sendable {
 
     /// Display string for the trading pair
     var pair: String { "\(crypto)/\(fiat)" }
+
+    var needsPurchaseReview: Bool {
+        status == .pending && (exchangeOrderId ?? "").isEmpty
+    }
 }

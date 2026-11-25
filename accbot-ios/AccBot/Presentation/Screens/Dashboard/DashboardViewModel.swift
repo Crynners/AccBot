@@ -14,6 +14,35 @@ final class DashboardViewModel: ObservableObject {
     @Published var isRefreshingPrices = false
     @Published var errorMessage: String?
     @Published var runResultMessage: String?
+    /// Latest filled purchase per plan id, shown on each plan card.
+    @Published var lastPurchaseByPlan: [Int64: Transaction] = [:]
+    @Published var pendingPurchases: [Transaction] = []
+    /// Info notice; hidden for the rest of the app session once dismissed.
+    @Published var sandboxNoticeDismissed = false
+    @Published var firstPlanGuideDismissed = UserDefaults.standard.bool(forKey: DashboardViewModel.firstPlanGuideKey)
+    /// Automation problems the user chose to ignore; the warning returns only for a new one.
+    @Published var dismissedAutomationIssues = Set(UserDefaults.standard.stringArray(forKey: DashboardViewModel.automationDismissedKey) ?? [])
+
+    private static let firstPlanGuideKey = "firstPlanGuideDismissed"
+    private static let automationDismissedKey = "dismissedAutomationIssues"
+
+    /// Purchases with an unknown outcome, oldest first. Each blocks its plan until reviewed.
+    /// A purchase being sent right now has no order ID yet either, so only one older than
+    /// two minutes (well past the request timeout) counts as waiting for the user.
+    var purchasesAwaitingReview: [Transaction] {
+        let cutoff = Date().addingTimeInterval(-120)
+        return pendingPurchases.filter { $0.needsPurchaseReview && $0.executedAt < cutoff }
+    }
+
+    func dismissFirstPlanGuide() {
+        firstPlanGuideDismissed = true
+        UserDefaults.standard.set(true, forKey: Self.firstPlanGuideKey)
+    }
+
+    func dismissAutomationWarning(_ issues: [AutomationIssue]) {
+        dismissedAutomationIssues = Set(issues.map(\.rawValue))
+        UserDefaults.standard.set(Array(dismissedAutomationIssues), forKey: Self.automationDismissedKey)
+    }
 
     // Market Pulse
     @Published var fearGreedValue: Int?
@@ -230,6 +259,22 @@ final class DashboardViewModel: ObservableObject {
     }
 
     private func observeTransactions() {
+        deps.activeDatabase.transactionDao.observePurchaseOverview()
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] overview in
+                    guard let self else { return }
+                    self.lastPurchaseByPlan = overview.lastByPlan
+                    // Once any purchase went through, the first-plan guide has done its job.
+                    if !overview.lastByPlan.isEmpty && !self.firstPlanGuideDismissed {
+                        self.dismissFirstPlanGuide()
+                    }
+                    self.pendingPurchases = overview.pending
+                }
+            )
+            .store(in: &cancellables)
+
         deps.activeDatabase.transactionDao.observeCount()
             .removeDuplicates()
             .dropFirst()
@@ -386,14 +431,13 @@ final class DashboardViewModel: ObservableObject {
     func runSelectedPlans() {
         guard !selectedPlanIds.isEmpty else { return }
         isRunning = true
-        let planCount = selectedPlanIds.count
         let planIds = Array(selectedPlanIds)
 
         Task {
-            // Note: executePlans is non-throwing; individual plan errors are
-            // recorded as failed transactions in the DB, not propagated here.
-            await deps.dcaExecutionEngine.executePlans(planIds)
-            let msg = String(localized: "\(planCount) plans executed successfully")
+            let handled = await deps.dcaExecutionEngine.executePlans(planIds)
+            let msg = handled
+                ? String(localized: "Check History for purchase outcomes.")
+                : String(localized: "Some plans could not run. Check History and exchange settings.")
             runResultMessage = msg
             announceForVoiceOver(msg)
             isRunning = false

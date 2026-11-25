@@ -223,6 +223,10 @@ struct MainTabView: View {
             BackupExportView()
         case .backupImport:
             BackupImportView()
+        case .sharedPlans:
+            SharedPlansView()
+        case .sharedPlanDetail(let shareId):
+            SharedPlanDetailView(shareId: shareId)
         }
     }
 }

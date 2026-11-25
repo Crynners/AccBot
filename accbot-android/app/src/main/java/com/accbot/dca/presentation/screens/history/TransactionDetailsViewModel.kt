@@ -6,6 +6,13 @@ import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.toDomain
 import com.accbot.dca.domain.model.Transaction
 import com.accbot.dca.domain.usecase.CancelSellOrderUseCase
+import com.accbot.dca.domain.usecase.ResolvePendingTransactionsUseCase
+import com.accbot.dca.domain.usecase.tryReviewSell
+import com.accbot.dca.scheduler.DcaAlarmScheduler
+import com.accbot.dca.worker.DcaWorker
+import com.accbot.dca.R
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -23,7 +30,9 @@ data class TransactionDetailsUiState(
 @HiltViewModel
 class TransactionDetailsViewModel @Inject constructor(
     private val transactionDao: TransactionDao,
-    private val cancelSellOrderUseCase: CancelSellOrderUseCase
+    private val cancelSellOrderUseCase: CancelSellOrderUseCase,
+    private val resolvePendingTransactions: ResolvePendingTransactionsUseCase,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TransactionDetailsUiState())
@@ -31,6 +40,56 @@ class TransactionDetailsViewModel @Inject constructor(
 
     private val _snackbar = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val snackbar: SharedFlow<String> = _snackbar.asSharedFlow()
+
+    fun acknowledgePurchaseReview(transactionId: Long, exchangeOrderId: String = "") {
+        viewModelScope.launch {
+            try {
+                var verified = true
+                val reviewed = DcaWorker.tryReviewPurchase {
+                    if (exchangeOrderId.isBlank()) {
+                        transactionDao.acknowledgeUnidentifiedBuy(transactionId)
+                    } else {
+                        verified = resolvePendingTransactions.verifyUnidentifiedBuy(transactionId, exchangeOrderId.trim())
+                    }
+                }
+                if (reviewed && !verified) {
+                    _snackbar.emit(context.getString(R.string.transaction_purchase_order_unverified))
+                    loadTransaction(transactionId)
+                    return@launch
+                }
+                if (reviewed) {
+                    DcaAlarmScheduler.scheduleNextAlarm(context)
+                } else {
+                    _snackbar.emit(context.getString(R.string.transaction_purchase_in_progress))
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _snackbar.emit(e.message ?: "Failed to update transaction")
+            }
+            loadTransaction(transactionId)
+        }
+    }
+
+    fun acknowledgeSellReview(transactionId: Long, exchangeOrderId: String) {
+        viewModelScope.launch {
+            try {
+                val reviewed = tryReviewSell {
+                    if (exchangeOrderId.isBlank()) {
+                        transactionDao.acknowledgeUnidentifiedSell(transactionId)
+                    } else if (!resolvePendingTransactions.verifyUnidentifiedSell(transactionId, exchangeOrderId.trim())) {
+                        _snackbar.emit(context.getString(R.string.transaction_sell_order_unverified))
+                    }
+                }
+                if (!reviewed) _snackbar.emit(context.getString(R.string.transaction_sell_in_progress))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _snackbar.emit(e.message ?: "Failed to update transaction")
+            }
+            loadTransaction(transactionId)
+        }
+    }
 
     fun loadTransaction(transactionId: Long) {
         viewModelScope.launch {
@@ -73,7 +132,10 @@ class TransactionDetailsViewModel @Inject constructor(
             val result = cancelSellOrderUseCase(txId)
             if (result.isFailure) {
                 _snackbar.emit(
-                    "Zruseni orderu selhalo: ${result.exceptionOrNull()?.message ?: "neznama chyba"}"
+                    context.getString(
+                        R.string.sell_cancel_failed,
+                        result.exceptionOrNull()?.message ?: context.getString(R.string.sell_cancel_failed_unknown)
+                    )
                 )
             }
             // Refresh after cancel attempt (success or failure) so displayed status is accurate.

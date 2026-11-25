@@ -4,18 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AccBot - Self-Custody Bitcoin DCA</title>
-  <meta name="description" content="Automated Dollar Cost Averaging for Bitcoin and crypto. Self-custody, open source, 7 exchanges supported.">
+  <meta name="description" content="Open-source automated Bitcoin and crypto purchases across five exchanges.">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="AccBot - Self-Custody Bitcoin DCA">
-  <meta property="og:description" content="Automated Dollar Cost Averaging for Bitcoin and crypto. Self-custody, open source, 7 exchanges supported.">
+  <meta property="og:description" content="Open-source automated Bitcoin and crypto purchases across five exchanges.">
   <meta property="og:url" content="https://crynners.github.io/AccBot/">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="AccBot - Self-Custody Bitcoin DCA">
-  <meta name="twitter:description" content="Automated Dollar Cost Averaging for Bitcoin and crypto. Self-custody, open source, 7 exchanges supported.">
+  <meta name="twitter:description" content="Open-source automated Bitcoin and crypto purchases across five exchanges.">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -383,7 +383,7 @@
         <div class="feature-block reverse reveal">
           <div class="feature-text">
             <h3 data-i18n="features_sandbox_title">Sandbox Mode</h3>
-            <p data-i18n="features_sandbox_desc">Test your strategies risk-free with exchange testnet environments. Sandbox uses a separate database so your production data stays safe.</p>
+            <p data-i18n="features_sandbox_desc">Try DCA with the Binance spot testnet. Sandbox keeps its plans, orders and credentials separate from production.</p>
           </div>
           <div class="feature-visual">
             <div class="mock-sandbox-banner">SANDBOX MODE - Test trades only</div>
@@ -401,21 +401,16 @@
           </div>
         </div>
 
-        <!-- Auto-Withdrawal -->
+        <!-- Withdrawal reminders -->
         <div class="feature-block reveal">
           <div class="feature-text">
-            <h3 data-i18n="features_withdrawal_title">Auto-Withdrawal</h3>
-            <p data-i18n="features_withdrawal_desc">Automatically send purchased crypto to your own wallet address after each purchase. True self-custody.</p>
+            <h3 data-i18n="features_withdrawal_title">Withdrawal reminders</h3>
+            <p data-i18n="features_withdrawal_desc">Set a balance threshold and get a reminder to withdraw your crypto through your exchange.</p>
           </div>
           <div class="feature-visual">
             <div class="mock-card">
-              <div class="mock-card-label">Auto-Withdrawal</div>
-              <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                <span style="font-size:0.8125rem;font-weight:500">Enabled</span>
-              </div>
-              <div class="mock-address-box">bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</div>
-              <div style="font-size:0.625rem;color:var(--text-muted);margin-top:8px">BTC will be sent to this address after each purchase</div>
+              <div class="mock-card-label" data-i18n="features_withdrawal_title">Withdrawal reminders</div>
+              <div class="mock-address-box">0.01 BTC</div>
             </div>
           </div>
         </div>
@@ -659,7 +654,7 @@
       <div class="container">
         <div class="section-header reveal">
           <h2 data-i18n="exchanges_title">Supported Exchanges</h2>
-          <p data-i18n="exchanges_subtitle">Connect to any of 7 major exchanges. Create multiple DCA plans across different exchanges and trading pairs.</p>
+          <p data-i18n="exchanges_subtitle">Create DCA plans across five exchanges. Android supports limit sells on Coinmate and Binance.</p>
         </div>
         <div class="exchange-logos reveal">
           <div class="exchange-logo">
@@ -688,22 +683,30 @@
           </div>
           <div class="exchange-logo">
             <div class="exchange-icon">
-              <img src="img/exchanges/ic_exchange_bitfinex.png" alt="Bitfinex" width="32" height="32">
-            </div>
-            <span class="exchange-name">Bitfinex</span>
-          </div>
-          <div class="exchange-logo">
-            <div class="exchange-icon">
-              <img src="img/exchanges/ic_exchange_huobi.png" alt="Huobi" width="32" height="32">
-            </div>
-            <span class="exchange-name">Huobi</span>
-          </div>
-          <div class="exchange-logo">
-            <div class="exchange-icon">
               <img src="img/exchanges/ic_exchange_coinbase.png" alt="Coinbase" width="32" height="32">
             </div>
             <span class="exchange-name">Coinbase</span>
           </div>
+        </div>
+        <div class="exchange-capabilities">
+          <table>
+            <caption data-i18n="exchanges_capabilities">Features by exchange</caption>
+            <thead>
+              <tr>
+                <th scope="col" data-i18n="exchanges_col_exchange">Exchange</th>
+                <th scope="col" data-i18n="exchanges_col_sandbox">Spot testnet</th>
+                <th scope="col" data-i18n="exchanges_col_sells">Limit sells (Android)</th>
+                <th scope="col" data-i18n="exchanges_col_import">Trade import</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Binance</th><td data-i18n="exchanges_yes">Yes</td><td data-i18n="exchanges_yes">Yes</td><td>API</td></tr>
+              <tr><th scope="row">Coinmate</th><td data-i18n="exchanges_no">No</td><td data-i18n="exchanges_yes">Yes</td><td>API, CSV</td></tr>
+              <tr><th scope="row">Kraken</th><td data-i18n="exchanges_no">No</td><td data-i18n="exchanges_no">No</td><td>API</td></tr>
+              <tr><th scope="row">KuCoin</th><td data-i18n="exchanges_no">No</td><td data-i18n="exchanges_no">No</td><td data-i18n="exchanges_no">No</td></tr>
+              <tr><th scope="row">Coinbase</th><td data-i18n="exchanges_no">No</td><td data-i18n="exchanges_no">No</td><td>API</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -819,20 +822,21 @@
               <input type="number" id="compare-amount" value="1000" min="1" step="100">
             </div>
             <div class="compare-input-group">
-              <label data-i18n="compare_interval_label">Purchase interval</label>
-              <div class="compare-interval-btns">
-                <button type="button" class="compare-interval-btn" data-interval="daily" data-i18n="compare_daily">Daily</button>
-                <button type="button" class="compare-interval-btn active" data-interval="weekly" data-i18n="compare_weekly">Weekly</button>
-                <button type="button" class="compare-interval-btn" data-interval="monthly" data-i18n="compare_monthly">Monthly</button>
+              <span class="compare-input-label" id="compare-interval-label" data-i18n="compare_interval_label">Purchase interval</span>
+              <div class="compare-interval-btns" role="group" aria-labelledby="compare-interval-label">
+                <button type="button" class="compare-interval-btn" aria-pressed="false" data-interval="daily" data-i18n="compare_daily">Daily</button>
+                <button type="button" class="compare-interval-btn active" aria-pressed="true" data-interval="weekly" data-i18n="compare_weekly">Weekly</button>
+                <button type="button" class="compare-interval-btn" aria-pressed="false" data-interval="monthly" data-i18n="compare_monthly">Monthly</button>
               </div>
             </div>
           </div>
           <button type="button" class="btn btn-primary compare-calc-btn" id="compare-calc" data-i18n="compare_calculate">Calculate comparison</button>
         </div>
+        <div id="compare-status" class="compare-status" role="status"></div>
 
         <div id="compare-results" class="compare-results" style="display:none">
           <div id="compare-loading" class="compare-loading"></div>
-          <div id="compare-error" class="compare-error" style="display:none" data-i18n="compare_error">Failed to load price data. Please try again later.</div>
+          <div id="compare-error" class="compare-error" style="display:none" role="alert" data-i18n="compare_error">Failed to load price data. Please try again later.</div>
           <div id="compare-content" style="display:none">
             <div class="compare-summary">
               <span id="compare-summary-text"></span>
@@ -894,7 +898,24 @@
               </div>
             </div>
 
-            <p class="compare-disclaimer" data-i18n="compare_disclaimer">* Simulation based on historical BTC/CZK prices from CryptoCompare. Past performance does not indicate future results.</p>
+            <details id="compare-table" class="compare-table">
+              <summary data-i18n="compare_table_label">Show values for each purchase</summary>
+              <div class="compare-table-scroll">
+                <table aria-labelledby="compare-table-heading">
+                  <caption id="compare-table-heading" data-i18n="compare_chart_title">Cumulative BTC accumulation</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" data-i18n="compare_table_date">Purchase date</th>
+                      <th scope="col" data-i18n="compare_legend_price">BTC/CZK price</th>
+                      <th scope="col">Štosuj</th>
+                      <th scope="col">AccBot</th>
+                    </tr>
+                  </thead>
+                  <tbody id="compare-table-body"></tbody>
+                </table>
+              </div>
+            </details>
+            <p class="compare-disclaimer" data-i18n="compare_disclaimer">This simulation uses historical BTC/CZK prices from CryptoCompare and fixed fee assumptions of 0.6% and 1.5%. Exchange spreads, withdrawal costs and taxes are excluded.</p>
           </div>
         </div>
       </div>

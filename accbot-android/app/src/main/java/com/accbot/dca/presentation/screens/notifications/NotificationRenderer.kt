@@ -4,6 +4,7 @@ import android.content.Context
 import com.accbot.dca.R
 import com.accbot.dca.data.local.NotificationEntity
 import com.accbot.dca.data.local.NotificationTemplateArgs
+import com.accbot.dca.presentation.utils.FriendlyErrors
 import com.accbot.dca.presentation.utils.NumberFormatters
 import java.math.BigDecimal
 import java.time.Instant
@@ -62,7 +63,7 @@ object NotificationRenderer {
                 val message = context.getString(
                     R.string.notification_dca_failed_text,
                     args.crypto,
-                    args.errorMessage
+                    FriendlyErrors.summary(context, args.errorMessage)
                 )
                 title to message
             }

@@ -188,7 +188,7 @@
 "Crypto Amount" = "Částka krypto";
 "Price" = "Cena";
 "Fee" = "Poplatek";
-"Order ID" = "ID objednávky";
+"Order ID" = "ID příkazu";
 
 /* ===== Portfolio ===== */
 "Loading portfolio..." = "Načítání portfolia…";
@@ -313,7 +313,7 @@
 "Supported Pairs" = "Podporované páry";
 "Cryptocurrencies" = "Kryptoměny";
 "Fiat Currencies" = "Fiat měny";
-"Minimum Order Sizes" = "Minimální velikosti objednávek";
+"Minimum Order Sizes" = "Minimální velikosti příkazů";
 "Cached Balances" = "Uložené zůstatky";
 "From local cache" = "Z lokální mezipaměti";
 "No cached balances. Tap Refresh to fetch." = "Žádné uložené zůstatky. Klepněte na Obnovit.";
@@ -517,7 +517,7 @@
 /* ===== Plan Details — extra format strings ===== */
 /* Note: "Last Executed" and "Next Execution" defined in Plan Details section above */
 /* Format: "Minimum order: %@" */
-"Minimum order: %@" = "Minimální objednávka: %@";
+"Minimum order: %@" = "Minimální příkaz: %@";
 
 /* ===== Transaction Card ===== */
 "at" = "v";
@@ -752,7 +752,7 @@
 "Swipe left to delete" = "Přejetím doleva smažete";
 
 /* TransactionDetailsView */
-"Copy order ID" = "Kopírovat ID objednávky";
+"Copy order ID" = "Kopírovat ID příkazu";
 
 /* SettingsView */
 "Select language" = "Vybrat jazyk";
@@ -811,3 +811,191 @@
 
 /* Authentication */
 "Authentication is not available on this device. Please set up a device passcode in Settings." = "Ověření není na tomto zařízení k dispozici. Prosím nastavte kód zařízení v Nastavení.";
+
+/* Purchase execution and review */
+"Unlock the device to make exchange credentials available." = "Odemkněte zařízení, aby byly přístupné klíče k burze.";
+"Connect the exchange before running this DCA plan." = "Před spuštěním tohoto plánu DCA připojte burzu.";
+"Unable to read exchange credentials." = "Přihlašovací údaje k burze se nepodařilo načíst.";
+"The purchase amount is below the exchange minimum." = "Částka nákupu je nižší než minimum burzy.";
+"Accumulation target reached" = "Cíl spoření dosažen";
+"The plan has been paused." = "Plán byl pozastaven.";
+"The plan changed or has a purchase awaiting confirmation." = "Plán se změnil nebo obsahuje nákup čekající na potvrzení.";
+"Purchase awaiting confirmation" = "Nákup čeká na potvrzení";
+"The exchange accepted the order. Fill details are pending." = "Burza příkaz přijala. Čeká se na údaje o jeho vyplnění.";
+"Check this purchase on the exchange before allowing the plan to run again." = "Než plán znovu spustíte, ověřte tento nákup na burze.";
+"The order ended without a fill." = "Příkaz skončil bez vyplnění.";
+"DCA Purchase Partially Filled" = "Nákup DCA byl proveden částečně";
+"Check History for purchase outcomes." = "Výsledky nákupů najdete v Historii.";
+"Some plans could not run. Check History and exchange settings." = "Některé plány se nepodařilo spustit. Zkontrolujte Historii a nastavení burzy.";
+
+"No fill was confirmed on the exchange." = "Burza nepotvrdila žádné provedení nákupu.";
+"A purchase check is in progress. Try again when it finishes." = "Probíhá ověření nákupu. Zkuste to znovu po jeho dokončení.";
+"Review pending purchases before deleting their history." = "Před smazáním historie vyřešte nákupy, které čekají na potvrzení.";
+"This purchase is no longer awaiting review." = "Tento nákup už nečeká na ověření.";
+"The purchase could not be matched. Check the order ID or use the ID shown in this plan’s imported history." = "Nákup se nepodařilo spárovat. Zkontrolujte ID příkazu nebo použijte ID nákupu z importované historie plánu.";
+"Plan name (optional)" = "Název plánu (nepovinný)";
+"Restored plans are paused. Review each plan before enabling it." = "Obnovené plány jsou pozastavené. Před zapnutím je zkontrolujte.";
+"This backup belongs to a different environment. Switch to that environment before restoring it." = "Záloha patří do jiného prostředí. Před obnovou do něj přepněte aplikaci.";
+"This backup exceeds the supported size limit." = "Záloha překračuje podporovanou velikost.";
+"A backup that includes API credentials must be encrypted." = "Záloha s přihlašovacími údaji musí být zašifrovaná.";
+"This backup contains multiple accounts per exchange or sell data that iOS cannot restore." = "Záloha obsahuje více účtů na jedné burze nebo údaje o prodejích, které iOS nedokáže obnovit.";
+"Resolve pending orders before replacing current data." = "Před přepsáním dat vyřešte čekající příkazy.";
+"The backup contains transactions or withdrawals without their plans." = "Záloha obsahuje transakce nebo výběry bez příslušných plánů.";
+"The backup contains credentials for an unsupported exchange." = "Záloha obsahuje přihlašovací údaje pro nepodporovanou burzu.";
+"Data was restored. Check your API credentials before enabling plans." = "Data byla obnovena. Před zapnutím plánů zkontrolujte přístupové údaje k API.";
+"Switch environment" = "Přepnout prostředí";
+"Switch to the test environment? It uses separate plans, credentials, and supported testnet APIs." = "Přepnout do testovacího prostředí? Používá oddělené plány a přihlašovací údaje a připojuje se pouze k podporovaným testovacím API.";
+"Switch to production? Enabled production plans can place real orders." = "Přepnout do produkce? Zapnuté produkční plány můžou zadávat skutečné příkazy.";
+
+"No confirmed fills to export." = "Žádná potvrzená plnění k exportu.";
+"The backup contains orders in states that iOS cannot restore." = "Záloha obsahuje příkazy ve stavech, které iOS nedokáže obnovit.";
+"Spot testnet available" = "Testovací spotový trh k dispozici";
+"Spot testnet unavailable" = "Testovací spotový trh není k dispozici";
+"API trade import available" = "Import obchodů přes API k dispozici";
+"API trade import unavailable" = "Import obchodů přes API není k dispozici";
+"Resolve pending purchases before removing this connection." = "Před odebráním připojení vyřešte čekající nákupy.";
+"Submit test orders on %@?" = "Odeslat testovací příkazy na %@?";
+"Submit real orders on %@?" = "Odeslat skutečné příkazy na %@?";
+"This plan schedules test purchases on %@." = "Tento plán naplánuje testovací nákupy na %@.";
+"This plan schedules real purchases on %@." = "Tento plán naplánuje skutečné nákupy na %@.";
+
+/* Read-only plan sharing */
+"This file is not an AccBot shared plan." = "Tento soubor není sdílený plán AccBotu.";
+"This shared plan needs a newer version of AccBot." = "Tento sdílený plán vyžaduje novější verzi AccBotu.";
+"The file is too large." = "Soubor je příliš velký.";
+"The shared plan is damaged or incomplete." = "Sdílený plán je poškozený nebo neúplný.";
+"This plan includes live updates. Enter the password you got from the sender." = "Tento plán obsahuje živé aktualizace. Zadejte heslo, které vám dal odesílatel.";
+"Wrong password." = "Nesprávné heslo.";
+"Live updates are not available for this exchange." = "Pro tuto burzu nejsou živé aktualizace k dispozici.";
+"The key must belong to the plan’s exchange." = "Klíč musí patřit burze, na které plán běží.";
+"This is the key the plan trades with. Create a separate read-only key." = "Tímto klíčem plán obchoduje. Vytvořte samostatný klíč jen pro čtení.";
+"This key can trade or withdraw. Create a key with read-only access." = "Tento klíč umí obchodovat nebo vybírat. Vytvořte klíč jen pro čtení.";
+"The key could not be checked. Make sure it is correct and try again." = "Klíč se nepodařilo ověřit. Zkontrolujte, že je správně, a zkuste to znovu.";
+"Could not create the share file." = "Soubor ke sdílení se nepodařilo vytvořit.";
+"Creates a snapshot file of this plan. The recipient opens it in AccBot and can only view it. To share the current state later, send the file again and it replaces the previous version." = "Vytvoří soubor se snímkem tohoto plánu. Příjemce ho otevře v AccBotu a může ho jen prohlížet. Aktuální stav později nasdílíte tak, že soubor pošlete znovu a nahradí předchozí verzi.";
+"Include amounts" = "Zahrnout částky";
+"Purchase amounts, invested total and holdings are included." = "Sdílí se částky nákupů, celková investice i držené množství.";
+"Only dates, prices, average buy price and performance in percent are shared." = "Sdílí se jen data, ceny, průměrná nákupní cena a výkonnost v procentech.";
+"Live updates" = "Živé aktualizace";
+"The recipient can fetch new trades with a separate read-only API key." = "Příjemce si může stahovat nové obchody pomocí samostatného API klíče jen pro čtení.";
+"Never shared: the key this plan trades with, order IDs, connection names and withdrawal addresses. The file is encrypted with your password." = "Nikdy se nesdílí: klíč, kterým plán obchoduje, ID příkazů, názvy připojení ani adresy pro výběr. Soubor se zašifruje vaším heslem.";
+"Never shared: API keys, order IDs, connection names and withdrawal addresses. The file cannot be used to run the plan." = "Nikdy se nesdílí: API klíče, ID příkazů, názvy připojení ani adresy pro výběr. Soubor nejde použít ke spuštění plánu.";
+"Share plan (read-only)" = "Sdílet plán (jen pro čtení)";
+"Share" = "Sdílet";
+"Create a new API key on %@ with read-only access: no trading and no withdrawals. Do not use the key this plan buys with. Anyone with the file and password can use this key outside AccBot, so only its exchange permissions protect you." = "Na burze %@ vytvořte nový API klíč jen pro čtení, bez obchodování a bez výběrů. Nepoužívejte klíč, kterým plán nakupuje. Kdo má soubor a heslo, může klíč použít i mimo AccBot, takže vás chrání jen oprávnění nastavená na burze.";
+"Read-only API key" = "API klíč jen pro čtení";
+"Read-only API secret" = "API secret jen pro čtení";
+"Check key" = "Ověřit klíč";
+"The exchange confirmed this key cannot trade or withdraw." = "Burza potvrdila, že klíč nemůže obchodovat ani vybírat.";
+"%@ cannot report key permissions. I confirm this key is read-only, without trading or withdrawals." = "%@ neumí oprávnění klíče ověřit. Potvrzuji, že klíč je jen pro čtení, bez obchodování a výběrů.";
+"The file will be encrypted. Send the password to the recipient another way than the file." = "Soubor se zašifruje. Heslo pošlete příjemci jinou cestou než soubor.";
+"File password" = "Heslo k souboru";
+"Confirm password" = "Heslo znovu";
+"Use at least %lld characters and type the same password twice." = "Použijte aspoň %lld znaků a zadejte heslo dvakrát stejně.";
+"The file could not be read." = "Soubor se nepodařilo načíst.";
+"Updated “%@”" = "Aktualizováno „%@“";
+"Added “%@”" = "Přidáno „%@“";
+"A newer snapshot of “%@” is already saved." = "Novější snímek plánu „%@“ už je uložený.";
+"The shared key can trade or withdraw, so AccBot refused it. Ask the sender for a read-only key." = "Sdílený klíč umí obchodovat nebo vybírat, proto ho AccBot odmítl. Požádejte odesílatele o klíč jen pro čtení.";
+"No shared plans yet" = "Zatím žádné sdílené plány";
+"When someone shares a plan with you from AccBot, save the file and import it here." = "Až vám někdo z AccBotu nasdílí plán, uložte si soubor a naimportujte ho sem.";
+"Import shared plan" = "Importovat sdílený plán";
+"Snapshots of plans other people shared with you. They are read-only, never run and are not part of your portfolio." = "Snímky plánů, které s vámi sdíleli jiní. Jsou jen pro čtení, nikdy se nespouštějí a nejsou součástí vašeho portfolia.";
+"Shared with me" = "Sdíleno se mnou";
+"Encrypted shared plan" = "Šifrovaný sdílený plán";
+"Open" = "Otevřít";
+"Snapshot from %@" = "Snímek z %@";
+"Test environment data" = "Data z testovacího prostředí";
+"%lld new trades" = "Nové obchody: %lld";
+"The shared key now allows trading or withdrawals. AccBot removed it and stopped live updates." = "Sdílený klíč nově umožňuje obchodovat nebo vybírat. AccBot ho odstranil a živé aktualizace zastavil.";
+"This shared plan is no longer available." = "Tento sdílený plán už není k dispozici.";
+"Shared plan" = "Sdílený plán";
+"Refresh" = "Obnovit";
+"Remove shared plan?" = "Odebrat sdílený plán?";
+"The snapshot is removed from this device. The sender’s plan is not affected." = "Snímek se odebere z tohoto zařízení. Plán odesílatele se nezmění.";
+"Amount per purchase" = "Částka na nákup";
+"Schedule" = "Plán nákupů";
+"State when shared" = "Stav při sdílení";
+"Summary" = "Souhrn";
+"Purchases" = "Nákupy";
+"Sells" = "Prodeje";
+"First purchase" = "První nákup";
+"Held" = "Drženo";
+"Sold for" = "Prodáno za";
+"Average buy price" = "Průměrná nákupní cena";
+"Current price" = "Aktuální cena";
+"Current value" = "Aktuální hodnota";
+"Performance vs. average" = "Výkonnost vůči průměru";
+"The sender chose not to share amounts." = "Odesílatel se rozhodl částky nesdílet.";
+"Trades (%lld)" = "Obchody (%lld)";
+"No confirmed trades yet." = "Zatím žádné potvrzené obchody.";
+"Read-only" = "Jen pro čtení";
+"The last refresh failed. The key may have been revoked or the exchange is unreachable." = "Poslední obnovení selhalo. Klíč mohl být odvolán nebo je burza nedostupná.";
+"Key checked by the exchange as read-only." = "Burza ověřila, že klíč je jen pro čtení.";
+"The exchange cannot confirm the key is read-only; the sender confirmed it." = "Burza neumí ověřit, že je klíč jen pro čtení; potvrdil to odesílatel.";
+"New trades include all trades of this pair on the sender’s exchange account." = "Nové obchody zahrnují všechny obchody tohoto páru na burzovním účtu odesílatele.";
+"Snapshot from %@. It does not update by itself and cannot be edited or run." = "Snímek z %@. Sám se neaktualizuje a nejde upravit ani spustit.";
+"Live updates · not refreshed yet. Cannot be edited or run." = "Živé aktualizace · zatím neobnoveno. Nejde upravit ani spustit.";
+"Live updates · last refreshed %@. Cannot be edited or run." = "Živé aktualizace · naposledy obnoveno %@. Nejde upravit ani spustit.";
+"Unknown" = "Neznámý";
+"Purchase" = "Nákup";
+"Sell" = "Prodej";
+"at %@" = "za %@";
+
+/* ===== UX: needs attention, automation, friendly errors, review, plan actions ===== */
+"Needs attention" = "Vyžaduje pozornost";
+"A purchase needs your review" = "Nákup čeká na vaši kontrolu";
+"%lld purchases need your review" = "Nákupy čekající na vaši kontrolu: %lld";
+"AccBot sent a %@ purchase to %@ but doesn't know whether the exchange executed it. The plan won't buy again until you check it." = "AccBot odeslal nákup %1$@ na %2$@, ale neví, jestli ho burza provedla. Dokud ho nezkontrolujete, plán znovu nenakoupí.";
+"Review" = "Zkontrolovat";
+"Automatic purchases may be limited" = "Automatické nákupy můžou být omezené";
+"iOS may postpone purchases or hide a failure from you:" = "iOS může nákupy odložit nebo vám nedá vědět o chybě:";
+"Don't remind me" = "Nepřipomínat";
+"Dismiss" = "Zavřít";
+"Sandbox mode" = "Sandbox režim";
+"Orders go to the exchanges' test accounts only. No real money is used." = "Příkazy jdou jen na testovací účty burz. Skutečné peníze se nepoužívají.";
+"What happens next" = "Co bude dál";
+"Got it" = "Rozumím";
+"First purchase %@: %@ on %@." = "První nákup %1$@: %2$@ na %3$@.";
+"Keep enough %@ on %@ for several purchases." = "Mějte na %2$@ dost %1$@ na několik nákupů.";
+"You have only %@ there now, which is not enough for the next purchase." = "Teď tam máte jen %@, na další nákup to nestačí.";
+"iOS runs purchases in the background only approximately. Open the app now and then so none is missed." = "iOS spouští nákupy na pozadí jen přibližně. Občas aplikaci otevřete, ať žádný nákup nevynechá.";
+"Last: %@ · %@" = "Naposledy: %1$@ · %2$@";
+"Purchases on hold until you review the last one" = "Nákupy stojí, dokud nezkontrolujete poslední";
+"Background App Refresh is off, so purchases run only when you open the app." = "Aktualizace na pozadí je vypnutá, nákupy proběhnou jen při otevření aplikace.";
+"Notifications are off, so you won't hear about a failed purchase." = "Oznámení jsou vypnutá, o selhání nákupu se nedozvíte.";
+"Fix" = "Opravit";
+"Automatic purchases" = "Automatické nákupy";
+"Working: purchases run in the background" = "V pořádku: nákupy běží na pozadí";
+"No connection to the exchange" = "Bez spojení s burzou";
+"The exchange rejected the API key" = "Burza odmítla API klíč";
+"Not enough money on the exchange" = "Na burze není dost peněz";
+"The order is below the exchange limit" = "Příkaz je pod limitem burzy";
+"The exchange is limiting requests" = "Burza omezuje počet požadavků";
+"The exchange is unavailable" = "Burza je nedostupná";
+"Check your internet connection. AccBot tries again on the next run." = "Zkontrolujte připojení k internetu. AccBot to zkusí znovu při dalším běhu.";
+"The key may have expired, lack trading permission or be limited to other IP addresses. Check it on the exchange and enter it again in Manage Exchanges." = "Klíč mohl vypršet, nemít oprávnění k obchodování nebo být omezený na jiné IP adresy. Zkontrolujte ho na burze a zadejte znovu ve Správě burz.";
+"Check your balance on the exchange and top it up if needed." = "Zkontrolujte zůstatek na burze a případně ho doplňte.";
+"Raise the purchase amount in the plan so it meets the exchange minimum." = "Zvyšte částku nákupu v plánu, aby splnila minimum burzy.";
+"Too many requests in a short time. Wait a few minutes and try again." = "Příliš mnoho požadavků v krátké době. Počkejte pár minut a zkuste to znovu.";
+"The exchange is probably under maintenance. Try again later." = "Burza má nejspíš údržbu. Zkuste to později.";
+"Technical detail: %@" = "Technický detail: %@";
+"Review purchase" = "Zkontrolujte nákup";
+"Open the order history for %@ on %@ around %@. What did you find? The plan is on hold until you answer." = "Otevřete historii příkazů %1$@ na %2$@ kolem %3$@. Co jste tam našli? Do odpovědi plán stojí.";
+"The purchase is there, I'll enter the order ID" = "Nákup tam je, zadám ID příkazu";
+"There is nothing on the exchange" = "Na burze nic není";
+"Mark as not executed?" = "Označit jako neprovedený?";
+"Mark as not executed" = "Označit jako neprovedený";
+"The purchase will be marked as not executed and the plan continues on schedule. Confirm only if the exchange shows no open order and nothing was bought." = "Nákup se označí jako neprovedený a plán bude dál nakupovat podle rozvrhu. Potvrďte jen tehdy, když burza neukazuje žádný otevřený příkaz a nic se nenakoupilo.";
+"Enter the order ID" = "Zadejte ID příkazu";
+"Verify and save" = "Ověřit a uložit";
+"Copy the order ID from the exchange. AccBot verifies it and records the amount actually bought. If you already imported the purchase, use its ID from History." = "Zkopírujte z burzy ID příkazu. AccBot ho ověří a zapíše skutečně nakoupené množství. Pokud jste nákup už importovali, použijte jeho ID z Historie.";
+"Pause" = "Pozastavit";
+"Resume" = "Spustit";
+"Buy now" = "Koupit teď";
+"Buy now?" = "Koupit teď?";
+"AccBot sends a purchase of %@ for %@ to %@ right away." = "AccBot hned odešle na %3$@ nákup %1$@ za %2$@.";
+"Automatic purchases & alerts" = "Automatické nákupy a upozornění";
+"Appearance" = "Vzhled";
+"Security & data" = "Zabezpečení a data";
+"For developers" = "Pro vývojáře";

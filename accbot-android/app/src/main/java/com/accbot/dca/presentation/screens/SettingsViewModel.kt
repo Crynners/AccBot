@@ -1,9 +1,10 @@
 package com.accbot.dca.presentation.screens
 
 import android.app.Application
+import com.accbot.dca.presentation.utils.AutomationHealth
+import com.accbot.dca.presentation.utils.AutomationHealthChecker
 import android.content.Context
 import android.content.Intent
-import android.os.PowerManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.accbot.dca.data.local.CredentialsStore
@@ -45,7 +46,7 @@ data class SettingsUiState(
      * exchange (e.g. two Coinmate sub-accounts).
      */
     val connectionCount: Int = 0,
-    val isBatteryOptimized: Boolean = true,
+    val automationHealth: AutomationHealth = AutomationHealth(),
     val isSandboxMode: Boolean = false,
     val showRestartDialog: Boolean = false,
     val pendingSandboxMode: Boolean = false,
@@ -126,15 +127,14 @@ class SettingsViewModel @Inject constructor(
 
     private fun loadSettings() {
         val isSandbox = userPreferences.isSandboxMode()
-        val powerManager = application.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
-        val isBatteryOptimized = !powerManager.isIgnoringBatteryOptimizations(application.packageName)
+        val automationHealth = AutomationHealthChecker.check(application)
 
         // Sync UI state immediately for non-suspend prefs values.
         // Note: `configuredExchanges` and `connectionCount` are populated reactively by
         // [observeConnections] from the connection DAO flow - no manual lookup here.
         _uiState.update {
             it.copy(
-                isBatteryOptimized = isBatteryOptimized,
+                automationHealth = automationHealth,
                 isSandboxMode = isSandbox,
                 lowBalanceThresholdDays = userPreferences.getLowBalanceThresholdDays(),
                 languageTag = userPreferences.getLanguageTag(),
@@ -274,10 +274,8 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(lowBalanceThresholdDays = days) }
     }
 
-    fun refreshBatteryStatus() {
-        val powerManager = application.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
-        val isBatteryOptimized = !powerManager.isIgnoringBatteryOptimizations(application.packageName)
-        _uiState.update { it.copy(isBatteryOptimized = isBatteryOptimized) }
+    fun refreshAutomationHealth() {
+        _uiState.update { it.copy(automationHealth = AutomationHealthChecker.check(application)) }
     }
 
     private fun loadWithdrawalThresholds() {
@@ -335,7 +333,7 @@ class SettingsViewModel @Inject constructor(
     private fun loadDataCounts() {
         viewModelScope.launch {
             val plans = dcaPlanDao.getPlanCount()
-            val txs = transactionDao.getTransactionCount()
+            val txs = transactionDao.getClosedTransactionCount()
             val notifs = notificationDao.getNotificationCount()
             _uiState.update { it.copy(dcaPlanCount = plans, transactionCount = txs, notificationCount = notifs) }
         }
@@ -352,7 +350,7 @@ class SettingsViewModel @Inject constructor(
 
     fun deleteTransactions() {
         viewModelScope.launch {
-            transactionDao.deleteAllTransactions()
+            transactionDao.deleteAllClosedTransactions()
             loadDataCounts()
         }
     }

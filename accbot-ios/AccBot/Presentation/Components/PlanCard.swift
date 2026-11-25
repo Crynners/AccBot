@@ -13,6 +13,10 @@ struct PlanCard: View {
     var goalProgress: Double? = nil
     var goalText: String? = nil
     var goalReached: Bool = false
+    /// "Last: 0.0004 BTC · 2 days ago" for the plan's latest filled purchase.
+    var lastPurchaseText: String? = nil
+    /// The plan has a purchase with an unknown outcome and won't buy until it is reviewed.
+    var awaitingReview: Bool = false
 
     @Environment(\.accBotColors) private var colors
 
@@ -22,6 +26,7 @@ struct PlanCard: View {
                 headerRow
                 Divider().background(colors.onSurfaceVariant.opacity(Opacity.divider))
                 detailsRow
+                lastPurchaseRow
                 nextExecutionRow
                 goalProgressRow
                 balanceDurationRow
@@ -45,7 +50,7 @@ struct PlanCard: View {
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 HStack(spacing: Spacing.sm) {
-                    Text(plan.pair)
+                    Text(plan.displayName)
                         .font(AccBotFonts.headline)
                         .foregroundStyle(colors.onSurface)
                     Text(plan.strategy.displayName)
@@ -54,7 +59,7 @@ struct PlanCard: View {
                         .foregroundStyle(colors.primary)
                 }
 
-                Text(plan.exchange.displayName)
+                Text(plan.name.isEmpty ? plan.exchange.displayName : "\(plan.pair) · \(plan.exchange.displayName)")
                     .font(AccBotFonts.caption)
                     .foregroundStyle(colors.onSurfaceVariant)
             }
@@ -69,7 +74,7 @@ struct PlanCard: View {
             }
             .labelsHidden()
             .tint(colors.primary)
-            .accessibilityLabel(String(localized: "Toggle plan \(plan.pair)"))
+            .accessibilityLabel(String(localized: "Toggle plan \(plan.displayName)"))
         }
     }
 
@@ -105,6 +110,23 @@ struct PlanCard: View {
         }
     }
 
+    // MARK: - Last Purchase
+
+    @ViewBuilder
+    private var lastPurchaseRow: some View {
+        if let lastPurchaseText {
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: "checkmark.circle")
+                    .font(AccBotFonts.caption)
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .accessibilityHidden(true)
+                Text(lastPurchaseText)
+                    .font(AccBotFonts.caption)
+                    .foregroundStyle(colors.onSurfaceVariant)
+            }
+        }
+    }
+
     // MARK: - Next Execution
 
     private var nextExecutionRow: some View {
@@ -115,7 +137,11 @@ struct PlanCard: View {
                     .foregroundStyle(colors.onSurfaceVariant)
                     .accessibilityHidden(true)
 
-                if let next = plan.nextExecutionAt {
+                if awaitingReview {
+                    Text(String(localized: "Purchases on hold until you review the last one"))
+                        .font(AccBotFonts.caption)
+                        .foregroundStyle(colors.error)
+                } else if let next = plan.nextExecutionAt {
                     Text(String(localized: "Next: \(next.formatted(.relative(presentation: .named)))"))
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.onSurfaceVariant)

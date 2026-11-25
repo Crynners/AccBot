@@ -14,11 +14,9 @@ enum ExchangeConfig {
 
     // MARK: - KuCoin
     static let kucoinBaseUrl = "https://api.kucoin.com"
-    static let kucoinSandboxUrl = "https://openapi-sandbox.kucoin.com"
 
     // MARK: - Coinbase
     static let coinbaseBaseUrl = "https://api.coinbase.com"
-    static let coinbaseSandboxUrl = "https://api-public.sandbox.exchange.coinbase.com"
 
     // MARK: - Bitfinex
     static let bitfinexBaseUrl = "https://api.bitfinex.com"
@@ -26,13 +24,19 @@ enum ExchangeConfig {
     // MARK: - Huobi
     static let huobiBaseUrl = "https://api.huobi.pro"
 
-    static func baseUrl(for exchange: Exchange, isSandbox: Bool) -> String {
+    static func baseUrl(for exchange: Exchange, isSandbox: Bool) -> String? {
+        if isSandbox {
+            switch exchange {
+            case .binance: return binanceSandboxUrl
+            case .coinmate, .kraken, .kucoin, .coinbase, .bitfinex, .huobi: return nil
+            }
+        }
         switch exchange {
         case .coinmate: return coinmateBaseUrl
-        case .binance: return isSandbox ? binanceSandboxUrl : binanceBaseUrl
+        case .binance: return binanceBaseUrl
         case .kraken: return krakenBaseUrl
-        case .kucoin: return isSandbox ? kucoinSandboxUrl : kucoinBaseUrl
-        case .coinbase: return isSandbox ? coinbaseSandboxUrl : coinbaseBaseUrl
+        case .kucoin: return kucoinBaseUrl
+        case .coinbase: return coinbaseBaseUrl
         case .bitfinex: return bitfinexBaseUrl
         case .huobi: return huobiBaseUrl
         }

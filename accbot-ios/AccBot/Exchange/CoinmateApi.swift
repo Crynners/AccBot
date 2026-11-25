@@ -7,23 +7,18 @@ final class CoinmateApi: ExchangeApi {
     let exchange = Exchange.coinmate
 
     private let credentials: ExchangeCredentials
-    private let isSandbox: Bool
     private let client: NetworkClient
     private let baseUrl: String
     private let clientId: String
 
-    /// Coinmate taker fee: 0.35%
-    private let takerFeeRate: Decimal = Decimal(string: "0.0035")!
-
-    init?(credentials: ExchangeCredentials, isSandbox: Bool, client: NetworkClient) {
+    init?(credentials: ExchangeCredentials, baseUrl: String, client: NetworkClient) {
         guard let id = credentials.clientId else {
             assertionFailure("Coinmate requires clientId in credentials")
             return nil
         }
         self.credentials = credentials
-        self.isSandbox = isSandbox
         self.client = client
-        self.baseUrl = ExchangeConfig.baseUrl(for: .coinmate, isSandbox: isSandbox)
+        self.baseUrl = baseUrl
         self.clientId = id
     }
 
@@ -47,46 +42,10 @@ final class CoinmateApi: ExchangeApi {
 
             if json["error"] as? Bool == true {
                 let errorMessage = json["errorMessage"] as? String ?? "Unknown error"
-                return .error(message: errorMessage, retryable: false)
+                return .rejected(message: errorMessage)
             }
 
-            let orderId = "\(json["data"] ?? "")"
-
-            // Query tradeHistory for real fill details
-            let tradeDetails = await getTradeDetailsByOrderId(orderId, currencyPair: pair)
-
-            let fee: Decimal
-            let cryptoAmount: Decimal
-            let fillingPrice: Decimal
-
-            if let details = tradeDetails {
-                cryptoAmount = details.totalAmount
-                fee = details.totalFee
-                fillingPrice = details.weightedAvgPrice
-            } else {
-                // Trade details not found — return as pending so the exact
-                // amounts can be resolved later instead of guessing.
-                guard let currentPrice = await getCurrentPrice(crypto: crypto, fiat: fiat),
-                      currentPrice > 0 else {
-                    return .success(Transaction(
-                        planId: 0,
-                        exchange: .coinmate,
-                        crypto: crypto,
-                        fiat: fiat,
-                        fiatAmount: fiatAmount,
-                        cryptoAmount: 0,
-                        price: 0,
-                        fee: 0,
-                        feeAsset: fiat,
-                        status: .pending,
-                        exchangeOrderId: orderId
-                    ))
-                }
-                fee = roundDecimal(fiatAmount * takerFeeRate, scale: 2)
-                let netFiatAmount = fiatAmount - fee
-                cryptoAmount = roundDecimal(netFiatAmount / currentPrice, scale: 8)
-                fillingPrice = currentPrice
-            }
+            let orderId = json["data"] as? String ?? (json["data"] as? NSNumber)?.stringValue
 
             return .success(Transaction(
                 planId: 0,
@@ -94,11 +53,10 @@ final class CoinmateApi: ExchangeApi {
                 crypto: crypto,
                 fiat: fiat,
                 fiatAmount: fiatAmount,
-                cryptoAmount: cryptoAmount,
-                price: fillingPrice,
-                fee: fee,
-                feeAsset: fiat,
-                status: .completed,
+                cryptoAmount: 0,
+                price: 0,
+                fee: 0,
+                status: .pending,
                 exchangeOrderId: orderId
             ))
         } catch let error as NetworkError where error.isRetryable {
@@ -212,8 +170,18 @@ final class CoinmateApi: ExchangeApi {
         return json["data"] != nil
     }
 
-    func getOrderStatus(orderId: String) async -> Transaction? {
-        nil
+    func getOrderStatus(orderId: String, crypto: String, fiat: String) async -> Transaction? {
+        guard !orderId.isEmpty,
+              let details = await getTradeDetailsByOrderId(orderId, currencyPair: "\(crypto)_\(fiat)") else {
+            return nil
+        }
+        return Transaction(
+            planId: 0, exchange: .coinmate, crypto: crypto, fiat: fiat,
+            fiatAmount: details.totalCost,
+            cryptoAmount: details.totalAmount, price: details.weightedAvgPrice,
+            fee: details.totalFee, feeAsset: fiat, status: .completed, exchangeOrderId: orderId,
+            executedAt: details.executedAt
+        )
     }
 
     func getTradeHistory(crypto: String, fiat: String, since: Date?, limit: Int) async throws -> TradeHistoryPage {
@@ -283,8 +251,10 @@ final class CoinmateApi: ExchangeApi {
 
     private struct TradeDetails {
         let totalAmount: Decimal
+        let totalCost: Decimal
         let totalFee: Decimal
         let weightedAvgPrice: Decimal
+        let executedAt: Date
     }
 
     private func getTradeDetailsByOrderId(_ orderId: String, currencyPair: String) async -> TradeDetails? {
@@ -316,12 +286,12 @@ final class CoinmateApi: ExchangeApi {
                 var totalAmount: Decimal = 0
                 var totalFee: Decimal = 0
                 var totalCost: Decimal = 0
-                var found = false
+                var timestamp: Int64 = 0
 
                 for trade in dataArray {
                     let tradeOrderId = jsonString(trade, key: "orderId")
-                    if tradeOrderId == orderId {
-                        found = true
+                    if tradeOrderId == orderId && jsonString(trade, key: "type") == "BUY" {
+                        timestamp = max(timestamp, jsonInt64(trade, key: "createdTimestamp"))
                         let amount = jsonDecimal(trade, key: "amount")
                         let price = jsonDecimal(trade, key: "price")
                         let fee = jsonDecimal(trade, key: "fee")
@@ -331,11 +301,13 @@ final class CoinmateApi: ExchangeApi {
                     }
                 }
 
-                if found && totalAmount > 0 {
+                if totalAmount > 0 {
                     return TradeDetails(
                         totalAmount: totalAmount,
+                        totalCost: totalCost,
                         totalFee: roundDecimal(totalFee, scale: 2),
-                        weightedAvgPrice: roundDecimal(totalCost / totalAmount, scale: 2)
+                        weightedAvgPrice: totalCost / totalAmount,
+                        executedAt: Date(timeIntervalSince1970: Double(timestamp) / 1000)
                     )
                 }
             } catch {

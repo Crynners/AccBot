@@ -48,6 +48,17 @@ class BackupDataRestorer @Inject constructor(
     }
     suspend fun restore(payload: BackupPayload, restoreMode: RestoreMode = RestoreMode.Merge): BackupResult {
         return try {
+            val sourceConnections = payload.connections.associateBy { it.id }
+            check(sourceConnections.size == payload.connections.size &&
+                payload.plans.map { it.id }.toSet().size == payload.plans.size
+            ) { "Invalid backup data" }
+            fun checkConnection(connectionId: Long?, exchange: Exchange) {
+                if (connectionId != null) {
+                    check(sourceConnections[connectionId]?.exchange == exchange.name) { "Invalid backup data" }
+                }
+            }
+            payload.plans.forEach { checkConnection(it.connectionId, Exchange.valueOf(it.exchange)) }
+            payload.withdrawalThresholds.forEach { checkConnection(it.connectionId, Exchange.valueOf(it.exchange)) }
             // PRE-VALIDATE credentials before touching the DB. If any credential has an
             // unknown exchange enum, abort with an error WITHOUT modifying any DB state.
             // This guards against the half-restored scenario where plans are committed but
@@ -60,6 +71,7 @@ class BackupDataRestorer @Inject constructor(
                 } catch (e: Exception) {
                     return BackupResult.Error("Backup contains credentials for unknown exchange '${cred.exchange}'")
                 }
+                checkConnection(cred.connectionId, exchange)
                 parsedCredentials += ParsedCredential(
                     exchange = exchange,
                     backupConnectionId = cred.connectionId,
@@ -77,6 +89,7 @@ class BackupDataRestorer @Inject constructor(
             val planIdMap = mutableMapOf<Long, Long>()
             // v2: map backup-local connection ids → newly assigned local ids.
             val connectionIdMap = mutableMapOf<Long, Long>()
+            val credentialTargets = mutableListOf<Pair<Long, ExchangeCredentials>>()
 
             database.withTransaction {
                 // Replace mode: wipe all existing DB data first.
@@ -84,6 +97,7 @@ class BackupDataRestorer @Inject constructor(
                 // assumptions. Connections are NOT wiped - we preserve them and let merge
                 // dedupe by (exchange, name).
                 if (restoreMode == RestoreMode.Replace) {
+                    check(!transactionDao.hasOpenTransactions()) { "backup_open_orders" }
                     transactionDao.deleteAllTransactions()
                     withdrawalDao.deleteAllWithdrawals()
                     notificationDao.deleteAllNotifications()
@@ -124,17 +138,21 @@ class BackupDataRestorer @Inject constructor(
                     return resolveOrCreateDefaultConnection(exchange)
                 }
 
+                for (item in parsedCredentials) {
+                    val target = resolveConnectionForRestore(item.backupConnectionId, item.exchange)
+                    check(!transactionDao.hasOpenTransactionsForConnection(target)) { "backup_open_orders" }
+                    dcaPlanDao.pausePlansForConnection(target)
+                    credentialTargets += target to item.credentials
+                }
+
                 // 1. Plans: merge with dedup or insert after wipe
                 if (restoreMode == RestoreMode.Merge) {
-                    val existingPlans = dcaPlanDao.getAllPlansOnce()
+                    val unmatchedPlans = dcaPlanDao.getAllPlansOnce().toMutableList()
                     for (plan in payload.plans) {
                         val planExchange = Exchange.valueOf(plan.exchange)
                         val connectionId = resolveConnectionForRestore(plan.connectionId, planExchange)
                         val entity = plan.toEntity(connectionId)
-                        // Match must include connectionId so that two plans with identical
-                        // crypto/fiat/amount on different envelopes ("Hlavní" vs "Spoření")
-                        // don't collapse to one during merge restore.
-                        val match = existingPlans.find { existing ->
+                        val candidates = unmatchedPlans.filter { existing ->
                             existing.connectionId == connectionId &&
                                 existing.exchange.name == plan.exchange &&
                                 existing.crypto == plan.crypto &&
@@ -142,9 +160,27 @@ class BackupDataRestorer @Inject constructor(
                                 existing.amount.compareTo(entity.amount) == 0 &&
                                 existing.frequency == entity.frequency
                         }
+                        // The original creation time can identify a renamed or rescheduled plan.
+                        val sameCreationTime = candidates.filter {
+                            plan.createdAt > 0 && it.createdAt == entity.createdAt
+                        }
+                        val sameMetadata = candidates.filter {
+                            (plan.name == null || it.name == plan.name) && it.cronExpression == entity.cronExpression
+                        }
+                        val match = sameCreationTime.firstOrNull { it in sameMetadata }
+                            ?: sameCreationTime.singleOrNull()
+                            ?: sameMetadata.firstOrNull()
                         if (match != null) {
-                            // Update existing plan with backup values, keep existing ID
+                            unmatchedPlans.remove(match)
+                            // An explicit sell setting makes an omitted target an empty target.
+                            val profitTarget = if (plan.allowSells != null || plan.targetProfitAmount != null) {
+                                entity.targetProfitAmount
+                            } else {
+                                match.targetProfitAmount
+                            }
                             dcaPlanDao.updatePlan(match.copy(
+                                name = plan.name ?: match.name,
+                                displayOrder = plan.displayOrder ?: match.displayOrder,
                                 strategy = entity.strategy,
                                 isEnabled = entity.isEnabled,
                                 withdrawalEnabled = entity.withdrawalEnabled,
@@ -152,7 +188,9 @@ class BackupDataRestorer @Inject constructor(
                                 cronExpression = entity.cronExpression,
                                 lastExecutedAt = entity.lastExecutedAt,
                                 nextExecutionAt = entity.nextExecutionAt,
-                                targetAmount = entity.targetAmount
+                                targetAmount = entity.targetAmount,
+                                allowSells = plan.allowSells ?: match.allowSells,
+                                targetProfitAmount = profitTarget
                             ))
                             planIdMap[plan.id] = match.id
                         } else {
@@ -176,13 +214,19 @@ class BackupDataRestorer @Inject constructor(
                 // savings envelope, or after an API key rotation), so a global lookup
                 // would silently drop the second set.
                 for (tx in payload.transactions) {
-                    val remappedPlanId = planIdMap[tx.planId] ?: tx.planId
+                    val remappedPlanId = planIdMap[tx.planId] ?: 0
                     val txExchange = Exchange.valueOf(tx.exchange)
-                    val connectionId = resolveConnectionForRestore(tx.connectionId, txExchange)
+                    val connectionId = if (tx.connectionId != null) {
+                        check(sourceConnections[tx.connectionId]?.exchange in setOf(null, tx.exchange)) { "Invalid backup data" }
+                        connectionIdMap[tx.connectionId]
+                    } else if (sourceConnections.isEmpty()) resolveConnectionForRestore(null, txExchange) else null
                     if (restoreMode == RestoreMode.Merge && !tx.exchangeOrderId.isNullOrEmpty()) {
-                        val existing = transactionDao.getByExchangeOrderIdAndConnection(
+                        val existing = transactionDao.findMatchingBackupOrder(
                             tx.exchangeOrderId,
-                            connectionId
+                            connectionId,
+                            txExchange,
+                            tx.crypto,
+                            tx.fiat
                         )
                         if (existing != null) continue // Already imported on this connection, skip
                     }
@@ -191,7 +235,7 @@ class BackupDataRestorer @Inject constructor(
 
                 // 3. Insert withdrawals with remapped planId
                 for (w in payload.withdrawals) {
-                    val remappedPlanId = planIdMap[w.planId] ?: w.planId
+                    val remappedPlanId = planIdMap[w.planId] ?: 0
                     val wExchange = Exchange.valueOf(w.exchange)
                     val connectionId = resolveConnectionForRestore(w.connectionId, wExchange)
                     withdrawalDao.insertWithdrawal(w.toEntity(remappedPlanId, connectionId))
@@ -199,7 +243,7 @@ class BackupDataRestorer @Inject constructor(
 
                 // 4. Insert notifications with remapped planId
                 for (n in payload.notifications) {
-                    val remappedPlanId = n.planId?.let { planIdMap[it] ?: it }
+                    val remappedPlanId = n.planId?.let { planIdMap[it] }
                     val connectionId = n.exchange?.let { name ->
                         try {
                             resolveConnectionForRestore(n.connectionId, Exchange.valueOf(name))
@@ -223,10 +267,7 @@ class BackupDataRestorer @Inject constructor(
                 userPreferences.setPurchaseNotificationsEnabled(settings.purchaseNotifications)
                 userPreferences.setErrorNotificationsEnabled(settings.errorNotifications)
                 userPreferences.setWeeklySummaryNotificationsEnabled(settings.weeklySummaryNotifications)
-                if (settings.languageTag.isNotEmpty()) {
-                    userPreferences.setLanguageTag(settings.languageTag)
-                }
-                userPreferences.setBiometricLockEnabled(settings.biometricLockEnabled)
+                settings.languageTag?.let { userPreferences.setLanguageTag(it) }
                 userPreferences.setLowBalanceThresholdDays(settings.lowBalanceThresholdDays)
             }
 
@@ -236,17 +277,11 @@ class BackupDataRestorer @Inject constructor(
             // Failures here are logged but don't roll back the DB - at this point the
             // restore is "best effort committed" and partial credentials is recoverable
             // (user can re-enter API keys via AddExchange).
-            val isSandbox = userPreferences.isSandboxMode()
-            if (restoreMode == RestoreMode.Replace) {
-                credentialsStore.clearAllCredentials(isSandbox)
-            }
+            val isSandbox = userPreferences.processSandboxMode
             var failedCredentials = 0
-            for (cred in parsedCredentials) {
+            for ((connectionId, credentials) in credentialTargets) {
                 try {
-                    val targetConnectionId = cred.backupConnectionId
-                        ?.let { connectionIdMap[it] }
-                        ?: resolveOrCreateDefaultConnection(cred.exchange)
-                    credentialsStore.saveCredentials(targetConnectionId, cred.credentials, isSandbox)
+                    credentialsStore.saveCredentials(connectionId, credentials, isSandbox)
                 } catch (e: Exception) {
                     failedCredentials++
                 }
@@ -331,20 +366,22 @@ class BackupDataRestorer @Inject constructor(
             id = 0,
             exchange = Exchange.valueOf(exchange),
             connectionId = connectionId,
+            name = name.orEmpty(),
             crypto = crypto,
             fiat = fiat,
             amount = BigDecimal(amount),
             frequency = freq,
             cronExpression = cronExpression,
             strategy = DcaStrategy.fromString(strategy),
-            isEnabled = isEnabled,
+            isEnabled = false,
             withdrawalEnabled = withdrawalEnabled,
             withdrawalAddress = withdrawalAddress,
             createdAt = Instant.ofEpochMilli(createdAt),
             lastExecutedAt = lastExecutedAt?.let { Instant.ofEpochMilli(it) },
             nextExecutionAt = effectiveNext,
             targetAmount = targetAmount?.let { BigDecimal(it) },
-            allowSells = allowSells,
+            displayOrder = displayOrder ?: 0,
+            allowSells = allowSells ?: false,
             targetProfitAmount = targetProfitAmount?.let { BigDecimal(it) }
         )
     }

@@ -10,15 +10,13 @@ final class KrakenApi: ExchangeApi {
     let exchange = Exchange.kraken
 
     private let credentials: ExchangeCredentials
-    private let isSandbox: Bool
     private let client: NetworkClient
     private let baseUrl: String
 
-    init(credentials: ExchangeCredentials, isSandbox: Bool, client: NetworkClient) {
+    init(credentials: ExchangeCredentials, baseUrl: String, client: NetworkClient) {
         self.credentials = credentials
-        self.isSandbox = isSandbox
         self.client = client
-        self.baseUrl = ExchangeConfig.baseUrl(for: .kraken, isSandbox: isSandbox)
+        self.baseUrl = baseUrl
     }
 
     // MARK: - Symbol Mapping
@@ -104,6 +102,9 @@ final class KrakenApi: ExchangeApi {
             let json = try parseJson(data)
 
             if let error = checkKrakenErrors(json) {
+                if error.hasPrefix("EOrder:Insufficient funds") || error == "EAPI:Invalid key" || error == "EAPI:Invalid signature" {
+                    return .rejected(message: error)
+                }
                 let isRetryable = error.contains("EService:Unavailable") || error.contains("EGeneral:Temporary")
                 return .error(message: error, retryable: isRetryable)
             }
@@ -115,26 +116,6 @@ final class KrakenApi: ExchangeApi {
             let txIds = result["txid"] as? [String]
             let txId = txIds?.first
 
-            // Query order to get fill details
-            if let txId = txId {
-                let fillDetails = await queryOrderFill(txId: txId)
-                if let fill = fillDetails {
-                    return .success(Transaction(
-                        planId: 0,
-                        exchange: .kraken,
-                        crypto: crypto,
-                        fiat: fiat,
-                        fiatAmount: fill.cost,
-                        cryptoAmount: fill.volume,
-                        price: fill.price,
-                        fee: fill.fee,
-                        status: .completed,
-                        exchangeOrderId: txId
-                    ))
-                }
-            }
-
-            // Fallback: order placed but fill details not yet available
             return .success(Transaction(
                 planId: 0,
                 exchange: .kraken,
@@ -154,50 +135,9 @@ final class KrakenApi: ExchangeApi {
         }
     }
 
-    /// Query order fill details with retry (market orders fill quickly)
-    private func queryOrderFill(txId: String) async -> OrderFillDetails? {
-        for attempt in 0..<3 {
-            do {
-                if attempt > 0 {
-                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1s
-                }
-
-                let data = try await executePrivateRequest(path: "/0/private/QueryOrders", extraParams: "txid=\(txId)&trades=true")
-                let json = try parseJson(data)
-
-                if checkKrakenErrors(json) != nil { return nil }
-
-                guard let result = json["result"] as? [String: Any],
-                      let order = result[txId] as? [String: Any]
-                else { return nil }
-
-                let status = order["status"] as? String ?? ""
-
-                if status == "closed" {
-                    let volExec = jsonDecimal(order, key: "vol_exec")
-                    let cost = jsonDecimal(order, key: "cost")
-                    let fee = jsonDecimal(order, key: "fee")
-                    let price = volExec > 0
-                        ? roundDecimal(cost / volExec, scale: 8)
-                        : Decimal.zero
-
-                    return OrderFillDetails(volume: volExec, cost: cost, fee: fee, price: price)
-                }
-            } catch {
-                // Continue retrying
-            }
-        }
-        return nil
-    }
-
-    private struct OrderFillDetails {
-        let volume: Decimal
-        let cost: Decimal
-        let fee: Decimal
-        let price: Decimal
-    }
-
-    func getOrderStatus(orderId: String) async -> Transaction? {
+    func getOrderStatus(orderId: String, crypto: String, fiat: String) async -> Transaction? {
+        guard !orderId.isEmpty,
+              orderId.range(of: "[^A-Za-z0-9-]", options: .regularExpression) == nil else { return nil }
         do {
             let data = try await executePrivateRequest(path: "/0/private/QueryOrders", extraParams: "txid=\(orderId)&trades=true")
             let json = try parseJson(data)
@@ -205,13 +145,16 @@ final class KrakenApi: ExchangeApi {
             if checkKrakenErrors(json) != nil { return nil }
 
             guard let result = json["result"] as? [String: Any],
-                  let order = result[orderId] as? [String: Any]
+                  let order = result[orderId] as? [String: Any],
+                  let description = order["descr"] as? [String: Any],
+                  jsonString(description, key: "type") == "buy",
+                  jsonString(description, key: "pair") == mapPair(crypto: crypto, fiat: fiat)
             else { return nil }
 
             let status = order["status"] as? String ?? ""
 
-            if status == "closed" {
-                let volExec = jsonDecimal(order, key: "vol_exec")
+            if status == "closed" || status == "canceled" || status == "expired" {
+                guard let volExec = jsonDecimalOptional(order, key: "vol_exec") else { return nil }
                 let cost = jsonDecimal(order, key: "cost")
                 let fee = jsonDecimal(order, key: "fee")
                 let price = volExec > 0
@@ -221,14 +164,16 @@ final class KrakenApi: ExchangeApi {
                 return Transaction(
                     planId: 0,
                     exchange: .kraken,
-                    crypto: "",
-                    fiat: "",
+                    crypto: crypto,
+                    fiat: fiat,
                     fiatAmount: cost,
                     cryptoAmount: volExec,
                     price: price,
                     fee: fee,
-                    status: .completed,
-                    exchangeOrderId: orderId
+                    status: volExec == 0 ? .failed : (status == "closed" ? .completed : .partial),
+                    exchangeOrderId: orderId,
+                    errorMessage: volExec == 0 ? String(localized: "The order ended without a fill.") : nil,
+                    executedAt: Date(timeIntervalSince1970: jsonDouble(order, key: "opentm"))
                 )
             }
             return nil

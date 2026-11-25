@@ -1,5 +1,27 @@
 [
   {
+    "versionCode": 29000,
+    "version": "2.9.0",
+    "title": {
+      "en": "Safer Orders and Backups",
+      "cs": "Bezpečnější objednávky a zálohy"
+    },
+    "features": {
+      "en": [
+        "Backups preserve plan names and order. Restored plans stay paused for review.",
+        "Review unconfirmed purchases and limit sells in History.",
+        "See each order’s result in a sell series and retain partial fills after cancellation.",
+        "See the next scheduled purchase and pending orders on the dashboard."
+      ],
+      "cs": [
+        "Zálohy zachovávají názvy a pořadí plánů. Obnovené plány zůstávají pozastavené ke kontrole.",
+        "Nepotvrzené nákupy a limitní prodeje můžete zkontrolovat v Historii.",
+        "U série prodejů uvidíte výsledek každého příkazu. Částečná plnění se evidují i po zrušení.",
+        "V Přehledu uvidíte příští plánovaný nákup a čekající objednávky."
+      ]
+    }
+  },
+  {
     "versionCode": 27000,
     "version": "2.7.0",
     "title": {

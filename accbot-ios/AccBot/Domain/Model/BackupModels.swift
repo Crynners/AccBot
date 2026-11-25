@@ -15,7 +15,9 @@ struct BackupEnvelope: Codable {
     let data: String // base64(salt || IV || ciphertext || GCM-tag) or plain JSON
 
     static let formatIdentifier = "accbot-backup"
-    static let currentVersion = 1
+    static let currentVersion = 2
+    static let maxEnvelopeBytes = 16 * 1024 * 1024
+    static let maxPayloadBytes = 64 * 1024 * 1024
 
     init(
         appVersion: String = "",
@@ -48,6 +50,7 @@ struct BackupPayload: Codable {
     let transactions: [BackupTransaction]
     let notifications: [BackupNotification]
     let withdrawals: [BackupWithdrawal]
+    var connections: [BackupConnection]? = nil
 
     init(
         plans: [BackupPlan] = [],
@@ -68,6 +71,10 @@ struct BackupPayload: Codable {
     }
 }
 
+struct BackupConnection: Codable {
+    let exchange: String
+}
+
 // MARK: - Serializable entities
 
 struct BackupPlan: Codable {
@@ -86,6 +93,10 @@ struct BackupPlan: Codable {
     let createdAt: Int64
     let lastExecutedAt: Int64?
     let nextExecutionAt: Int64?
+    var name: String? = nil
+    var displayOrder: Int? = nil
+    var allowSells: Bool? = nil
+    var targetProfitAmount: String? = nil
 }
 
 struct BackupSettings: Codable {
@@ -94,7 +105,7 @@ struct BackupSettings: Codable {
     let purchaseNotifications: Bool
     let errorNotifications: Bool
     let weeklySummaryNotifications: Bool
-    let languageTag: String
+    let languageTag: String?
     let biometricLockEnabled: Bool
     let lowBalanceThresholdDays: Int
 }
@@ -123,6 +134,7 @@ struct BackupTransaction: Codable {
     let errorMessage: String?
     let warningMessage: String?
     let executedAt: Int64
+    var side: String? = nil
 }
 
 struct BackupNotification: Codable {

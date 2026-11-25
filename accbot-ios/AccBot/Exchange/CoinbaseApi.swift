@@ -4,7 +4,6 @@ import Foundation
 /// Uses legacy API keys with HMAC-SHA256 authentication.
 ///
 /// Production: https://api.coinbase.com
-/// Sandbox: https://api-public.sandbox.exchange.coinbase.com
 ///
 /// Auth headers: CB-ACCESS-KEY, CB-ACCESS-SIGN, CB-ACCESS-TIMESTAMP, CB-ACCESS-PASSPHRASE
 /// Prehash: timestamp + method + requestPath + body
@@ -13,15 +12,13 @@ final class CoinbaseApi: ExchangeApi {
     let exchange = Exchange.coinbase
 
     private let credentials: ExchangeCredentials
-    private let isSandbox: Bool
     private let client: NetworkClient
     private let baseUrl: String
 
-    init(credentials: ExchangeCredentials, isSandbox: Bool, client: NetworkClient) {
+    init(credentials: ExchangeCredentials, baseUrl: String, client: NetworkClient) {
         self.credentials = credentials
-        self.isSandbox = isSandbox
         self.client = client
-        self.baseUrl = ExchangeConfig.baseUrl(for: .coinbase, isSandbox: isSandbox)
+        self.baseUrl = baseUrl
     }
 
     // MARK: - Authentication
@@ -106,30 +103,12 @@ final class CoinbaseApi: ExchangeApi {
             if let errorResponse = json["error_response"] as? [String: Any] {
                 let error = errorResponse["error"] as? String ?? "Order failed"
                 let message = errorResponse["message"] as? String ?? error
-                return .error(message: message, retryable: false)
+                return .rejected(message: message)
             }
 
             if let successResponse = json["success_response"] as? [String: Any] {
                 let orderId = successResponse["order_id"] as? String ?? ""
 
-                // Try to get fill details by querying the order
-                let fillDetails = await queryOrderFill(orderId: orderId)
-                if let fill = fillDetails {
-                    return .success(Transaction(
-                        planId: 0,
-                        exchange: .coinbase,
-                        crypto: crypto,
-                        fiat: fiat,
-                        fiatAmount: fill.cost,
-                        cryptoAmount: fill.filledSize,
-                        price: fill.avgPrice,
-                        fee: fill.fee,
-                        status: .completed,
-                        exchangeOrderId: orderId
-                    ))
-                }
-
-                // Order placed but details not yet available
                 return .success(Transaction(
                     planId: 0,
                     exchange: .coinbase,
@@ -163,58 +142,22 @@ final class CoinbaseApi: ExchangeApi {
         }
     }
 
-    /// Query order to get fill details, retry up to 3 times
-    private func queryOrderFill(orderId: String) async -> FillDetails? {
-        for attempt in 0..<3 {
-            do {
-                if attempt > 0 {
-                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1s
-                }
-
-                let path = "/api/v3/brokerage/orders/historical/\(orderId)"
-                let headers = getHeaders(path: path)
-                let (data, _) = try await client.get(url: "\(baseUrl)\(path)", headers: headers)
-                let json = try parseJson(data)
-
-                guard let order = json["order"] as? [String: Any] else { return nil }
-                let status = order["status"] as? String ?? ""
-
-                if status == "FILLED" {
-                    let filledSize = jsonDecimal(order, key: "filled_size")
-                    let avgPrice = jsonDecimal(order, key: "average_filled_price")
-                    let totalFees = jsonDecimal(order, key: "total_fees")
-                    let cost = (filledSize > 0 && avgPrice > 0)
-                        ? roundDecimal(filledSize * avgPrice, scale: 8)
-                        : Decimal.zero
-
-                    return FillDetails(filledSize: filledSize, cost: cost, avgPrice: avgPrice, fee: totalFees)
-                }
-            } catch {
-                // Continue retrying
-            }
-        }
-        return nil
-    }
-
-    private struct FillDetails {
-        let filledSize: Decimal
-        let cost: Decimal
-        let avgPrice: Decimal
-        let fee: Decimal
-    }
-
-    func getOrderStatus(orderId: String) async -> Transaction? {
+    func getOrderStatus(orderId: String, crypto: String, fiat: String) async -> Transaction? {
+        guard UUID(uuidString: orderId) != nil else { return nil }
         do {
             let path = "/api/v3/brokerage/orders/historical/\(orderId)"
             let headers = getHeaders(path: path)
             let (data, _) = try await client.get(url: "\(baseUrl)\(path)", headers: headers)
             let json = try parseJson(data)
 
-            guard let order = json["order"] as? [String: Any] else { return nil }
+            guard let order = json["order"] as? [String: Any],
+                  jsonString(order, key: "order_id") == orderId,
+                  jsonString(order, key: "product_id") == "\(crypto)-\(fiat)",
+                  jsonString(order, key: "side") == "BUY" else { return nil }
             let status = order["status"] as? String ?? ""
 
-            if status == "FILLED" {
-                let filledSize = jsonDecimal(order, key: "filled_size")
+            if ["FILLED", "CANCELLED", "EXPIRED", "FAILED"].contains(status) {
+                guard let filledSize = jsonDecimalOptional(order, key: "filled_size") else { return nil }
                 let avgPrice = jsonDecimal(order, key: "average_filled_price")
                 let totalFees = jsonDecimal(order, key: "total_fees")
                 let cost = (filledSize > 0 && avgPrice > 0)
@@ -224,20 +167,30 @@ final class CoinbaseApi: ExchangeApi {
                 return Transaction(
                     planId: 0,
                     exchange: .coinbase,
-                    crypto: "",
-                    fiat: "",
+                    crypto: crypto,
+                    fiat: fiat,
                     fiatAmount: cost,
                     cryptoAmount: filledSize,
                     price: avgPrice,
                     fee: totalFees,
-                    status: .completed,
-                    exchangeOrderId: orderId
+                    status: filledSize == 0 ? .failed : (status == "FILLED" ? .completed : .partial),
+                    exchangeOrderId: orderId,
+                    errorMessage: filledSize == 0 ? String(localized: "The order ended without a fill.") : nil,
+                    executedAt: Self.orderDate(jsonString(order, key: "created_time")) ?? .distantPast
                 )
             }
             return nil
         } catch {
             return nil
         }
+    }
+
+    private static func orderDate(_ value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: value)
     }
 
     func getBalance(currency: String) async -> Decimal? {
@@ -273,6 +226,16 @@ final class CoinbaseApi: ExchangeApi {
         } catch {
             return nil
         }
+    }
+
+    func getKeyPermissions() async throws -> ApiKeyPermissions? {
+        let path = "/api/v3/brokerage/key_permissions"
+        let (data, _) = try await client.get(url: "\(baseUrl)\(path)", headers: getHeaders(path: path))
+        let json = try parseJson(data)
+        return ApiKeyPermissions(
+            canTrade: (json["can_trade"] as? Bool) ?? true,
+            canWithdraw: (json["can_transfer"] as? Bool) ?? true
+        )
     }
 
     func getTradeHistory(crypto: String, fiat: String, since: Date?, limit: Int) async throws -> TradeHistoryPage {

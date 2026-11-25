@@ -10,6 +10,7 @@ struct ExchangeDetailView: View {
     @State private var isRefreshing = false
     @State private var refreshError: String?
     @State private var showDeleteConfirmation = false
+    @State private var removalError: String?
 
     // Credentials editing
     @State private var credentialsExpanded = false
@@ -52,6 +53,15 @@ struct ExchangeDetailView: View {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 // Exchange header
                 exchangeHeader
+
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(exchange.supportsSandbox ? String(localized: "Spot testnet available") :
+                            String(localized: "Spot testnet unavailable"))
+                    Text(exchange.supportsApiImport ? String(localized: "API trade import available") :
+                            String(localized: "API trade import unavailable"))
+                }
+                .font(AccBotFonts.bodySmall)
+                .foregroundStyle(colors.onSurfaceVariant)
 
                 // Sandbox info card (only in sandbox mode for supported exchanges)
                 if colors.isSandbox && exchange.sandboxSupport == .full {
@@ -145,6 +155,14 @@ struct ExchangeDetailView: View {
             ImportConfigSheet(sinceDate: $importSinceDate) {
                 Task { await importFromApi(sinceDate: importSinceDate) }
             }
+        }
+        .alert(String(localized: "Error"), isPresented: Binding(
+            get: { removalError != nil },
+            set: { if !$0 { removalError = nil } }
+        )) {
+            Button(String(localized: "OK")) {}
+        } message: {
+            Text(removalError ?? "")
         }
     }
 
@@ -996,6 +1014,16 @@ struct ExchangeDetailView: View {
     }
 
     private func deleteConnection() {
+        do {
+            let pending = try dependencies.activeDatabase.transactionDao.getPendingTransactions()
+            guard !pending.contains(where: { $0.exchange == exchange }) else {
+                removalError = String(localized: "Resolve pending purchases before removing this connection.")
+                return
+            }
+        } catch {
+            removalError = error.localizedDescription
+            return
+        }
         let isSandbox = dependencies.userPreferences.sandboxMode
         dependencies.credentialsStore.delete(exchange: exchange, isSandbox: isSandbox)
         // Clean up cached balances

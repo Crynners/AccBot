@@ -18,6 +18,7 @@ final class HistoryViewModel: ObservableObject {
     @Published var showUndoSnackbar = false
     private var undoTask: Task<Void, Never>?
     private var undoInsertIndex: Int?
+    private var undoDatabase: DcaDatabase?
 
     // Filters
     @Published var filterCrypto: String?
@@ -70,16 +71,17 @@ final class HistoryViewModel: ObservableObject {
         undoTask?.cancel()
         // Commit any pending soft-deleted transaction so it doesn't get lost
         MainActor.assumeIsolated {
-            if let tx = undoTransaction, let deps = dependencies {
-                try? deps.activeDatabase.transactionDao.delete(id: tx.id)
+            if let tx = undoTransaction {
+                try? undoDatabase?.transactionDao.delete(id: tx.id)
             }
         }
     }
 
     func setup(_ dependencies: AppDependencies) {
-        guard !isSetUp else { return }
-        isSetUp = true
-        self.dependencies = dependencies
+        if !isSetUp {
+            isSetUp = true
+            self.dependencies = dependencies
+        }
         loadData()
     }
 
@@ -104,7 +106,8 @@ final class HistoryViewModel: ObservableObject {
         isLoading = currentPage == 0
 
         do {
-            let newTxs = try deps.activeDatabase.transactionDao.getFiltered(
+            let database = deps.activeDatabase
+            let newTxs = try database.transactionDao.getFiltered(
                 crypto: filterCrypto,
                 fiat: filterFiat,
                 exchange: filterExchange,
@@ -114,14 +117,17 @@ final class HistoryViewModel: ObservableObject {
                 limit: pageSize,
                 offset: currentPage * pageSize
             )
+            let visible = undoDatabase === database
+                ? newTxs.filter { $0.id != undoTransaction?.id }
+                : newTxs
 
             let allTxs: [Transaction]
             if sortOption == .dateNewest {
                 // DB already returns results sorted by executedAt desc — no re-sort needed
-                allTxs = transactions + newTxs
+                allTxs = transactions + visible
             } else {
                 // Non-default sort: merge and re-sort
-                allTxs = applySorting(transactions + newTxs)
+                allTxs = applySorting(transactions + visible)
             }
 
             transactions = allTxs
@@ -150,6 +156,7 @@ final class HistoryViewModel: ObservableObject {
     }
 
     private func softDelete(_ transaction: Transaction) {
+        guard transaction.status != .pending else { return }
         // Cancel any pending undo from a previous delete
         commitDelete()
 
@@ -159,6 +166,7 @@ final class HistoryViewModel: ObservableObject {
             transactions.remove(at: index)
         }
         undoTransaction = transaction
+        undoDatabase = deps.activeDatabase
         showUndoSnackbar = true
 
         // Start 8-second timer for permanent delete
@@ -176,10 +184,13 @@ final class HistoryViewModel: ObservableObject {
         guard let tx = undoTransaction else { return }
 
         // Re-insert at original position
-        let index = min(undoInsertIndex ?? transactions.count, transactions.count)
-        transactions.insert(tx, at: index)
+        if undoDatabase === deps.activeDatabase {
+            let index = min(undoInsertIndex ?? transactions.count, transactions.count)
+            transactions.insert(tx, at: index)
+        }
 
         undoTransaction = nil
+        undoDatabase = nil
         undoInsertIndex = nil
         showUndoSnackbar = false
     }
@@ -188,9 +199,10 @@ final class HistoryViewModel: ObservableObject {
         undoTask?.cancel()
         undoTask = nil
         if let tx = undoTransaction {
-            try? deps.activeDatabase.transactionDao.delete(id: tx.id)
+            try? undoDatabase?.transactionDao.delete(id: tx.id)
         }
         undoTransaction = nil
+        undoDatabase = nil
         undoInsertIndex = nil
         showUndoSnackbar = false
     }
@@ -274,43 +286,20 @@ final class HistoryViewModel: ObservableObject {
     }
 
     func exportCsv() {
-        let header = "Date,Exchange,Crypto,Fiat,Fiat Amount,Crypto Amount,Price,Fee,Fee Asset,Status,Order ID\n"
-        let dateFormatter = ISO8601DateFormatter()
-
-        let rows = transactions.map { tx in
-            [
-                dateFormatter.string(from: tx.executedAt),
-                csvQuote(tx.exchange.displayName),
-                tx.crypto,
-                tx.fiat,
-                "\(tx.fiatAmount)",
-                "\(tx.cryptoAmount)",
-                "\(tx.price)",
-                "\(tx.fee)",
-                csvQuote(tx.feeAsset),
-                tx.status.rawValue,
-                csvQuote(tx.exchangeOrderId ?? ""),
-            ].joined(separator: ",")
-        }.joined(separator: "\n")
-
-        let csvContent = header + rows
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileUrl = tempDir.appendingPathComponent("accbot_transactions.csv")
-
         do {
-            try csvContent.write(to: fileUrl, atomically: true, encoding: .utf8)
-            csvFileUrl = fileUrl
-            showExportSheet = true
+            let exporter = ExportTransactionsToCsvUseCase(transactionDao: deps.activeDatabase.transactionDao)
+            switch try exporter.execute(transactions: transactions) {
+            case .success(let csvContent, let fileName):
+                let fileUrl = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+                try Data(csvContent.utf8).write(to: fileUrl, options: [.atomic, .completeFileProtection])
+                csvFileUrl = fileUrl
+                showExportSheet = true
+            case .error(let message):
+                errorMessage = message
+            }
         } catch {
             errorMessage = String(localized: "Export failed: \(error.localizedDescription)")
         }
-    }
-
-    private func csvQuote(_ value: String) -> String {
-        if value.contains(",") || value.contains("\"") || value.contains("\n") {
-            return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
-        }
-        return value
     }
 }
 

@@ -1120,7 +1120,8 @@ section { padding: 96px 0; }
   margin-bottom: 24px;
 }
 
-.compare-input-group label {
+.compare-input-group label,
+.compare-input-label {
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
@@ -1173,6 +1174,74 @@ section { padding: 96px 0; }
 
 .compare-interval-btn:hover {
   color: var(--text);
+}
+
+.compare-interval-btn:focus-visible,
+.compare-table summary:focus-visible {
+  outline: 2px solid #a8c5ff;
+  outline-offset: -2px;
+}
+
+.compare-table {
+  margin-top: 1.5rem;
+}
+
+.compare-table summary {
+  cursor: pointer;
+}
+
+.compare-table-scroll {
+  max-height: 24rem;
+  overflow: auto;
+}
+
+.compare-table table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.compare-table caption,
+.compare-table th,
+.compare-table td,
+.exchange-capabilities caption,
+.exchange-capabilities th,
+.exchange-capabilities td {
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.exchange-capabilities {
+  margin: 1.5rem auto 0;
+  max-width: 40rem;
+}
+
+.exchange-capabilities table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.exchange-capabilities caption,
+.exchange-capabilities th {
+  font-weight: 600;
+}
+
+.exchange-capabilities tbody tr {
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.compare-table th {
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+}
+
+.compare-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .compare-interval-btn.active {
@@ -1460,7 +1529,6 @@ section { padding: 96px 0; }
   text-align: center;
   font-size: 0.75rem;
   color: var(--text-muted);
-  opacity: 0.7;
   margin-top: 24px;
 }
 

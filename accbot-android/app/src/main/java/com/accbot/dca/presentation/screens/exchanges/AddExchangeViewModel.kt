@@ -17,6 +17,7 @@ import com.accbot.dca.domain.model.ExchangeInstructions
 import com.accbot.dca.domain.model.ExchangeInstructionsProvider
 import com.accbot.dca.domain.model.isStable
 import com.accbot.dca.domain.model.supportsApiImport
+import com.accbot.dca.domain.model.ExchangeFilter
 import com.accbot.dca.domain.model.supportsSandbox
 import com.accbot.dca.domain.usecase.ApiImportProgress
 import com.accbot.dca.domain.usecase.ApiImportResultState
@@ -104,7 +105,7 @@ class AddExchangeViewModel @Inject constructor(
         // If exchange was passed via navigation, auto-select it
         val exchangeName = savedStateHandle.get<String>("exchange")
         if (exchangeName != null) {
-            val exchange = Exchange.entries.find { it.name == exchangeName }
+            val exchange = computeSupportedExchanges().firstOrNull { it.name == exchangeName }
             if (exchange != null) {
                 selectExchange(exchange)
                 _localState.update { it.copy(preSelectedExchange = true) }
@@ -117,11 +118,10 @@ class AddExchangeViewModel @Inject constructor(
      * multiple connections per exchange, so we no longer filter out exchanges that
      * already have credentials - every supported exchange is always selectable.
      */
-    private suspend fun computeSupportedExchanges(): List<Exchange> {
+    private fun computeSupportedExchanges(): List<Exchange> {
         val isSandbox = userPreferences.isSandboxMode()
         val showExperimental = userPreferences.areExperimentalExchangesEnabled()
-        return Exchange.entries
-            .filter { !isSandbox || it.supportsSandbox() }
+        return ExchangeFilter.getAvailableExchanges(isSandbox)
             .filter { showExperimental || it.isStable }
     }
 

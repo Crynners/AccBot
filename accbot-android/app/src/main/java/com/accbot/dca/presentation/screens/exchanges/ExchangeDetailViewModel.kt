@@ -230,12 +230,15 @@ class ExchangeDetailViewModel @Inject constructor(
      * thresholds. Transactions are kept for history (their `connectionId` becomes orphaned;
      * the History UI falls back to the [Exchange] enum label).
      */
-    fun removeExchange(onRemoved: () -> Unit) {
+    fun removeExchange(onRemoved: () -> Unit, onOpenOrders: () -> Unit) {
         val state = _localState.value
         val connection = state.connection ?: return
         viewModelScope.launch {
-            connectionRepository.delete(connection.id, deletePlans = true)
-            onRemoved()
+            if (connectionRepository.delete(connection.id, deletePlans = true)) {
+                onRemoved()
+            } else {
+                onOpenOrders()
+            }
         }
     }
 

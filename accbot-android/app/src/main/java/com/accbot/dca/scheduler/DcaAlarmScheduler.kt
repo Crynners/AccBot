@@ -41,7 +41,8 @@ object DcaAlarmScheduler {
     suspend fun scheduleNextAlarm(context: Context) = withContext(Dispatchers.IO) {
         val appContext = context.applicationContext
         val userPreferences = getPreferences(appContext)
-        val database = DcaDatabase.getInstance(appContext, userPreferences.isSandboxMode())
+        if (userPreferences.processSandboxMode != userPreferences.isSandboxMode()) return@withContext
+        val database = DcaDatabase.getInstance(appContext, userPreferences.processSandboxMode)
         val earliestMillis = database.dcaPlanDao().getEarliestNextExecution()
 
         if (earliestMillis == null) {

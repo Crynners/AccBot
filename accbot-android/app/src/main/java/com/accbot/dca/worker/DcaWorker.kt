@@ -3,6 +3,7 @@ package com.accbot.dca.worker
 import android.content.Context
 import android.util.Log
 import androidx.hilt.work.HiltWorker
+import androidx.room.withTransaction
 import androidx.work.*
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.CredentialsStore
@@ -12,7 +13,7 @@ import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.data.local.UserPreferences
 import com.accbot.dca.domain.model.DcaResult
 import com.accbot.dca.domain.model.DcaStrategy
-import com.accbot.dca.domain.model.Transaction
+import com.accbot.dca.domain.model.HistoricalTrade
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.domain.usecase.BuySafetyPolicy
@@ -29,6 +30,8 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Duration
 import java.time.Instant
@@ -53,8 +56,14 @@ class DcaWorker @AssistedInject constructor(
     private val minOrderSizeRepository: MinOrderSizeRepository
 ) : CoroutineWorker(context, workerParams) {
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = purchaseLock.withLock { executePurchases() }
+
+    private suspend fun executePurchases(): Result {
         val forceRun = inputData.getBoolean(KEY_FORCE_RUN, false)
+        val isSandbox = userPreferences.processSandboxMode
+        if (isSandbox != userPreferences.isSandboxMode() ||
+            (forceRun && inputData.getString(KEY_SANDBOX_MODE) != isSandbox.toString())
+        ) return Result.success()
         val forcePlanId = inputData.getLong(KEY_PLAN_ID, -1L)
         val repeatCount = inputData.getInt(KEY_REPEAT_COUNT, 1)
         Log.d(TAG, "DcaWorker started (forceRun=$forceRun, forcePlanId=$forcePlanId, repeatCount=$repeatCount)")
@@ -62,6 +71,8 @@ class DcaWorker @AssistedInject constructor(
         // Resolve any PENDING transactions from previous runs before processing new purchases
         try {
             resolvePendingTransactions()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "Failed to resolve pending transactions", e)
         }
@@ -69,7 +80,10 @@ class DcaWorker @AssistedInject constructor(
         // Catch-up progress is persisted in missedPurchaseCount so that a replayed worker
         // (process death mid-loop -> WorkManager re-runs the whole request) resumes where
         // it left off instead of re-buying already-covered slots from iteration 1.
-        val isCatchUp = forceRun && forcePlanId > 0 && repeatCount > 1
+        val requestedAt = inputData.getLong(KEY_REQUESTED_AT, 0).let(Instant::ofEpochMilli)
+        val isCatchUp = forceRun && forcePlanId > 0 &&
+            (repeatCount > 1 || inputData.getBoolean(KEY_CATCH_UP, false))
+        if (forceRun && requestedAt == Instant.EPOCH && runAttemptCount > 0) return Result.failure()
         val totalIterations = if (isCatchUp) {
             val remaining = database.dcaPlanDao().getPlanById(forcePlanId)?.missedPurchaseCount ?: 0
             minOf(repeatCount, remaining)
@@ -78,283 +92,105 @@ class DcaWorker @AssistedInject constructor(
         }
 
         try {
-            for (iteration in 1..totalIterations) {
-            if (iteration > 1) {
-                Log.d(TAG, "Repeat iteration $iteration/$repeatCount")
-                kotlinx.coroutines.delay(3_000L) // brief pause between missed purchases
-            }
-
-            val enabledPlans = if (forcePlanId > 0) {
-                listOfNotNull(database.dcaPlanDao().getPlanById(forcePlanId))
-            } else {
-                database.dcaPlanDao().getEnabledPlans()
-            }
-
-            if (enabledPlans.isEmpty()) {
-                Log.d(TAG, "No enabled DCA plans")
-                if (iteration == 1) return Result.success() else break
-            }
-
-            for (plan in enabledPlans) {
-                // Check if it's time to execute (skip check when forceRun)
-                val now = Instant.now()
-                val nextExecution = plan.nextExecutionAt
-
-                if (!forceRun && nextExecution != null && nextExecution.isAfter(now)) {
-                    Log.d(TAG, "Plan ${plan.id} not due yet, skipping")
-                    continue
+            repeats@ for (iteration in 1..totalIterations) {
+                if (iteration > 1) {
+                    Log.d(TAG, "Repeat iteration $iteration/$repeatCount")
+                    kotlinx.coroutines.delay(3_000L) // brief pause between missed purchases
                 }
 
-                // Check if plan has reached its target accumulation amount
-                if (plan.targetAmount != null && plan.targetAmount > BigDecimal.ZERO) {
-                    val accumulated = BigDecimal(database.transactionDao().getAccumulatedCryptoByPlan(plan.id))
-                    if (accumulated >= plan.targetAmount) {
-                        database.dcaPlanDao().setEnabled(plan.id, false)
-                        Log.d(TAG, "Plan ${plan.id} reached target ${plan.targetAmount}, auto-disabled")
-                        notificationService.showErrorNotification(
-                            planId = plan.id,
-                            exchange = plan.exchange,
-                            connectionId = plan.connectionId,
-                            templateArgs = NotificationTemplateArgs.TargetReached(
-                                targetAmount = plan.targetAmount.toPlainString(),
-                                crypto = plan.crypto
-                            )
-                        )
+                val enabledPlans = if (forcePlanId > 0) {
+                    listOfNotNull(database.dcaPlanDao().getPlanById(forcePlanId)?.takeIf { it.isEnabled })
+                } else {
+                    database.dcaPlanDao().getEnabledPlans()
+                }
+
+                if (enabledPlans.isEmpty()) {
+                    Log.d(TAG, "No enabled DCA plans")
+                    if (iteration == 1) return Result.success() else break
+                }
+
+                for (plan in enabledPlans) {
+                    // Check if it's time to execute (skip check when forceRun)
+                    val now = Instant.now()
+                    val nextExecution = plan.nextExecutionAt
+                    // A run that started since the user queued this purchase already covered it.
+                    if (forceRun && iteration == 1 && requestedAt != Instant.EPOCH &&
+                        plan.lastExecutedAt?.let { !it.isBefore(requestedAt) } == true
+                    ) continue
+                    if (database.transactionDao().hasUnidentifiedBuy(plan.id)) continue
+
+                    if (!forceRun && nextExecution != null && nextExecution.isAfter(now)) {
+                        Log.d(TAG, "Plan ${plan.id} not due yet, skipping")
                         continue
                     }
-                }
 
-                // Get credentials for this plan's connection (using current sandbox mode)
-                val isSandbox = userPreferences.isSandboxMode()
-                val credentials = credentialsStore.getCredentials(plan.connectionId, isSandbox)
-                if (credentials == null) {
-                    Log.e(TAG, "No credentials for connection ${plan.connectionId} (${plan.exchange}, sandbox=$isSandbox)")
-                    // Notify the user once per plan per worker lifetime so a missing-credentials
-                    // plan doesn't just silently fail forever (e.g. after a half-completed
-                    // backup restore or a deleted connection). Dedup is in-memory, which
-                    // means we re-notify after the worker is recreated - acceptable, since
-                    // the user needs to act on it anyway.
-                    if (credentialErrorNotifiedPlans.add(plan.id)) {
-                        val connectionName = try {
-                            database.exchangeConnectionDao().getById(plan.connectionId)?.name ?: ""
-                        } catch (_: Exception) { "" }
-                        notificationService.showErrorNotification(
-                            planId = plan.id,
-                            exchange = plan.exchange,
-                            connectionId = plan.connectionId,
-                            templateArgs = NotificationTemplateArgs.MissingCredentials(
-                                crypto = plan.crypto,
-                                exchangeName = plan.exchange.displayName,
-                                connectionName = connectionName
-                            )
-                        )
-                    }
-                    continue
-                }
-                // Credentials are back - allow future notifications if they disappear again
-                credentialErrorNotifiedPlans.remove(plan.id)
-
-                // Calculate purchase amount based on strategy
-                val strategyResult = calculateStrategyMultiplier(
-                    strategy = plan.strategy,
-                    crypto = plan.crypto,
-                    fiat = plan.fiat
-                )
-
-                val purchaseAmount = plan.amount
-                    .multiply(BigDecimal(strategyResult.multiplier.toString()))
-                    .setScale(2, RoundingMode.HALF_UP)
-
-                Log.d(TAG, "Strategy: ${plan.strategy::class.simpleName}, " +
-                        "Base: ${plan.amount}, Multiplier: ${strategyResult.multiplier}, " +
-                        "Final: $purchaseAmount (${strategyResult.reason})")
-
-                // Check minimum order size
-                val minOrderSize = minOrderSizeRepository.getMinOrderSize(plan.exchange, plan.crypto, plan.fiat)
-                if (purchaseAmount < minOrderSize) {
-                    Log.w(TAG, "Plan ${plan.id}: purchaseAmount $purchaseAmount < minimum $minOrderSize, skipping")
-                    try {
-                        val transaction = TransactionEntity(
-                            planId = plan.id,
-                            exchange = plan.exchange,
-                            connectionId = plan.connectionId,
-                            crypto = plan.crypto,
-                            fiat = plan.fiat,
-                            fiatAmount = purchaseAmount,
-                            cryptoAmount = BigDecimal.ZERO,
-                            price = BigDecimal.ZERO,
-                            fee = BigDecimal.ZERO,
-                            status = TransactionStatus.FAILED,
-                            errorMessage = "Amount $purchaseAmount ${plan.fiat} below minimum $minOrderSize ${plan.fiat}",
-                            executedAt = Instant.now()
-                        )
-                        database.runInTransaction {
-                            database.transactionDao().insertTransactionSync(transaction)
-                            database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, calculateNextExecution(plan, now))
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to save below-minimum transaction for plan ${plan.id}", e)
-                    }
-
-                    notificationService.showErrorNotification(
-                        planId = plan.id,
-                        exchange = plan.exchange,
-                        connectionId = plan.connectionId,
-                        templateArgs = NotificationTemplateArgs.BelowMinimum(
-                            crypto = plan.crypto,
-                            purchaseAmount = purchaseAmount.toPlainString(),
-                            fiat = plan.fiat,
-                            minOrderSize = minOrderSize.toPlainString()
-                        )
-                    )
-                    continue
-                }
-
-                // Circuit breaker: if this plan has already bought far more than its schedule
-                // allows in the last 24h, something is wrong - auto-disable instead of continuing
-                // to spend. Counts reconciled buys too, so it reflects real exchange spend.
-                // Forced runs (run-now / catch-up) are user-initiated and may legitimately
-                // exceed the schedule, so they get a wider allowance (+repeatCount) instead
-                // of bypassing the breaker - a replayed or duplicated force run must still
-                // be bounded.
-                val buysLast24h = database.transactionDao()
-                    .countCompletedBuysSinceSync(plan.id, now.minus(Duration.ofHours(24)))
-                val expectedPerDay = BuySafetyPolicy.expectedBuysPerDay(effectiveIntervalMinutes(plan))
-                val allowedPerDay = if (forceRun) expectedPerDay + repeatCount else expectedPerDay
-                if (BuySafetyPolicy.isRunaway(buysLast24h, allowedPerDay)) {
-                    Log.e(TAG, "Plan ${plan.id} runaway detected ($buysLast24h buys/24h, allowed ~$allowedPerDay) - auto-disabling")
-                    database.dcaPlanDao().setEnabled(plan.id, false)
-                    notificationService.showErrorNotification(
-                        planId = plan.id,
-                        exchange = plan.exchange,
-                        connectionId = plan.connectionId,
-                        templateArgs = NotificationTemplateArgs.Error(
-                            crypto = plan.crypto,
-                            errorMessage = context.getString(R.string.notification_runaway_disabled)
-                        )
-                    )
-                    continue
-                }
-
-                // Atomically claim the plan to prevent double-purchase from concurrent workers.
-                // claimPlanForExecutionSync advances nextExecutionAt only if it's still in the past
-                // (or null), returning 0 if another worker already claimed it.
-                if (!forceRun) {
-                    val nextExec = calculateNextExecution(plan, now)
-                    val claimed = database.dcaPlanDao().claimPlanForExecutionSync(plan.id, now, nextExec)
-                    if (claimed == 0) {
-                        Log.d(TAG, "Plan ${plan.id} already claimed by another worker, skipping")
-                        continue
-                    }
-                    Log.d(TAG, "Plan ${plan.id} claimed for execution, nextExecution advanced to $nextExec")
-                }
-
-                // Execute DCA purchase. A market buy is NOT idempotent: the order may be placed
-                // server-side even when the client sees a timeout/network error. So before EVER
-                // re-issuing a buy, reconcile against the exchange to see whether the order
-                // actually went through - this prevents the runaway duplicate-spend bug.
-                val api = exchangeApiFactory.create(credentials)
-                val reconcileRecentBuy = ReconcileRecentBuyUseCase(database.transactionDao())
-                val attemptStart = Instant.now()
-                val maxAttempts = 3
-                val retryDelayMs = 2_000L
-                val failedAttemptMessages = mutableListOf<String>()
-                var finalResult: DcaResult? = null
-                var reconcileUncertain = false
-
-                attemptLoop@ for (attempt in 1..maxAttempts) {
-                    // Kept strictly ABOVE OkHttp's callTimeout (30s) so this coroutine
-                    // timeout only fires after OkHttp has already aborted the request -
-                    // reconciliation must never run while the order POST is still in flight.
-                    val attemptResult = withTimeoutOrNull(45_000L) {
-                        api.marketBuy(plan.crypto, plan.fiat, purchaseAmount)
-                    } ?: DcaResult.Error("API call timed out after 45s", retryable = true)
-
-                    if (attemptResult is DcaResult.Success) {
-                        finalResult = attemptResult
-                        break
-                    }
-
-                    val error = attemptResult as DcaResult.Error
-                    failedAttemptMessages.add("Attempt $attempt: ${error.message}")
-                    Log.w(TAG, "Plan ${plan.id} attempt $attempt/$maxAttempts failed: ${error.message}")
-
-                    if (!error.retryable) {
-                        // Business error (e.g. insufficient balance) - no order placed, don't retry.
-                        finalResult = error
-                        break
-                    }
-
-                    // Ambiguous failure - did the order actually go through on the exchange?
-                    when (val rec = reconcileRecentBuy(api, plan, attemptStart, purchaseAmount)) {
-                        is ReconcileResult.Found -> {
-                            Log.w(TAG, "Plan ${plan.id} buy timed out client-side but order ${rec.trade.orderId} exists on exchange - recording, not retrying")
-                            finalResult = DcaResult.Success(
-                                Transaction(
-                                    planId = plan.id,
-                                    exchange = plan.exchange,
-                                    crypto = plan.crypto,
-                                    fiat = plan.fiat,
-                                    fiatAmount = rec.trade.fiatAmount,
-                                    cryptoAmount = rec.trade.cryptoAmount,
-                                    price = rec.trade.price,
-                                    fee = rec.trade.fee,
-                                    feeAsset = rec.trade.feeAsset,
-                                    status = TransactionStatus.COMPLETED,
-                                    exchangeOrderId = rec.trade.orderId,
-                                    executedAt = rec.trade.timestamp
+                    // Check if plan has reached its target accumulation amount
+                    if (plan.targetAmount != null && plan.targetAmount > BigDecimal.ZERO) {
+                        val accumulated = BigDecimal(database.transactionDao().getAccumulatedCryptoByPlan(plan.id))
+                        if (accumulated >= plan.targetAmount) {
+                            database.dcaPlanDao().setEnabled(plan.id, false)
+                            Log.d(TAG, "Plan ${plan.id} reached target ${plan.targetAmount}, auto-disabled")
+                            notificationService.showErrorNotification(
+                                planId = plan.id,
+                                exchange = plan.exchange,
+                                connectionId = plan.connectionId,
+                                templateArgs = NotificationTemplateArgs.TargetReached(
+                                    targetAmount = plan.targetAmount.toPlainString(),
+                                    crypto = plan.crypto
                                 )
                             )
-                            break@attemptLoop
-                        }
-                        ReconcileResult.Unknown -> {
-                            // We don't know whether an order was placed - NEVER retry on uncertainty.
-                            Log.w(TAG, "Plan ${plan.id} buy failed and reconciliation inconclusive - not retrying")
-                            reconcileUncertain = true
-                            finalResult = error
-                            break@attemptLoop
-                        }
-                        ReconcileResult.NotFound -> {
-                            // Confirmed: no order exists. Safe to retry.
+                            continue
                         }
                     }
 
-                    if (attempt < maxAttempts) {
-                        kotlinx.coroutines.delay(retryDelayMs)
-                    } else {
-                        finalResult = error
-                    }
-                }
-
-                val warningMessage = if (finalResult is DcaResult.Success && failedAttemptMessages.isNotEmpty()) {
-                    failedAttemptMessages.joinToString("; ")
-                } else null
-
-                when (finalResult) {
-                    is DcaResult.Success -> {
-                        // Reset network retry state on success and calculate missed purchases
-                        try {
-                            // Detect missed purchases: from retry recovery OR device boot/long-off
-                            val missedOrigin = plan.originalScheduledAt ?: nextExecution
-                            val missed = if (missedOrigin != null) {
-                                // Subtract 1: this purchase just executed, covering one of the missed slots
-                                (calculateMissedPurchaseCount(plan, missedOrigin, Instant.now()) - 1).coerceAtLeast(0)
-                            } else 0
-                            database.dcaPlanDao().resetNetworkRetry(plan.id)
-                            if (missed > 0) {
-                                database.dcaPlanDao().setMissedPurchaseCount(plan.id, missed)
-                                notificationService.showMissedPurchasesNotification(
+                    // Get credentials for this plan's connection (using current sandbox mode)
+                    val credentials = credentialsStore.getCredentials(plan.connectionId, isSandbox)
+                    if (credentials == null) {
+                        Log.e(TAG, "No credentials for connection ${plan.connectionId} (${plan.exchange}, sandbox=$isSandbox)")
+                        // Notify the user once per plan per worker lifetime so a missing-credentials
+                        // plan doesn't just silently fail forever (e.g. after a half-completed
+                        // backup restore or a deleted connection). Dedup is in-memory, which
+                        // means we re-notify after the worker is recreated - acceptable, since
+                        // the user needs to act on it anyway.
+                        if (credentialErrorNotifiedPlans.add(plan.id)) {
+                            val connectionName = try {
+                                database.exchangeConnectionDao().getById(plan.connectionId)?.name ?: ""
+                            } catch (_: Exception) { "" }
+                            notificationService.showErrorNotification(
+                                planId = plan.id,
+                                exchange = plan.exchange,
+                                connectionId = plan.connectionId,
+                                templateArgs = NotificationTemplateArgs.MissingCredentials(
                                     crypto = plan.crypto,
                                     exchangeName = plan.exchange.displayName,
-                                    missedCount = missed,
-                                    planId = plan.id,
-                                    exchange = plan.exchange,
-                                    connectionId = plan.connectionId
+                                    connectionName = connectionName
                                 )
-                            }
-                        } catch (_: Exception) {}
+                            )
+                        }
+                        continue
+                    }
+                    // Credentials are back - allow future notifications if they disappear again
+                    credentialErrorNotifiedPlans.remove(plan.id)
 
-                        // Save transaction atomically with plan update
+                    // Calculate purchase amount based on strategy
+                    val strategyResult = calculateStrategyMultiplier(
+                        strategy = plan.strategy,
+                        crypto = plan.crypto,
+                        fiat = plan.fiat
+                    )
+
+                    val purchaseAmount = plan.amount
+                        .multiply(BigDecimal(strategyResult.multiplier.toString()))
+                        .setScale(2, RoundingMode.HALF_UP)
+
+                    Log.d(TAG, "Strategy: ${plan.strategy::class.simpleName}, " +
+                            "Base: ${plan.amount}, Multiplier: ${strategyResult.multiplier}, " +
+                            "Final: $purchaseAmount (${strategyResult.reason})")
+
+                    // Check minimum order size
+                    val minOrderSize = minOrderSizeRepository.getMinOrderSize(plan.exchange, plan.crypto, plan.fiat)
+                    if (purchaseAmount < minOrderSize) {
+                        Log.w(TAG, "Plan ${plan.id}: purchaseAmount $purchaseAmount < minimum $minOrderSize, skipping")
                         try {
                             val transaction = TransactionEntity(
                                 planId = plan.id,
@@ -362,172 +198,244 @@ class DcaWorker @AssistedInject constructor(
                                 connectionId = plan.connectionId,
                                 crypto = plan.crypto,
                                 fiat = plan.fiat,
-                                fiatAmount = finalResult.transaction.fiatAmount,
-                                cryptoAmount = finalResult.transaction.cryptoAmount,
-                                price = finalResult.transaction.price,
-                                fee = finalResult.transaction.fee,
-                                feeAsset = finalResult.transaction.feeAsset,
-                                status = finalResult.transaction.status,
-                                exchangeOrderId = finalResult.transaction.exchangeOrderId,
-                                warningMessage = warningMessage,
+                                fiatAmount = purchaseAmount,
+                                cryptoAmount = BigDecimal.ZERO,
+                                price = BigDecimal.ZERO,
+                                fee = BigDecimal.ZERO,
+                                status = TransactionStatus.FAILED,
+                                errorMessage = "Amount $purchaseAmount ${plan.fiat} below minimum $minOrderSize ${plan.fiat}",
                                 executedAt = Instant.now()
                             )
                             database.runInTransaction {
                                 database.transactionDao().insertTransactionSync(transaction)
-                                // For non-forceRun, nextExecutionAt was already advanced by the claim;
-                                // only update for forceRun which bypasses the claim step
-                                if (forceRun) {
-                                    database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, calculateNextExecution(plan, now))
-                                }
+                                database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, calculateNextExecution(plan, now))
                             }
                         } catch (e: Exception) {
-                            Log.e(TAG, "Failed to save transaction for plan ${plan.id}", e)
+                            Log.e(TAG, "Failed to save below-minimum transaction for plan ${plan.id}", e)
                         }
 
-                        // Show notification (pending-aware, with delay info)
-                        // Use originalScheduledAt if plan went through retries, otherwise nextExecution
-                        val isPending = finalResult.transaction.status == TransactionStatus.PENDING
-                        val executedNow = Instant.now()
-                        val scheduledTime = if (!forceRun) (plan.originalScheduledAt ?: nextExecution) else null
-                        notificationService.showPurchaseNotification(
-                            plan.crypto,
-                            finalResult.transaction.cryptoAmount,
-                            if (isPending) purchaseAmount else finalResult.transaction.fiatAmount,
-                            plan.fiat,
-                            finalResult.transaction.price,
-                            plan.id,
-                            pending = isPending,
+                        notificationService.showErrorNotification(
+                            planId = plan.id,
                             exchange = plan.exchange,
                             connectionId = plan.connectionId,
-                            scheduledAt = scheduledTime,
-                            executedAt = if (scheduledTime != null) executedNow else null
+                            templateArgs = NotificationTemplateArgs.BelowMinimum(
+                                crypto = plan.crypto,
+                                purchaseAmount = purchaseAmount.toPlainString(),
+                                fiat = plan.fiat,
+                                minOrderSize = minOrderSize.toPlainString()
+                            )
                         )
-
-                        // Check withdrawal threshold
-                        checkWithdrawalThreshold(plan, api)
-
-                        Log.d(TAG, "DCA purchase successful: ${finalResult.transaction.cryptoAmount} ${plan.crypto}" +
-                            if (isPending) " (pending confirmation)" else "" +
-                            if (warningMessage != null) " (with retries: $warningMessage)" else "")
-
-                        // Check remaining balance for low-balance warning
-                        val effectiveInterval = if (plan.cronExpression != null) {
-                            CronUtils.getIntervalMinutesEstimate(plan.cronExpression) ?: 1440L
-                        } else {
-                            plan.frequency.intervalMinutes
-                        }
-                        checkLowBalance(api, plan.exchange.displayName, plan.fiat, plan.amount, effectiveInterval, plan.id, plan.connectionId)
+                        continue
                     }
 
-                    is DcaResult.Error -> {
-                        if (finalResult.retryable) {
-                            // We only reach here when reconciliation confirmed NO order exists
-                            // (safe) or was inconclusive (uncertain). Bound how often we re-issue
-                            // a market buy so a degraded network can never drain the account.
-                            try {
-                                val capReached = !BuySafetyPolicy.shouldRetryAfterConfirmedFailure(plan.networkRetryCount)
-                                if (reconcileUncertain || capReached) {
-                                    // Stop hammering: advance to the next normal slot and reset.
-                                    // A later run / trade-history import records the order if it
-                                    // actually went through.
-                                    database.runInTransaction {
-                                        database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, calculateNextExecution(plan, now))
-                                        database.dcaPlanDao().resetNetworkRetrySync(plan.id)
-                                    }
-                                    Log.w(TAG, "Plan ${plan.id} giving up this slot (uncertain=$reconcileUncertain, capReached=$capReached): ${finalResult.message}")
-                                    notificationService.showErrorNotification(
-                                        planId = plan.id,
-                                        exchange = plan.exchange,
-                                        connectionId = plan.connectionId,
-                                        templateArgs = NotificationTemplateArgs.Error(
-                                            crypto = plan.crypto,
-                                            errorMessage = finalResult.message
-                                        )
-                                    )
-                                } else {
-                                    // Confirmed-failed network buy under the retry cap: retry in 5 min.
-                                    val retryTime = now.plus(Duration.ofMinutes(5))
-                                    database.runInTransaction {
-                                        database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, retryTime)
-                                        database.dcaPlanDao().incrementNetworkRetrySync(plan.id, retryTime, nextExecution ?: now)
-                                    }
-                                    Log.w(TAG, "Network error for plan ${plan.id}, will retry at $retryTime: ${finalResult.message}")
+                    // Circuit breaker: if this plan has already bought far more than its schedule
+                    // allows in the last 24h, something is wrong - auto-disable instead of continuing
+                    // to spend. Counts reconciled buys too, so it reflects real exchange spend.
+                    // Forced runs (run-now / catch-up) are user-initiated and may legitimately
+                    // exceed the schedule, so they get a wider allowance (+repeatCount) instead
+                    // of bypassing the breaker - a replayed or duplicated force run must still
+                    // be bounded.
+                    val buysLast24h = database.transactionDao()
+                        .countCompletedBuysSinceSync(plan.id, now.minus(Duration.ofHours(24)))
+                    val expectedPerDay = BuySafetyPolicy.expectedBuysPerDay(effectiveIntervalMinutes(plan))
+                    val allowedPerDay = if (forceRun) expectedPerDay + repeatCount else expectedPerDay
+                    if (BuySafetyPolicy.isRunaway(buysLast24h, allowedPerDay)) {
+                        Log.e(TAG, "Plan ${plan.id} runaway detected ($buysLast24h buys/24h, allowed ~$allowedPerDay) - auto-disabling")
+                        database.dcaPlanDao().setEnabled(plan.id, false)
+                        notificationService.showErrorNotification(
+                            planId = plan.id,
+                            exchange = plan.exchange,
+                            connectionId = plan.connectionId,
+                            templateArgs = NotificationTemplateArgs.Error(
+                                crypto = plan.crypto,
+                                errorMessage = context.getString(R.string.notification_runaway_disabled)
+                            )
+                        )
+                        continue
+                    }
 
-                                    // Only notify on first failure, not on subsequent retries
-                                    if (plan.networkRetryCount == 0) {
-                                        notificationService.showNetworkRetryNotification(
-                                            crypto = plan.crypto,
-                                            exchangeName = plan.exchange.displayName,
-                                            errorMessage = finalResult.message,
-                                            nextRetryAt = retryTime,
-                                            attemptCount = 1,
-                                            planId = plan.id,
-                                            exchange = plan.exchange,
-                                            connectionId = plan.connectionId
-                                        )
-                                    }
+                    val pending = TransactionEntity(
+                        planId = plan.id,
+                        exchange = plan.exchange,
+                        connectionId = plan.connectionId,
+                        crypto = plan.crypto,
+                        fiat = plan.fiat,
+                        fiatAmount = purchaseAmount,
+                        cryptoAmount = BigDecimal.ZERO,
+                        price = BigDecimal.ZERO,
+                        fee = BigDecimal.ZERO,
+                        status = TransactionStatus.PENDING,
+                        executedAt = Instant.now()
+                    )
+                    // Persist the purchase before sending it. A lost response or interrupted worker
+                    // leaves a reviewable record and prevents the same plan from placing another order.
+                    val nextExec = calculateNextExecution(plan, now)
+                    val transactionId = database.withTransaction {
+                        val current = database.dcaPlanDao().getPlanById(plan.id)
+                        if (current != plan || userPreferences.isSandboxMode() != isSandbox ||
+                            database.transactionDao().hasUnidentifiedBuy(plan.id)
+                        ) return@withTransaction null
+
+                        if (forceRun) {
+                            database.dcaPlanDao().updateExecutionTime(plan.id, now, nextExec)
+                        } else if (database.dcaPlanDao().claimPlanForExecutionSync(plan.id, now, nextExec) == 0) {
+                            return@withTransaction null
+                        }
+                        database.transactionDao().insertTransaction(pending)
+                    } ?: continue
+
+                    val api = exchangeApiFactory.create(credentials, isSandbox)
+                    val receipt = withTimeoutOrNull(45_000L) {
+                        api.marketBuy(plan.crypto, plan.fiat, purchaseAmount)
+                    } ?: DcaResult.Error(context.getString(R.string.notification_purchase_needs_review))
+                    val result = if (receipt is DcaResult.Success && receipt.transaction.exchangeOrderId.isNullOrBlank()) {
+                        DcaResult.Error(context.getString(R.string.notification_purchase_needs_review))
+                    } else {
+                        receipt
+                    }
+
+                    when (result) {
+                        is DcaResult.Success -> {
+                            val filled = result.transaction
+                            database.withTransaction {
+                                database.dcaPlanDao().resetNetworkRetry(plan.id)
+                                database.transactionDao().updateTransaction(pending.copy(
+                                    id = transactionId,
+                                    fiatAmount = filled.fiatAmount,
+                                    cryptoAmount = filled.cryptoAmount,
+                                    price = filled.price,
+                                    fee = filled.fee,
+                                    feeAsset = filled.feeAsset,
+                                    status = filled.status,
+                                    exchangeOrderId = filled.exchangeOrderId,
+                                    executedAt = filled.executedAt
+                                ))
+                                if (isCatchUp && (filled.status.isOpen || filled.status.hasFilledPortion)) {
+                                    database.dcaPlanDao().decrementMissedPurchaseCount(plan.id)
                                 }
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Failed to update retry time for plan ${plan.id}", e)
                             }
-                        } else {
-                            // Business error – save failed transaction, notify, advance to next interval
-                            val failedWarning = if (failedAttemptMessages.size > 1) {
-                                failedAttemptMessages.dropLast(1).joinToString("; ")
-                            } else null
-                            try {
-                                val transaction = TransactionEntity(
+
+                            if (filled.status.isTerminal && !filled.status.hasFilledPortion) {
+                                notificationService.showErrorNotification(
                                     planId = plan.id,
                                     exchange = plan.exchange,
                                     connectionId = plan.connectionId,
-                                    crypto = plan.crypto,
-                                    fiat = plan.fiat,
-                                    fiatAmount = plan.amount,
-                                    cryptoAmount = BigDecimal.ZERO,
-                                    price = BigDecimal.ZERO,
-                                    fee = BigDecimal.ZERO,
-                                    status = TransactionStatus.FAILED,
-                                    errorMessage = finalResult.message,
-                                    warningMessage = failedWarning,
-                                    executedAt = Instant.now()
+                                    templateArgs = NotificationTemplateArgs.Error(
+                                        crypto = plan.crypto,
+                                        errorMessage = context.getString(R.string.notification_purchase_without_fill)
+                                    )
                                 )
-                                database.runInTransaction {
-                                    database.transactionDao().insertTransactionSync(transaction)
-                                    // For non-forceRun, nextExecutionAt was already advanced by the claim;
-                                    // only update for forceRun which bypasses the claim step
-                                    if (forceRun) {
-                                        database.dcaPlanDao().updateExecutionTimeSync(plan.id, now, calculateNextExecution(plan, now))
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Failed to save failed transaction for plan ${plan.id}", e)
+                                if (isCatchUp) break@repeats
+                                continue
                             }
 
+                            if (!isCatchUp) {
+                                val missedOrigin = plan.originalScheduledAt ?: nextExecution
+                                val missed = if (missedOrigin != null) {
+                                    (calculateMissedPurchaseCount(plan, missedOrigin, Instant.now()) - 1).coerceAtLeast(0)
+                                } else 0
+                                if (missed > 0) {
+                                    database.dcaPlanDao().setMissedPurchaseCount(plan.id, missed)
+                                    notificationService.showMissedPurchasesNotification(
+                                        crypto = plan.crypto,
+                                        exchangeName = plan.exchange.displayName,
+                                        missedCount = missed,
+                                        planId = plan.id,
+                                        exchange = plan.exchange,
+                                        connectionId = plan.connectionId
+                                    )
+                                }
+                            }
+                            val isPending = filled.status.isOpen
+                            val scheduledTime = if (!forceRun) (plan.originalScheduledAt ?: nextExecution) else null
+                            notificationService.showPurchaseNotification(
+                                plan.crypto,
+                                filled.cryptoAmount,
+                                if (isPending) purchaseAmount else filled.fiatAmount,
+                                plan.fiat,
+                                filled.price,
+                                plan.id,
+                                pending = isPending,
+                                exchange = plan.exchange,
+                                connectionId = plan.connectionId,
+                                scheduledAt = scheduledTime,
+                                executedAt = if (scheduledTime != null) Instant.now() else null
+                            )
+                            if (!isPending) {
+                                checkWithdrawalThreshold(plan, api)
+                                checkLowBalance(
+                                    api, plan.exchange.displayName, plan.fiat, plan.amount,
+                                    effectiveIntervalMinutes(plan), plan.id, plan.connectionId
+                                )
+                            }
+                        }
+                        is DcaResult.Error -> {
+                            if (!result.confirmedRejection) {
+                                // The order may have been placed. Look for it in the exchange's
+                                // trade history before asking the user to review it by hand.
+                                val reconciled = reconcileUncertainBuy(api, plan, transactionId, pending, isCatchUp)
+                                if (reconciled != null) {
+                                    notificationService.showPurchaseNotification(
+                                        plan.crypto,
+                                        reconciled.cryptoAmount,
+                                        reconciled.fiatAmount,
+                                        plan.fiat,
+                                        reconciled.price,
+                                        plan.id,
+                                        pending = false,
+                                        exchange = plan.exchange,
+                                        connectionId = plan.connectionId
+                                    )
+                                    continue
+                                }
+                            }
+                            if (result.confirmedRejection && result.retryable && !forceRun && !isCatchUp &&
+                                BuySafetyPolicy.shouldRetryAfterConfirmedFailure(plan.networkRetryCount)
+                            ) {
+                                // The request never reached the exchange (no connection, DNS,
+                                // TLS). Nothing was bought, so try this slot again in 5 minutes.
+                                val retryTime = Instant.now().plus(NETWORK_RETRY_DELAY)
+                                database.withTransaction {
+                                    database.transactionDao().updateTransaction(pending.copy(
+                                        id = transactionId, status = TransactionStatus.FAILED, errorMessage = result.message
+                                    ))
+                                    database.dcaPlanDao().updateExecutionTime(plan.id, now, retryTime)
+                                    database.dcaPlanDao().incrementNetworkRetry(plan.id, retryTime, nextExecution ?: now)
+                                }
+                                if (plan.networkRetryCount == 0) {
+                                    notificationService.showNetworkRetryNotification(
+                                        crypto = plan.crypto,
+                                        exchangeName = plan.exchange.displayName,
+                                        errorMessage = result.message,
+                                        nextRetryAt = retryTime,
+                                        attemptCount = 1,
+                                        planId = plan.id,
+                                        exchange = plan.exchange,
+                                        connectionId = plan.connectionId
+                                    )
+                                }
+                                continue
+                            }
+                            database.dcaPlanDao().resetNetworkRetry(plan.id)
+                            val message = if (result.confirmedRejection) {
+                                database.transactionDao().updateTransaction(pending.copy(
+                                    id = transactionId, status = TransactionStatus.FAILED, errorMessage = result.message
+                                ))
+                                result.message
+                            } else {
+                                context.getString(R.string.notification_purchase_needs_review)
+                            }
                             notificationService.showErrorNotification(
                                 planId = plan.id,
                                 exchange = plan.exchange,
                                 connectionId = plan.connectionId,
-                                templateArgs = NotificationTemplateArgs.Error(
-                                    crypto = plan.crypto,
-                                    errorMessage = finalResult.message
-                                )
+                                templateArgs = NotificationTemplateArgs.Error(crypto = plan.crypto, errorMessage = message)
                             )
-                            Log.e(TAG, "DCA purchase failed for plan ${plan.id} after $maxAttempts attempts: ${finalResult.message}")
+                            if (isCatchUp) break@repeats
                         }
-                    }
-
-                    null -> {
-                        Log.e(TAG, "DCA purchase for plan ${plan.id}: no result (unexpected)")
                     }
                 }
             }
-
-            // Consume one persisted catch-up slot per finished iteration (see isCatchUp
-            // above) so a replayed worker continues instead of starting over.
-            if (isCatchUp) {
-                database.dcaPlanDao().decrementMissedPurchaseCount(forcePlanId)
-            }
-            } // repeat loop
 
             // Re-arm alarm for next execution (self-perpetuating chain)
             DcaAlarmScheduler.scheduleNextAlarm(context)
@@ -541,7 +449,7 @@ class DcaWorker @AssistedInject constructor(
             throw ce
         } catch (e: Exception) {
             Log.e(TAG, "DcaWorker error", e)
-            notificationService.showErrorNotification(context.getString(R.string.notification_dca_error), e.message ?: "Unknown error")
+            notificationService.showErrorNotification(context.getString(R.string.notification_dca_error), com.accbot.dca.presentation.utils.FriendlyErrors.summary(context, e.message ?: "Unknown error"))
             // Still try to re-arm alarm even on error
             try { DcaAlarmScheduler.scheduleNextAlarm(context) } catch (_: Exception) {}
             // Forced runs bypass the per-plan claim and due-time guards, so an automatic
@@ -550,6 +458,49 @@ class DcaWorker @AssistedInject constructor(
             // and can trigger the run again.
             return if (forceRun) Result.failure() else Result.retry()
         }
+    }
+
+    /**
+     * Records an uncertain buy from the exchange's trade history when a matching order is
+     * found. Returns the recorded fill, or null when the buy stays pending for review.
+     */
+    private suspend fun reconcileUncertainBuy(
+        api: ExchangeApi,
+        plan: DcaPlanEntity,
+        transactionId: Long,
+        pending: TransactionEntity,
+        isCatchUp: Boolean
+    ): HistoricalTrade? {
+        val trade = try {
+            (ReconcileRecentBuyUseCase(database.transactionDao())(api, plan, pending.executedAt, pending.fiatAmount)
+                as? ReconcileResult.Found)?.trade
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Reconciling plan ${plan.id} failed", e)
+            null
+        } ?: return null
+        val recorded = database.withTransaction {
+            val dao = database.transactionDao()
+            val current = dao.getTransactionById(transactionId)
+            if (current == null || current.status != TransactionStatus.PENDING || !current.exchangeOrderId.isNullOrBlank() ||
+                dao.findMatchingBackupOrder(trade.orderId, plan.connectionId, plan.exchange, plan.crypto, plan.fiat) != null
+            ) return@withTransaction false
+            dao.updateTransaction(current.copy(
+                fiatAmount = trade.fiatAmount,
+                cryptoAmount = trade.cryptoAmount,
+                price = trade.price,
+                fee = trade.fee,
+                feeAsset = trade.feeAsset,
+                status = TransactionStatus.COMPLETED,
+                exchangeOrderId = trade.orderId,
+                executedAt = trade.timestamp
+            ))
+            database.dcaPlanDao().resetNetworkRetry(plan.id)
+            if (isCatchUp) database.dcaPlanDao().decrementMissedPurchaseCount(plan.id)
+            true
+        }
+        return trade.takeIf { recorded }
     }
 
     private fun calculateMissedPurchaseCount(plan: DcaPlanEntity, originalScheduledAt: Instant, now: Instant): Int {
@@ -635,6 +586,20 @@ class DcaWorker @AssistedInject constructor(
         private const val KEY_FORCE_RUN = "forceRun"
         private const val KEY_PLAN_ID = "planId"
         private const val KEY_REPEAT_COUNT = "repeatCount"
+        private const val KEY_REQUESTED_AT = "requestedAt"
+        private const val KEY_CATCH_UP = "catchUp"
+        private val NETWORK_RETRY_DELAY: Duration = Duration.ofMinutes(5)
+        private val purchaseLock = Mutex()
+
+        internal suspend fun tryReviewPurchase(review: suspend () -> Unit): Boolean {
+            if (!purchaseLock.tryLock()) return false
+            try {
+                review()
+                return true
+            } finally {
+                purchaseLock.unlock()
+            }
+        }
         const val WORK_NAME = "dca_periodic_work"
 
         /**
@@ -652,6 +617,7 @@ class DcaWorker @AssistedInject constructor(
          * the user acts. Cleared when credentials reappear for that plan.
          */
         private val credentialErrorNotifiedPlans = java.util.Collections.synchronizedSet(mutableSetOf<Long>())
+        private const val KEY_SANDBOX_MODE = "sandbox_mode"
 
         /**
          * Schedule periodic DCA work as a safety net (backs up AlarmManager).
@@ -695,6 +661,8 @@ class DcaWorker @AssistedInject constructor(
 
             val inputData = Data.Builder()
                 .putBoolean(KEY_FORCE_RUN, true)
+                .putString(KEY_SANDBOX_MODE, UserPreferences(context).processSandboxMode.toString())
+                .putLong(KEY_REQUESTED_AT, System.currentTimeMillis())
                 .build()
 
             val oneTimeWorkRequest = OneTimeWorkRequestBuilder<DcaWorker>()
@@ -718,6 +686,8 @@ class DcaWorker @AssistedInject constructor(
 
             val inputData = Data.Builder()
                 .putBoolean(KEY_FORCE_RUN, true)
+                .putString(KEY_SANDBOX_MODE, UserPreferences(context).processSandboxMode.toString())
+                .putLong(KEY_REQUESTED_AT, System.currentTimeMillis())
                 .putLong(KEY_PLAN_ID, planId)
                 .build()
 
@@ -738,8 +708,11 @@ class DcaWorker @AssistedInject constructor(
         fun runMissedPurchases(context: Context, planId: Long, count: Int) {
             val inputData = Data.Builder()
                 .putBoolean(KEY_FORCE_RUN, true)
+                .putString(KEY_SANDBOX_MODE, UserPreferences(context).processSandboxMode.toString())
+                .putLong(KEY_REQUESTED_AT, System.currentTimeMillis())
                 .putLong(KEY_PLAN_ID, planId)
                 .putInt(KEY_REPEAT_COUNT, count)
+                .putBoolean(KEY_CATCH_UP, true)
                 .build()
 
             val oneTimeWorkRequest = OneTimeWorkRequestBuilder<DcaWorker>()
@@ -773,9 +746,8 @@ class DcaWorker @AssistedInject constructor(
         private const val ALARM_WORK_NAME = "dca_alarm_execution"
 
         fun runFromAlarm(context: Context) {
-            // No network constraint – worker must run even when offline so it can
-            // show a network-retry notification instead of silently waiting.
             val oneTimeWorkRequest = OneTimeWorkRequestBuilder<DcaWorker>()
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
                 .build()
 

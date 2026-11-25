@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
+import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,7 +29,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.collectAsState
@@ -62,6 +62,8 @@ import com.accbot.dca.presentation.screens.plans.EditPlanScreen
 import com.accbot.dca.presentation.screens.plans.PlanDetailsScreen
 import com.accbot.dca.presentation.screens.backup.BackupExportScreen
 import com.accbot.dca.presentation.screens.backup.BackupImportScreen
+import com.accbot.dca.presentation.screens.shared.SharedPlanDetailScreen
+import com.accbot.dca.presentation.screens.shared.SharedPlansScreen
 import com.accbot.dca.presentation.screens.portfolio.PortfolioScreen
 import com.accbot.dca.presentation.screens.splash.SplashScreen
 import com.accbot.dca.presentation.changelog.ChangelogData
@@ -121,8 +123,16 @@ class MainActivity : AppCompatActivity() {
             // Plain remember, NOT rememberSaveable: saved instance state survives process
             // death (system kills the app in background, task stays in recents), so a
             // saveable flag would restore isUnlocked=true and silently skip the lock.
-            var isUnlocked by remember { mutableStateOf(false) }
-            val biometricEnabled = userPreferences.isBiometricLockEnabled()
+            val biometricEnabled by userPreferences.biometricLockEnabledFlow.collectAsState()
+            var isUnlocked by remember(biometricEnabled) { mutableStateOf(false) }
+            var sensitiveRoute by remember { mutableStateOf(false) }
+            SideEffect {
+                if (biometricEnabled || sensitiveRoute) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                }
+            }
 
             // Re-lock when the app spends longer than a short grace period in background,
             // so a quick app switch doesn't re-prompt but a real walk-away does.
@@ -188,7 +198,8 @@ class MainActivity : AppCompatActivity() {
                                 onboardingPreferences.setOnboardingCompleted(true)
                             },
                             pendingTab = pendingTab,
-                            unreadNotificationCount = notificationDao.getUnreadCount()
+                            unreadNotificationCount = notificationDao.getUnreadCount(),
+                            onSensitiveRouteChanged = { sensitiveRoute = it }
                         )
                     }
 
@@ -260,11 +271,19 @@ fun AccBotApp(
     isOnboardingCompleted: Boolean,
     onOnboardingComplete: () -> Unit,
     pendingTab: MutableStateFlow<Int?> = MutableStateFlow(null),
-    unreadNotificationCount: kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.flowOf(0)
+    unreadNotificationCount: kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.flowOf(0),
+    onSensitiveRouteChanged: (Boolean) -> Unit = {}
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    LaunchedEffect(currentRoute) {
+        onSensitiveRouteChanged(
+            currentRoute == Screen.BackupExport.route || currentRoute == Screen.BackupImport.route ||
+                currentRoute == Screen.ExchangeSetup.route || currentRoute == Screen.AddExchange.route ||
+                currentRoute == Screen.ExchangeDetail.route
+        )
+    }
 
     // Detect orientation
     val configuration = LocalConfiguration.current
@@ -568,6 +587,28 @@ fun AccBotApp(
         composable(Screen.BackupImport.route) {
             BackupImportScreen(onNavigateBack = { navController.popBackStack() })
         }
+
+        // Read-only shared plans
+        composable(Screen.SharedPlans.route) {
+            SharedPlansScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenPlan = { shareId ->
+                    navController.navigate(Screen.SharedPlanDetail.createRoute(shareId)) {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+        composable(
+            route = Screen.SharedPlanDetail.route,
+            arguments = listOf(navArgument(Screen.SHARE_ID_ARG) { type = NavType.StringType })
+        ) { backStackEntry ->
+            val shareId = backStackEntry.arguments?.getString(Screen.SHARE_ID_ARG) ?: return@composable
+            SharedPlanDetailScreen(
+                shareId = shareId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
     }
 }
 
@@ -589,6 +630,9 @@ private fun MainTabPage(
             onNavigateToPortfolio = { _, _ -> onSwitchToTab(1) },
             onNavigateToExchangeManagement = {
                 navController.navigate(Screen.ExchangeManagement.route)
+            },
+            onNavigateToTransaction = { transactionId ->
+                navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
             }
         )
         1 -> PortfolioScreen(
@@ -609,6 +653,9 @@ private fun MainTabPage(
             },
             onNavigateToBackupImport = {
                 navController.navigate(Screen.BackupImport.route)
+            },
+            onNavigateToSharedPlans = {
+                navController.navigate(Screen.SharedPlans.route)
             }
         )
     }

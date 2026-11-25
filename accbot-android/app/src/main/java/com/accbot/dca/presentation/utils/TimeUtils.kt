@@ -6,6 +6,22 @@ import java.time.Duration
 import java.time.Instant
 
 object TimeUtils {
+    /** "just now", "5 minutes ago", "2 days ago"; older than 30 days falls back to a date. */
+    fun formatTimeAgo(past: Instant, context: Context, now: Instant = Instant.now()): String {
+        val duration = Duration.between(past, now)
+        val res = context.resources
+        return when {
+            duration.toMinutes() < 1 -> context.getString(R.string.time_ago_just_now)
+            duration.toHours() < 1 -> duration.toMinutes().toInt().let { res.getQuantityString(R.plurals.time_ago_minutes, it, it) }
+            duration.toDays() < 1 -> duration.toHours().toInt().let { res.getQuantityString(R.plurals.time_ago_hours, it, it) }
+            duration.toDays() <= 30 -> duration.toDays().toInt().let { res.getQuantityString(R.plurals.time_ago_days, it, it) }
+            else -> java.time.format.DateTimeFormatter
+                .ofLocalizedDate(java.time.format.FormatStyle.MEDIUM)
+                .withLocale(res.configuration.locales[0])
+                .format(past.atZone(java.time.ZoneId.systemDefault()))
+        }
+    }
+
     fun formatTimeUntil(nextExecution: Instant?, context: Context): String {
         if (nextExecution == null) return context.getString(R.string.time_not_scheduled)
         val now = Instant.now()

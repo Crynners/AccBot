@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.accbot.dca.R
+import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.presentation.components.AccBotTopAppBar
@@ -37,6 +38,7 @@ import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.accentColor
 import com.accbot.dca.presentation.ui.theme.successColor
 import com.accbot.dca.presentation.utils.DateFormatters
+import com.accbot.dca.presentation.utils.FriendlyErrors
 import com.accbot.dca.presentation.utils.NumberFormatters
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -107,6 +109,46 @@ fun TransactionDetailsScreen(
                     StatusHeader(status = transaction.status)
 
                     Spacer(modifier = Modifier.height(24.dp))
+
+                    if (transaction.status == TransactionStatus.PENDING &&
+                        transaction.exchangeOrderId.isNullOrBlank()
+                    ) {
+                        val isSell = transaction.side == TransactionSide.SELL
+                        // Order IDs can be checked on exchanges that report order details.
+                        val canVerifyOrder = transaction.exchange == Exchange.BINANCE ||
+                            transaction.exchange == Exchange.COINMATE
+                        val reviewTitle = stringResource(
+                            if (isSell) R.string.transaction_review_sell else R.string.transaction_review_purchase
+                        )
+                        var showReviewDialog by remember(transaction.id) { mutableStateOf(false) }
+                        Text(
+                            text = stringResource(
+                                if (isSell) R.string.transaction_sell_needs_review else R.string.notification_purchase_needs_review
+                            ),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Button(onClick = { showReviewDialog = true }) {
+                            Text(reviewTitle)
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        if (showReviewDialog) {
+                            PendingReviewDialog(
+                                isSell = isSell,
+                                canVerifyOrder = isSell || canVerifyOrder,
+                                pair = "${transaction.crypto}/${transaction.fiat}",
+                                exchangeName = transaction.exchange.displayName,
+                                sentAt = DateFormatters.fullDate.format(transaction.executedAt) + " " +
+                                    DateFormatters.timeOnly.format(transaction.executedAt),
+                                title = reviewTitle,
+                                onDismiss = { showReviewDialog = false },
+                                onResolve = { orderId ->
+                                    showReviewDialog = false
+                                    if (isSell) viewModel.acknowledgeSellReview(transaction.id, orderId)
+                                    else viewModel.acknowledgePurchaseReview(transaction.id, orderId)
+                                }
+                            )
+                        }
+                    }
 
                     // Amount card
                     Card(
@@ -203,8 +245,7 @@ fun TransactionDetailsScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         SellDetailsCard(transaction = transaction)
 
-                        if (transaction.status == TransactionStatus.PENDING ||
-                            transaction.status == TransactionStatus.PARTIAL
+                        if (transaction.status.isOpen && !transaction.exchangeOrderId.isNullOrBlank()
                         ) {
                             Spacer(modifier = Modifier.height(16.dp))
                             var showConfirm by remember { mutableStateOf(false) }
@@ -256,6 +297,11 @@ fun TransactionDetailsScreen(
 
                     // Error message card (if failed)
                     if (transaction.status == TransactionStatus.FAILED && transaction.errorMessage != null) {
+                        val errorContext = LocalContext.current
+                        val errorCategory = remember(transaction.errorMessage) {
+                            FriendlyErrors.categorize(transaction.errorMessage)
+                        }
+                        val advice = FriendlyErrors.advice(errorContext, errorCategory)
                         Spacer(modifier = Modifier.height(16.dp))
                         Card(
                             colors = CardDefaults.cardColors(
@@ -276,17 +322,32 @@ fun TransactionDetailsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = stringResource(R.string.transaction_details_error_message),
+                                        text = FriendlyErrors.title(errorContext, errorCategory)
+                                            ?: stringResource(R.string.transaction_details_error_message),
                                         fontWeight = FontWeight.SemiBold,
                                         color = Error
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = transaction.errorMessage,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                if (advice != null) {
+                                    Text(
+                                        text = advice,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.error_technical_detail, transaction.errorMessage),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                } else {
+                                    Text(
+                                        text = transaction.errorMessage,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
                             }
                         }
                     }
@@ -344,6 +405,7 @@ private fun StatusHeader(status: TransactionStatus) {
         TransactionStatus.FAILED -> Triple(Icons.Default.Error, Error, stringResource(R.string.transaction_status_failed))
         TransactionStatus.PENDING -> Triple(Icons.Default.Schedule, accentCol, stringResource(R.string.transaction_status_pending))
         TransactionStatus.PARTIAL -> Triple(Icons.Default.RemoveCircle, Color(0xFFFFA500), stringResource(R.string.transaction_status_partial))
+        TransactionStatus.PARTIAL_CANCELLED -> Triple(Icons.Default.Cancel, Color(0xFFFFA500), stringResource(R.string.transaction_status_partial_cancelled))
         TransactionStatus.CANCELLED -> Triple(Icons.Default.Cancel, MaterialTheme.colorScheme.onSurfaceVariant, stringResource(R.string.transaction_status_cancelled))
     }
 
@@ -506,4 +568,86 @@ private fun DetailRowWithCopy(
             )
         }
     }
+}
+
+private enum class ReviewStep { CHOOSE, ENTER_ID, IMPORT_FIRST, NOT_FOUND }
+
+/**
+ * Review of an order whose outcome AccBot doesn't know. Instead of one OK button whose
+ * meaning depends on an empty text field, the user answers what they found on the
+ * exchange and each answer leads to one explicit action:
+ * - found + exchange can verify IDs -> enter the order ID, AccBot verifies and records it
+ * - found + no verification (purchase) -> import trade history first, then finish
+ * - nothing there -> mark as not executed (plan continues / reserved amount is released)
+ * [onResolve] gets the order ID, or "" for "not executed / already imported".
+ */
+@Composable
+private fun PendingReviewDialog(
+    isSell: Boolean,
+    canVerifyOrder: Boolean,
+    pair: String,
+    exchangeName: String,
+    sentAt: String,
+    title: String,
+    onDismiss: () -> Unit,
+    onResolve: (orderId: String) -> Unit
+) {
+    var step by remember { mutableStateOf(ReviewStep.CHOOSE) }
+    var orderId by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                when (step) {
+                    ReviewStep.CHOOSE -> {
+                        Text(stringResource(R.string.review_question, pair, exchangeName, sentAt))
+                        Button(
+                            onClick = { step = if (canVerifyOrder) ReviewStep.ENTER_ID else ReviewStep.IMPORT_FIRST },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(if (isSell) R.string.review_choice_found_sell else R.string.review_choice_found_purchase))
+                        }
+                        OutlinedButton(onClick = { step = ReviewStep.NOT_FOUND }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.review_choice_not_found))
+                        }
+                    }
+                    ReviewStep.ENTER_ID -> {
+                        Text(stringResource(if (isSell) R.string.review_enter_id_sell else R.string.review_enter_id_purchase))
+                        OutlinedTextField(
+                            value = orderId,
+                            onValueChange = { orderId = it.take(32) },
+                            singleLine = true,
+                            label = { Text(stringResource(R.string.transaction_details_order_id)) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    ReviewStep.IMPORT_FIRST -> Text(stringResource(R.string.review_import_first, exchangeName))
+                    ReviewStep.NOT_FOUND -> Text(
+                        stringResource(if (isSell) R.string.review_not_found_sell else R.string.review_not_found_purchase)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            when (step) {
+                ReviewStep.CHOOSE -> Unit
+                ReviewStep.ENTER_ID -> TextButton(
+                    onClick = { onResolve(orderId.trim()) },
+                    enabled = orderId.isNotBlank()
+                ) { Text(stringResource(R.string.review_verify_save)) }
+                ReviewStep.IMPORT_FIRST -> TextButton(onClick = { onResolve("") }) {
+                    Text(stringResource(R.string.review_import_done))
+                }
+                ReviewStep.NOT_FOUND -> TextButton(onClick = { onResolve("") }) {
+                    Text(stringResource(R.string.review_mark_not_executed))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { if (step == ReviewStep.CHOOSE) onDismiss() else step = ReviewStep.CHOOSE }) {
+                Text(stringResource(if (step == ReviewStep.CHOOSE) android.R.string.cancel else R.string.review_back))
+            }
+        }
+    )
 }

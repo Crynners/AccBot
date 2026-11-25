@@ -423,3 +423,6 @@ Marketing/
 # Miscellaneous
 # ======================================
 nul
+
+# Local build and audit outputs (.aab, PDF)
+/output/
