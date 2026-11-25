@@ -6,8 +6,8 @@ package com.accbot.dca.presentation.changelog
 object ChangelogData {
     val entries: List<ChangelogEntry> = listOf(
         ChangelogEntry(
-            versionCode = 29000,
-            version = "2.9.0",
+            versionCode = 29100,
+            version = "2.9.1",
             titles = mapOf(
                 "cs" to "Sdílení plánů a přehlednější aplikace",
                 "en" to "Plan Sharing & a Clearer App",
