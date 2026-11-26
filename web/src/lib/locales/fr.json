@@ -196,10 +196,9 @@
   "carousel_prev": "Capture précédente",
   "carousel_next": "Capture suivante",
   "carousel_goto_tpl": "Afficher la capture {0}",
-  "support_coffee_title": "Offrez-nous un café",
-  "support_coffee_desc": "Un don ponctuel par carte, Apple Pay ou Google Pay. Aucun compte requis.",
-  "support_coffee_btn": "Offrir un café",
   "support_crypto_title": "Envoyer des cryptos",
   "support_crypto_desc": "Scannez le QR code avec votre portefeuille ou copiez l'adresse.",
-  "support_help_title": "D'autres façons d'aider"
+  "support_help_title": "D'autres façons d'aider",
+  "support_ln_title": "Envoyer des sats via Lightning",
+  "support_ln_desc": "Instantané et presque sans frais. Scannez le QR code avec un portefeuille Lightning ou copiez l'adresse."
 }

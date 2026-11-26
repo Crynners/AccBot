@@ -264,10 +264,9 @@
   "carousel_prev": "Previous screenshot",
   "carousel_next": "Next screenshot",
   "carousel_goto_tpl": "Show screenshot {0}",
-  "support_coffee_title": "Buy us a coffee",
-  "support_coffee_desc": "A one-off tip by card, Apple Pay or Google Pay. No account needed.",
-  "support_coffee_btn": "Buy us a coffee",
   "support_crypto_title": "Send crypto",
   "support_crypto_desc": "Scan the QR code in your wallet or copy the address.",
-  "support_help_title": "Other ways to help"
+  "support_help_title": "Other ways to help",
+  "support_ln_title": "Send sats over Lightning",
+  "support_ln_desc": "Instant and almost free. Scan the QR code in a Lightning wallet or copy the address."
 }

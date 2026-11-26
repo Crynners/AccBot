@@ -1,5 +1,6 @@
 <script>
-  import { BUY_ME_A_COFFEE } from '$lib/i18n.js';
+  import QRCode from 'qrcode';
+  import { LIGHTNING_ADDRESS } from '$lib/i18n.js';
 
   let { t } = $props();
 
@@ -15,15 +16,16 @@
 
   let coinId = $state('btc');
   const coin = $derived(COINS.find((c) => c.id === coinId));
-  let copied = $state(false);
+  // Which address was just copied ('ln' or a coin id), for the "Copied" state.
+  let copied = $state(null);
   let timer;
 
-  async function copy() {
+  async function copy(text, key) {
     try {
-      await navigator.clipboard.writeText(coin.address);
-      copied = true;
+      await navigator.clipboard.writeText(text);
+      copied = key;
       clearTimeout(timer);
-      timer = setTimeout(() => (copied = false), 2000);
+      timer = setTimeout(() => (copied = null), 2000);
     } catch (e) {
       /* clipboard blocked: the address stays selectable */
     }
@@ -31,8 +33,17 @@
 
   function pick(id) {
     coinId = id;
-    copied = false;
+    copied = null;
   }
+
+  // QR code for the Lightning address, rendered as an SVG path (wallets read "lightning:" + address).
+  function qrPath(text) {
+    const { size, data } = QRCode.create(text, { errorCorrectionLevel: 'M' }).modules;
+    let d = '';
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (data[y * size + x]) d += `M${x + 2} ${y + 2}h1v1h-1z`;
+    return { size: size + 4, d };
+  }
+  const lnQr = LIGHTNING_ADDRESS ? qrPath(`lightning:${LIGHTNING_ADDRESS}`) : null;
 
   const HELP = [
     {
@@ -57,25 +68,35 @@
 </script>
 
 <div class="support">
-  <div class="give">
-    <!-- Buy Me a Coffee -->
-    <div class="card coffee reveal">
-      <div class="cup" aria-hidden="true">
-        <svg viewBox="0 0 64 64">
-          <path class="steam" d="M24 8c-3 4 3 6 0 10M32 6c-3 4 3 6 0 10M40 8c-3 4 3 6 0 10" />
-          <path class="mug" d="M14 24h32v14a14 14 0 01-14 14h-4a14 14 0 01-14-14z" />
-          <path class="handle" d="M46 28h4a6 6 0 010 12h-4" />
-          <path class="saucer" d="M10 56h40" />
-        </svg>
+  <div class="give" class:solo={!LIGHTNING_ADDRESS}>
+    {#if LIGHTNING_ADDRESS}
+      <!-- Lightning -->
+      <div class="card lightning reveal">
+        <div class="bolt" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></svg>
+        </div>
+        <h3>{t('support_ln_title')}</h3>
+        <p>{t('support_ln_desc')}</p>
+        <div class="wallet ln-box">
+          <svg class="ln-qr" viewBox="0 0 {lnQr.size} {lnQr.size}" role="img" aria-label="{t('support_qr_alt')} (Lightning)" shape-rendering="crispEdges">
+            <rect width={lnQr.size} height={lnQr.size} fill="#fff" /><path d={lnQr.d} fill="#0E0E1A" />
+          </svg>
+          <div class="addr">
+            <span class="coin-name">Lightning</span>
+            <code>{LIGHTNING_ADDRESS}</code>
+          <button type="button" class="copy" class:copied={copied === 'ln'} onclick={() => copy(LIGHTNING_ADDRESS, 'ln')}>
+            {#if copied === 'ln'}
+              <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+              {t('support_copied')}
+            {:else}
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+              {t('support_copy')}
+            {/if}
+          </button>
+          </div>
+        </div>
       </div>
-      <h3>{t('support_coffee_title')}</h3>
-      <p>{t('support_coffee_desc')}</p>
-      <a class="bmc" href={BUY_ME_A_COFFEE} target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h12v5a5 5 0 01-5 5h-2a5 5 0 01-5-5z" /><path d="M17 9h1.5a2.5 2.5 0 010 5H17" /></svg>
-        <span>{t('support_coffee_btn')}</span>
-      </a>
-      <span class="via">buymeacoffee.com</span>
-    </div>
+    {/if}
 
     <!-- Crypto -->
     <div class="card crypto reveal">
@@ -93,8 +114,8 @@
         <div class="addr">
           <span class="coin-name">{coin.name}</span>
           <code>{coin.address}</code>
-          <button type="button" class="copy" class:copied onclick={copy}>
-            {#if copied}
+          <button type="button" class="copy" class:copied={copied === coin.id} onclick={() => copy(coin.address, coin.id)}>
+            {#if copied === coin.id}
               <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
               {t('support_copied')}
             {:else}
@@ -156,101 +177,50 @@
     line-height: 1.6;
   }
 
-  /* Coffee card: warm, a little playful */
-  .coffee {
+  .give.solo {
+    grid-template-columns: 1fr;
+  }
+
+  /* Lightning card */
+  .lightning {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
     background:
-      radial-gradient(120% 80% at 100% 0%, rgba(255, 221, 0, 0.1), transparent 60%),
+      radial-gradient(120% 80% at 100% 0%, rgba(247, 147, 26, 0.12), transparent 60%),
       var(--surface);
   }
 
-  .cup {
-    width: 64px;
-    height: 64px;
+  .bolt {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: rgba(247, 147, 26, 0.14);
+    display: grid;
+    place-items: center;
     margin-bottom: 18px;
   }
 
-  .cup svg {
-    width: 100%;
-    height: 100%;
-    fill: none;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+  .bolt svg {
+    width: 26px;
+    height: 26px;
+    fill: #f7931a;
   }
 
-  .mug {
-    fill: #ffdd00;
-    stroke: #ffdd00;
-    stroke-width: 2;
-  }
-
-  .handle,
-  .saucer {
-    stroke: #ffdd00;
-    stroke-width: 4;
-  }
-
-  .steam {
-    stroke: rgba(255, 255, 255, 0.45);
-    stroke-width: 2.5;
-    stroke-dasharray: 14;
-    animation: steam 3s ease-in-out infinite;
-  }
-
-  @keyframes steam {
-    0%, 100% { stroke-dashoffset: 0; opacity: 0.25; }
-    50% { stroke-dashoffset: 14; opacity: 0.8; }
-  }
-
-  .bmc {
+  .ln-box {
     margin-top: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 13px 22px;
-    border-radius: 12px;
-    background: #ffdd00;
-    color: #0e0e1a;
-    font-weight: 700;
-    font-size: 1rem;
-    transition: transform 0.15s ease, box-shadow 0.2s ease;
   }
 
-  .coffee p {
-    margin-bottom: 24px;
+  .lightning p {
+    margin-bottom: 20px;
   }
 
-  .bmc:hover {
-    color: #0e0e1a;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(255, 221, 0, 0.22);
+  .ln-qr {
+    flex: 0 0 auto;
+    width: 132px;
+    height: 132px;
+    border-radius: 8px;
   }
 
-  .bmc:focus-visible,
-  .coins button:focus-visible,
-  .copy:focus-visible,
-  .help a:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-  }
-
-  .bmc svg {
-    width: 22px;
-    height: 22px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .via {
-    margin-top: 10px;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-  }
 
   /* Crypto card */
   .coins {
@@ -456,12 +426,4 @@
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .steam {
-      animation: none;
-    }
-    .bmc {
-      transition: none;
-    }
-  }
 </style>

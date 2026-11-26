@@ -196,10 +196,9 @@
   "carousel_prev": "Captura anterior",
   "carousel_next": "Captura siguiente",
   "carousel_goto_tpl": "Ver captura {0}",
-  "support_coffee_title": "Invítanos a un café",
-  "support_coffee_desc": "Una aportación puntual con tarjeta, Apple Pay o Google Pay. Sin crear cuenta.",
-  "support_coffee_btn": "Invitar a un café",
   "support_crypto_title": "Envía cripto",
   "support_crypto_desc": "Escanea el código QR con tu cartera o copia la dirección.",
-  "support_help_title": "Otras formas de ayudar"
+  "support_help_title": "Otras formas de ayudar",
+  "support_ln_title": "Envía sats por Lightning",
+  "support_ln_desc": "Al instante y casi sin comisión. Escanea el código QR con una cartera Lightning o copia la dirección."
 }

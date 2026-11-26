@@ -14,5 +14,5 @@ export function exposeTranslator(lang, dict) {
   };
 }
 
-/** Buy Me a Coffee page for one-off donations. */
-export const BUY_ME_A_COFFEE = 'https://buymeacoffee.com/accbot';
+/** Lightning address for donations (user@domain). The Lightning card is hidden while this is empty. */
+export const LIGHTNING_ADDRESS = '';

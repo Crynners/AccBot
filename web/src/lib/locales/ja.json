@@ -196,10 +196,9 @@
   "carousel_prev": "前のスクリーンショット",
   "carousel_next": "次のスクリーンショット",
   "carousel_goto_tpl": "スクリーンショット {0} を表示",
-  "support_coffee_title": "コーヒーをおごる",
-  "support_coffee_desc": "カード、Apple Pay、Google Pay で一回だけのサポート。アカウント登録は不要です。",
-  "support_coffee_btn": "コーヒーをおごる",
   "support_crypto_title": "暗号資産を送る",
   "support_crypto_desc": "ウォレットで QR コードを読み取るか、アドレスをコピーしてください。",
-  "support_help_title": "ほかの応援方法"
+  "support_help_title": "ほかの応援方法",
+  "support_ln_title": "Lightning で sats を送る",
+  "support_ln_desc": "すぐに届き、手数料もほぼかかりません。Lightning ウォレットで QR コードを読み取るか、アドレスをコピーしてください。"
 }

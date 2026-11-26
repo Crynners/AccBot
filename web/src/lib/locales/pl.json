@@ -196,10 +196,9 @@
   "carousel_prev": "Poprzedni zrzut ekranu",
   "carousel_next": "Następny zrzut ekranu",
   "carousel_goto_tpl": "Pokaż zrzut ekranu {0}",
-  "support_coffee_title": "Postaw nam kawę",
-  "support_coffee_desc": "Jednorazowe wsparcie kartą, Apple Pay lub Google Pay. Bez zakładania konta.",
-  "support_coffee_btn": "Postaw kawę",
   "support_crypto_title": "Wyślij kryptowalutę",
   "support_crypto_desc": "Zeskanuj kod QR w portfelu albo skopiuj adres.",
-  "support_help_title": "Inne sposoby, by pomóc"
+  "support_help_title": "Inne sposoby, by pomóc",
+  "support_ln_title": "Wyślij saty przez Lightning",
+  "support_ln_desc": "Natychmiast i prawie bez opłat. Zeskanuj kod QR w portfelu Lightning albo skopiuj adres."
 }

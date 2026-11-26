@@ -196,10 +196,9 @@
   "carousel_prev": "Предыдущий снимок",
   "carousel_next": "Следующий снимок",
   "carousel_goto_tpl": "Показать снимок {0}",
-  "support_coffee_title": "Угостите нас кофе",
-  "support_coffee_desc": "Разовый взнос картой, Apple Pay или Google Pay. Регистрация не нужна.",
-  "support_coffee_btn": "Угостить кофе",
   "support_crypto_title": "Отправить криптовалюту",
   "support_crypto_desc": "Отсканируйте QR-код в кошельке или скопируйте адрес.",
-  "support_help_title": "Как ещё можно помочь"
+  "support_help_title": "Как ещё можно помочь",
+  "support_ln_title": "Отправить саты через Lightning",
+  "support_ln_desc": "Мгновенно и почти без комиссии. Отсканируйте QR-код в Lightning-кошельке или скопируйте адрес."
 }

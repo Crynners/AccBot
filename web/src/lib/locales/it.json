@@ -196,10 +196,9 @@
   "carousel_prev": "Screenshot precedente",
   "carousel_next": "Screenshot successivo",
   "carousel_goto_tpl": "Mostra screenshot {0}",
-  "support_coffee_title": "Offrici un caffè",
-  "support_coffee_desc": "Un contributo una tantum con carta, Apple Pay o Google Pay. Senza registrazione.",
-  "support_coffee_btn": "Offri un caffè",
   "support_crypto_title": "Invia cripto",
   "support_crypto_desc": "Scansiona il QR code con il tuo wallet o copia l'indirizzo.",
-  "support_help_title": "Altri modi per aiutare"
+  "support_help_title": "Altri modi per aiutare",
+  "support_ln_title": "Invia sats via Lightning",
+  "support_ln_desc": "Istantaneo e quasi senza commissioni. Scansiona il QR code con un wallet Lightning o copia l'indirizzo."
 }
