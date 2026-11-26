@@ -13,3 +13,6 @@ export function exposeTranslator(lang, dict) {
     t: translator(dict)
   };
 }
+
+/** Lightning address for donations (user@domain). The Lightning card is hidden while this is empty. */
+export const LIGHTNING_ADDRESS = 'jumpymop204@walletofsatoshi.com';

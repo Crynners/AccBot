@@ -1,8 +1,26 @@
 <script>
+  import HeroChart from './HeroChart.svelte';
+  import ShotCarousel from './ShotCarousel.svelte';
+  import StrategySim from './StrategySim.svelte';
+  import WithdrawalMock from './WithdrawalMock.svelte';
+  import QrScanMock from './QrScanMock.svelte';
+  import Support from './Support.svelte';
+  import { fmtDate, fmtMoney, fmtNum, tpl } from '$lib/format.js';
+  import { tilt } from '$lib/tilt.js';
+
   let { t, lang, isHome = true } = $props();
   const home = () => (isHome ? '#' : `/${lang}/`);
   const sec = (id) => (isHome ? `#${id}` : `/${lang}/#${id}`);
   const shot = (name) => `/img/screenshots/${['cs', 'sk'].includes(lang) ? 'cs' : 'en'}/${name}.webp`;
+  const shots = $derived([
+    { src: shot('01_dashboard'), caption: t('shot_dashboard') },
+    { src: shot('03_portfolio_full'), caption: t('shot_portfolio') },
+    { src: shot('06_plan_details'), caption: t('shot_plan') },
+    { src: shot('07_history'), caption: t('shot_history') },
+    { src: shot('04_notifications'), caption: t('shot_notifications') },
+    { src: shot('05_settings'), caption: t('shot_settings') }
+  ]);
+  const txDate = (iso, exchange) => `${fmtDate(lang, iso)}, ${exchange}`;
 </script>
 
 <main>
@@ -46,7 +64,8 @@
         </div>
 
         <!-- Real app screenshot -->
-        <div class="hero-mockup">
+        <div class="hero-mockup" use:tilt>
+          <HeroChart />
           <div class="phone-frame phone-frame-shot">
             <img width="540" height="1200" fetchpriority="high" alt={t('shot_dashboard_alt')} src={shot('01_dashboard')}>
           </div>
@@ -120,29 +139,7 @@
             </div>
           </div>
           <div class="feature-visual">
-            <div class="mock-card" style="margin-bottom:8px">
-              <div class="mock-card-label">ATH-based DCA</div>
-              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
-                <div>
-                  <div style="font-size:0.625rem;color:var(--text-muted)">Current price</div>
-                  <div style="font-size:0.875rem;font-weight:700">$67,420</div>
-                </div>
-                <div style="text-align:right">
-                  <div style="font-size:0.625rem;color:var(--text-muted)">Distance from ATH</div>
-                  <div style="font-size:0.875rem;font-weight:700;color:var(--accent)">-38%</div>
-                </div>
-              </div>
-            </div>
-            <div class="mock-card">
-              <div class="mock-card-label">Current multiplier</div>
-              <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
-                <div style="flex:1;height:6px;background:var(--surface-alt);border-radius:3px;overflow:hidden">
-                  <div style="width:60%;height:100%;background:var(--accent);border-radius:3px"></div>
-                </div>
-                <span style="font-size:1rem;font-weight:700;color:var(--accent)">1.5x</span>
-              </div>
-              <div style="font-size:0.6875rem;color:var(--text-muted);margin-top:6px">Buying 75 EUR instead of 50 EUR</div>
-            </div>
+            <StrategySim {t} {lang} />
           </div>
         </div>
 
@@ -154,22 +151,22 @@
           </div>
           <div class="feature-visual">
             <div class="mock-tabs">
-              <div class="mock-tab active">Holdings</div>
-              <div class="mock-tab">By Exchange</div>
-              <div class="mock-tab">Performance</div>
+              <div class="mock-tab active">{t('mock_holdings')}</div>
+              <div class="mock-tab">{t('mock_by_exchange')}</div>
+              <div class="mock-tab">{t('mock_performance')}</div>
             </div>
             <div class="mock-stat-row">
               <div class="mock-stat">
-                <div class="mock-stat-label">Current Value</div>
-                <div class="mock-stat-value">$4,218</div>
+                <div class="mock-stat-label">{t('mock_value')}</div>
+                <div class="mock-stat-value">{fmtMoney(lang, 4218)}</div>
               </div>
               <div class="mock-stat">
-                <div class="mock-stat-label">Invested</div>
-                <div class="mock-stat-value">$3,750</div>
+                <div class="mock-stat-label">{t('mock_invested')}</div>
+                <div class="mock-stat-value">{fmtMoney(lang, 3750)}</div>
               </div>
               <div class="mock-stat">
-                <div class="mock-stat-label">ROI</div>
-                <div class="mock-stat-value green">+12.48%</div>
+                <div class="mock-stat-label">{t('mock_profit')}</div>
+                <div class="mock-stat-value green">+{fmtNum(lang, 12.48, 2)} %</div>
               </div>
             </div>
             <div class="mock-chart" style="height:80px">
@@ -186,8 +183,8 @@
               </svg>
             </div>
             <div style="display:flex;gap:16px;font-size:0.625rem;color:var(--text-muted)">
-              <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:2px;background:var(--accent);display:inline-block"></span> Portfolio Value</span>
-              <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:2px;background:var(--text-muted);display:inline-block;opacity:0.4"></span> Cost Basis</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:2px;background:var(--accent);display:inline-block"></span> {t('mock_value')}</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:2px;background:var(--text-muted);display:inline-block;opacity:0.4"></span> {t('mock_invested')}</span>
             </div>
           </div>
         </div>
@@ -200,20 +197,20 @@
           </div>
           <div class="feature-visual">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-              <span style="font-size:0.75rem;font-weight:600">Transaction History</span>
-              <span style="font-size:0.625rem;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:2px 8px">Export CSV</span>
+              <span style="font-size:0.75rem;font-weight:600">{t('mock_history')}</span>
+              <span style="font-size:0.625rem;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:2px 8px">{t('mock_export')}</span>
             </div>
             <div class="mock-tx-row">
               <div class="mock-tx-left">
                 <div class="mock-tx-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg></div>
                 <div>
                   <div class="mock-tx-pair">BTC/EUR</div>
-                  <div class="mock-tx-date">Feb 14, 2026 - Coinmate</div>
+                  <div class="mock-tx-date">{txDate('2026-11-14', 'Coinmate')}</div>
                 </div>
               </div>
               <div>
-                <div class="mock-tx-amount" style="color:var(--accent)">+0.00082 BTC</div>
-                <div class="mock-tx-fiat">50.00 EUR</div>
+                <div class="mock-tx-amount" style="color:var(--accent)">+{fmtNum(lang, 0.00082, 5)} BTC</div>
+                <div class="mock-tx-fiat">{fmtMoney(lang, 50, 'EUR', 2)}</div>
               </div>
             </div>
             <div class="mock-tx-row">
@@ -221,12 +218,12 @@
                 <div class="mock-tx-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg></div>
                 <div>
                   <div class="mock-tx-pair">ETH/EUR</div>
-                  <div class="mock-tx-date">Feb 10, 2026 - Kraken</div>
+                  <div class="mock-tx-date">{txDate('2026-11-10', 'Kraken')}</div>
                 </div>
               </div>
               <div>
-                <div class="mock-tx-amount" style="color:var(--accent)">+0.0125 ETH</div>
-                <div class="mock-tx-fiat">25.00 EUR</div>
+                <div class="mock-tx-amount" style="color:var(--accent)">+{fmtNum(lang, 0.0125, 4)} ETH</div>
+                <div class="mock-tx-fiat">{fmtMoney(lang, 25, 'EUR', 2)}</div>
               </div>
             </div>
             <div class="mock-tx-row">
@@ -234,12 +231,12 @@
                 <div class="mock-tx-icon" style="background:rgba(233,69,96,0.1)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
                 <div>
                   <div class="mock-tx-pair">BTC/EUR</div>
-                  <div class="mock-tx-date">Feb 7, 2026 - Coinmate</div>
+                  <div class="mock-tx-date">{txDate('2026-11-07', 'Coinmate')}</div>
                 </div>
               </div>
               <div>
-                <div class="mock-tx-amount" style="color:var(--error)">Failed</div>
-                <div class="mock-tx-fiat">Insufficient balance</div>
+                <div class="mock-tx-amount" style="color:var(--error)">{t('mock_failed')}</div>
+                <div class="mock-tx-fiat">{t('mock_insufficient')}</div>
               </div>
             </div>
           </div>
@@ -252,17 +249,17 @@
             <p>{t('features_sandbox_desc')}</p>
           </div>
           <div class="feature-visual">
-            <div class="mock-sandbox-banner">SANDBOX MODE - Test trades only</div>
+            <div class="mock-sandbox-banner">{t('mock_sandbox_banner')}</div>
             <div class="mock-toggle-row">
               <div>
-                <div class="mock-toggle-label">Sandbox Mode</div>
-                <div class="mock-toggle-desc">Using test networks - no real trades</div>
+                <div class="mock-toggle-label">{t('mock_sandbox_label')}</div>
+                <div class="mock-toggle-desc">{t('mock_sandbox_desc')}</div>
               </div>
               <div class="mock-toggle"></div>
             </div>
             <div class="mock-card" style="margin-top:16px;border-color:rgba(255,167,38,0.2)">
-              <div class="mock-card-label" style="color:var(--warning)">Testnet Environment</div>
-              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px">Separate database from production. Your real data is safe.</div>
+              <div class="mock-card-label" style="color:var(--warning)">{t('mock_testnet_title')}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px">{t('mock_testnet_desc')}</div>
             </div>
           </div>
         </div>
@@ -274,10 +271,7 @@
             <p>{t('features_withdrawal_desc')}</p>
           </div>
           <div class="feature-visual">
-            <div class="mock-card">
-              <div class="mock-card-label">{t('features_withdrawal_title')}</div>
-              <div class="mock-address-box">0.01 BTC</div>
-            </div>
+            <WithdrawalMock {t} {lang} />
           </div>
         </div>
 
@@ -287,194 +281,8 @@
             <h3>{t('features_qr_title')}</h3>
             <p>{t('features_qr_desc')}</p>
           </div>
-          <div class="feature-visual" style="align-items:center">
-            <div class="mock-qr-box">
-              <svg viewBox="0 0 100 100" width="96" height="96">
-                <!-- Version 2 QR code (25×25 modules) -->
-                <!-- Top-left finder pattern -->
-                <rect x="0" y="0" width="28" height="28" fill="#000"/>
-                <rect x="4" y="4" width="20" height="20" fill="#fff"/>
-                <rect x="8" y="8" width="12" height="12" fill="#000"/>
-                <!-- Top-right finder pattern -->
-                <rect x="72" y="0" width="28" height="28" fill="#000"/>
-                <rect x="76" y="4" width="20" height="20" fill="#fff"/>
-                <rect x="80" y="8" width="12" height="12" fill="#000"/>
-                <!-- Bottom-left finder pattern -->
-                <rect x="0" y="72" width="28" height="28" fill="#000"/>
-                <rect x="4" y="76" width="20" height="20" fill="#fff"/>
-                <rect x="8" y="80" width="12" height="12" fill="#000"/>
-                <!-- Timing patterns (horizontal) -->
-                <rect x="32" y="24" width="4" height="4" fill="#000"/>
-                <rect x="40" y="24" width="4" height="4" fill="#000"/>
-                <rect x="48" y="24" width="4" height="4" fill="#000"/>
-                <rect x="56" y="24" width="4" height="4" fill="#000"/>
-                <rect x="64" y="24" width="4" height="4" fill="#000"/>
-                <!-- Timing patterns (vertical) -->
-                <rect x="24" y="32" width="4" height="4" fill="#000"/>
-                <rect x="24" y="40" width="4" height="4" fill="#000"/>
-                <rect x="24" y="48" width="4" height="4" fill="#000"/>
-                <rect x="24" y="56" width="4" height="4" fill="#000"/>
-                <rect x="24" y="64" width="4" height="4" fill="#000"/>
-                <!-- Alignment pattern -->
-                <rect x="64" y="64" width="20" height="20" fill="#000"/>
-                <rect x="68" y="68" width="12" height="12" fill="#fff"/>
-                <rect x="72" y="72" width="4" height="4" fill="#000"/>
-                <!-- Data modules - dense pseudo-random fill -->
-                <rect x="32" y="0" width="4" height="4" fill="#000"/>
-                <rect x="40" y="0" width="4" height="4" fill="#000"/>
-                <rect x="48" y="4" width="4" height="4" fill="#000"/>
-                <rect x="56" y="0" width="4" height="4" fill="#000"/>
-                <rect x="64" y="4" width="4" height="4" fill="#000"/>
-                <rect x="32" y="8" width="4" height="4" fill="#000"/>
-                <rect x="44" y="8" width="4" height="4" fill="#000"/>
-                <rect x="56" y="8" width="4" height="4" fill="#000"/>
-                <rect x="64" y="12" width="4" height="4" fill="#000"/>
-                <rect x="36" y="12" width="4" height="4" fill="#000"/>
-                <rect x="48" y="12" width="4" height="4" fill="#000"/>
-                <rect x="32" y="16" width="4" height="4" fill="#000"/>
-                <rect x="44" y="16" width="4" height="4" fill="#000"/>
-                <rect x="52" y="16" width="4" height="4" fill="#000"/>
-                <rect x="60" y="16" width="4" height="4" fill="#000"/>
-                <rect x="36" y="20" width="4" height="4" fill="#000"/>
-                <rect x="48" y="20" width="4" height="4" fill="#000"/>
-                <rect x="56" y="20" width="4" height="4" fill="#000"/>
-                <rect x="64" y="20" width="4" height="4" fill="#000"/>
-                <!-- Row 7-8 data -->
-                <rect x="0" y="32" width="4" height="4" fill="#000"/>
-                <rect x="8" y="32" width="4" height="4" fill="#000"/>
-                <rect x="16" y="32" width="4" height="4" fill="#000"/>
-                <rect x="32" y="32" width="4" height="4" fill="#000"/>
-                <rect x="40" y="32" width="4" height="4" fill="#000"/>
-                <rect x="52" y="32" width="4" height="4" fill="#000"/>
-                <rect x="60" y="32" width="4" height="4" fill="#000"/>
-                <rect x="72" y="32" width="4" height="4" fill="#000"/>
-                <rect x="84" y="32" width="4" height="4" fill="#000"/>
-                <rect x="96" y="32" width="4" height="4" fill="#000"/>
-                <rect x="4" y="36" width="4" height="4" fill="#000"/>
-                <rect x="12" y="36" width="4" height="4" fill="#000"/>
-                <rect x="20" y="36" width="4" height="4" fill="#000"/>
-                <rect x="36" y="36" width="4" height="4" fill="#000"/>
-                <rect x="44" y="36" width="4" height="4" fill="#000"/>
-                <rect x="56" y="36" width="4" height="4" fill="#000"/>
-                <rect x="68" y="36" width="4" height="4" fill="#000"/>
-                <rect x="80" y="36" width="4" height="4" fill="#000"/>
-                <rect x="92" y="36" width="4" height="4" fill="#000"/>
-                <!-- Row 10-11 data -->
-                <rect x="0" y="40" width="4" height="4" fill="#000"/>
-                <rect x="12" y="40" width="4" height="4" fill="#000"/>
-                <rect x="20" y="40" width="4" height="4" fill="#000"/>
-                <rect x="32" y="40" width="4" height="4" fill="#000"/>
-                <rect x="44" y="40" width="4" height="4" fill="#000"/>
-                <rect x="52" y="40" width="4" height="4" fill="#000"/>
-                <rect x="64" y="40" width="4" height="4" fill="#000"/>
-                <rect x="76" y="40" width="4" height="4" fill="#000"/>
-                <rect x="88" y="40" width="4" height="4" fill="#000"/>
-                <rect x="96" y="40" width="4" height="4" fill="#000"/>
-                <rect x="4" y="44" width="4" height="4" fill="#000"/>
-                <rect x="16" y="44" width="4" height="4" fill="#000"/>
-                <rect x="28" y="44" width="4" height="4" fill="#000"/>
-                <rect x="36" y="44" width="4" height="4" fill="#000"/>
-                <rect x="48" y="44" width="4" height="4" fill="#000"/>
-                <rect x="60" y="44" width="4" height="4" fill="#000"/>
-                <rect x="72" y="44" width="4" height="4" fill="#000"/>
-                <rect x="84" y="44" width="4" height="4" fill="#000"/>
-                <rect x="92" y="44" width="4" height="4" fill="#000"/>
-                <!-- Row 12-13 data -->
-                <rect x="0" y="48" width="4" height="4" fill="#000"/>
-                <rect x="8" y="48" width="4" height="4" fill="#000"/>
-                <rect x="20" y="48" width="4" height="4" fill="#000"/>
-                <rect x="32" y="48" width="4" height="4" fill="#000"/>
-                <rect x="40" y="48" width="4" height="4" fill="#000"/>
-                <rect x="52" y="48" width="4" height="4" fill="#000"/>
-                <rect x="64" y="48" width="4" height="4" fill="#000"/>
-                <rect x="76" y="48" width="4" height="4" fill="#000"/>
-                <rect x="88" y="48" width="4" height="4" fill="#000"/>
-                <rect x="4" y="52" width="4" height="4" fill="#000"/>
-                <rect x="12" y="52" width="4" height="4" fill="#000"/>
-                <rect x="28" y="52" width="4" height="4" fill="#000"/>
-                <rect x="36" y="52" width="4" height="4" fill="#000"/>
-                <rect x="48" y="52" width="4" height="4" fill="#000"/>
-                <rect x="56" y="52" width="4" height="4" fill="#000"/>
-                <rect x="68" y="52" width="4" height="4" fill="#000"/>
-                <rect x="80" y="52" width="4" height="4" fill="#000"/>
-                <rect x="96" y="52" width="4" height="4" fill="#000"/>
-                <!-- Row 14-15 data -->
-                <rect x="0" y="56" width="4" height="4" fill="#000"/>
-                <rect x="16" y="56" width="4" height="4" fill="#000"/>
-                <rect x="32" y="56" width="4" height="4" fill="#000"/>
-                <rect x="44" y="56" width="4" height="4" fill="#000"/>
-                <rect x="52" y="56" width="4" height="4" fill="#000"/>
-                <rect x="60" y="56" width="4" height="4" fill="#000"/>
-                <rect x="76" y="56" width="4" height="4" fill="#000"/>
-                <rect x="92" y="56" width="4" height="4" fill="#000"/>
-                <rect x="8" y="60" width="4" height="4" fill="#000"/>
-                <rect x="20" y="60" width="4" height="4" fill="#000"/>
-                <rect x="36" y="60" width="4" height="4" fill="#000"/>
-                <rect x="48" y="60" width="4" height="4" fill="#000"/>
-                <rect x="56" y="60" width="4" height="4" fill="#000"/>
-                <rect x="68" y="60" width="4" height="4" fill="#000"/>
-                <rect x="84" y="60" width="4" height="4" fill="#000"/>
-                <rect x="96" y="60" width="4" height="4" fill="#000"/>
-                <!-- Row 16-17 data -->
-                <rect x="0" y="64" width="4" height="4" fill="#000"/>
-                <rect x="12" y="64" width="4" height="4" fill="#000"/>
-                <rect x="20" y="64" width="4" height="4" fill="#000"/>
-                <rect x="28" y="64" width="4" height="4" fill="#000"/>
-                <rect x="36" y="64" width="4" height="4" fill="#000"/>
-                <rect x="44" y="64" width="4" height="4" fill="#000"/>
-                <rect x="52" y="64" width="4" height="4" fill="#000"/>
-                <rect x="60" y="64" width="4" height="4" fill="#000"/>
-                <rect x="88" y="64" width="4" height="4" fill="#000"/>
-                <rect x="4" y="68" width="4" height="4" fill="#000"/>
-                <rect x="16" y="68" width="4" height="4" fill="#000"/>
-                <rect x="32" y="68" width="4" height="4" fill="#000"/>
-                <rect x="40" y="68" width="4" height="4" fill="#000"/>
-                <rect x="48" y="68" width="4" height="4" fill="#000"/>
-                <rect x="56" y="68" width="4" height="4" fill="#000"/>
-                <rect x="88" y="68" width="4" height="4" fill="#000"/>
-                <rect x="96" y="68" width="4" height="4" fill="#000"/>
-                <!-- Bottom-right data area -->
-                <rect x="32" y="72" width="4" height="4" fill="#000"/>
-                <rect x="40" y="72" width="4" height="4" fill="#000"/>
-                <rect x="52" y="72" width="4" height="4" fill="#000"/>
-                <rect x="60" y="72" width="4" height="4" fill="#000"/>
-                <rect x="88" y="72" width="4" height="4" fill="#000"/>
-                <rect x="36" y="76" width="4" height="4" fill="#000"/>
-                <rect x="48" y="76" width="4" height="4" fill="#000"/>
-                <rect x="56" y="76" width="4" height="4" fill="#000"/>
-                <rect x="88" y="76" width="4" height="4" fill="#000"/>
-                <rect x="96" y="76" width="4" height="4" fill="#000"/>
-                <rect x="32" y="80" width="4" height="4" fill="#000"/>
-                <rect x="44" y="80" width="4" height="4" fill="#000"/>
-                <rect x="52" y="80" width="4" height="4" fill="#000"/>
-                <rect x="60" y="80" width="4" height="4" fill="#000"/>
-                <rect x="88" y="80" width="4" height="4" fill="#000"/>
-                <rect x="36" y="84" width="4" height="4" fill="#000"/>
-                <rect x="48" y="84" width="4" height="4" fill="#000"/>
-                <rect x="56" y="84" width="4" height="4" fill="#000"/>
-                <rect x="88" y="84" width="4" height="4" fill="#000"/>
-                <rect x="96" y="84" width="4" height="4" fill="#000"/>
-                <rect x="32" y="88" width="4" height="4" fill="#000"/>
-                <rect x="40" y="88" width="4" height="4" fill="#000"/>
-                <rect x="52" y="88" width="4" height="4" fill="#000"/>
-                <rect x="64" y="88" width="4" height="4" fill="#000"/>
-                <rect x="76" y="88" width="4" height="4" fill="#000"/>
-                <rect x="92" y="88" width="4" height="4" fill="#000"/>
-                <rect x="36" y="92" width="4" height="4" fill="#000"/>
-                <rect x="44" y="92" width="4" height="4" fill="#000"/>
-                <rect x="56" y="92" width="4" height="4" fill="#000"/>
-                <rect x="68" y="92" width="4" height="4" fill="#000"/>
-                <rect x="80" y="92" width="4" height="4" fill="#000"/>
-                <rect x="88" y="92" width="4" height="4" fill="#000"/>
-                <rect x="32" y="96" width="4" height="4" fill="#000"/>
-                <rect x="48" y="96" width="4" height="4" fill="#000"/>
-                <rect x="60" y="96" width="4" height="4" fill="#000"/>
-                <rect x="72" y="96" width="4" height="4" fill="#000"/>
-                <rect x="84" y="96" width="4" height="4" fill="#000"/>
-                <rect x="96" y="96" width="4" height="4" fill="#000"/>
-              </svg>
-            </div>
-            <div style="text-align:center;font-size:0.75rem;color:var(--text-muted);margin-top:12px">Point camera at QR code<br>Scanning will happen automatically</div>
+          <div class="feature-visual">
+            <QrScanMock {t} />
           </div>
         </div>
 
@@ -492,20 +300,20 @@
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
                 <span style="font-size:0.625rem;background:rgba(247,147,26,0.12);color:var(--accent);padding:2px 8px;border-radius:4px;font-weight:600">AES-256-GCM</span>
-                <span style="font-size:0.625rem;background:var(--surface-alt);color:var(--text-muted);padding:2px 8px;border-radius:4px">Password-encrypted</span>
+                <span style="font-size:0.625rem;background:var(--surface-alt);color:var(--text-muted);padding:2px 8px;border-radius:4px">{t('mock_backup_password')}</span>
               </div>
               <div style="font-size:0.6875rem;color:var(--text-muted);display:flex;flex-direction:column;gap:4px">
                 <div style="display:flex;align-items:center;gap:6px">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span>3 DCA plans</span>
+                  <span>{tpl(t('mock_backup_plans_tpl'), 3)}</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span>847 transactions</span>
+                  <span>{tpl(t('mock_backup_tx_tpl'), fmtNum(lang, 847))}</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span>API credentials (optional)</span>
+                  <span>{t('mock_backup_keys')}</span>
                 </div>
               </div>
             </div>
@@ -549,31 +357,8 @@
           <p>{t('screenshots_subtitle')}</p>
         </div>
       </div>
-      <div class="shots reveal" tabindex="0" role="region" aria-label={t('screenshots_title')}>
-        <figure class="shot">
-          <div class="shot-frame"><img width="540" height="1200" loading="lazy" alt={t('shot_dashboard')} src={shot('01_dashboard')}></div>
-          <figcaption>{t('shot_dashboard')}</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="shot-frame"><img width="540" height="1200" loading="lazy" alt={t('shot_portfolio')} src={shot('03_portfolio_full')}></div>
-          <figcaption>{t('shot_portfolio')}</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="shot-frame"><img width="540" height="1200" loading="lazy" alt={t('shot_plan')} src={shot('06_plan_details')}></div>
-          <figcaption>{t('shot_plan')}</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="shot-frame"><img width="540" height="1200" loading="lazy" alt={t('shot_history')} src={shot('07_history')}></div>
-          <figcaption>{t('shot_history')}</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="shot-frame"><img width="540" height="1200" loading="lazy" alt={t('shot_notifications')} src={shot('04_notifications')}></div>
-          <figcaption>{t('shot_notifications')}</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="shot-frame"><img width="540" height="1200" loading="lazy" alt={t('shot_settings')} src={shot('05_settings')}></div>
-          <figcaption>{t('shot_settings')}</figcaption>
-        </figure>
+      <div class="container reveal">
+        <ShotCarousel {t} {shots} />
       </div>
     </section>
 
@@ -895,82 +680,7 @@
           <h2>{t('support_title')}</h2>
           <p>{t('support_subtitle')}</p>
         </div>
-        <div class="support-grid">
-          <div class="support-card support-donate reveal">
-            <div class="donate-main">
-            <h3>{t('support_donate_title')}</h3>
-            <p>{t('support_donate_desc')}</p>
-            <div class="donate-btc">
-              <img class="donate-qr" src="/img/donate-btc.svg" width="148" height="148" alt={t('support_qr_alt')}>
-              <div class="donate-btc-info">
-                <span class="donate-label">Bitcoin (BTC)</span>
-                <code class="donate-address">bc1q2hz79m4csklecqgusu9e2yjnrr6e9ca6nhu0at</code>
-                <button type="button" class="btn btn-primary btn-copy" data-copy="bc1q2hz79m4csklecqgusu9e2yjnrr6e9ca6nhu0at"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg><span>{t('support_copy')}</span></button>
-              </div>
-            </div>
-            </div>
-            <details class="donate-more" open>
-              <summary>{t('support_other')}</summary>
-              <ul class="donate-list">
-                <li>
-                  <span class="donate-coin" title="Litecoin">LTC</span>
-                  <code>LTXdCFBYHgVLa8cBNBqwEvaQLi8tENY5R3</code>
-                  <button type="button" class="copy-mini" data-copy="LTXdCFBYHgVLa8cBNBqwEvaQLi8tENY5R3" aria-label={t('support_copy')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-                </li>
-                <li>
-                  <span class="donate-coin" title="Ethereum">ETH</span>
-                  <code>0x8A944bcb5919dF04C5207939749C40A61f88188C</code>
-                  <button type="button" class="copy-mini" data-copy="0x8A944bcb5919dF04C5207939749C40A61f88188C" aria-label={t('support_copy')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-                </li>
-                <li>
-                  <span class="donate-coin" title="Monero">XMR</span>
-                  <code>49QBko3UdegAkx6g8foqjs9efQD6rrhsPEoTqP9HmA2LCUZsJ8xBD2JZSMEdzhA5NJ9SrVhzu2uJXRUvL2kAiV45LyDBCUt</code>
-                  <button type="button" class="copy-mini" data-copy="49QBko3UdegAkx6g8foqjs9efQD6rrhsPEoTqP9HmA2LCUZsJ8xBD2JZSMEdzhA5NJ9SrVhzu2uJXRUvL2kAiV45LyDBCUt" aria-label={t('support_copy')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-                </li>
-                <li>
-                  <span class="donate-coin" title="Dogecoin">DOGE</span>
-                  <code>DR9mEaVLmx3gxqiqffwYQcLsT1upRL3xe9</code>
-                  <button type="button" class="copy-mini" data-copy="DR9mEaVLmx3gxqiqffwYQcLsT1upRL3xe9" aria-label={t('support_copy')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-                </li>
-                <li>
-                  <span class="donate-coin" title="Polkadot">DOT</span>
-                  <code>15sBCVyWu5Gy9VnzQpid4ggC1MmguBBd1xotUVbsbbRWddun</code>
-                  <button type="button" class="copy-mini" data-copy="15sBCVyWu5Gy9VnzQpid4ggC1MmguBBd1xotUVbsbbRWddun" aria-label={t('support_copy')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-                </li>
-                <li>
-                  <span class="donate-coin" title="Cardano">ADA</span>
-                  <code>addr1qxgfp7xf8rpg7laque78queavpfdztajgl3hr8kuanuqgdysjruvjwxz3al6penuwpen6czj6yhmy3lrwx0dem8cqs6qr8y8fj</code>
-                  <button type="button" class="copy-mini" data-copy="addr1qxgfp7xf8rpg7laque78queavpfdztajgl3hr8kuanuqgdysjruvjwxz3al6penuwpen6czj6yhmy3lrwx0dem8cqs6qr8y8fj" aria-label={t('support_copy')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-                </li>
-              </ul>
-            </details>
-          </div>
-          <div class="support-side">
-            <div class="support-card reveal">
-              <h3>{t('support_star_title')}</h3>
-              <p>{t('support_star_desc')}</p>
-              <a href="https://github.com/crynners/AccBot" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 0-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6 0-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 016 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8 0 3.2.9.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.5.4.9 1 .9 2.2v3.3c0 .3.1.7.8.6A12 12 0 0012 .3"/></svg><span>{t('support_star_btn')}</span></a>
-            </div>
-            <div class="support-card reveal">
-              <h3>{t('support_review_title')}</h3>
-              <p>{t('support_review_desc')}</p>
-              <a href="https://play.google.com/store/apps/details?id=com.accbot.dca" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg><span>{t('support_review_btn')}</span></a>
-            </div>
-            <div class="support-card reveal">
-              <h3>{t('support_contribute_title')}</h3>
-              <p>{t('support_contribute_desc')}</p>
-              <a href="https://github.com/crynners/AccBot/issues" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>{t('support_contribute_btn')}</span></a>
-            </div>
-            <div class="support-card reveal">
-              <h3>{t('support_follow_title')}</h3>
-              <p>{t('support_follow_desc')}</p>
-              <div class="support-buttons">
-                <a href="https://t.me/accbotsupport" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.9 4.3l-3.2 15.1c-.2 1.1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.3-5 9.1-8.2c.4-.4-.1-.6-.6-.2L6.2 13 1.4 11.5c-1-.3-1-1 .2-1.5L20.6 2.8c.9-.3 1.6.2 1.3 1.5z"/></svg><span>Telegram</span></a>
-                <a href="https://www.facebook.com/profile.php?id=61580714271760" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12a12 12 0 10-13.9 11.9v-8.4h-3V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0024 12z"/></svg><span>Facebook</span></a>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Support {t} />
       </div>
     </section>
 
