@@ -1,4 +1,6 @@
-export const SITE_URL = 'https://accbot.eu';
+// Public address of the site, used for canonical, hreflang, sitemap and share-image URLs.
+// Switch to 'https://accbot.eu' once the domain is connected in Cloudflare Pages.
+export const SITE_URL = 'https://accbot-4f6.pages.dev';
 
 export const LANGS = ['en', 'cs', 'sk', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'uk', 'ru', 'zh', 'ja'];
 
