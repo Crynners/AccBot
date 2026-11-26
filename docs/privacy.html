@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy - AccBot</title>
+  <title>Privacy policy | AccBot</title>
   <meta name="description" content="AccBot Privacy Policy. Self-custody DCA tool that collects no personal data.">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Privacy Policy - AccBot">
+  <meta property="og:title" content="Privacy policy | AccBot">
   <meta property="og:description" content="AccBot Privacy Policy. Self-custody DCA tool that collects no personal data.">
 
   <!-- Fonts -->
@@ -17,9 +17,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=3">
 </head>
-<body>
+<body data-title-key="privacy_page_title">
 
   <!-- Header -->
   <header class="site-header scrolled">
@@ -60,19 +60,38 @@
       <nav>
         <ul class="nav-links">
           <li><a href="index.html#features" data-i18n="nav_features">Features</a></li>
-          <li><a href="index.html#security" data-i18n="nav_security">Security</a></li>
+          <li><a href="index.html#screenshots" data-i18n="nav_screenshots">Screenshots</a></li>
           <li><a href="index.html#exchanges" data-i18n="nav_exchanges">Exchanges</a></li>
+          <li><a href="index.html#security" data-i18n="nav_security">Security</a></li>
+          <li><a href="index.html#compare" data-i18n="nav_compare">Compare</a></li>
+          <li><a href="index.html#faq" data-i18n="nav_faq">FAQ</a></li>
+          <li><a href="index.html#support" data-i18n="nav_support">Support us</a></li>
           <li><a href="index.html#download" data-i18n="nav_download">Download</a></li>
           <li>
-            <div class="lang-switcher">
-              <button class="lang-btn active" data-lang="en">EN</button>
-              <button class="lang-btn" data-lang="cs">CS</button>
-            </div>
+            <label class="lang-select-wrap">
+              <span class="sr-only" data-i18n="lang_label">Language</span>
+              <svg class="lang-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+              <select id="lang-select" class="lang-select">
+                <option value="en">English</option>
+                <option value="cs">Čeština</option>
+                <option value="sk">Slovenčina</option>
+                <option value="de">Deutsch</option>
+                <option value="fr">Français</option>
+                <option value="es">Español</option>
+                <option value="it">Italiano</option>
+                <option value="pt">Português</option>
+                <option value="pl">Polski</option>
+                <option value="uk">Українська</option>
+                <option value="ru">Русский</option>
+                <option value="zh">简体中文</option>
+                <option value="ja">日本語</option>
+              </select>
+            </label>
           </li>
         </ul>
       </nav>
 
-      <button class="burger" aria-label="Menu">
+      <button class="burger" aria-label="Menu" data-i18n-aria-label="nav_menu">
         <span></span>
         <span></span>
         <span></span>
@@ -109,7 +128,7 @@
           <h2 data-i18n="privacy_network_title">Network Communication</h2>
           <p data-i18n="privacy_network_intro">The App communicates with the following external services via HTTPS. All connections are encrypted in transit. No personal data is intentionally sent; however, your device's IP address is exposed to these services as part of normal network communication.</p>
           <p><strong data-i18n="privacy_network_exchanges">Cryptocurrency Exchanges:</strong> <span data-i18n="privacy_network_exchanges_text">The App connects directly to exchanges you configure (e.g. Coinmate, Binance, Kraken, KuCoin, Bitfinex, Huobi, Coinbase) to execute trades, retrieve balances, and fetch order data. Only your API credentials and trade parameters are sent.</span></p>
-          <p><strong data-i18n="privacy_network_market">Market Data Providers:</strong> <span data-i18n="privacy_network_market_text">The App fetches cryptocurrency prices and market data from CoinGecko (coingecko.com), CryptoCompare (cryptocompare.com), and Alternative.me (alternative.me) for the Fear & Greed Index. No personal data or API credentials are sent to these services — only standard HTTPS requests for public market data.</span></p>
+          <p><strong data-i18n="privacy_network_market">Market Data Providers:</strong> <span data-i18n="privacy_network_market_text">The App fetches cryptocurrency prices and market data from CoinGecko (coingecko.com), CryptoCompare (cryptocompare.com), and Alternative.me (alternative.me) for the Fear & Greed Index. No personal data or API credentials are sent to these services. The App only makes standard HTTPS requests for public market data.</span></p>
           <p><strong data-i18n="privacy_network_mlkit">Google ML Kit (on-device):</strong> <span data-i18n="privacy_network_mlkit_text">The App uses Google ML Kit for barcode scanning and text recognition. ML Kit processes data on-device, but the SDK may send diagnostic data to Google, including device information, app info, per-installation identifiers, and performance metrics. This data is not used for advertising or user profiling. This data collection is managed by Google and is described in <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>.</span></p>
 
           <h2 data-i18n="privacy_security_title">Data Security</h2>
@@ -139,11 +158,11 @@
           <h2 data-i18n="privacy_thirdparty_title">Third-Party Services</h2>
           <p data-i18n="privacy_thirdparty_text">AccBot does not integrate any third-party analytics, advertising, or tracking services. The App communicates with the following third-party services:</p>
           <ul>
-            <li data-i18n="privacy_thirdparty_exchanges">Cryptocurrency exchanges (Coinmate, Binance, Kraken, KuCoin, Bitfinex, Huobi, Coinbase) — only those you explicitly connect, for trade execution and balance retrieval</li>
-            <li data-i18n="privacy_thirdparty_coingecko">CoinGecko — for cryptocurrency price data and market information</li>
-            <li data-i18n="privacy_thirdparty_cryptocompare">CryptoCompare — for cryptocurrency price data and all-time high tracking</li>
-            <li data-i18n="privacy_thirdparty_alternative">Alternative.me — for the Fear & Greed Index used in the Fear & Greed DCA strategy</li>
-            <li data-i18n="privacy_thirdparty_mlkit">Google ML Kit — on-device barcode scanning and text recognition. ML Kit may collect diagnostic data as described in <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>. This data is not used for advertising or user profiling.</li>
+            <li data-i18n="privacy_thirdparty_exchanges">Cryptocurrency exchanges (Coinmate, Binance, Kraken, KuCoin, Bitfinex, Huobi, Coinbase), but only the ones you connect yourself, to place trades and read balances</li>
+            <li data-i18n="privacy_thirdparty_coingecko">CoinGecko: used for cryptocurrency price data and market information</li>
+            <li data-i18n="privacy_thirdparty_cryptocompare">CryptoCompare: used for cryptocurrency price data and all-time high tracking</li>
+            <li data-i18n="privacy_thirdparty_alternative">Alternative.me: used for the Fear & Greed Index used in the Fear & Greed DCA strategy</li>
+            <li data-i18n="privacy_thirdparty_mlkit">Google ML Kit: on-device barcode scanning and text recognition. ML Kit may collect diagnostic data as described in <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>. This data is not used for advertising or user profiling.</li>
           </ul>
 
           <h2 data-i18n="privacy_deletion_title">Data Deletion</h2>
@@ -189,14 +208,14 @@
         <div class="footer-left" data-i18n="footer_made">Made with love by Crynners</div>
         <div class="footer-links">
           <a href="https://github.com/crynners/AccBot/blob/main/LICENSE" target="_blank" rel="noopener" data-i18n="footer_license">MIT License</a>
-          <a href="https://github.com/crynners/AccBot" target="_blank" rel="noopener" data-i18n="footer_source">Source Code</a>
-          <a href="https://github.com/crynners/AccBot/issues" target="_blank" rel="noopener" data-i18n="footer_issues">Report Issue</a>
+          <a href="https://github.com/crynners/AccBot" target="_blank" rel="noopener" data-i18n="footer_source">Source code</a>
+          <a href="https://github.com/crynners/AccBot/issues" target="_blank" rel="noopener" data-i18n="footer_issues">Report an issue</a>
         </div>
       </div>
     </div>
   </footer>
 
-  <script src="js/i18n.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/i18n.js?v=3"></script>
+  <script src="js/main.js?v=3"></script>
 </body>
 </html>
