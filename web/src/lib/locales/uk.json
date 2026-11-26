@@ -195,5 +195,11 @@
   "mock_backup_keys": "API-ключі (за бажанням)",
   "carousel_prev": "Попередній знімок",
   "carousel_next": "Наступний знімок",
-  "carousel_goto_tpl": "Показати знімок {0}"
+  "carousel_goto_tpl": "Показати знімок {0}",
+  "support_coffee_title": "Пригостіть нас кавою",
+  "support_coffee_desc": "Разовий внесок карткою, Apple Pay або Google Pay. Реєстрація не потрібна.",
+  "support_coffee_btn": "Пригостити кавою",
+  "support_crypto_title": "Надіслати криптовалюту",
+  "support_crypto_desc": "Відскануйте QR-код у гаманці або скопіюйте адресу.",
+  "support_help_title": "Як ще можна допомогти"
 }

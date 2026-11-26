@@ -4,6 +4,7 @@
   import StrategySim from './StrategySim.svelte';
   import WithdrawalMock from './WithdrawalMock.svelte';
   import QrScanMock from './QrScanMock.svelte';
+  import Support from './Support.svelte';
   import { fmtDate, fmtMoney, fmtNum, tpl } from '$lib/format.js';
   import { tilt } from '$lib/tilt.js';
 
@@ -679,82 +680,7 @@
           <h2>{t('support_title')}</h2>
           <p>{t('support_subtitle')}</p>
         </div>
-        <div class="support-grid">
-          <div class="support-card support-donate reveal">
-            <div class="donate-main">
-            <h3>{t('support_donate_title')}</h3>
-            <p>{t('support_donate_desc')}</p>
-            <div class="donate-btc">
-              <img class="donate-qr" src="/img/donate-btc.svg" width="148" height="148" alt={t('support_qr_alt')}>
-              <div class="donate-btc-info">
-                <span class="donate-label">Bitcoin (BTC)</span>
-                <code class="donate-address">bc1q2hz79m4csklecqgusu9e2yjnrr6e9ca6nhu0at</code>
-                <button type="button" class="btn btn-primary btn-copy" data-copy="bc1q2hz79m4csklecqgusu9e2yjnrr6e9ca6nhu0at"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg><span>{t('support_copy')}</span></button>
-              </div>
-            </div>
-            </div>
-            <details class="donate-more" open>
-              <summary>{t('support_other')}</summary>
-              <ul class="donate-list">
-                <li>
-                  <span class="donate-coin" title="Litecoin">LTC</span>
-                  <code>LTXdCFBYHgVLa8cBNBqwEvaQLi8tENY5R3</code>
-                  <button type="button" class="copy-mini" data-copy="LTXdCFBYHgVLa8cBNBqwEvaQLi8tENY5R3" aria-label={t('support_copy')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-                </li>
-                <li>
-                  <span class="donate-coin" title="Ethereum">ETH</span>
-                  <code>0x8A944bcb5919dF04C5207939749C40A61f88188C</code>
-                  <button type="button" class="copy-mini" data-copy="0x8A944bcb5919dF04C5207939749C40A61f88188C" aria-label={t('support_copy')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-                </li>
-                <li>
-                  <span class="donate-coin" title="Monero">XMR</span>
-                  <code>49QBko3UdegAkx6g8foqjs9efQD6rrhsPEoTqP9HmA2LCUZsJ8xBD2JZSMEdzhA5NJ9SrVhzu2uJXRUvL2kAiV45LyDBCUt</code>
-                  <button type="button" class="copy-mini" data-copy="49QBko3UdegAkx6g8foqjs9efQD6rrhsPEoTqP9HmA2LCUZsJ8xBD2JZSMEdzhA5NJ9SrVhzu2uJXRUvL2kAiV45LyDBCUt" aria-label={t('support_copy')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-                </li>
-                <li>
-                  <span class="donate-coin" title="Dogecoin">DOGE</span>
-                  <code>DR9mEaVLmx3gxqiqffwYQcLsT1upRL3xe9</code>
-                  <button type="button" class="copy-mini" data-copy="DR9mEaVLmx3gxqiqffwYQcLsT1upRL3xe9" aria-label={t('support_copy')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-                </li>
-                <li>
-                  <span class="donate-coin" title="Polkadot">DOT</span>
-                  <code>15sBCVyWu5Gy9VnzQpid4ggC1MmguBBd1xotUVbsbbRWddun</code>
-                  <button type="button" class="copy-mini" data-copy="15sBCVyWu5Gy9VnzQpid4ggC1MmguBBd1xotUVbsbbRWddun" aria-label={t('support_copy')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-                </li>
-                <li>
-                  <span class="donate-coin" title="Cardano">ADA</span>
-                  <code>addr1qxgfp7xf8rpg7laque78queavpfdztajgl3hr8kuanuqgdysjruvjwxz3al6penuwpen6czj6yhmy3lrwx0dem8cqs6qr8y8fj</code>
-                  <button type="button" class="copy-mini" data-copy="addr1qxgfp7xf8rpg7laque78queavpfdztajgl3hr8kuanuqgdysjruvjwxz3al6penuwpen6czj6yhmy3lrwx0dem8cqs6qr8y8fj" aria-label={t('support_copy')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-                </li>
-              </ul>
-            </details>
-          </div>
-          <div class="support-side">
-            <div class="support-card reveal">
-              <h3>{t('support_star_title')}</h3>
-              <p>{t('support_star_desc')}</p>
-              <a href="https://github.com/crynners/AccBot" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 0-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6 0-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 016 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8 0 3.2.9.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.5.4.9 1 .9 2.2v3.3c0 .3.1.7.8.6A12 12 0 0012 .3"/></svg><span>{t('support_star_btn')}</span></a>
-            </div>
-            <div class="support-card reveal">
-              <h3>{t('support_review_title')}</h3>
-              <p>{t('support_review_desc')}</p>
-              <a href="https://play.google.com/store/apps/details?id=com.accbot.dca" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg><span>{t('support_review_btn')}</span></a>
-            </div>
-            <div class="support-card reveal">
-              <h3>{t('support_contribute_title')}</h3>
-              <p>{t('support_contribute_desc')}</p>
-              <a href="https://github.com/crynners/AccBot/issues" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>{t('support_contribute_btn')}</span></a>
-            </div>
-            <div class="support-card reveal">
-              <h3>{t('support_follow_title')}</h3>
-              <p>{t('support_follow_desc')}</p>
-              <div class="support-buttons">
-                <a href="https://t.me/accbotsupport" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.9 4.3l-3.2 15.1c-.2 1.1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.3-5 9.1-8.2c.4-.4-.1-.6-.6-.2L6.2 13 1.4 11.5c-1-.3-1-1 .2-1.5L20.6 2.8c.9-.3 1.6.2 1.3 1.5z"/></svg><span>Telegram</span></a>
-                <a href="https://www.facebook.com/profile.php?id=61580714271760" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12a12 12 0 10-13.9 11.9v-8.4h-3V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0024 12z"/></svg><span>Facebook</span></a>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Support {t} />
       </div>
     </section>
 

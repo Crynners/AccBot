@@ -195,5 +195,11 @@
   "mock_backup_keys": "API 密钥（可选）",
   "carousel_prev": "上一张截图",
   "carousel_next": "下一张截图",
-  "carousel_goto_tpl": "查看第 {0} 张截图"
+  "carousel_goto_tpl": "查看第 {0} 张截图",
+  "support_coffee_title": "请我们喝杯咖啡",
+  "support_coffee_desc": "用银行卡、Apple Pay 或 Google Pay 一次性打赏，无需注册。",
+  "support_coffee_btn": "请喝咖啡",
+  "support_crypto_title": "发送加密货币",
+  "support_crypto_desc": "用钱包扫描二维码，或复制地址。",
+  "support_help_title": "其他支持方式"
 }

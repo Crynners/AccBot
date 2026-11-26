@@ -195,5 +195,11 @@
   "mock_backup_keys": "API kľúče (voliteľne)",
   "carousel_prev": "Predchádzajúca snímka",
   "carousel_next": "Ďalšia snímka",
-  "carousel_goto_tpl": "Zobraziť snímku {0}"
+  "carousel_goto_tpl": "Zobraziť snímku {0}",
+  "support_coffee_title": "Kúpte nám kávu",
+  "support_coffee_desc": "Jednorazový príspevok kartou, Apple Pay alebo Google Pay. Nemusíte sa nikde registrovať.",
+  "support_coffee_btn": "Kúpte nám kávu",
+  "support_crypto_title": "Pošlite kryptomenu",
+  "support_crypto_desc": "Naskenujte QR kód v peňaženke alebo skopírujte adresu.",
+  "support_help_title": "Pomôcť môžete aj inak"
 }

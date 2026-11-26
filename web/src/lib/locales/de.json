@@ -195,5 +195,11 @@
   "mock_backup_keys": "API-Schlüssel (optional)",
   "carousel_prev": "Vorheriger Screenshot",
   "carousel_next": "Nächster Screenshot",
-  "carousel_goto_tpl": "Screenshot {0} anzeigen"
+  "carousel_goto_tpl": "Screenshot {0} anzeigen",
+  "support_coffee_title": "Spendier uns einen Kaffee",
+  "support_coffee_desc": "Ein einmaliger Beitrag per Karte, Apple Pay oder Google Pay. Ganz ohne Konto.",
+  "support_coffee_btn": "Kaffee spendieren",
+  "support_crypto_title": "Krypto senden",
+  "support_crypto_desc": "Scanne den QR-Code mit deiner Wallet oder kopiere die Adresse.",
+  "support_help_title": "So kannst du sonst helfen"
 }

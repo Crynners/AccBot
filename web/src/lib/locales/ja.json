@@ -195,5 +195,11 @@
   "mock_backup_keys": "API キー（任意）",
   "carousel_prev": "前のスクリーンショット",
   "carousel_next": "次のスクリーンショット",
-  "carousel_goto_tpl": "スクリーンショット {0} を表示"
+  "carousel_goto_tpl": "スクリーンショット {0} を表示",
+  "support_coffee_title": "コーヒーをおごる",
+  "support_coffee_desc": "カード、Apple Pay、Google Pay で一回だけのサポート。アカウント登録は不要です。",
+  "support_coffee_btn": "コーヒーをおごる",
+  "support_crypto_title": "暗号資産を送る",
+  "support_crypto_desc": "ウォレットで QR コードを読み取るか、アドレスをコピーしてください。",
+  "support_help_title": "ほかの応援方法"
 }

@@ -195,5 +195,11 @@
   "mock_backup_keys": "Chaves API (opcional)",
   "carousel_prev": "Captura anterior",
   "carousel_next": "Captura seguinte",
-  "carousel_goto_tpl": "Mostrar captura {0}"
+  "carousel_goto_tpl": "Mostrar captura {0}",
+  "support_coffee_title": "Pague-nos um café",
+  "support_coffee_desc": "Um contributo pontual com cartão, Apple Pay ou Google Pay. Sem criar conta.",
+  "support_coffee_btn": "Pagar um café",
+  "support_crypto_title": "Enviar cripto",
+  "support_crypto_desc": "Leia o código QR na sua carteira ou copie o endereço.",
+  "support_help_title": "Outras formas de ajudar"
 }
