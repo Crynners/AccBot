@@ -131,7 +131,7 @@
   "faq_q7": "Posso experimentar sem dinheiro real?",
   "faq_a7": "Sim. Ative o modo sandbox e o AccBot negoceia na testnet spot da Binance com fundos de teste.",
   "support_title": "Apoie o AccBot",
-  "support_subtitle": "O AccBot é gratuito e desenvolvido no nosso tempo livre. Se o ajuda a acumular, eis como nos pode retribuir.",
+  "support_subtitle": "O AccBot é gratuito e desenvolvemo-lo nos nossos tempos livres. Se o ajuda a acumular, veja como nos pode retribuir.",
   "support_donate_title": "Faça um donativo",
   "support_donate_desc": "Cada sat ajuda a pagar o desenvolvimento e os testes. Obrigado!",
   "support_qr_alt": "Código QR com o nosso endereço Bitcoin",

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -170,28 +171,37 @@ class ScreenshotCaptureTest {
         composeRule.waitForIdle()
         Thread.sleep(2000)
 
-        // Navigate KPI pager to BTC/EUR: landscape uses arrow buttons, portrait uses swipe
+        // Navigate the KPI pager until the BTC/EUR page is shown (page order depends on the data).
+        // Landscape layouts have arrow buttons, portrait layouts are swiped.
         val nextLabel = composeRule.activity.getString(R.string.common_next)
-        val nextArrows = composeRule.onAllNodes(hasContentDescription(nextLabel) and hasClickAction())
-        try {
-            nextArrows.onFirst().performClick()
-            composeRule.waitForIdle()
-            Thread.sleep(1000)
-        } catch (e: AssertionError) {
-            composeRule.onRoot().performTouchInput {
-                val cardY = height * 0.18f
-                down(Offset(width * 0.8f, cardY))
-                moveTo(Offset(width * 0.2f, cardY), delayMillis = 300)
-                up()
+        val isLandscape = composeRule.activity.resources.configuration.orientation ==
+            android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        repeat(4) {
+            if (composeRule.onAllNodesWithText("BTC/EUR").fetchSemanticsNodes().isNotEmpty()) return@repeat
+            if (isLandscape) {
+                composeRule.onAllNodes(hasContentDescription(nextLabel) and hasClickAction())
+                    .onFirst().performClick()
+            } else {
+                composeRule.onRoot().performTouchInput {
+                    val cardY = height * 0.18f
+                    down(Offset(width * 0.85f, cardY))
+                    moveTo(Offset(width * 0.15f, cardY), delayMillis = 300)
+                    up()
+                }
             }
             composeRule.waitForIdle()
-            Thread.sleep(2000)
+            Thread.sleep(1500)
         }
         capture("02_portfolio_$locale")
 
         // 3. Portfolio with Avg Buy Price + Accum. BTC enabled
         val avgBuyLabel = composeRule.activity.getString(R.string.chart_avg_buy_price)
-        val accumLabel = composeRule.activity.getString(R.string.chart_accumulated_crypto, "BTC")
+        // The legend names the crypto of the page the pager ended on (BTC or ETH).
+        val accumLabel = listOf("BTC", "ETH")
+            .map { composeRule.activity.getString(R.string.chart_accumulated_crypto, it) }
+            .firstOrNull { label ->
+                composeRule.onAllNodes(hasText(label) and hasClickAction()).fetchSemanticsNodes().isNotEmpty()
+            } ?: composeRule.activity.getString(R.string.chart_accumulated_crypto, "BTC")
         clickLegendChip(avgBuyLabel)
         composeRule.waitForIdle()
         clickLegendChip(accumLabel)
@@ -230,7 +240,12 @@ class ScreenshotCaptureTest {
             composeRule.onNodeWithText("Coinmate").performClick()
         }
         composeRule.waitForIdle()
-        Thread.sleep(3000)
+        // Plan details load asynchronously; wait until the loading placeholder is gone.
+        val loadingPlan = composeRule.activity.getString(R.string.plan_details_loading)
+        composeRule.waitUntil(timeoutMillis = 30000) {
+            composeRule.onAllNodesWithText(loadingPlan).fetchSemanticsNodes().isEmpty()
+        }
+        Thread.sleep(2000)
         capture("06_plan_details_$locale")
 
         // 7. History - back via TopAppBar arrow (device.pressBack exits app on API 36)
@@ -243,7 +258,11 @@ class ScreenshotCaptureTest {
             (hasText(historyText) or hasContentDescription(historyText)) and hasClickAction()
         ).onFirst().performScrollTo().performClick()
         composeRule.waitForIdle()
-        Thread.sleep(500)
+        // History loads its list asynchronously; wait for the first rows instead of capturing a spinner.
+        composeRule.waitUntil(timeoutMillis = 30000) {
+            composeRule.onAllNodesWithText("BTC/EUR").fetchSemanticsNodes().isNotEmpty()
+        }
+        Thread.sleep(1000)
         capture("07_history_$locale")
     }
 
@@ -305,13 +324,14 @@ class ScreenshotCaptureTest {
         db.exchangeBalanceDao().deleteAllBalances()
         db.notificationDao().deleteAllNotifications()
 
-        // Insert default connections first (one per exchange used by the screenshots)
-        val coinmateConnectionId = db.exchangeConnectionDao().insert(
-            ExchangeConnectionEntity(exchange = Exchange.COINMATE, name = "")
-        )
-        val binanceConnectionId = db.exchangeConnectionDao().insert(
-            ExchangeConnectionEntity(exchange = Exchange.BINANCE, name = "")
-        )
+        // Default connections (one per exchange used by the screenshots). Reuse them when a
+        // previous run already created them: (exchange, name) is unique.
+        val connectionDao = db.exchangeConnectionDao()
+        suspend fun defaultConnectionId(exchange: Exchange): Long =
+            connectionDao.getByExchange(exchange).firstOrNull { it.name.isEmpty() }?.id
+                ?: connectionDao.insert(ExchangeConnectionEntity(exchange = exchange, name = ""))
+        val coinmateConnectionId = defaultConnectionId(Exchange.COINMATE)
+        val binanceConnectionId = defaultConnectionId(Exchange.BINANCE)
 
         // Credentials (dummy - app won't call APIs during screenshots).
         creds.saveCredentials(

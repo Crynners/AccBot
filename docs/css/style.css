@@ -1741,17 +1741,33 @@ section { padding: 96px 0; }
    Support
    ====================== */
 .support-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 20px;
-  align-items: start;
-}
-
-.support-side {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
+
+.support-side {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.support-side .support-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.support-side .support-card p { flex: 1; }
+.support-side .btn { align-self: flex-start; }
+
+.support-donate {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 40px;
+  align-items: start;
+}
+
+.support-donate > .donate-more summary { margin-top: 4px; }
 
 .support-card {
   background: var(--surface);
@@ -1844,14 +1860,46 @@ section { padding: 96px 0; }
 .copy-mini:hover, .copy-mini.copied { color: var(--accent); border-color: var(--accent); }
 .copy-mini svg { width: 15px; height: 15px; }
 
-@media (max-width: 1080px) {
-  .nav-links { gap: 20px; }
+@media (max-width: 1320px) {
+  .nav-links { gap: 18px; }
 }
 
 @media (max-width: 960px) {
   .more-grid { grid-template-columns: repeat(2, 1fr); }
-  .support-grid { grid-template-columns: 1fr; }
+  .support-side { grid-template-columns: repeat(2, 1fr); }
+  .support-donate { grid-template-columns: 1fr; }
 
+}
+
+@media (max-width: 560px) {
+  .more-grid { grid-template-columns: 1fr; }
+  .support-side { grid-template-columns: 1fr; }
+  .donate-btc { flex-direction: column; align-items: flex-start; }
+  .shot { width: 200px; }
+}
+
+.support-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.footer-links { flex-wrap: wrap; justify-content: center; row-gap: 8px; }
+
+.exchange-capabilities { overflow-x: auto; }
+
+@media (max-width: 560px) {
+  .exchange-capabilities th,
+  .exchange-capabilities td { padding: 0.5rem 0.35rem; font-size: 0.8125rem; hyphens: auto; }
+}
+
+.compare-inputs > * { min-width: 0; }
+.compare-interval-btn { min-width: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 560px) {
+  .compare-form { padding: 20px; }
+  .compare-interval-btn { padding: 10px 6px; font-size: 0.75rem; }
+}
+
+
+/* Collapse the navigation earlier: 13 languages make the menu labels long */
+@media (max-width: 1180px) {
   .nav-links {
     position: fixed;
     top: var(--header-h);
@@ -1872,11 +1920,3 @@ section { padding: 96px 0; }
   .burger { display: flex; }
   .lang-select-wrap { margin-left: 0; }
 }
-
-@media (max-width: 560px) {
-  .more-grid { grid-template-columns: 1fr; }
-  .donate-btc { flex-direction: column; align-items: flex-start; }
-  .shot { width: 200px; }
-}
-
-.support-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
