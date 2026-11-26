@@ -23,7 +23,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=8">
 </head>
 <body>
 
@@ -66,20 +66,38 @@
       <nav>
         <ul class="nav-links">
           <li><a href="#features" data-i18n="nav_features">Features</a></li>
+          <li><a href="#screenshots" data-i18n="nav_screenshots">Screenshots</a></li>
           <li><a href="#exchanges" data-i18n="nav_exchanges">Exchanges</a></li>
           <li><a href="#security" data-i18n="nav_security">Security</a></li>
           <li><a href="#compare" data-i18n="nav_compare">Compare</a></li>
+          <li><a href="#faq" data-i18n="nav_faq">FAQ</a></li>
+          <li><a href="#support" data-i18n="nav_support">Support us</a></li>
           <li><a href="#download" data-i18n="nav_download">Download</a></li>
           <li>
-            <div class="lang-switcher">
-              <button class="lang-btn active" data-lang="en">EN</button>
-              <button class="lang-btn" data-lang="cs">CS</button>
-            </div>
+            <label class="lang-select-wrap">
+              <span class="sr-only" data-i18n="lang_label">Language</span>
+              <svg class="lang-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+              <select id="lang-select" class="lang-select">
+                <option value="en">English</option>
+                <option value="cs">Čeština</option>
+                <option value="sk">Slovenčina</option>
+                <option value="de">Deutsch</option>
+                <option value="fr">Français</option>
+                <option value="es">Español</option>
+                <option value="it">Italiano</option>
+                <option value="pt">Português</option>
+                <option value="pl">Polski</option>
+                <option value="uk">Українська</option>
+                <option value="ru">Русский</option>
+                <option value="zh">简体中文</option>
+                <option value="ja">日本語</option>
+              </select>
+            </label>
           </li>
         </ul>
       </nav>
 
-      <button class="burger" aria-label="Menu">
+      <button class="burger" aria-label="Menu" data-i18n-aria-label="nav_menu">
         <span></span>
         <span></span>
         <span></span>
@@ -92,8 +110,8 @@
     <section class="hero">
       <div class="container">
         <div class="hero-content">
-          <h1><span class="accent" data-i18n="hero_tagline">Stack Sats on Autopilot</span></h1>
-          <p class="subtitle" data-i18n="hero_subtitle">Own your DCA. Bitcoin accumulation that runs on your phone — no cloud, no middlemen. Just you and your exchange.</p>
+          <h1><span class="accent" data-i18n="hero_tagline">Stack sats on autopilot</span></h1>
+          <p class="subtitle" data-i18n="hero_subtitle">AccBot buys Bitcoin for you on a schedule, straight from your own exchange account. It runs on your phone, so there's no cloud service and no middleman taking a cut.</p>
           <div class="hero-ctas">
             <a href="https://play.google.com/store/apps/details?id=com.accbot.dca" class="store-badge" target="_blank" rel="noopener">
               <svg width="160" height="48" viewBox="0 0 160 48" xmlns="http://www.w3.org/2000/svg">
@@ -127,62 +145,10 @@
           </div>
         </div>
 
-        <!-- Phone Mockup -->
+        <!-- Real app screenshot -->
         <div class="hero-mockup">
-          <div class="phone-frame">
-            <div class="phone-screen">
-              <div class="mock-header">
-                <span class="mock-title">AccBot</span>
-                <span class="mock-badge">ACTIVE</span>
-              </div>
-              <div class="mock-card">
-                <div class="mock-card-label">Total Accumulated</div>
-                <div class="mock-card-value">0.04218 BTC</div>
-                <div class="mock-card-sub">+12.4% ROI</div>
-              </div>
-              <div class="mock-chart">
-                <svg viewBox="0 0 240 60" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stop-color="#4ECCA3" stop-opacity="0.3"/>
-                      <stop offset="100%" stop-color="#4ECCA3" stop-opacity="0"/>
-                    </linearGradient>
-                  </defs>
-                  <path d="M0,45 L20,42 L40,38 L60,40 L80,35 L100,30 L120,32 L140,25 L160,20 L180,22 L200,15 L220,12 L240,8" fill="none" stroke="#4ECCA3" stroke-width="2"/>
-                  <path d="M0,45 L20,42 L40,38 L60,40 L80,35 L100,30 L120,32 L140,25 L160,20 L180,22 L200,15 L220,12 L240,8 L240,60 L0,60 Z" fill="url(#cg)"/>
-                </svg>
-              </div>
-              <div class="mock-plan">
-                <div class="mock-plan-icon">B</div>
-                <div class="mock-plan-info">
-                  <div class="mock-plan-name">BTC/EUR - Coinmate</div>
-                  <div class="mock-plan-detail">50 EUR daily - ATH DCA</div>
-                </div>
-                <div class="mock-plan-status">Active</div>
-              </div>
-              <div class="mock-plan">
-                <div class="mock-plan-icon" style="color:#5B8DEF">E</div>
-                <div class="mock-plan-info">
-                  <div class="mock-plan-name">ETH/EUR - Kraken</div>
-                  <div class="mock-plan-detail">25 EUR weekly - Classic</div>
-                </div>
-                <div class="mock-plan-status">Active</div>
-              </div>
-              <div class="mock-nav">
-                <div class="mock-nav-item active">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                  Dashboard
-                </div>
-                <div class="mock-nav-item">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-                  Portfolio
-                </div>
-                <div class="mock-nav-item">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-                  Settings
-                </div>
-              </div>
-            </div>
+          <div class="phone-frame phone-frame-shot">
+            <img data-shot="01_dashboard" src="img/screenshots/en/01_dashboard.webp" width="540" height="1200" alt="AccBot dashboard with DCA plans" data-i18n-alt="shot_dashboard_alt" fetchpriority="high">
           </div>
         </div>
       </div>
@@ -196,22 +162,22 @@
             <div class="icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
             </div>
-            <h3 data-i18n="value_custody_title">Self-Custody</h3>
-            <p data-i18n="value_custody_desc">Your API keys never leave your device. Encrypted with AES-256-GCM via Android Keystore. No cloud, no tracking.</p>
+            <h3 data-i18n="value_custody_title">Your keys stay with you</h3>
+            <p data-i18n="value_custody_desc">API keys never leave your phone. They're encrypted with AES-256-GCM in the Android Keystore. Nothing goes to the cloud and nothing is tracked.</p>
           </div>
           <div class="value-card reveal">
             <div class="icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             </div>
-            <h3 data-i18n="value_auto_title">Set & Forget</h3>
-            <p data-i18n="value_auto_desc">Configure once, accumulate forever. AccBot executes purchases on your schedule, even when your phone is in your pocket.</p>
+            <h3 data-i18n="value_auto_title">Set it and forget it</h3>
+            <p data-i18n="value_auto_desc">Set up a plan once and AccBot keeps buying on schedule, even while your phone sits in your pocket.</p>
           </div>
           <div class="value-card reveal">
             <div class="icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             </div>
-            <h3 data-i18n="value_open_title">Open Source</h3>
-            <p data-i18n="value_open_desc">Fully auditable code under MIT license. No hidden fees, no premium tiers, no data collection. Free forever.</p>
+            <h3 data-i18n="value_open_title">Open source and free</h3>
+            <p data-i18n="value_open_desc">The code is public under the MIT license. No subscription, no premium tier, no data collection. You only pay your exchange's usual trading fee.</p>
           </div>
         </div>
       </div>
@@ -221,34 +187,34 @@
     <section id="features">
       <div class="container">
         <div class="section-header reveal">
-          <h2 data-i18n="features_title">Features</h2>
+          <h2 data-i18n="features_title">What AccBot can do</h2>
         </div>
 
         <!-- Smart DCA Strategies -->
         <div class="feature-block reveal">
           <div class="feature-text">
-            <h3 data-i18n="features_strategies_title">Smart DCA Strategies</h3>
-            <p data-i18n="features_strategies_desc">Choose from three strategies to optimize your accumulation. Classic DCA buys a fixed amount every time. ATH-based increases purchases when price drops below all-time high. Fear & Greed adjusts based on market sentiment.</p>
+            <h3 data-i18n="features_strategies_title">Smart DCA strategies</h3>
+            <p data-i18n="features_strategies_desc">Pick the strategy that suits you. Classic DCA buys the same amount every time. ATH-based DCA buys more the further the price drops below its all-time high. Fear & Greed DCA follows market sentiment and buys more when others panic.</p>
             <div class="strategy-cards">
               <div class="strategy-card">
                 <span class="dot green"></span>
                 <div class="strategy-card-info">
                   <strong data-i18n="features_strategies_classic">Classic DCA</strong>
-                  <span data-i18n="features_strategies_classic_desc">Fixed amount at regular intervals</span>
+                  <span data-i18n="features_strategies_classic_desc">The same amount at regular intervals</span>
                 </div>
               </div>
               <div class="strategy-card">
                 <span class="dot blue"></span>
                 <div class="strategy-card-info">
                   <strong data-i18n="features_strategies_ath">ATH-based DCA</strong>
-                  <span data-i18n="features_strategies_ath_desc">0.5x near ATH, up to 3x at 70%+ below</span>
+                  <span data-i18n="features_strategies_ath_desc">0.5× near the ATH, up to 3× when 70% or more below it</span>
                 </div>
               </div>
               <div class="strategy-card">
                 <span class="dot orange"></span>
                 <div class="strategy-card-info">
                   <strong data-i18n="features_strategies_fg">Fear & Greed DCA</strong>
-                  <span data-i18n="features_strategies_fg_desc">0.25x at extreme greed, 2.5x at extreme fear</span>
+                  <span data-i18n="features_strategies_fg_desc">0.25× at extreme greed, 2.5× at extreme fear</span>
                 </div>
               </div>
             </div>
@@ -283,8 +249,8 @@
         <!-- Portfolio Analytics -->
         <div class="feature-block reverse reveal">
           <div class="feature-text">
-            <h3 data-i18n="features_portfolio_title">Portfolio Analytics</h3>
-            <p data-i18n="features_portfolio_desc">Track your holdings, ROI, and performance with interactive charts. See your cost basis, current value, and returns across all exchanges and trading pairs.</p>
+            <h3 data-i18n="features_portfolio_title">Portfolio overview</h3>
+            <p data-i18n="features_portfolio_desc">Interactive charts show what you hold, how much you've made and how each plan is doing. See your average buy price and today's value, per exchange and per trading pair.</p>
           </div>
           <div class="feature-visual">
             <div class="mock-tabs">
@@ -329,8 +295,8 @@
         <!-- Transaction History -->
         <div class="feature-block reveal">
           <div class="feature-text">
-            <h3 data-i18n="features_history_title">Transaction History & CSV Export</h3>
-            <p data-i18n="features_history_desc">Complete history of every DCA purchase with filtering by crypto, exchange, and status. Export to CSV for tax reporting or your own analysis.</p>
+            <h3 data-i18n="features_history_title">Purchase history and CSV export</h3>
+            <p data-i18n="features_history_desc">Every purchase in one place, filterable by coin, exchange and status. Export it to CSV for your tax return or your own spreadsheets.</p>
           </div>
           <div class="feature-visual">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -382,8 +348,8 @@
         <!-- Sandbox Mode -->
         <div class="feature-block reverse reveal">
           <div class="feature-text">
-            <h3 data-i18n="features_sandbox_title">Sandbox Mode</h3>
-            <p data-i18n="features_sandbox_desc">Try DCA with the Binance spot testnet. Sandbox keeps its plans, orders and credentials separate from production.</p>
+            <h3 data-i18n="features_sandbox_title">Sandbox mode</h3>
+            <p data-i18n="features_sandbox_desc">Try everything on the Binance spot testnet without risking real money. Test plans, orders and keys are kept completely separate from your real ones.</p>
           </div>
           <div class="feature-visual">
             <div class="mock-sandbox-banner">SANDBOX MODE - Test trades only</div>
@@ -405,7 +371,7 @@
         <div class="feature-block reveal">
           <div class="feature-text">
             <h3 data-i18n="features_withdrawal_title">Withdrawal reminders</h3>
-            <p data-i18n="features_withdrawal_desc">Set a balance threshold and get a reminder to withdraw your crypto through your exchange.</p>
+            <p data-i18n="features_withdrawal_desc">Set a balance limit and AccBot reminds you when it's time to move your coins from the exchange to your own wallet.</p>
           </div>
           <div class="feature-visual">
             <div class="mock-card">
@@ -418,8 +384,8 @@
         <!-- QR Code Setup -->
         <div class="feature-block reverse reveal">
           <div class="feature-text">
-            <h3 data-i18n="features_qr_title">QR Code Setup</h3>
-            <p data-i18n="features_qr_desc">Scan your API keys and wallet addresses with your camera. No more error-prone manual entry of long alphanumeric strings.</p>
+            <h3 data-i18n="features_qr_title">Set up with a QR code</h3>
+            <p data-i18n="features_qr_desc">Scan API keys and wallet addresses with your camera instead of typing long strings of characters by hand.</p>
           </div>
           <div class="feature-visual" style="align-items:center">
             <div class="mock-qr-box">
@@ -615,8 +581,8 @@
         <!-- Encrypted Backup -->
         <div class="feature-block reveal">
           <div class="feature-text">
-            <h3 data-i18n="features_backup_title">Encrypted Backup</h3>
-            <p data-i18n="features_backup_desc">Back up your DCA plans, transaction history, and optionally API credentials with a single tap. Backups are encrypted with your password using AES-256-GCM. Restore on a new phone in seconds — no account needed, no data lost.</p>
+            <h3 data-i18n="features_backup_title">Encrypted backup</h3>
+            <p data-i18n="features_backup_desc">Back up your plans, purchase history and, if you like, your API keys with a single tap. The backup is encrypted with your password using AES-256-GCM. Moving to a new phone takes a few seconds, and you don't need an account.</p>
           </div>
           <div class="feature-visual">
             <div class="mock-card">
@@ -646,15 +612,77 @@
           </div>
         </div>
 
+        <div class="more-features reveal">
+          <h3 data-i18n="more_title">And a few more things</h3>
+          <div class="more-grid">
+            <div class="more-card">
+              <div class="more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
+              <h4 data-i18n="more_sells_title">Limit sells</h4>
+              <p data-i18n="more_sells_desc">Place limit sell orders on Coinmate and Binance right from the app (Android).</p>
+            </div>
+            <div class="more-card">
+              <div class="more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+              <h4 data-i18n="more_import_title">Import past trades</h4>
+              <p data-i18n="more_import_desc">Bring in earlier purchases through the exchange API or a CSV file, so your stats start from day one.</p>
+            </div>
+            <div class="more-card">
+              <div class="more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+              <h4 data-i18n="more_share_title">Read-only plan sharing</h4>
+              <p data-i18n="more_share_desc">Show a plan to your partner or a friend. Send a snapshot, or live updates with a separate read-only key. They can look, but they can't trade.</p>
+            </div>
+            <div class="more-card">
+              <div class="more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+              <h4 data-i18n="more_watch_title">Automation check</h4>
+              <p data-i18n="more_watch_desc">AccBot keeps an eye on battery optimization, exact alarms and notifications, and tells you how to fix anything that could stop a purchase.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== Screenshots ==================== -->
+    <section id="screenshots" class="section-alt">
+      <div class="container">
+        <div class="section-header reveal">
+          <h2 data-i18n="screenshots_title">See it in action</h2>
+          <p data-i18n="screenshots_subtitle">Real screenshots from the Android app.</p>
+        </div>
+      </div>
+      <div class="shots reveal" tabindex="0" role="region" aria-label="See it in action" data-i18n-aria-label="screenshots_title">
+        <figure class="shot">
+          <div class="shot-frame"><img data-shot="01_dashboard" src="img/screenshots/en/01_dashboard.webp" width="540" height="1200" loading="lazy" alt="Dashboard with your plans and market mood" data-i18n-alt="shot_dashboard"></div>
+          <figcaption data-i18n="shot_dashboard">Dashboard with your plans and market mood</figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="shot-frame"><img data-shot="03_portfolio_full" src="img/screenshots/en/03_portfolio_full.webp" width="540" height="1200" loading="lazy" alt="Portfolio value and average buy price" data-i18n-alt="shot_portfolio"></div>
+          <figcaption data-i18n="shot_portfolio">Portfolio value and average buy price</figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="shot-frame"><img data-shot="06_plan_details" src="img/screenshots/en/06_plan_details.webp" width="540" height="1200" loading="lazy" alt="Plan details" data-i18n-alt="shot_plan"></div>
+          <figcaption data-i18n="shot_plan">Plan details</figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="shot-frame"><img data-shot="07_history" src="img/screenshots/en/07_history.webp" width="540" height="1200" loading="lazy" alt="Purchase history" data-i18n-alt="shot_history"></div>
+          <figcaption data-i18n="shot_history">Purchase history</figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="shot-frame"><img data-shot="04_notifications" src="img/screenshots/en/04_notifications.webp" width="540" height="1200" loading="lazy" alt="Notifications" data-i18n-alt="shot_notifications"></div>
+          <figcaption data-i18n="shot_notifications">Notifications</figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="shot-frame"><img data-shot="05_settings" src="img/screenshots/en/05_settings.webp" width="540" height="1200" loading="lazy" alt="Settings" data-i18n-alt="shot_settings"></div>
+          <figcaption data-i18n="shot_settings">Settings</figcaption>
+        </figure>
       </div>
     </section>
 
     <!-- ==================== Supported Exchanges ==================== -->
-    <section id="exchanges" class="section-alt">
+    <section id="exchanges">
       <div class="container">
         <div class="section-header reveal">
-          <h2 data-i18n="exchanges_title">Supported Exchanges</h2>
-          <p data-i18n="exchanges_subtitle">Create DCA plans across five exchanges. Android supports limit sells on Coinmate and Binance.</p>
+          <h2 data-i18n="exchanges_title">Supported exchanges</h2>
+          <p data-i18n="exchanges_subtitle">Run DCA plans on five exchanges. On Android you can also place limit sells on Coinmate and Binance.</p>
         </div>
         <div class="exchange-logos reveal">
           <div class="exchange-logo">
@@ -690,7 +718,7 @@
         </div>
         <div class="exchange-capabilities">
           <table>
-            <caption data-i18n="exchanges_capabilities">Features by exchange</caption>
+            <caption data-i18n="exchanges_capabilities">What each exchange supports</caption>
             <thead>
               <tr>
                 <th scope="col" data-i18n="exchanges_col_exchange">Exchange</th>
@@ -712,11 +740,11 @@
     </section>
 
     <!-- ==================== Security ==================== -->
-    <section id="security">
+    <section id="security" class="section-alt">
       <div class="container">
         <div class="section-header reveal">
-          <h2 data-i18n="security_title">Security First</h2>
-          <p data-i18n="security_subtitle">AccBot is built on a decentralized, security-first architecture. Your data stays on your device.</p>
+          <h2 data-i18n="security_title">Security comes first</h2>
+          <p data-i18n="security_subtitle">AccBot has no server of its own. Everything happens on your phone, and your data stays there.</p>
         </div>
         <div class="security-grid">
           <div class="security-item reveal">
@@ -724,8 +752,8 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <div>
-              <strong data-i18n="security_aes">AES-256-GCM Encryption</strong>
-              <span data-i18n="security_aes_desc">API credentials encrypted with hardware-backed Android Keystore</span>
+              <strong data-i18n="security_aes">AES-256-GCM encryption</strong>
+              <span data-i18n="security_aes_desc">API keys are protected by the hardware-backed Android Keystore</span>
             </div>
           </div>
           <div class="security-item reveal">
@@ -733,8 +761,8 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <div>
-              <strong data-i18n="security_local">Local Storage Only</strong>
-              <span data-i18n="security_local_desc">No data is ever uploaded to any server</span>
+              <strong data-i18n="security_local">Stored only on your phone</strong>
+              <span data-i18n="security_local_desc">Nothing is uploaded to any server</span>
             </div>
           </div>
           <div class="security-item reveal">
@@ -742,8 +770,8 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <div>
-              <strong data-i18n="security_direct">Direct API Calls</strong>
-              <span data-i18n="security_direct_desc">Communication goes directly to exchanges via HTTPS</span>
+              <strong data-i18n="security_direct">Direct connection to exchanges</strong>
+              <span data-i18n="security_direct_desc">The app talks to your exchange over HTTPS with nobody in between</span>
             </div>
           </div>
           <div class="security-item reveal">
@@ -751,8 +779,8 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <div>
-              <strong data-i18n="security_biometric">Biometric Lock</strong>
-              <span data-i18n="security_biometric_desc">Optional fingerprint or face recognition to open the app</span>
+              <strong data-i18n="security_biometric">Biometric lock</strong>
+              <span data-i18n="security_biometric_desc">Optionally unlock the app with your fingerprint or face</span>
             </div>
           </div>
           <div class="security-item reveal">
@@ -760,8 +788,8 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <div>
-              <strong data-i18n="security_opensource">Open Source</strong>
-              <span data-i18n="security_opensource_desc">Fully auditable codebase under MIT license</span>
+              <strong data-i18n="security_opensource">Open source</strong>
+              <span data-i18n="security_opensource_desc">Anyone can read the code, published under the MIT license</span>
             </div>
           </div>
           <div class="security-item reveal">
@@ -769,8 +797,8 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <div>
-              <strong data-i18n="security_nocloud">No Cloud Sync</strong>
-              <span data-i18n="security_nocloud_desc">No analytics, no tracking, no ads, no telemetry</span>
+              <strong data-i18n="security_nocloud">No cloud, no tracking</strong>
+              <span data-i18n="security_nocloud_desc">No analytics, no ads, no telemetry</span>
             </div>
           </div>
         </div>
@@ -778,43 +806,43 @@
     </section>
 
     <!-- ==================== How It Works ==================== -->
-    <section class="section-alt">
+    <section>
       <div class="container">
         <div class="section-header reveal">
-          <h2 data-i18n="howto_title">How It Works</h2>
+          <h2 data-i18n="howto_title">How it works</h2>
         </div>
         <div class="steps">
           <div class="step reveal">
             <div class="step-number">1</div>
             <h3 data-i18n="howto_step1_title">Connect</h3>
-            <p data-i18n="howto_step1_desc">Add your exchange API keys with trading-only permissions. Scan QR codes or enter manually.</p>
+            <p data-i18n="howto_step1_desc">Create an API key on your exchange with trading permission only, then scan its QR code or paste it in.</p>
           </div>
           <div class="step reveal">
             <div class="step-number">2</div>
-            <h3 data-i18n="howto_step2_title">Configure</h3>
-            <p data-i18n="howto_step2_desc">Set your crypto, amount, frequency, and strategy. Choose from Classic, ATH-based, or Fear & Greed DCA.</p>
+            <h3 data-i18n="howto_step2_title">Set up a plan</h3>
+            <p data-i18n="howto_step2_desc">Choose the coin, amount, frequency and strategy: Classic, ATH-based or Fear & Greed.</p>
           </div>
           <div class="step reveal">
             <div class="step-number">3</div>
-            <h3 data-i18n="howto_step3_title">Accumulate</h3>
-            <p data-i18n="howto_step3_desc">AccBot runs in the background and executes purchases on your schedule. Track performance in the portfolio view.</p>
+            <h3 data-i18n="howto_step3_title">Stack</h3>
+            <p data-i18n="howto_step3_desc">AccBot buys in the background on your schedule, and you follow the results in your portfolio.</p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- ==================== Compare ==================== -->
-    <section id="compare">
+    <section id="compare" class="section-alt">
       <div class="container">
         <div class="section-header reveal">
           <h2 data-i18n="compare_title">AccBot vs Štosuj</h2>
-          <p data-i18n="compare_subtitle">Štosuj charges 1.5% per purchase on Coinmate. AccBot lets you trade directly — just the standard 0.6% taker fee, no middleman markup.</p>
+          <p data-i18n="compare_subtitle">Štosuj, a popular Czech DCA service, charges 1.5% on every purchase on Coinmate. With AccBot you buy on Coinmate directly and pay only the exchange's standard 0.6% taker fee. See what that adds up to over time.</p>
         </div>
 
         <div class="compare-form reveal" id="compare-form">
           <div class="compare-inputs">
             <div class="compare-input-group">
-              <label for="compare-start" data-i18n="compare_start_label">DCA start date</label>
+              <label for="compare-start" data-i18n="compare_start_label">Start date</label>
               <input type="date" id="compare-start">
             </div>
             <div class="compare-input-group">
@@ -822,7 +850,7 @@
               <input type="number" id="compare-amount" value="1000" min="1" step="100">
             </div>
             <div class="compare-input-group">
-              <span class="compare-input-label" id="compare-interval-label" data-i18n="compare_interval_label">Purchase interval</span>
+              <span class="compare-input-label" id="compare-interval-label" data-i18n="compare_interval_label">How often</span>
               <div class="compare-interval-btns" role="group" aria-labelledby="compare-interval-label">
                 <button type="button" class="compare-interval-btn" aria-pressed="false" data-interval="daily" data-i18n="compare_daily">Daily</button>
                 <button type="button" class="compare-interval-btn active" aria-pressed="true" data-interval="weekly" data-i18n="compare_weekly">Weekly</button>
@@ -830,13 +858,13 @@
               </div>
             </div>
           </div>
-          <button type="button" class="btn btn-primary compare-calc-btn" id="compare-calc" data-i18n="compare_calculate">Calculate comparison</button>
+          <button type="button" class="btn btn-primary compare-calc-btn" id="compare-calc" data-i18n="compare_calculate">Calculate</button>
         </div>
         <div id="compare-status" class="compare-status" role="status"></div>
 
         <div id="compare-results" class="compare-results" style="display:none">
           <div id="compare-loading" class="compare-loading"></div>
-          <div id="compare-error" class="compare-error" style="display:none" role="alert" data-i18n="compare_error">Failed to load price data. Please try again later.</div>
+          <div id="compare-error" class="compare-error" style="display:none" role="alert" data-i18n="compare_error">Couldn't load price data. Please try again in a moment.</div>
           <div id="compare-content" style="display:none">
             <div class="compare-summary">
               <span id="compare-summary-text"></span>
@@ -846,19 +874,19 @@
               <div class="compare-card stosuj">
                 <div class="compare-card-header">
                   <span class="compare-card-name">Štosuj</span>
-                  <span class="compare-card-fee">1,5 % <span data-i18n="compare_fee_label">fee</span></span>
+                  <span class="compare-card-fee" data-i18n="compare_fee_stosuj">1.5% fee</span>
                 </div>
                 <div class="compare-stat">
                   <span class="compare-stat-label" data-i18n="compare_fees_paid">Fees paid</span>
                   <span class="compare-stat-value" id="stosuj-fees"></span>
                 </div>
                 <div class="compare-stat">
-                  <span class="compare-stat-label" data-i18n="compare_btc_accumulated">BTC accumulated</span>
+                  <span class="compare-stat-label" data-i18n="compare_btc_accumulated">BTC stacked</span>
                   <span class="compare-stat-value" id="stosuj-btc"></span>
                 </div>
                 <div class="compare-stat-sub" id="stosuj-sats"></div>
                 <div class="compare-stat">
-                  <span class="compare-stat-label" data-i18n="compare_current_value">Current value</span>
+                  <span class="compare-stat-label" data-i18n="compare_current_value">Value today</span>
                   <span class="compare-stat-value" id="stosuj-value"></span>
                 </div>
               </div>
@@ -866,19 +894,19 @@
               <div class="compare-card accbot">
                 <div class="compare-card-header">
                   <span class="compare-card-name">AccBot</span>
-                  <span class="compare-card-fee">0,6 % <span data-i18n="compare_fee_label">fee</span></span>
+                  <span class="compare-card-fee" data-i18n="compare_fee_accbot">0.6% fee</span>
                 </div>
                 <div class="compare-stat">
                   <span class="compare-stat-label" data-i18n="compare_fees_paid">Fees paid</span>
                   <span class="compare-stat-value" id="accbot-fees"></span>
                 </div>
                 <div class="compare-stat">
-                  <span class="compare-stat-label" data-i18n="compare_btc_accumulated">BTC accumulated</span>
+                  <span class="compare-stat-label" data-i18n="compare_btc_accumulated">BTC stacked</span>
                   <span class="compare-stat-value" id="accbot-btc"></span>
                 </div>
                 <div class="compare-stat-sub" id="accbot-sats"></div>
                 <div class="compare-stat">
-                  <span class="compare-stat-label" data-i18n="compare_current_value">Current value</span>
+                  <span class="compare-stat-label" data-i18n="compare_current_value">Value today</span>
                   <span class="compare-stat-value" id="accbot-value"></span>
                 </div>
               </div>
@@ -889,24 +917,24 @@
             </div>
 
             <div class="compare-chart-container">
-              <h3 data-i18n="compare_chart_title">Cumulative BTC accumulation</h3>
+              <h3 data-i18n="compare_chart_title">BTC stacked over time</h3>
               <div id="compare-chart"></div>
               <div class="compare-legend">
-                <span class="compare-legend-item price" data-i18n="compare_legend_price">BTC/CZK price</span>
-                <span class="compare-legend-item stosuj">Štosuj (1,5 %)</span>
-                <span class="compare-legend-item accbot">AccBot (0,6 %)</span>
+                <span class="compare-legend-item price" data-i18n="compare_legend_price">BTC price in CZK</span>
+                <span class="compare-legend-item stosuj" data-i18n="compare_legend_stosuj">Štosuj (1.5%)</span>
+                <span class="compare-legend-item accbot" data-i18n="compare_legend_accbot">AccBot (0.6%)</span>
               </div>
             </div>
 
             <details id="compare-table" class="compare-table">
-              <summary data-i18n="compare_table_label">Show values for each purchase</summary>
+              <summary data-i18n="compare_table_label">Show every purchase</summary>
               <div class="compare-table-scroll">
                 <table aria-labelledby="compare-table-heading">
-                  <caption id="compare-table-heading" data-i18n="compare_chart_title">Cumulative BTC accumulation</caption>
+                  <caption id="compare-table-heading" data-i18n="compare_chart_title">BTC stacked over time</caption>
                   <thead>
                     <tr>
-                      <th scope="col" data-i18n="compare_table_date">Purchase date</th>
-                      <th scope="col" data-i18n="compare_legend_price">BTC/CZK price</th>
+                      <th scope="col" data-i18n="compare_table_date">Date</th>
+                      <th scope="col" data-i18n="compare_legend_price">BTC price in CZK</th>
                       <th scope="col">Štosuj</th>
                       <th scope="col">AccBot</th>
                     </tr>
@@ -915,7 +943,132 @@
                 </table>
               </div>
             </details>
-            <p class="compare-disclaimer" data-i18n="compare_disclaimer">This simulation uses historical BTC/CZK prices from CryptoCompare and fixed fee assumptions of 0.6% and 1.5%. Exchange spreads, withdrawal costs and taxes are excluded.</p>
+            <p class="compare-disclaimer" data-i18n="compare_disclaimer">This is a simulation. It uses daily BTC/USD prices from Bitstamp converted to CZK at ECB reference rates, with fixed fees of 0.6% and 1.5%. Spreads, withdrawal fees and taxes are left out.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== FAQ ==================== -->
+    <section id="faq">
+      <div class="container">
+        <div class="section-header reveal">
+          <h2 data-i18n="faq_title">Frequently asked questions</h2>
+        </div>
+        <div class="faq-list reveal">
+          <details class="faq-item">
+            <summary data-i18n="faq_q1">Is AccBot really free?</summary>
+            <p data-i18n="faq_a1">Yes. AccBot is open source under the MIT license and costs nothing. There's no subscription and no extra fee on your purchases. You only pay your exchange's normal trading fee.</p>
+          </details>
+          <details class="faq-item">
+            <summary data-i18n="faq_q2">Can AccBot withdraw or lose my money?</summary>
+            <p data-i18n="faq_a2">AccBot only works with the API key you create on your exchange. Give the key permission to trade and leave withdrawals turned off. The key is stored encrypted on your phone, and AccBot only ever sends it to your exchange.</p>
+          </details>
+          <details class="faq-item">
+            <summary data-i18n="faq_q3">Does my phone need to be on?</summary>
+            <p data-i18n="faq_a3">Yes. Purchases run on your phone, so it needs to be switched on and online. Android sometimes delays background tasks by a few minutes. If a purchase is missed, for example while the phone was off, AccBot shows it on the dashboard and lets you buy it later or skip it.</p>
+          </details>
+          <details class="faq-item">
+            <summary data-i18n="faq_q4">Where are my coins kept?</summary>
+            <p data-i18n="faq_a4">Purchased coins land in your exchange account. AccBot can remind you when your balance reaches a limit you choose, so you can move it to your own wallet.</p>
+          </details>
+          <details class="faq-item">
+            <summary data-i18n="faq_q5">Which coins and currencies are supported?</summary>
+            <p data-i18n="faq_a5">You can buy BTC, ETH, SOL, ADA, DOT, LTC and BNB with EUR, USD, GBP, CZK, USDT or USDC. What's available depends on your exchange.</p>
+          </details>
+          <details class="faq-item">
+            <summary data-i18n="faq_q6">Is there an iPhone version?</summary>
+            <p data-i18n="faq_a6">The iOS app is in the works. For now AccBot is available for Android on Google Play and GitHub.</p>
+          </details>
+          <details class="faq-item">
+            <summary data-i18n="faq_q7">Can I try it without real money?</summary>
+            <p data-i18n="faq_a7">Yes. Turn on sandbox mode and AccBot trades on the Binance spot testnet with test funds.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== Support ==================== -->
+    <section id="support" class="section-alt">
+      <div class="container">
+        <div class="section-header reveal">
+          <h2 data-i18n="support_title">Support AccBot</h2>
+          <p data-i18n="support_subtitle">AccBot is free and we build it in our spare time. If it helps you stack, here's how you can help us back.</p>
+        </div>
+        <div class="support-grid">
+          <div class="support-card support-donate reveal">
+            <div class="donate-main">
+            <h3 data-i18n="support_donate_title">Send a donation</h3>
+            <p data-i18n="support_donate_desc">Every sat helps us cover development and testing. Thank you!</p>
+            <div class="donate-btc">
+              <img class="donate-qr" src="img/donate-btc.svg" width="148" height="148" alt="QR code with our Bitcoin address" data-i18n-alt="support_qr_alt">
+              <div class="donate-btc-info">
+                <span class="donate-label">Bitcoin (BTC)</span>
+                <code class="donate-address">bc1q2hz79m4csklecqgusu9e2yjnrr6e9ca6nhu0at</code>
+                <button type="button" class="btn btn-primary btn-copy" data-copy="bc1q2hz79m4csklecqgusu9e2yjnrr6e9ca6nhu0at"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg><span data-i18n="support_copy">Copy address</span></button>
+              </div>
+            </div>
+            </div>
+            <details class="donate-more" open>
+              <summary data-i18n="support_other">Other coins</summary>
+              <ul class="donate-list">
+                <li>
+                  <span class="donate-coin" title="Litecoin">LTC</span>
+                  <code>LTXdCFBYHgVLa8cBNBqwEvaQLi8tENY5R3</code>
+                  <button type="button" class="copy-mini" data-copy="LTXdCFBYHgVLa8cBNBqwEvaQLi8tENY5R3" aria-label="Copy address" data-i18n-aria-label="support_copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
+                </li>
+                <li>
+                  <span class="donate-coin" title="Ethereum">ETH</span>
+                  <code>0x8A944bcb5919dF04C5207939749C40A61f88188C</code>
+                  <button type="button" class="copy-mini" data-copy="0x8A944bcb5919dF04C5207939749C40A61f88188C" aria-label="Copy address" data-i18n-aria-label="support_copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
+                </li>
+                <li>
+                  <span class="donate-coin" title="Monero">XMR</span>
+                  <code>49QBko3UdegAkx6g8foqjs9efQD6rrhsPEoTqP9HmA2LCUZsJ8xBD2JZSMEdzhA5NJ9SrVhzu2uJXRUvL2kAiV45LyDBCUt</code>
+                  <button type="button" class="copy-mini" data-copy="49QBko3UdegAkx6g8foqjs9efQD6rrhsPEoTqP9HmA2LCUZsJ8xBD2JZSMEdzhA5NJ9SrVhzu2uJXRUvL2kAiV45LyDBCUt" aria-label="Copy address" data-i18n-aria-label="support_copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
+                </li>
+                <li>
+                  <span class="donate-coin" title="Dogecoin">DOGE</span>
+                  <code>DR9mEaVLmx3gxqiqffwYQcLsT1upRL3xe9</code>
+                  <button type="button" class="copy-mini" data-copy="DR9mEaVLmx3gxqiqffwYQcLsT1upRL3xe9" aria-label="Copy address" data-i18n-aria-label="support_copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
+                </li>
+                <li>
+                  <span class="donate-coin" title="Polkadot">DOT</span>
+                  <code>15sBCVyWu5Gy9VnzQpid4ggC1MmguBBd1xotUVbsbbRWddun</code>
+                  <button type="button" class="copy-mini" data-copy="15sBCVyWu5Gy9VnzQpid4ggC1MmguBBd1xotUVbsbbRWddun" aria-label="Copy address" data-i18n-aria-label="support_copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
+                </li>
+                <li>
+                  <span class="donate-coin" title="Cardano">ADA</span>
+                  <code>addr1qxgfp7xf8rpg7laque78queavpfdztajgl3hr8kuanuqgdysjruvjwxz3al6penuwpen6czj6yhmy3lrwx0dem8cqs6qr8y8fj</code>
+                  <button type="button" class="copy-mini" data-copy="addr1qxgfp7xf8rpg7laque78queavpfdztajgl3hr8kuanuqgdysjruvjwxz3al6penuwpen6czj6yhmy3lrwx0dem8cqs6qr8y8fj" aria-label="Copy address" data-i18n-aria-label="support_copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
+                </li>
+              </ul>
+            </details>
+          </div>
+          <div class="support-side">
+            <div class="support-card reveal">
+              <h3 data-i18n="support_star_title">Star us on GitHub</h3>
+              <p data-i18n="support_star_desc">A star helps other people find the project.</p>
+              <a href="https://github.com/crynners/AccBot" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 0-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6 0-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 016 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8 0 3.2.9.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.5.4.9 1 .9 2.2v3.3c0 .3.1.7.8.6A12 12 0 0012 .3"/></svg><span data-i18n="support_star_btn">Star on GitHub</span></a>
+            </div>
+            <div class="support-card reveal">
+              <h3 data-i18n="support_review_title">Rate the app</h3>
+              <p data-i18n="support_review_desc">A short review on Google Play makes a big difference.</p>
+              <a href="https://play.google.com/store/apps/details?id=com.accbot.dca" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg><span data-i18n="support_review_btn">Rate on Google Play</span></a>
+            </div>
+            <div class="support-card reveal">
+              <h3 data-i18n="support_contribute_title">Report bugs and ideas</h3>
+              <p data-i18n="support_contribute_desc">Found a bug or missing a feature? Open an issue, or send us a pull request.</p>
+              <a href="https://github.com/crynners/AccBot/issues" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span data-i18n="support_contribute_btn">Open an issue</span></a>
+            </div>
+            <div class="support-card reveal">
+              <h3 data-i18n="support_follow_title">Follow AccBot</h3>
+              <p data-i18n="support_follow_desc">News, tips and help from the community.</p>
+              <div class="support-buttons">
+                <a href="https://t.me/accbotsupport" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.9 4.3l-3.2 15.1c-.2 1.1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.3-5 9.1-8.2c.4-.4-.1-.6-.6-.2L6.2 13 1.4 11.5c-1-.3-1-1 .2-1.5L20.6 2.8c.9-.3 1.6.2 1.3 1.5z"/></svg><span>Telegram</span></a>
+                <a href="https://www.facebook.com/profile.php?id=61580714271760" class="btn btn-outline" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12a12 12 0 10-13.9 11.9v-8.4h-3V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0024 12z"/></svg><span>Facebook</span></a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -925,7 +1078,7 @@
     <section id="download" class="download-section">
       <div class="container">
         <div class="section-header reveal">
-          <h2 data-i18n="download_title">Start Stacking Today</h2>
+          <h2 data-i18n="download_title">Start stacking today</h2>
           <p data-i18n="download_subtitle">Available for Android. Free and open source.</p>
         </div>
         <div class="download-buttons reveal">
@@ -970,16 +1123,19 @@
         <div class="footer-left" data-i18n="footer_made">Made with love by Crynners</div>
         <div class="footer-links">
           <a href="https://github.com/crynners/AccBot/blob/main/LICENSE" target="_blank" rel="noopener" data-i18n="footer_license">MIT License</a>
-          <a href="https://github.com/crynners/AccBot" target="_blank" rel="noopener" data-i18n="footer_source">Source Code</a>
-          <a href="privacy.html" data-i18n="footer_privacy">Privacy Policy</a>
-          <a href="https://github.com/crynners/AccBot/issues" target="_blank" rel="noopener" data-i18n="footer_issues">Report Issue</a>
+          <a href="https://github.com/crynners/AccBot" target="_blank" rel="noopener" data-i18n="footer_source">Source code</a>
+          <a href="#support" data-i18n="nav_support">Support us</a>
+          <a href="privacy.html" data-i18n="footer_privacy">Privacy policy</a>
+          <a href="https://github.com/crynners/AccBot/issues" target="_blank" rel="noopener" data-i18n="footer_issues">Report an issue</a>
+          <a href="https://t.me/accbotsupport" target="_blank" rel="noopener">Telegram</a>
+          <a href="https://www.facebook.com/profile.php?id=61580714271760" target="_blank" rel="noopener">Facebook</a>
         </div>
       </div>
     </div>
   </footer>
 
-  <script src="js/i18n.js"></script>
-  <script src="js/main.js"></script>
-  <script src="js/compare.js"></script>
+  <script src="js/i18n.js?v=3"></script>
+  <script src="js/main.js?v=3"></script>
+  <script src="js/compare.js?v=3"></script>
 </body>
 </html>

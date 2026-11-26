@@ -82,8 +82,12 @@
     return lo;
   }
 
+  function lang() {
+    return document.documentElement.lang || 'en';
+  }
+
   function fmtCZK(n) {
-    return new Intl.NumberFormat('cs-CZ', {
+    return new Intl.NumberFormat(lang(), {
       style: 'currency', currency: 'CZK', maximumFractionDigits: 0
     }).format(n);
   }
@@ -93,7 +97,7 @@
   }
 
   function fmtSats(n) {
-    return new Intl.NumberFormat('cs-CZ').format(Math.round(n * 1e8)) + ' sats';
+    return new Intl.NumberFormat(lang()).format(Math.round(n * 1e8)) + ' sats';
   }
 
   function fmtAxisCZK(n) {
@@ -124,53 +128,109 @@
     if (el) el.textContent = val;
   }
 
-  function fetchPrices(startTs, endTs) {
-    var allPrices = [];
+  /*
+   * Price data comes from public endpoints that need no API key and allow CORS:
+   *  - daily BTC/USD closes from Bitstamp (history back to 2011), Binance BTC/USDT as a fallback,
+   *  - daily USD/CZK reference rates of the ECB via Frankfurter.
+   * BTC/CZK is BTC/USD multiplied by the USD/CZK rate of the same (or the previous) business day.
+   */
+  var DAY = 86400;
 
-    function fetchChunk(toTs) {
-      var daysNeeded = Math.ceil((toTs - startTs) / 86400) + 1;
-      var limit = Math.min(daysNeeded, 2000);
-
-      return fetch(
-        'https://min-api.cryptocompare.com/data/v2/histoday?fsym=BTC&tsym=CZK&limit=' + limit + '&toTs=' + toTs
-      )
-        .then(function (r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.json();
-        })
-        .then(function (data) {
-          if (data.Response !== 'Success') throw new Error(data.Message || 'API error');
-          var points = data.Data.Data;
-
-          for (var i = 0; i < points.length; i++) {
-            if (points[i].close > 0 && points[i].time >= startTs) {
-              allPrices.push([points[i].time * 1000, points[i].close]);
-            }
-          }
-
-          var earliest = points[0] ? points[0].time : startTs;
-          if (limit === 2000 && earliest > startTs) {
-            return fetchChunk(earliest);
-          }
-
-          allPrices.sort(function (a, b) { return a[0] - b[0]; });
-          return allPrices;
-        });
-    }
-
-    return fetchChunk(endTs);
+  function getJson(url) {
+    return fetch(url).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
   }
 
-  function fetchCurrentPrice() {
-    return fetch('https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=CZK')
-      .then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
+  // Returns [[timestampMs, closeUsd], ...] sorted by time.
+  function fetchUsdBitstamp(startTs, endTs) {
+    var out = [];
+    function chunk(from) {
+      return getJson('https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=86400&limit=1000&start=' + from)
+        .then(function (data) {
+          var rows = (data && data.data && data.data.ohlc) || [];
+          for (var i = 0; i < rows.length; i++) {
+            var t = parseInt(rows[i].timestamp, 10);
+            var c = parseFloat(rows[i].close);
+            if (t <= endTs && c > 0) out.push([t * 1000, c]);
+          }
+          var last = rows.length ? parseInt(rows[rows.length - 1].timestamp, 10) : endTs;
+          if (rows.length === 1000 && last + DAY <= endTs) return chunk(last + DAY);
+          return out;
+        });
+    }
+    return chunk(startTs);
+  }
+
+  function fetchUsdBinance(startTs, endTs) {
+    var out = [];
+    function chunk(fromMs) {
+      return getJson('https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=1000&startTime=' + fromMs)
+        .then(function (rows) {
+          for (var i = 0; i < rows.length; i++) {
+            var c = parseFloat(rows[i][4]);
+            if (rows[i][0] <= endTs * 1000 && c > 0) out.push([rows[i][0], c]);
+          }
+          var last = rows.length ? rows[rows.length - 1][0] : endTs * 1000;
+          if (rows.length === 1000 && last + DAY * 1000 <= endTs * 1000) return chunk(last + DAY * 1000);
+          return out;
+        });
+    }
+    return chunk(startTs * 1000);
+  }
+
+  function fetchUsdPrices(startTs, endTs) {
+    return fetchUsdBitstamp(startTs, endTs)
+      .then(function (rows) {
+        if (!rows.length) throw new Error('No Bitstamp data');
+        return rows;
       })
-      .then(function (data) {
-        if (!data.CZK) throw new Error('No CZK price');
-        return data.CZK;
+      .catch(function () { return fetchUsdBinance(startTs, endTs); });
+  }
+
+  // Returns [[timestampMs, usdCzk], ...] sorted by time. Starts a week early so the first day has a rate.
+  function fetchUsdCzk(startTs) {
+    var from = isoDate(new Date((startTs - 7 * DAY) * 1000));
+    return getJson('https://api.frankfurter.dev/v1/' + from + '..?from=USD&to=CZK').then(function (data) {
+      var rates = (data && data.rates) || {};
+      var out = Object.keys(rates).sort().map(function (d) {
+        return [new Date(d + 'T00:00:00Z').getTime(), rates[d].CZK];
       });
+      if (!out.length) throw new Error('No FX data');
+      return out;
+    });
+  }
+
+  // Rate of the last business day on or before ts.
+  function rateAt(rates, ts) {
+    var lo = 0, hi = rates.length - 1;
+    if (ts <= rates[0][0]) return rates[0][1];
+    while (lo < hi) {
+      var mid = (lo + hi + 1) >> 1;
+      if (rates[mid][0] <= ts) lo = mid;
+      else hi = mid - 1;
+    }
+    return rates[lo][1];
+  }
+
+  function fetchPrices(startTs, endTs) {
+    return Promise.all([fetchUsdPrices(startTs, endTs), fetchUsdCzk(startTs)]).then(function (res) {
+      var usd = res[0], fx = res[1];
+      usd.sort(function (a, b) { return a[0] - b[0]; });
+      return {
+        prices: usd.map(function (p) { return [p[0], p[1] * rateAt(fx, p[0])]; }),
+        lastRate: fx[fx.length - 1][1]
+      };
+    });
+  }
+
+  function fetchCurrentUsd() {
+    return getJson('https://www.bitstamp.net/api/v2/ticker/btcusd/').then(function (data) {
+      var p = parseFloat(data && data.last);
+      if (!(p > 0)) throw new Error('No ticker');
+      return p;
+    });
   }
 
   function calculate() {
@@ -206,12 +266,12 @@
     var startTs = Math.floor(startDate.getTime() / 1000);
     var endTs = Math.floor(now.getTime() / 1000);
 
-    Promise.all([fetchPrices(startTs, endTs), fetchCurrentPrice()])
+    Promise.all([fetchPrices(startTs, endTs), fetchCurrentUsd().catch(function () { return null; })])
       .then(function (results) {
-        var prices = results[0];
-        var curPrice = results[1];
-
+        var prices = results[0].prices;
         if (!prices.length) throw new Error('No price data');
+        // Live price if the ticker answered, otherwise the latest daily close.
+        var curPrice = results[1] ? results[1] * results[0].lastRate : prices[prices.length - 1][1];
 
         var dates = genBuyDates(startDate, now, interval);
         if (!dates.length) throw new Error('No buy dates');
@@ -311,7 +371,7 @@
     }
     maxBtc = maxBtc * 1.08 || 1;
 
-    // BTC price range (right Y) — only prices in chart time range
+    // BTC price range (right Y), only prices in the chart time range
     var chartPrices = [];
     var minP = Infinity, maxP = 0;
     for (var i = 0; i < rawPrices.length; i++) {
@@ -360,7 +420,7 @@
     for (var i = 0; i <= 4; i++) {
       var p = minP + (pRange / 4) * i;
       var yy = syP(p);
-      svg += '<text x="' + (W - R + 8) + '" y="' + (yy + 3.5).toFixed(1) + '" text-anchor="start" fill="#a8c5ff" font-size="10" font-family="Inter,sans-serif">' + fmtAxisCZK(p) + ' Kč</text>';
+      svg += '<text x="' + (W - R + 8) + '" y="' + (yy + 3.5).toFixed(1) + '" text-anchor="start" fill="#a8c5ff" font-size="10" font-family="Inter,sans-serif">' + fmtAxisCZK(p) + (lang() === 'cs' || lang() === 'sk' ? ' Kč' : ' CZK') + '</text>';
     }
 
     // Axis lines
@@ -533,7 +593,7 @@
 
       // Tooltip
       var dd = new Date(buyT);
-      var dateStr = dd.getDate() + '. ' + (dd.getMonth() + 1) + '. ' + dd.getFullYear();
+      var dateStr = new Intl.DateTimeFormat(document.documentElement.lang || 'en').format(dd);
       var sB = sData[idx][1], aB = aData[idx][1];
       var diff = aB - sB;
       var diffLbl = tr('compare_diff_row');

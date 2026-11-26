@@ -94,7 +94,31 @@
     }, { passive: true });
   }
 
+  // Copy donation addresses to the clipboard
+  function initCopy() {
+    var btns = document.querySelectorAll('[data-copy]');
+    btns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var text = btn.getAttribute('data-copy');
+        var done = function () {
+          var label = btn.querySelector('[data-i18n]');
+          var t = window.AccBotI18n ? window.AccBotI18n.t : function (k) { return k; };
+          btn.classList.add('copied');
+          if (label) label.textContent = t('support_copied');
+          setTimeout(function () {
+            btn.classList.remove('copied');
+            if (label) label.textContent = t('support_copy');
+          }, 2000);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function () {});
+        }
+      });
+    });
+  }
+
   function init() {
+    initCopy();
     initScrollReveal();
     initSmoothScroll();
     initBurger();

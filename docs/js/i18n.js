@@ -2,81 +2,116 @@
   'use strict';
 
   var DEFAULT_LANG = 'en';
-  var SUPPORTED = ['en', 'cs'];
+  // Order matches the language picker.
+  var SUPPORTED = ['en', 'cs', 'sk', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'uk', 'ru', 'zh', 'ja'];
+  // Languages that use the Czech app screenshots; everyone else sees the English ones.
+  var CZECH_SCREENSHOTS = ['cs', 'sk'];
   var current = DEFAULT_LANG;
+  var cache = {};
+  var _tr = {};
+
+  function isLangHash(hash) {
+    return SUPPORTED.indexOf(hash) !== -1;
+  }
 
   function detect() {
     var hash = window.location.hash.replace('#', '');
-    if (SUPPORTED.indexOf(hash) !== -1) return hash;
-    var saved = localStorage.getItem('accbot-lang');
-    if (saved && SUPPORTED.indexOf(saved) !== -1) return saved;
-    var nav = (navigator.language || '').slice(0, 2);
-    if (SUPPORTED.indexOf(nav) !== -1) return nav;
+    if (isLangHash(hash)) return hash;
+    var saved = null;
+    try { saved = localStorage.getItem('accbot-lang'); } catch (e) { /* storage blocked */ }
+    if (saved && isLangHash(saved)) return saved;
+    var navs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+    for (var i = 0; i < navs.length; i++) {
+      var code = (navs[i] || '').slice(0, 2).toLowerCase();
+      if (isLangHash(code)) return code;
+    }
     return DEFAULT_LANG;
   }
 
-  var _tr = {};
+  function load(lang) {
+    if (cache[lang]) return Promise.resolve(cache[lang]);
+    return fetch('locales/' + lang + '.json?v=3')
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        cache[lang] = data;
+        return data;
+      });
+  }
 
   function apply(translations) {
     _tr = translations;
     var els = document.querySelectorAll('[data-i18n]');
     for (var i = 0; i < els.length; i++) {
       var key = els[i].getAttribute('data-i18n');
-      if (translations[key]) {
-        if (translations[key].indexOf('<') !== -1) {
-          els[i].innerHTML = translations[key];
-        } else {
-          els[i].textContent = translations[key];
-        }
+      var val = translations[key];
+      if (val) {
+        if (val.indexOf('<') !== -1) els[i].innerHTML = val;
+        else els[i].textContent = val;
       }
     }
-    var placeholders = document.querySelectorAll('[data-i18n-placeholder]');
-    for (var j = 0; j < placeholders.length; j++) {
-      var pk = placeholders[j].getAttribute('data-i18n-placeholder');
-      if (translations[pk]) {
-        placeholders[j].setAttribute('placeholder', translations[pk]);
+    var attrs = ['placeholder', 'alt', 'aria-label', 'title'];
+    attrs.forEach(function (attr) {
+      var nodes = document.querySelectorAll('[data-i18n-' + attr + ']');
+      for (var j = 0; j < nodes.length; j++) {
+        var k = nodes[j].getAttribute('data-i18n-' + attr);
+        if (translations[k]) nodes[j].setAttribute(attr, translations[k]);
       }
+    });
+
+    var shotLang = CZECH_SCREENSHOTS.indexOf(current) !== -1 ? 'cs' : 'en';
+    var shots = document.querySelectorAll('img[data-shot]');
+    for (var s = 0; s < shots.length; s++) {
+      var src = 'img/screenshots/' + shotLang + '/' + shots[s].getAttribute('data-shot') + '.webp';
+      if (shots[s].getAttribute('src') !== src) shots[s].setAttribute('src', src);
     }
+
     document.documentElement.setAttribute('lang', current);
-    if (translations.meta_title) {
-      document.title = translations.meta_title;
-    }
+    var title = translations[document.body.getAttribute('data-title-key') || 'meta_title'];
+    if (title) document.title = title;
+    var desc = document.querySelector('meta[name="description"]');
+    if (desc && translations.meta_description) desc.setAttribute('content', translations.meta_description);
+
+    document.dispatchEvent(new CustomEvent('accbot:lang', { detail: { lang: current } }));
   }
 
   function setLang(lang) {
-    if (SUPPORTED.indexOf(lang) === -1) lang = DEFAULT_LANG;
+    if (!isLangHash(lang)) lang = DEFAULT_LANG;
     current = lang;
-    localStorage.setItem('accbot-lang', lang);
-    window.location.hash = lang;
+    try { localStorage.setItem('accbot-lang', lang); } catch (e) { /* storage blocked */ }
 
-    var btns = document.querySelectorAll('.lang-btn');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].classList.toggle('active', btns[i].getAttribute('data-lang') === lang);
+    // Keep the language in the URL so links can be shared, but never overwrite a section anchor.
+    var hash = window.location.hash.replace('#', '');
+    if (!hash || isLangHash(hash)) {
+      history.replaceState(null, '', window.location.pathname + window.location.search + '#' + lang);
     }
 
-    if (lang === DEFAULT_LANG) {
-      fetch('locales/en.json').then(function (r) { return r.json(); }).then(apply);
-      return;
-    }
+    var select = document.getElementById('lang-select');
+    if (select) select.value = lang;
 
-    fetch('locales/' + lang + '.json')
-      .then(function (r) { return r.json(); })
-      .then(apply)
-      .catch(function () {
-        fetch('locales/en.json').then(function (r) { return r.json(); }).then(apply);
-      });
+    // English is the base: other languages are layered on top of it, so a missing key falls back to English.
+    load(DEFAULT_LANG)
+      .then(function (base) {
+        if (lang === DEFAULT_LANG) return base;
+        return load(lang)
+          .then(function (tr) { return Object.assign({}, base, tr); })
+          .catch(function () { return base; });
+      })
+      .then(apply);
   }
 
   function init() {
-    var btns = document.querySelectorAll('.lang-btn');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].addEventListener('click', function (e) {
-        e.preventDefault();
-        setLang(this.getAttribute('data-lang'));
-      });
+    var select = document.getElementById('lang-select');
+    if (select) {
+      select.addEventListener('change', function () { setLang(this.value); });
     }
-    var lang = detect();
-    setLang(lang);
+    window.addEventListener('hashchange', function () {
+      var hash = window.location.hash.replace('#', '');
+      if (isLangHash(hash) && hash !== current) setLang(hash);
+    });
+    setLang(detect());
   }
 
   if (document.readyState === 'loading') {
