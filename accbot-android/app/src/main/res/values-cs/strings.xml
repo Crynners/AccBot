@@ -183,13 +183,9 @@
     <string name="shared_plan_side_sell">Prodej</string>
     <string name="shared_plan_at_price">za %1$s</string>
     <string name="share_plan_live_updates">Živé aktualizace</string>
-    <string name="share_plan_live_updates_subtitle">Příjemce si může stahovat nové obchody pomocí samostatného API klíče jen pro čtení.</string>
+    <string name="share_plan_live_updates_subtitle">Příjemce si může stahovat nové obchody z burzy pomocí API klíče, který přiložíte do souboru.</string>
     <string name="share_plan_never_included_live">Nikdy se nesdílí: klíč, kterým plán obchoduje, ID příkazů, názvy připojení ani adresy pro výběr. Soubor se zašifruje vaším heslem.</string>
     <string name="share_plan_live_key_instructions">Na burze %1$s vytvořte nový API klíč jen pro čtení, bez obchodování a bez výběrů. Nepoužívejte klíč, kterým plán nakupuje. Kdo má soubor a heslo, může klíč použít i mimo AccBot, takže vás chrání jen oprávnění nastavená na burze.</string>
-    <string name="share_plan_live_api_key">API klíč jen pro čtení</string>
-    <string name="share_plan_live_api_secret">API secret jen pro čtení</string>
-    <string name="share_plan_live_client_id">Client ID</string>
-    <string name="share_plan_live_passphrase">Passphrase</string>
     <string name="share_plan_live_verify">Ověřit klíč</string>
     <string name="share_plan_live_verified">Burza potvrdila, že klíč nemůže obchodovat ani vybírat.</string>
     <string name="share_plan_live_unverifiable">%1$s neumí oprávnění klíče ověřit. Potvrzuji, že klíč je jen pro čtení, bez obchodování a výběrů.</string>
@@ -202,6 +198,16 @@
     <string name="share_plan_live_password">Heslo k souboru</string>
     <string name="share_plan_live_password_confirm">Heslo znovu</string>
     <string name="share_plan_live_password_invalid">Použijte aspoň %1$d znaků a zadejte heslo dvakrát stejně.</string>
+    <string name="share_plan_key_source_title">Jaký API klíč sdílet</string>
+    <string name="share_plan_key_source_new">Nový klíč jen pro čtení (doporučeno)</string>
+    <string name="share_plan_key_source_new_subtitle">Na burze vytvoříte samostatný klíč, který nemůže obchodovat ani vybírat.</string>
+    <string name="share_plan_key_source_plan">API klíč tohoto plánu</string>
+    <string name="share_plan_key_source_plan_subtitle">Nemusíte vytvářet nový klíč, ale příjemce dostane klíč s plným přístupem.</string>
+    <string name="share_plan_plan_key_warning_title">Příjemce dostane váš obchodní klíč</string>
+    <string name="share_plan_plan_key_warning">Soubor bude obsahovat API klíč, kterým tento plán nakupuje, se všemi jeho oprávněními na burze %1$s: obchodování a pokud to klíč dovoluje, i výběry. AccBot u příjemce s klíčem jen čte, ale kdo má soubor a heslo, může klíč použít i mimo AccBot. Sdílení zastavíte jen smazáním nebo výměnou klíče na burze, čímž se zastaví i tento plán, dokud nezadáte nový klíč.</string>
+    <string name="share_plan_plan_key_confirm">Rozumím a chci sdílet klíč tohoto plánu</string>
+    <string name="share_plan_never_included_plan_key">Nikdy se nesdílí: ID příkazů, názvy připojení ani adresy pro výběr. Soubor se zašifruje vaším heslem.</string>
+    <string name="share_plan_key_plan_missing">Tento plán nemá uložený API klíč, který by šel sdílet.</string>
     <string name="shared_plans_password_title">Šifrovaný sdílený plán</string>
     <string name="shared_plans_password_text">Tento plán obsahuje živé aktualizace. Zadejte heslo, které vám dal odesílatel.</string>
     <string name="shared_plans_password_open">Otevřít</string>
@@ -216,6 +222,7 @@
     <string name="shared_plan_refresh_failed">Poslední obnovení selhalo. Klíč mohl být odvolán nebo je burza nedostupná.</string>
     <string name="shared_plan_key_verified">Burza ověřila, že klíč je jen pro čtení.</string>
     <string name="shared_plan_key_unverified">Burza neumí ověřit, že je klíč jen pro čtení; potvrdil to odesílatel.</string>
+    <string name="shared_plan_key_full_access">Odesílatel sdílel klíč, kterým jeho plán obchoduje. Klíč umí obchodovat, ale AccBot s ním jen čte. Soubor i heslo dobře chraňte.</string>
     <string name="shared_plan_account_scope">Nové obchody zahrnují všechny obchody tohoto páru na burzovním účtu odesílatele.</string>
     <string name="backup_step_select_data">Výběr dat</string>
     <string name="backup_step_encryption">Šifrování</string>
@@ -809,6 +816,11 @@
     </plurals>
     <string name="import_api_from_label">Od</string>
     <string name="import_api_all_history">Celá historie</string>
+    <string name="import_api_all_history_hint">Stáhne z burzy celou historii obchodů daného páru.</string>
+    <string name="import_api_since_last_purchase">Od posledního nákupu</string>
+    <string name="import_api_since_last_purchase_each_plan">Každý plán od svého posledního zaznamenaného nákupu</string>
+    <string name="import_api_since_date">Od data</string>
+    <string name="import_api_pick_date">Vybrat datum</string>
     <string name="import_api_start">Importovat</string>
 
     <!-- Schedule Builder -->

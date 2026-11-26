@@ -182,13 +182,9 @@
     <string name="shared_plan_side_sell">Sell</string>
     <string name="shared_plan_at_price">at %1$s</string>
     <string name="share_plan_live_updates">Live updates</string>
-    <string name="share_plan_live_updates_subtitle">The recipient can fetch new trades with a separate read-only API key.</string>
+    <string name="share_plan_live_updates_subtitle">The recipient can fetch new trades from the exchange with an API key you add to the file.</string>
     <string name="share_plan_never_included_live">Never shared: the key this plan trades with, order IDs, connection names and withdrawal addresses. The file is encrypted with your password.</string>
     <string name="share_plan_live_key_instructions">Create a new API key on %1$s with read-only access: no trading and no withdrawals. Do not use the key this plan buys with. Anyone with the file and password can use this key outside AccBot, so only its exchange permissions protect you.</string>
-    <string name="share_plan_live_api_key">Read-only API key</string>
-    <string name="share_plan_live_api_secret">Read-only API secret</string>
-    <string name="share_plan_live_client_id">Client ID</string>
-    <string name="share_plan_live_passphrase">Passphrase</string>
     <string name="share_plan_live_verify">Check key</string>
     <string name="share_plan_live_verified">The exchange confirmed this key cannot trade or withdraw.</string>
     <string name="share_plan_live_unverifiable">%1$s cannot report key permissions. I confirm this key is read-only, without trading or withdrawals.</string>
@@ -201,6 +197,16 @@
     <string name="share_plan_live_password">File password</string>
     <string name="share_plan_live_password_confirm">Confirm password</string>
     <string name="share_plan_live_password_invalid">Use at least %1$d characters and type the same password twice.</string>
+    <string name="share_plan_key_source_title">Which API key to share</string>
+    <string name="share_plan_key_source_new">New read-only key (recommended)</string>
+    <string name="share_plan_key_source_new_subtitle">Create a separate key on the exchange that cannot trade or withdraw.</string>
+    <string name="share_plan_key_source_plan">This plan’s API key</string>
+    <string name="share_plan_key_source_plan_subtitle">No new key needed, but the recipient gets full access to the key.</string>
+    <string name="share_plan_plan_key_warning_title">The recipient gets your trading key</string>
+    <string name="share_plan_plan_key_warning">The file will contain the API key this plan buys with, with all its permissions on %1$s: trading and, if the key allows it, withdrawals. AccBot on the recipient’s side only reads with it, but anyone with the file and password can use the key outside AccBot. To stop sharing, you have to delete or replace the key on the exchange, which also stops this plan until you enter a new key.</string>
+    <string name="share_plan_plan_key_confirm">I understand and want to share this plan’s key</string>
+    <string name="share_plan_never_included_plan_key">Never shared: order IDs, connection names and withdrawal addresses. The file is encrypted with your password.</string>
+    <string name="share_plan_key_plan_missing">This plan has no stored API key to share.</string>
     <string name="shared_plans_password_title">Encrypted shared plan</string>
     <string name="shared_plans_password_text">This plan includes live updates. Enter the password you got from the sender.</string>
     <string name="shared_plans_password_open">Open</string>
@@ -215,6 +221,7 @@
     <string name="shared_plan_refresh_failed">The last refresh failed. The key may have been revoked or the exchange is unreachable.</string>
     <string name="shared_plan_key_verified">Key checked by the exchange as read-only.</string>
     <string name="shared_plan_key_unverified">The exchange cannot confirm the key is read-only; the sender confirmed it.</string>
+    <string name="shared_plan_key_full_access">The sender shared the key their plan trades with. It can trade, but AccBot only reads with it. Keep the file and password safe.</string>
     <string name="shared_plan_account_scope">New trades include all trades of this pair on the sender’s exchange account.</string>
     <string name="backup_step_select_data">Select Data</string>
     <string name="backup_step_encryption">Encryption</string>
@@ -828,6 +835,11 @@
     </plurals>
     <string name="import_api_from_label">From</string>
     <string name="import_api_all_history">All history</string>
+    <string name="import_api_all_history_hint">Downloads the whole trade history of the pair from the exchange.</string>
+    <string name="import_api_since_last_purchase">Since the last purchase</string>
+    <string name="import_api_since_last_purchase_each_plan">Each plan from its own last recorded purchase</string>
+    <string name="import_api_since_date">From a date</string>
+    <string name="import_api_pick_date">Choose a date</string>
     <string name="import_api_start">Import</string>
 
     <!-- Exchange Instructions - Coinmate -->

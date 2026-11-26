@@ -213,6 +213,27 @@ class SharedPlanCodecTest {
         val stored = SharedPlanCodec.encode(decoded.plan)
         assertFalse(stored.contains("ro-key"))
         assertTrue(SharedPlanCodec.decode(stored).liveUpdates)
+        assertFalse(decoded.plan.fullAccessKey)
+    }
+
+    @Test
+    fun `plan key share is marked as full access and keeps the mark in storage`() {
+        val snapshot = SharedPlanCodec.createSnapshot(plan, transactions, shareId, isSandbox = false, includeAmounts = true)
+        val access = SharedPlanAccessDto(
+            exchange = "COINMATE", apiKey = "plan-key", apiSecret = "plan-secret", clientId = "42",
+            verifiedReadOnly = false, fullAccess = true
+        )
+        val file = SharedPlanCodec.encodeShare(snapshot, access, "correct horse", ::fakeEncrypt)
+        assertFalse(file.contains("plan-secret"))
+
+        val decoded = SharedPlanCodec.decodeShare(file, "correct horse", ::fakeDecrypt)
+        assertTrue(decoded.plan.liveUpdates)
+        assertTrue(decoded.plan.fullAccessKey)
+        assertFalse(decoded.plan.verifiedReadOnly)
+
+        val stored = SharedPlanCodec.encode(decoded.plan)
+        assertFalse(stored.contains("plan-key"))
+        assertTrue(SharedPlanCodec.decode(stored).fullAccessKey)
     }
 
     @Test

@@ -10,7 +10,9 @@ final class ImportCsvViewModel: ObservableObject {
     @Published var isComplete = false
     @Published var importMode: ImportMode = .csv
     @Published var showImportConfig = false
-    @Published var sinceDate: Date?
+    @Published var importRange: ImportRange = .allHistory
+    /// Latest recorded purchase of the plan, offered as the default import start.
+    @Published var lastPurchaseDate: Date?
     @Published var isPreviewing = false
     @Published var newTransactionCount = 0
     @Published var skippedTransactionCount = 0
@@ -163,6 +165,15 @@ final class ImportCsvViewModel: ObservableObject {
         }
     }
 
+    /// Opens the import options with "since the last purchase" preselected when the plan has one.
+    func openImportConfig() {
+        guard let plan = plan else { return }
+        let useCase = ImportTradeHistoryUseCase(transactionDao: deps.activeDatabase.transactionDao)
+        lastPurchaseDate = useCase.lastPurchaseAt(planId: plan.id)
+        importRange = lastPurchaseDate != nil ? .sinceLastPurchase : .allHistory
+        showImportConfig = true
+    }
+
     func importFromApi() {
         guard let plan = plan else { return }
         let isSandbox = deps.userPreferences.isSandboxMode()
@@ -187,7 +198,7 @@ final class ImportCsvViewModel: ObservableObject {
                 crypto: plan.crypto,
                 fiat: plan.fiat,
                 exchange: plan.exchange,
-                sinceDate: sinceDate
+                sinceDate: importUseCase.sinceDate(for: importRange, planId: plan.id)
             )
 
             for await event in stream {

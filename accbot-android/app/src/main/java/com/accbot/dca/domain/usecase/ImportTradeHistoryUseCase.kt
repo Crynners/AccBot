@@ -8,9 +8,20 @@ import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.exchange.ExchangeApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import com.accbot.dca.domain.model.TransactionSide
 import java.math.BigDecimal
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
+
+/** Which part of the exchange history an API import fetches. */
+sealed interface ImportRange {
+    /** Trades after the plan's last recorded purchase; the whole history when it has none. */
+    data object SinceLastPurchase : ImportRange
+    /** Trades from [millis] (epoch milliseconds) on. */
+    data class SinceDate(val millis: Long) : ImportRange
+    data object AllHistory : ImportRange
+}
 
 sealed class ApiImportResultState {
     data class Success(val imported: Int, val skipped: Int) : ApiImportResultState()
@@ -29,6 +40,21 @@ class ImportTradeHistoryUseCase @Inject constructor(
     private val transactionDao: TransactionDao,
     private val dcaPlanDao: DcaPlanDao
 ) {
+    /** Execution time of the plan's latest buy that has fills, or null when there is none. */
+    suspend fun lastPurchaseAt(planId: Long): Instant? =
+        transactionDao.getTransactionsByPlanSync(planId)
+            .filter { it.side == TransactionSide.BUY && it.status.hasFilledPortion }
+            .maxOfOrNull { it.executedAt }
+
+    /** The `sinceDate` to pass to [importFromApi] for [range]; null fetches the whole history. */
+    suspend fun sinceDateFor(range: ImportRange, planId: Long): Instant? = when (range) {
+        ImportRange.AllHistory -> null
+        is ImportRange.SinceDate -> Instant.ofEpochMilli(range.millis)
+        // Fills of the last purchase can carry their own trade IDs (Binance, Coinbase), so
+        // they would not match the stored order ID; skip a short margin after it instead.
+        ImportRange.SinceLastPurchase -> lastPurchaseAt(planId)?.plus(LAST_PURCHASE_MARGIN)
+    }
+
     fun importFromApi(
         api: ExchangeApi,
         planId: Long,
@@ -129,5 +155,10 @@ class ImportTradeHistoryUseCase @Inject constructor(
         } catch (e: Exception) {
             emit(ApiImportProgress.Error(e.message ?: "Import failed"))
         }
+    }
+
+    companion object {
+        /** Trades this close after the last recorded purchase are treated as part of it. */
+        val LAST_PURCHASE_MARGIN: Duration = Duration.ofMinutes(5)
     }
 }

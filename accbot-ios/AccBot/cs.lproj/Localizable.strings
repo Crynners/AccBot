@@ -999,3 +999,26 @@
 "Appearance" = "Vzhled";
 "Security & data" = "Zabezpečení a data";
 "For developers" = "Pro vývojáře";
+
+/* Plan sharing with the plan key, API import range */
+"The recipient can fetch new trades from the exchange with an API key you add to the file." = "Příjemce si může stahovat nové obchody z burzy pomocí API klíče, který přiložíte do souboru.";
+"Never shared: order IDs, connection names and withdrawal addresses. The file is encrypted with your password." = "Nikdy se nesdílí: ID příkazů, názvy připojení ani adresy pro výběr. Soubor se zašifruje vaším heslem.";
+"Which API key to share" = "Jaký API klíč sdílet";
+"New read-only key (recommended)" = "Nový klíč jen pro čtení (doporučeno)";
+"Create a separate key on the exchange that cannot trade or withdraw." = "Na burze vytvoříte samostatný klíč, který nemůže obchodovat ani vybírat.";
+"This plan’s API key" = "API klíč tohoto plánu";
+"No new key needed, but the recipient gets full access to the key." = "Nemusíte vytvářet nový klíč, ale příjemce dostane klíč s plným přístupem.";
+"The recipient gets your trading key" = "Příjemce dostane váš obchodní klíč";
+"The file will contain the API key this plan buys with, with all its permissions on %@: trading and, if the key allows it, withdrawals. AccBot on the recipient’s side only reads with it, but anyone with the file and password can use the key outside AccBot. To stop sharing, you have to delete or replace the key on the exchange, which also stops this plan until you enter a new key." = "Soubor bude obsahovat API klíč, kterým tento plán nakupuje, se všemi jeho oprávněními na burze %@: obchodování a pokud to klíč dovoluje, i výběry. AccBot u příjemce s klíčem jen čte, ale kdo má soubor a heslo, může klíč použít i mimo AccBot. Sdílení zastavíte jen smazáním nebo výměnou klíče na burze, čímž se zastaví i tento plán, dokud nezadáte nový klíč.";
+"I understand and want to share this plan’s key" = "Rozumím a chci sdílet klíč tohoto plánu";
+"This plan has no stored API key to share." = "Tento plán nemá uložený API klíč, který by šel sdílet.";
+"The sender shared the key their plan trades with. It can trade, but AccBot only reads with it. Keep the file and password safe." = "Odesílatel sdílel klíč, kterým jeho plán obchoduje. Klíč umí obchodovat, ale AccBot s ním jen čte. Soubor i heslo dobře chraňte.";
+"Since the last purchase" = "Od posledního nákupu";
+"Each plan from its own last recorded purchase" = "Každý plán od svého posledního zaznamenaného nákupu";
+"From a date" = "Od data";
+"Choose a date" = "Vybrat datum";
+"All history" = "Celá historie";
+"Downloads the whole trade history of the pair from the exchange." = "Stáhne z burzy celou historii obchodů daného páru.";
+"Import Configuration" = "Nastavení importu";
+"Start Import" = "Spustit import";
+"Import since" = "Importovat od";

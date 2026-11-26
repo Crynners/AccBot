@@ -13,6 +13,7 @@ import com.accbot.dca.domain.model.Transaction
 import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.usecase.ApiImportProgress
+import com.accbot.dca.domain.usecase.ImportRange
 import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.domain.usecase.CalculatePlanPnLUseCase
 import com.accbot.dca.domain.usecase.CancelSellOrderUseCase
@@ -60,7 +61,9 @@ data class PlanDetailsUiState(
     val apiImportProgress: String = "",
     val apiImportResult: ApiImportResultState? = null,
     val showImportDialog: Boolean = false,
-    val importSinceMillis: Long? = null,
+    val importRange: ImportRange = ImportRange.AllHistory,
+    /** Latest recorded purchase of the plan, offered as the default import start. */
+    val importLastPurchaseMillis: Long? = null,
     /** Number of OTHER plans on the same connection. When > 0, import dialog shows a warning. */
     val otherPlansOnSameConnection: Int = 0,
     /**
@@ -413,21 +416,34 @@ class PlanDetailsViewModel @Inject constructor(
     }
 
     fun showImportDialog() {
-        _uiState.update { it.copy(showImportDialog = true, importSinceMillis = null) }
+        val plan = _uiState.value.plan ?: return
+        viewModelScope.launch {
+            val lastPurchase = importTradeHistoryUseCase.lastPurchaseAt(plan.id)
+            _uiState.update {
+                it.copy(
+                    showImportDialog = true,
+                    importLastPurchaseMillis = lastPurchase?.toEpochMilli(),
+                    importRange = if (lastPurchase != null) ImportRange.SinceLastPurchase else ImportRange.AllHistory
+                )
+            }
+        }
     }
 
     fun dismissImportDialog() {
         _uiState.update { it.copy(showImportDialog = false) }
     }
 
-    fun setImportSinceDate(millis: Long?) {
-        _uiState.update { it.copy(importSinceMillis = millis) }
+    fun setImportRange(range: ImportRange) {
+        _uiState.update { it.copy(importRange = range) }
     }
 
     fun confirmImport() {
-        val sinceMillis = _uiState.value.importSinceMillis
+        val plan = _uiState.value.plan ?: return
+        val range = _uiState.value.importRange
         _uiState.update { it.copy(showImportDialog = false) }
-        importViaApi(sinceMillis?.let { Instant.ofEpochMilli(it) })
+        viewModelScope.launch {
+            importViaApi(importTradeHistoryUseCase.sinceDateFor(range, plan.id))
+        }
     }
 
     fun importViaApi(sinceDate: Instant? = null) {

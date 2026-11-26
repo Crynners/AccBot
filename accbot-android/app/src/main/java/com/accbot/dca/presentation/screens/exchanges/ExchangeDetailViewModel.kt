@@ -17,6 +17,7 @@ import com.accbot.dca.domain.usecase.ApiImportProgress
 import com.accbot.dca.domain.usecase.ApiImportResultState
 import com.accbot.dca.domain.usecase.ValidateAndSaveCredentialsUseCase
 import com.accbot.dca.domain.usecase.ImportTradeHistoryUseCase
+import com.accbot.dca.domain.usecase.ImportRange
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.presentation.credentials.CredentialFormDelegate
 import com.accbot.dca.presentation.credentials.CredentialFormState
@@ -25,7 +26,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.Immutable
-import java.time.Instant
 import javax.inject.Inject
 
 @Immutable
@@ -38,7 +38,9 @@ data class ExchangeDetailUiState(
     val apiImportProgress: String = "",
     val apiImportResult: ApiImportResultState? = null,
     val showImportDialog: Boolean = false,
-    val importSinceMillis: Long? = null,
+    val importRange: ImportRange = ImportRange.AllHistory,
+    /** At least one plan has a recorded purchase, so "since last purchase" is offered. */
+    val canImportSinceLastPurchase: Boolean = false,
     // Credential form (from delegate)
     val credentialForm: CredentialFormState = CredentialFormState()
 )
@@ -119,24 +121,35 @@ class ExchangeDetailViewModel @Inject constructor(
     }
 
     fun showImportDialog() {
-        _localState.update { it.copy(showImportDialog = true, importSinceMillis = null) }
+        val plans = _localState.value.plans
+        viewModelScope.launch {
+            val anyPurchase = plans.any { importTradeHistoryUseCase.lastPurchaseAt(it.id) != null }
+            _localState.update {
+                it.copy(
+                    showImportDialog = true,
+                    canImportSinceLastPurchase = anyPurchase,
+                    importRange = if (anyPurchase) ImportRange.SinceLastPurchase else ImportRange.AllHistory
+                )
+            }
+        }
     }
 
     fun dismissImportDialog() {
         _localState.update { it.copy(showImportDialog = false) }
     }
 
-    fun setImportSinceDate(millis: Long?) {
-        _localState.update { it.copy(importSinceMillis = millis) }
+    fun setImportRange(range: ImportRange) {
+        _localState.update { it.copy(importRange = range) }
     }
 
     fun confirmImport() {
-        val sinceMillis = _localState.value.importSinceMillis
+        val range = _localState.value.importRange
         _localState.update { it.copy(showImportDialog = false) }
-        importViaApi(sinceMillis?.let { Instant.ofEpochMilli(it) })
+        importViaApi(range)
     }
 
-    fun importViaApi(sinceDate: Instant? = null) {
+    /** Each plan resolves [range] on its own, so "since last purchase" uses that plan's purchase. */
+    fun importViaApi(range: ImportRange = ImportRange.AllHistory) {
         val state = _localState.value
         val exchange = state.exchange ?: return
         if (state.isApiImporting) return
@@ -170,7 +183,7 @@ class ExchangeDetailViewModel @Inject constructor(
                         crypto = plan.crypto,
                         fiat = plan.fiat,
                         exchange = exchange,
-                        sinceDate = sinceDate
+                        sinceDate = importTradeHistoryUseCase.sinceDateFor(range, plan.id)
                     ).collect { progress ->
                         when (progress) {
                             is ApiImportProgress.Fetching -> {

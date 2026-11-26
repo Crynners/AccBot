@@ -3,7 +3,6 @@ package com.accbot.dca.presentation.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,6 +11,9 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.accbot.dca.R
+import com.accbot.dca.domain.usecase.ImportRange
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -21,10 +23,14 @@ import java.time.format.FormatStyle
 @Composable
 fun ImportConfigDialog(
     planCount: Int? = null,
-    sinceMillis: Long?,
-    onSinceDateChanged: (Long?) -> Unit,
+    range: ImportRange,
+    onRangeChange: (ImportRange) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    /** Offer [ImportRange.SinceLastPurchase]; false when no plan has a recorded purchase yet. */
+    canImportSinceLastPurchase: Boolean = false,
+    /** Shown next to the "since last purchase" option; null for several plans (each uses its own). */
+    lastPurchaseMillis: Long? = null,
     /** When > 0, shows a warning that this connection has other plans and the import
      *  will fetch ALL trades from the exchange account, not just this plan's trades. */
     otherPlansOnSameConnection: Int = 0
@@ -33,10 +39,13 @@ fun ImportConfigDialog(
     val dateFormatter = remember {
         DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withZone(ZoneId.systemDefault())
     }
+    val dateTimeFormatter = remember {
+        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT).withZone(ZoneId.systemDefault())
+    }
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = sinceMillis,
+            initialSelectedDateMillis = (range as? ImportRange.SinceDate)?.millis,
             selectableDates = object : SelectableDates {
                 override fun isSelectableDate(utcTimeMillis: Long): Boolean {
                     return utcTimeMillis <= System.currentTimeMillis()
@@ -47,7 +56,7 @@ fun ImportConfigDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    onSinceDateChanged(datePickerState.selectedDateMillis)
+                    datePickerState.selectedDateMillis?.let { onRangeChange(ImportRange.SinceDate(it)) }
                     showDatePicker = false
                 }) {
                     Text(stringResource(R.string.common_done))
@@ -95,45 +104,38 @@ fun ImportConfigDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                OutlinedCard(
-                    onClick = { showDatePicker = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (sinceMillis != null)
-                                dateFormatter.format(Instant.ofEpochMilli(sinceMillis))
-                            else
-                                stringResource(R.string.import_api_all_history),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        if (sinceMillis != null) {
-                            IconButton(
-                                onClick = { onSinceDateChanged(null) },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Clear,
-                                    contentDescription = stringResource(R.string.import_api_all_history),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.CalendarMonth,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                if (canImportSinceLastPurchase) {
+                    RangeOption(
+                        selected = range == ImportRange.SinceLastPurchase,
+                        title = stringResource(R.string.import_api_since_last_purchase),
+                        subtitle = lastPurchaseMillis
+                            ?.let { dateTimeFormatter.format(Instant.ofEpochMilli(it)) }
+                            ?: stringResource(R.string.import_api_since_last_purchase_each_plan),
+                        onClick = { onRangeChange(ImportRange.SinceLastPurchase) }
+                    )
                 }
+                RangeOption(
+                    selected = range is ImportRange.SinceDate,
+                    title = stringResource(R.string.import_api_since_date),
+                    subtitle = (range as? ImportRange.SinceDate)
+                        ?.let { dateFormatter.format(Instant.ofEpochMilli(it.millis)) }
+                        ?: stringResource(R.string.import_api_pick_date),
+                    onClick = { showDatePicker = true },
+                    trailing = {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                )
+                RangeOption(
+                    selected = range == ImportRange.AllHistory,
+                    title = stringResource(R.string.import_api_all_history),
+                    subtitle = stringResource(R.string.import_api_all_history_hint),
+                    onClick = { onRangeChange(ImportRange.AllHistory) }
+                )
             }
         },
         confirmButton = {
@@ -147,4 +149,33 @@ fun ImportConfigDialog(
             }
         }
     )
+}
+
+@Composable
+private fun RangeOption(
+    selected: Boolean,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    trailing: (@Composable () -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Spacer(modifier = Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        trailing?.invoke()
+    }
 }

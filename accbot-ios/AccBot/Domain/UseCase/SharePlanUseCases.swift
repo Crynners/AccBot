@@ -6,12 +6,21 @@ struct PlanShareFile {
     let content: Data
 }
 
-/// Read-only key and file password for a live-update share.
+/// Which exchange key a live-update share carries.
+enum LiveShareKey {
+    /// A separate key the user created for sharing (the default). The check is the result of
+    /// `VerifyShareKeyUseCase`; `.unverifiable` requires the user's explicit confirmation.
+    case separate(ExchangeCredentials, keyCheck: ReadOnlyExchangeClient.KeyCheck)
+    /// The key the plan itself trades with. The user accepted a warning that the recipient gets
+    /// the key with all its exchange permissions. `CreatePlanShareUseCase` loads the key itself,
+    /// so its secret never passes through the UI.
+    case planKey
+}
+
+/// Exchange key and file password for a live-update share.
 struct LiveShareAccess {
-    let credentials: ExchangeCredentials
+    let key: LiveShareKey
     let password: String
-    /// Result of `VerifyShareKeyUseCase`; `.unverifiable` requires the user's explicit confirmation.
-    let keyCheck: ReadOnlyExchangeClient.KeyCheck
 }
 
 /// Reasons a key cannot be shared or used; the UI maps each case to a message.
@@ -21,6 +30,7 @@ enum ShareKeyProblem: Error, Equatable {
     case sameAsPlanKey
     case notReadOnly
     case checkFailed
+    case planKeyMissing
 
     var message: String {
         switch self {
@@ -29,6 +39,7 @@ enum ShareKeyProblem: Error, Equatable {
         case .sameAsPlanKey: return String(localized: "This is the key the plan trades with. Create a separate read-only key.")
         case .notReadOnly: return String(localized: "This key can trade or withdraw. Create a key with read-only access.")
         case .checkFailed: return String(localized: "The key could not be checked. Make sure it is correct and try again.")
+        case .planKeyMissing: return String(localized: "This plan has no stored API key to share.")
         }
     }
 }
@@ -83,12 +94,25 @@ struct CreatePlanShareUseCase {
         guard let plan = try dependencies.activeDatabase.planDao.getById(planId) else {
             throw SharedPlanError.invalid
         }
-        if let live {
-            guard live.credentials.exchange == plan.exchange else { throw ShareKeyProblem.wrongExchange }
-            guard live.keyCheck != .notReadOnly else { throw ShareKeyProblem.notReadOnly }
+        let isSandbox = dependencies.userPreferences.isSandboxMode()
+        let access: SharedPlanAccessDto?
+        switch live?.key {
+        case nil:
+            access = nil
+        case .separate(let credentials, let keyCheck):
+            guard credentials.exchange == plan.exchange else { throw ShareKeyProblem.wrongExchange }
+            guard keyCheck != .notReadOnly else { throw ShareKeyProblem.notReadOnly }
+            access = Self.accessDto(credentials, verifiedReadOnly: keyCheck == .readOnly, fullAccess: false)
+        case .planKey:
+            guard let planKey = dependencies.credentialsStore.get(for: plan.exchange, isSandbox: isSandbox),
+                  planKey.exchange == plan.exchange
+            else { throw ShareKeyProblem.planKeyMissing }
+            guard ReadOnlyExchangeClient.make(
+                credentials: planKey, isSandbox: isSandbox, factory: dependencies.exchangeApiFactory
+            ) != nil else { throw ShareKeyProblem.liveUpdatesUnsupported }
+            access = Self.accessDto(planKey, verifiedReadOnly: false, fullAccess: true)
         }
         let transactions = try dependencies.activeDatabase.transactionDao.getByPlanId(planId, limit: SharedPlanCodec.maxTrades)
-        let isSandbox = dependencies.userPreferences.isSandboxMode()
         let snapshot = SharedPlanCodec.createSnapshot(
             plan: plan,
             transactions: transactions,
@@ -97,21 +121,6 @@ struct CreatePlanShareUseCase {
             // A shared key reveals amounts anyway, so live shares always include them.
             includeAmounts: includeAmounts || live != nil
         )
-        let access = live.map { live -> SharedPlanAccessDto in
-            let credentials = live.credentials
-            func clean(_ value: String?) -> String? {
-                let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                return trimmed.isEmpty ? nil : trimmed
-            }
-            return SharedPlanAccessDto(
-                exchange: credentials.exchange.rawValue,
-                apiKey: clean(credentials.apiKey),
-                apiSecret: clean(credentials.apiSecret),
-                passphrase: clean(credentials.passphrase),
-                clientId: clean(credentials.clientId),
-                verifiedReadOnly: live.keyCheck == .readOnly
-            )
-        }
         let password = live?.password
         // Key derivation is deliberately slow, so keep it off the main thread.
         let content = try await Task.detached(priority: .userInitiated) {
@@ -125,6 +134,24 @@ struct CreatePlanShareUseCase {
         formatter.dateFormat = "yyyy-MM-dd"
         let fileName = "accbot_plan_\(plan.crypto.lowercased())_\(plan.fiat.lowercased())_\(formatter.string(from: Date())).json"
         return PlanShareFile(fileName: fileName, content: content)
+    }
+
+    private static func accessDto(
+        _ credentials: ExchangeCredentials, verifiedReadOnly: Bool, fullAccess: Bool
+    ) -> SharedPlanAccessDto {
+        func clean(_ value: String?) -> String? {
+            let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        return SharedPlanAccessDto(
+            exchange: credentials.exchange.rawValue,
+            apiKey: clean(credentials.apiKey),
+            apiSecret: clean(credentials.apiSecret),
+            passphrase: clean(credentials.passphrase),
+            clientId: clean(credentials.clientId),
+            verifiedReadOnly: verifiedReadOnly,
+            fullAccess: fullAccess ? true : nil
+        )
     }
 }
 
@@ -150,8 +177,12 @@ struct ImportSharedPlanUseCase {
             ) else { throw ShareKeyProblem.liveUpdatesUnsupported }
             // Offline: keep the key, the next refresh checks it again.
             let check = try? await client.verifyKey()
-            if check == .notReadOnly { throw ShareKeyProblem.notReadOnly }
-            if check == .readOnly { plan.verifiedReadOnly = true }
+            // A key the sender knowingly shared with full access is expected to allow trading.
+            if check == .notReadOnly && !plan.fullAccessKey { throw ShareKeyProblem.notReadOnly }
+            if check == .readOnly {
+                plan.verifiedReadOnly = true
+                plan.fullAccessKey = false
+            }
         }
         return try store.save(plan, credentials: decoded.credentials)
     }
@@ -187,7 +218,8 @@ struct RefreshSharedPlanUseCase {
                 credentials: credentials, isSandbox: plan.isSandbox, factory: dependencies.exchangeApiFactory
               ) else { return .notLive }
         do {
-            if try await client.verifyKey() == .notReadOnly {
+            // Expected for a key shared with full access; it is still used only for reads.
+            if try await client.verifyKey() == .notReadOnly, !plan.fullAccessKey {
                 try store.save(plan, credentials: nil)
                 return .keyNotReadOnly
             }
