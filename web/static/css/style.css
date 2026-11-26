@@ -1604,46 +1604,6 @@ section { padding: 96px 0; }
   border-radius: 24px;
 }
 
-.shots {
-  display: flex;
-  gap: 28px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding: 8px max(24px, calc((100vw - var(--max-w)) / 2 + 24px)) 24px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--surface-raised) transparent;
-}
-
-.shots:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-
-.shot {
-  flex: 0 0 auto;
-  width: 232px;
-  scroll-snap-align: center;
-  text-align: center;
-}
-
-.shot-frame {
-  border: 2px solid rgba(255,255,255,0.1);
-  border-radius: 26px;
-  background: var(--surface);
-  padding: 6px;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.35);
-}
-
-.shot-frame img {
-  width: 100%;
-  height: auto;
-  border-radius: 20px;
-}
-
-.shot figcaption {
-  margin-top: 14px;
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  line-height: 1.4;
-}
-
 /* ======================
    More features
    ====================== */
@@ -1875,7 +1835,6 @@ section { padding: 96px 0; }
   .more-grid { grid-template-columns: 1fr; }
   .support-side { grid-template-columns: 1fr; }
   .donate-btc { flex-direction: column; align-items: flex-start; }
-  .shot { width: 200px; }
 }
 
 .support-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -1920,3 +1879,10 @@ section { padding: 96px 0; }
   .burger { display: flex; }
   .lang-select-wrap { margin-left: 0; }
 }
+
+/* ======================
+   Hero chart backdrop and carousel
+   ====================== */
+.hero { overflow-x: clip; }
+.hero-mockup { position: relative; }
+.hero-mockup .phone-frame { position: relative; z-index: 1; will-change: transform; }
