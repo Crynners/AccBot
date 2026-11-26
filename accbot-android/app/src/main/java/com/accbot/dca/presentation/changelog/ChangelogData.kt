@@ -6,6 +6,26 @@ package com.accbot.dca.presentation.changelog
 object ChangelogData {
     val entries: List<ChangelogEntry> = listOf(
         ChangelogEntry(
+            versionCode = 29200,
+            version = "2.9.2",
+            titles = mapOf(
+                "cs" to "Snazší sdílení a rychlejší import",
+                "en" to "Easier Sharing & Faster Import",
+            ),
+            features = mapOf(
+                "cs" to listOf(
+                    "Živé sdílení plánu může místo nového klíče použít API klíč plánu, po jasném varování, že příjemce dostane plný přístup. Doporučená výchozí volba zůstává nový klíč jen pro čtení.",
+                    "Klíč jen pro čtení pro sdílení zadáte stejným formulářem jako při připojení burzy, včetně skenování QR kódu.",
+                    "Import přes API nově ve výchozím stavu začíná od posledního nákupu plánu. Pořád můžete zvolit datum nebo celou historii.",
+                ),
+                "en" to listOf(
+                    "Live plan sharing can now use the plan's own API key instead of a new one, after a clear warning that the recipient gets full access to it. A new read-only key stays the recommended default.",
+                    "Enter the read-only key for sharing with the same form as when connecting an exchange, including QR scanning.",
+                    "Import via API now starts from the plan's last purchase by default. You can still choose a date or the whole history.",
+                ),
+            )
+        ),
+        ChangelogEntry(
             versionCode = 29100,
             version = "2.9.1",
             titles = mapOf(
