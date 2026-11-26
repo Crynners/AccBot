@@ -37,7 +37,9 @@ struct ExchangeDetailView: View {
     @State private var showImportResult = false
     @State private var importResultMessage = ""
     @State private var showImportConfig = false
-    @State private var importSinceDate: Date?
+    @State private var importRange: ImportRange = .allHistory
+    /// At least one plan has a recorded purchase, so "since the last purchase" is offered.
+    @State private var canImportSinceLastPurchase = false
 
     @Environment(\.accBotColors) private var colors
 
@@ -152,8 +154,11 @@ struct ExchangeDetailView: View {
             Text(importResultMessage)
         }
         .sheet(isPresented: $showImportConfig) {
-            ImportConfigSheet(sinceDate: $importSinceDate) {
-                Task { await importFromApi(sinceDate: importSinceDate) }
+            ImportConfigSheet(
+                range: $importRange,
+                canImportSinceLastPurchase: canImportSinceLastPurchase
+            ) {
+                Task { await importFromApi(range: importRange) }
             }
         }
         .alert(String(localized: "Error"), isPresented: Binding(
@@ -570,6 +575,9 @@ struct ExchangeDetailView: View {
 
     private var importFromApiCard: some View {
         Button {
+            let useCase = ImportTradeHistoryUseCase(transactionDao: dependencies.activeDatabase.transactionDao)
+            canImportSinceLastPurchase = plans.contains { useCase.lastPurchaseAt(planId: $0.id) != nil }
+            importRange = canImportSinceLastPurchase ? .sinceLastPurchase : .allHistory
             showImportConfig = true
         } label: {
             HStack(spacing: Spacing.md) {
@@ -903,7 +911,8 @@ struct ExchangeDetailView: View {
         isValidating = false
     }
 
-    private func importFromApi(sinceDate: Date? = nil) async {
+    /// Each plan resolves `range` on its own, so "since the last purchase" uses that plan's purchase.
+    private func importFromApi(range: ImportRange) async {
         guard !plans.isEmpty else { return }
         let isSandbox = dependencies.userPreferences.sandboxMode
 
@@ -937,7 +946,7 @@ struct ExchangeDetailView: View {
                 crypto: plan.crypto,
                 fiat: plan.fiat,
                 exchange: exchange,
-                sinceDate: sinceDate
+                sinceDate: importUseCase.sinceDate(for: range, planId: plan.id)
             )
 
             for await progress in stream {

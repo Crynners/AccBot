@@ -274,14 +274,22 @@ private fun ReadOnlyBanner(plan: SharedPlan) {
                     )
                 }
                 if (plan.liveUpdates) {
-                    Text(
-                        stringResource(
-                            if (plan.verifiedReadOnly) R.string.shared_plan_key_verified
-                            else R.string.shared_plan_key_unverified
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                    if (plan.fullAccessKey) {
+                        Text(
+                            stringResource(R.string.shared_plan_key_full_access),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Warning
+                        )
+                    } else {
+                        Text(
+                            stringResource(
+                                if (plan.verifiedReadOnly) R.string.shared_plan_key_verified
+                                else R.string.shared_plan_key_unverified
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
                     Text(
                         stringResource(R.string.shared_plan_account_scope),
                         style = MaterialTheme.typography.labelSmall,

@@ -36,7 +36,7 @@ data class SharedPlanSnapshotDto(
      */
     @SerializedName("encrypted") val encrypted: Boolean? = null,
     @SerializedName("data") val data: String? = null,
-    /** Read-only exchange key; only ever present inside the encrypted payload. */
+    /** Exchange key for live updates; only ever present inside the encrypted payload. */
     @SerializedName("access") val access: SharedPlanAccessDto? = null,
     /** Local state of a stored share; ignored in received files. */
     @SerializedName("local") val local: SharedPlanLocalDto? = null
@@ -49,12 +49,19 @@ data class SharedPlanAccessDto(
     @SerializedName("passphrase") val passphrase: String? = null,
     @SerializedName("clientId") val clientId: String? = null,
     /** True when the sender's exchange confirmed the key cannot trade or withdraw. */
-    @SerializedName("verifiedReadOnly") val verifiedReadOnly: Boolean? = null
+    @SerializedName("verifiedReadOnly") val verifiedReadOnly: Boolean? = null,
+    /**
+     * True when the sender knowingly shared the key the plan trades with instead of a
+     * separate read-only key. The recipient then accepts a key that can trade, but still
+     * uses it only for reads.
+     */
+    @SerializedName("fullAccess") val fullAccess: Boolean? = null
 )
 
 data class SharedPlanLocalDto(
     @SerializedName("liveUpdates") val liveUpdates: Boolean? = null,
     @SerializedName("verifiedReadOnly") val verifiedReadOnly: Boolean? = null,
+    @SerializedName("fullAccessKey") val fullAccessKey: Boolean? = null,
     @SerializedName("refreshedAt") val refreshedAt: Long? = null,
     @SerializedName("refreshFailed") val refreshFailed: Boolean? = null
 )
@@ -118,6 +125,8 @@ data class SharedPlan(
     /** The sender included a read-only key, so new trades can be fetched from the exchange. */
     val liveUpdates: Boolean = false,
     val verifiedReadOnly: Boolean = false,
+    /** The sender shared the plan's own trading key (see [SharedPlanAccessDto.fullAccess]). */
+    val fullAccessKey: Boolean = false,
     val refreshedAt: Instant? = null,
     val refreshFailed: Boolean = false
 ) {

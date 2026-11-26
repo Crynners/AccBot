@@ -98,7 +98,11 @@ struct ImportCsvView: View {
             }
         }
         .sheet(isPresented: $viewModel.showImportConfig) {
-            ImportConfigSheet(sinceDate: $viewModel.sinceDate) {
+            ImportConfigSheet(
+                range: $viewModel.importRange,
+                canImportSinceLastPurchase: viewModel.lastPurchaseDate != nil,
+                lastPurchaseDate: viewModel.lastPurchaseDate
+            ) {
                 viewModel.importFromApi()
             }
         }
@@ -144,7 +148,7 @@ struct ImportCsvView: View {
                 .padding(.vertical, Spacing.xxl)
 
                 Button {
-                    viewModel.showImportConfig = true
+                    viewModel.openImportConfig()
                 } label: {
                     Label(String(localized: "Import from API"), systemImage: "arrow.down.circle")
                         .font(AccBotFonts.headline)
@@ -273,61 +277,89 @@ struct ImportCsvView: View {
 // MARK: - Import Config Sheet
 
 struct ImportConfigSheet: View {
-    @Binding var sinceDate: Date?
+    @Binding var range: ImportRange
+    /// Offer "since the last purchase"; false when no plan has a recorded purchase yet.
+    var canImportSinceLastPurchase: Bool = false
+    /// Shown with the "since the last purchase" option; nil for several plans (each uses its own).
+    var lastPurchaseDate: Date? = nil
     let onConfirm: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accBotColors) private var colors
-    @State private var useDateFilter = false
+    @State private var option: Option = .allHistory
     @State private var selectedDate = Date()
+
+    private enum Option: Hashable {
+        case sinceLastPurchase, sinceDate, allHistory
+    }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: Spacing.lg) {
-                Toggle(String(localized: "Filter by date"), isOn: $useDateFilter)
-                    .padding(.horizontal, Spacing.lg)
-
-                if useDateFilter {
-                    DatePicker(
-                        String(localized: "Import since"),
-                        selection: $selectedDate,
-                        in: ...Date(),
-                        displayedComponents: .date
-                    )
-                    .datePickerStyle(.graphical)
-                    .padding(.horizontal, Spacing.lg)
-                } else {
-                    VStack(spacing: Spacing.sm) {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(AccBotFonts.displayLarge)
-                            .foregroundStyle(colors.onSurfaceVariant)
-                            .accessibilityHidden(true)
-                        Text(String(localized: "All history will be imported"))
-                            .font(AccBotFonts.body)
-                            .foregroundStyle(colors.onSurfaceVariant)
+            Form {
+                Section {
+                    Picker(String(localized: "From"), selection: $option) {
+                        if canImportSinceLastPurchase {
+                            optionLabel(
+                                title: String(localized: "Since the last purchase"),
+                                subtitle: lastPurchaseDate.map {
+                                    $0.formatted(date: .abbreviated, time: .shortened)
+                                } ?? String(localized: "Each plan from its own last recorded purchase")
+                            )
+                            .tag(Option.sinceLastPurchase)
+                        }
+                        optionLabel(
+                            title: String(localized: "From a date"),
+                            subtitle: option == .sinceDate
+                                ? selectedDate.formatted(date: .abbreviated, time: .omitted)
+                                : String(localized: "Choose a date")
+                        )
+                        .tag(Option.sinceDate)
+                        optionLabel(
+                            title: String(localized: "All history"),
+                            subtitle: String(localized: "Downloads the whole trade history of the pair from the exchange.")
+                        )
+                        .tag(Option.allHistory)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.xxl)
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                } header: {
+                    Text(String(localized: "From"))
+                }
+                .listRowBackground(colors.surface)
+
+                if option == .sinceDate {
+                    Section {
+                        DatePicker(
+                            String(localized: "Import since"),
+                            selection: $selectedDate,
+                            in: ...Date(),
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.graphical)
+                    }
+                    .listRowBackground(colors.surface)
                 }
 
-                Spacer()
-
-                Button {
-                    sinceDate = useDateFilter ? selectedDate : nil
-                    dismiss()
-                    onConfirm()
-                } label: {
-                    Text(String(localized: "Start Import"))
-                        .font(AccBotFonts.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Spacing.md)
-                        .background(colors.primary)
-                        .foregroundStyle(colors.onPrimary)
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                Section {
+                    Button {
+                        range = selectedRange
+                        dismiss()
+                        onConfirm()
+                    } label: {
+                        Text(String(localized: "Start Import"))
+                            .font(AccBotFonts.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Spacing.md)
+                            .background(colors.primary)
+                            .foregroundStyle(colors.onPrimary)
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .padding(.horizontal, Spacing.lg)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
             }
-            .padding(.top, Spacing.lg)
+            .scrollContentBackground(.hidden)
             .background(colors.background)
             .navigationTitle(String(localized: "Import Configuration"))
             .navigationBarTitleDisplayMode(.inline)
@@ -338,6 +370,35 @@ struct ImportConfigSheet: View {
                     }
                 }
             }
+            .onAppear {
+                switch range {
+                case .sinceLastPurchase:
+                    option = canImportSinceLastPurchase ? .sinceLastPurchase : .allHistory
+                case .sinceDate(let date):
+                    option = .sinceDate
+                    selectedDate = date
+                case .allHistory:
+                    option = .allHistory
+                }
+            }
+        }
+    }
+
+    private var selectedRange: ImportRange {
+        switch option {
+        case .sinceLastPurchase: return .sinceLastPurchase
+        case .sinceDate: return .sinceDate(Calendar.current.startOfDay(for: selectedDate))
+        case .allHistory: return .allHistory
+        }
+    }
+
+    private func optionLabel(title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(AccBotFonts.body)
+            Text(subtitle)
+                .font(AccBotFonts.caption)
+                .foregroundStyle(colors.onSurfaceVariant)
         }
     }
 }

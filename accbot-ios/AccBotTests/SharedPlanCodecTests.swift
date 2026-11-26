@@ -99,6 +99,25 @@ final class SharedPlanCodecTests: XCTestCase {
         let stored = try SharedPlanCodec.encode(decoded.plan)
         XCTAssertFalse(String(decoding: stored, as: UTF8.self).contains("ro-key"))
         XCTAssertTrue(try SharedPlanCodec.decode(stored).liveUpdates)
+        XCTAssertFalse(decoded.plan.fullAccessKey)
+    }
+
+    func testPlanKeyShareIsMarkedAsFullAccess() throws {
+        let access = SharedPlanAccessDto(
+            exchange: "COINMATE", apiKey: "plan-key", apiSecret: "plan-secret", clientId: "42",
+            verifiedReadOnly: false, fullAccess: true
+        )
+        let data = try SharedPlanCodec.encodeShare(snapshot(), access: access, password: "correct horse", encrypt: fakeEncrypt)
+        XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("plan-secret"))
+
+        let decoded = try SharedPlanCodec.decodeShare(data, password: "correct horse", decrypt: fakeDecrypt)
+        XCTAssertTrue(decoded.plan.liveUpdates)
+        XCTAssertTrue(decoded.plan.fullAccessKey)
+        XCTAssertFalse(decoded.plan.verifiedReadOnly)
+
+        let stored = try SharedPlanCodec.encode(decoded.plan)
+        XCTAssertFalse(String(decoding: stored, as: UTF8.self).contains("plan-key"))
+        XCTAssertTrue(try SharedPlanCodec.decode(stored).fullAccessKey)
     }
 
     func testLiveShareWithRealBackupCrypto() throws {

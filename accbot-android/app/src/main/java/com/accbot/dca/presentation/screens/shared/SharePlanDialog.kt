@@ -8,18 +8,27 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -44,10 +54,13 @@ import com.accbot.dca.domain.model.ExchangeCredentials
 import com.accbot.dca.domain.model.supportsApiImport
 import com.accbot.dca.domain.usecase.CreatePlanShareUseCase
 import com.accbot.dca.domain.usecase.LiveShareAccess
+import com.accbot.dca.domain.usecase.LiveShareKey
 import com.accbot.dca.domain.usecase.ShareKeyException
 import com.accbot.dca.domain.usecase.ShareKeyProblem
 import com.accbot.dca.domain.usecase.VerifyShareKeyUseCase
 import com.accbot.dca.exchange.ReadOnlyExchangeClient.KeyCheck
+import com.accbot.dca.presentation.components.CredentialsInputCard
+import com.accbot.dca.presentation.components.areCredentialsComplete
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -63,6 +76,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+/** Which key a live-update share carries; see [LiveShareKey]. */
+enum class ShareKeySource {
+    /** A new key the user creates on the exchange with read-only access (the default). */
+    NEW_READ_ONLY,
+    /** The key this plan trades with, after an explicit warning. */
+    PLAN_KEY
+}
+
 @HiltViewModel
 class SharePlanViewModel @Inject constructor(
     private val createPlanShare: CreatePlanShareUseCase,
@@ -74,6 +95,9 @@ class SharePlanViewModel @Inject constructor(
     data class UiState(
         val includeAmounts: Boolean = false,
         val liveUpdates: Boolean = false,
+        val keySource: ShareKeySource = ShareKeySource.NEW_READ_ONLY,
+        /** The user accepted that the recipient gets the plan's key with all its permissions. */
+        val planKeyAcknowledged: Boolean = false,
         val apiKey: String = "",
         val apiSecret: String = "",
         val passphrase: String = "",
@@ -90,7 +114,11 @@ class SharePlanViewModel @Inject constructor(
     ) {
         val passwordValid: Boolean get() = password.length >= MIN_PASSWORD_LENGTH && password == passwordConfirm
         val keyAccepted: Boolean
-            get() = keyCheck == KeyCheck.READ_ONLY || (keyCheck == KeyCheck.UNVERIFIABLE && unverifiableConfirmed)
+            get() = when (keySource) {
+                ShareKeySource.NEW_READ_ONLY ->
+                    keyCheck == KeyCheck.READ_ONLY || (keyCheck == KeyCheck.UNVERIFIABLE && unverifiableConfirmed)
+                ShareKeySource.PLAN_KEY -> planKeyAcknowledged
+            }
         val canShare: Boolean
             get() = !creating && !verifying && (!liveUpdates || (keyAccepted && passwordValid))
     }
@@ -107,6 +135,13 @@ class SharePlanViewModel @Inject constructor(
     fun setPassword(value: String) = _uiState.update { it.copy(password = value) }
     fun setPasswordConfirm(value: String) = _uiState.update { it.copy(passwordConfirm = value) }
     fun setUnverifiableConfirmed(value: Boolean) = _uiState.update { it.copy(unverifiableConfirmed = value) }
+    fun setPlanKeyAcknowledged(value: Boolean) = _uiState.update { it.copy(planKeyAcknowledged = value) }
+
+    /** Switching the source always asks for the warning to be accepted again. */
+    fun setKeySource(value: ShareKeySource) = _uiState.update {
+        if (it.keySource == value) it
+        else it.copy(keySource = value, planKeyAcknowledged = false, keyProblem = null)
+    }
 
     /** Any change to the key invalidates an earlier verification. */
     private fun updateKey(change: (UiState) -> UiState) = _uiState.update {
@@ -142,21 +177,39 @@ class SharePlanViewModel @Inject constructor(
     fun createShare(planId: Long, exchange: Exchange) {
         val state = _uiState.value
         if (!state.canShare) return
-        val keyCheck = state.keyCheck
-        val live = if (state.liveUpdates && keyCheck != null) {
-            LiveShareAccess(credentials(exchange, state), state.password, keyCheck)
+        val live = if (state.liveUpdates) {
+            val key = when (state.keySource) {
+                ShareKeySource.PLAN_KEY -> LiveShareKey.PlanKey
+                ShareKeySource.NEW_READ_ONLY -> LiveShareKey.Separate(
+                    credentials(exchange, state),
+                    state.keyCheck ?: return
+                )
+            }
+            LiveShareAccess(key, state.password)
         } else null
-        _uiState.update { it.copy(creating = true, failed = false) }
+        _uiState.update { it.copy(creating = true, failed = false, keyProblem = null) }
         viewModelScope.launch {
+            var problem: ShareKeyProblem? = null
             val uri = try {
                 val file = createPlanShare(planId, state.includeAmounts, live)
                 withContext(Dispatchers.IO) { writeSharedExport(context, file.fileName, file.content) }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
+            } catch (e: ShareKeyException) {
+                problem = e.problem
+                null
             } catch (_: Exception) {
                 null
             }
-            _uiState.update { it.copy(creating = false, readyUri = uri, failed = uri == null) }
+            _uiState.update {
+                it.copy(
+                    creating = false,
+                    readyUri = uri,
+                    // A key problem is shown inline in the dialog instead of a generic error.
+                    failed = uri == null && problem == null,
+                    keyProblem = problem ?: it.keyProblem
+                )
+            }
         }
     }
 
@@ -173,8 +226,9 @@ class SharePlanViewModel @Inject constructor(
 }
 
 /**
- * Lets the user choose what a read-only plan share contains, optionally adding a separate
- * read-only exchange key for live updates, then opens the system share sheet.
+ * Lets the user choose what a read-only plan share contains, optionally adding an exchange
+ * key for live updates (by default a new read-only key, or the plan's own key after a
+ * warning), then opens the system share sheet.
  */
 @Composable
 fun SharePlanDialog(
@@ -248,7 +302,11 @@ fun SharePlanDialog(
                 }
                 Text(
                     text = stringResource(
-                        if (state.liveUpdates) R.string.share_plan_never_included_live else R.string.share_plan_never_included
+                        when {
+                            !state.liveUpdates -> R.string.share_plan_never_included
+                            state.keySource == ShareKeySource.PLAN_KEY -> R.string.share_plan_never_included_plan_key
+                            else -> R.string.share_plan_never_included_live
+                        }
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -279,26 +337,88 @@ private fun LiveKeySection(
     viewModel: SharePlanViewModel,
     onVerify: () -> Unit
 ) {
+    val busy = state.verifying || state.creating
     HorizontalDivider()
+    Text(stringResource(R.string.share_plan_key_source_title), fontWeight = FontWeight.Medium)
+    KeySourceOption(
+        selected = state.keySource == ShareKeySource.NEW_READ_ONLY,
+        title = stringResource(R.string.share_plan_key_source_new),
+        subtitle = stringResource(R.string.share_plan_key_source_new_subtitle),
+        enabled = !busy,
+        onClick = { viewModel.setKeySource(ShareKeySource.NEW_READ_ONLY) }
+    )
+    KeySourceOption(
+        selected = state.keySource == ShareKeySource.PLAN_KEY,
+        title = stringResource(R.string.share_plan_key_source_plan),
+        subtitle = stringResource(R.string.share_plan_key_source_plan_subtitle),
+        enabled = !busy,
+        onClick = { viewModel.setKeySource(ShareKeySource.PLAN_KEY) }
+    )
+
+    when (state.keySource) {
+        ShareKeySource.NEW_READ_ONLY -> NewKeyInput(state, exchange, viewModel, busy, onVerify)
+        ShareKeySource.PLAN_KEY -> PlanKeyWarning(state, exchange, viewModel, busy)
+    }
+
+    state.keyProblem?.let { problem ->
+        Text(
+            stringResource(
+                when (problem) {
+                    ShareKeyProblem.LIVE_UPDATES_UNSUPPORTED -> R.string.share_plan_key_unsupported
+                    ShareKeyProblem.WRONG_EXCHANGE -> R.string.share_plan_key_wrong_exchange
+                    ShareKeyProblem.SAME_AS_PLAN_KEY -> R.string.share_plan_key_same_as_plan
+                    ShareKeyProblem.NOT_READ_ONLY -> R.string.share_plan_key_not_read_only
+                    ShareKeyProblem.CHECK_FAILED -> R.string.share_plan_key_check_failed
+                    ShareKeyProblem.PLAN_KEY_MISSING -> R.string.share_plan_key_plan_missing
+                }
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = Error
+        )
+    }
+    HorizontalDivider()
+    Text(stringResource(R.string.share_plan_live_password_info), style = MaterialTheme.typography.bodySmall)
+    SecretField(state.password, viewModel::setPassword, stringResource(R.string.share_plan_live_password))
+    SecretField(state.passwordConfirm, viewModel::setPasswordConfirm, stringResource(R.string.share_plan_live_password_confirm))
+    if (state.password.isNotEmpty() && !state.passwordValid) {
+        Text(
+            stringResource(R.string.share_plan_live_password_invalid, SharePlanViewModel.MIN_PASSWORD_LENGTH),
+            style = MaterialTheme.typography.bodySmall,
+            color = Error
+        )
+    }
+}
+
+/** The same credentials form (QR scan, paste) as when adding a plan for this exchange. */
+@Composable
+private fun NewKeyInput(
+    state: SharePlanViewModel.UiState,
+    exchange: Exchange,
+    viewModel: SharePlanViewModel,
+    busy: Boolean,
+    onVerify: () -> Unit
+) {
     Text(
         stringResource(R.string.share_plan_live_key_instructions, exchange.displayName),
         style = MaterialTheme.typography.bodySmall,
         color = Warning
     )
-    SecretField(state.apiKey, viewModel::setApiKey, stringResource(R.string.share_plan_live_api_key), secret = false)
-    SecretField(state.apiSecret, viewModel::setApiSecret, stringResource(R.string.share_plan_live_api_secret))
-    if (exchange == Exchange.COINMATE) {
-        SecretField(state.clientId, viewModel::setClientId, stringResource(R.string.share_plan_live_client_id), secret = false)
-    }
-    if (exchange == Exchange.KUCOIN || exchange == Exchange.COINBASE) {
-        SecretField(state.passphrase, viewModel::setPassphrase, stringResource(R.string.share_plan_live_passphrase))
-    }
-    val keyComplete = state.apiKey.isNotBlank() && state.apiSecret.isNotBlank() &&
-        (exchange != Exchange.COINMATE || state.clientId.isNotBlank()) &&
-        ((exchange != Exchange.KUCOIN && exchange != Exchange.COINBASE) || state.passphrase.isNotBlank())
+    CredentialsInputCard(
+        exchange = exchange,
+        clientId = state.clientId,
+        apiKey = state.apiKey,
+        apiSecret = state.apiSecret,
+        passphrase = state.passphrase,
+        onClientIdChange = viewModel::setClientId,
+        onApiKeyChange = viewModel::setApiKey,
+        onApiSecretChange = viewModel::setApiSecret,
+        onPassphraseChange = viewModel::setPassphrase,
+        isValidating = busy
+    )
+    val keyComplete = areCredentialsComplete(exchange, state.clientId, state.apiKey, state.apiSecret, state.passphrase)
     OutlinedButton(
         onClick = onVerify,
-        enabled = keyComplete && !state.verifying && !state.creating,
+        enabled = keyComplete && !busy,
         modifier = Modifier.fillMaxWidth()
     ) {
         if (state.verifying) {
@@ -323,46 +443,102 @@ private fun LiveKeySection(
         }
         else -> Unit
     }
-    state.keyProblem?.let { problem ->
-        Text(
-            stringResource(
-                when (problem) {
-                    ShareKeyProblem.LIVE_UPDATES_UNSUPPORTED -> R.string.share_plan_key_unsupported
-                    ShareKeyProblem.WRONG_EXCHANGE -> R.string.share_plan_key_wrong_exchange
-                    ShareKeyProblem.SAME_AS_PLAN_KEY -> R.string.share_plan_key_same_as_plan
-                    ShareKeyProblem.NOT_READ_ONLY -> R.string.share_plan_key_not_read_only
-                    ShareKeyProblem.CHECK_FAILED -> R.string.share_plan_key_check_failed
-                }
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = Error
-        )
-    }
-    HorizontalDivider()
-    Text(stringResource(R.string.share_plan_live_password_info), style = MaterialTheme.typography.bodySmall)
-    SecretField(state.password, viewModel::setPassword, stringResource(R.string.share_plan_live_password))
-    SecretField(state.passwordConfirm, viewModel::setPasswordConfirm, stringResource(R.string.share_plan_live_password_confirm))
-    if (state.password.isNotEmpty() && !state.passwordValid) {
-        Text(
-            stringResource(R.string.share_plan_live_password_invalid, SharePlanViewModel.MIN_PASSWORD_LENGTH),
-            style = MaterialTheme.typography.bodySmall,
-            color = Error
-        )
+}
+
+@Composable
+private fun PlanKeyWarning(
+    state: SharePlanViewModel.UiState,
+    exchange: Exchange,
+    viewModel: SharePlanViewModel,
+    busy: Boolean
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    stringResource(R.string.share_plan_plan_key_warning_title),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+            Text(
+                stringResource(R.string.share_plan_plan_key_warning, exchange.displayName),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = state.planKeyAcknowledged,
+                        enabled = !busy,
+                        role = Role.Checkbox,
+                        onValueChange = viewModel::setPlanKeyAcknowledged
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(checked = state.planKeyAcknowledged, onCheckedChange = null, enabled = !busy)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    stringResource(R.string.share_plan_plan_key_confirm),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
     }
 }
 
 @Composable
-private fun SecretField(value: String, onChange: (String) -> Unit, label: String, secret: Boolean = true) {
+private fun KeySourceOption(
+    selected: Boolean,
+    title: String,
+    subtitle: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = null, enabled = enabled)
+        Spacer(modifier = Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun SecretField(value: String, onChange: (String) -> Unit, label: String) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
         label = { Text(label) },
         singleLine = true,
-        visualTransformation = if (secret) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-        keyboardOptions = KeyboardOptions(
-            keyboardType = if (secret) KeyboardType.Password else KeyboardType.Ascii,
-            autoCorrectEnabled = false
-        ),
+        visualTransformation = PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
         modifier = Modifier.fillMaxWidth()
     )
 }

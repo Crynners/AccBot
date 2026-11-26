@@ -170,7 +170,9 @@ object SharedPlanCodec {
         } catch (_: Exception) {
             invalid()
         }
-        val plan = convert(inner, trustLocal = false, live = access.verifiedReadOnly == true)
+        val verifiedReadOnly = access.verifiedReadOnly == true
+        val plan = convert(inner, trustLocal = false, live = verifiedReadOnly)
+            .copy(fullAccessKey = access.fullAccess == true && !verifiedReadOnly)
         if (plan.exchange != credentials.exchange) invalid()
         return DecodedShare(plan, credentials)
     }
@@ -210,6 +212,7 @@ object SharedPlanCodec {
             local != null -> plan.copy(
                 liveUpdates = local.liveUpdates == true,
                 verifiedReadOnly = local.verifiedReadOnly == true,
+                fullAccessKey = local.fullAccessKey == true,
                 refreshedAt = local.refreshedAt?.let(Instant::ofEpochMilli),
                 refreshFailed = local.refreshFailed == true
             )
@@ -301,6 +304,7 @@ object SharedPlanCodec {
         local = SharedPlanLocalDto(
             liveUpdates = plan.liveUpdates,
             verifiedReadOnly = plan.verifiedReadOnly,
+            fullAccessKey = plan.fullAccessKey.takeIf { it },
             refreshedAt = plan.refreshedAt?.toEpochMilli(),
             refreshFailed = plan.refreshFailed
         )

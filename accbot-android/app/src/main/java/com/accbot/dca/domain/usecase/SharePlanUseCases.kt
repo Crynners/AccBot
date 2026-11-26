@@ -24,16 +24,29 @@ import javax.inject.Inject
 
 data class PlanShareFile(val fileName: String, val content: String)
 
-/** Read-only key and file password for a live-update share. */
-data class LiveShareAccess(
-    val credentials: ExchangeCredentials,
-    val password: String,
-    /** Result of [VerifyShareKeyUseCase]; UNVERIFIABLE requires the user's explicit confirmation. */
-    val keyCheck: KeyCheck
-)
+/** Which exchange key a live-update share carries. */
+sealed interface LiveShareKey {
+    /**
+     * A separate key the user created for sharing (the default). [keyCheck] is the result
+     * of [VerifyShareKeyUseCase]; UNVERIFIABLE requires the user's explicit confirmation.
+     */
+    data class Separate(val credentials: ExchangeCredentials, val keyCheck: KeyCheck) : LiveShareKey
+
+    /**
+     * The key the plan itself trades with. The user accepted a warning that the recipient
+     * gets the key with all its exchange permissions. [CreatePlanShareUseCase] loads the key
+     * itself, so its secret never passes through the UI.
+     */
+    data object PlanKey : LiveShareKey
+}
+
+/** Exchange key and file password for a live-update share. */
+data class LiveShareAccess(val key: LiveShareKey, val password: String)
 
 /** Locale-free reasons a key cannot be shared; the UI maps them to strings. */
-enum class ShareKeyProblem { LIVE_UPDATES_UNSUPPORTED, WRONG_EXCHANGE, SAME_AS_PLAN_KEY, NOT_READ_ONLY, CHECK_FAILED }
+enum class ShareKeyProblem {
+    LIVE_UPDATES_UNSUPPORTED, WRONG_EXCHANGE, SAME_AS_PLAN_KEY, NOT_READ_ONLY, CHECK_FAILED, PLAN_KEY_MISSING
+}
 
 class ShareKeyException(val problem: ShareKeyProblem) : Exception(problem.name)
 
@@ -86,14 +99,31 @@ class CreatePlanShareUseCase @Inject constructor(
     private val database: DcaDatabase,
     private val sharedPlanStore: SharedPlanStore,
     private val userPreferences: UserPreferences,
-    private val backupCrypto: BackupCryptoUseCase
+    private val backupCrypto: BackupCryptoUseCase,
+    private val credentialsStore: CredentialsStore,
+    private val readOnlyClients: ReadOnlyExchangeClient.Factory
 ) {
+    /** @throws ShareKeyException when [LiveShareKey.PlanKey] is requested but cannot be shared. */
     suspend operator fun invoke(planId: Long, includeAmounts: Boolean, live: LiveShareAccess? = null): PlanShareFile {
         val plan = requireNotNull(database.dcaPlanDao().getPlanById(planId)) { "Plan $planId not found" }
-        require(live == null || live.credentials.exchange == plan.exchange)
-        require(live == null || live.keyCheck != KeyCheck.NOT_READ_ONLY)
-        val transactions = database.transactionDao().getTransactionsByPlanSync(planId)
         val isSandbox = userPreferences.processSandboxMode
+        val access = when (val key = live?.key) {
+            null -> null
+            is LiveShareKey.Separate -> {
+                require(key.credentials.exchange == plan.exchange)
+                require(key.keyCheck != KeyCheck.NOT_READ_ONLY)
+                accessDto(key.credentials, verifiedReadOnly = key.keyCheck == KeyCheck.READ_ONLY, fullAccess = false)
+            }
+            LiveShareKey.PlanKey -> {
+                val planKey = credentialsStore.getCredentials(plan.connectionId, isSandbox)
+                    ?.takeIf { it.exchange == plan.exchange }
+                    ?: throw ShareKeyException(ShareKeyProblem.PLAN_KEY_MISSING)
+                readOnlyClients.create(planKey, isSandbox)
+                    ?: throw ShareKeyException(ShareKeyProblem.LIVE_UPDATES_UNSUPPORTED)
+                accessDto(planKey, verifiedReadOnly = false, fullAccess = true)
+            }
+        }
+        val transactions = database.transactionDao().getTransactionsByPlanSync(planId)
         val snapshot = SharedPlanCodec.createSnapshot(
             plan = plan,
             transactions = transactions,
@@ -102,21 +132,22 @@ class CreatePlanShareUseCase @Inject constructor(
             // A shared key reveals amounts anyway, so live shares always include them.
             includeAmounts = includeAmounts || live != null
         )
-        val access = live?.let {
-            SharedPlanAccessDto(
-                exchange = it.credentials.exchange.name,
-                apiKey = it.credentials.apiKey.trim(),
-                apiSecret = it.credentials.apiSecret.trim(),
-                passphrase = it.credentials.passphrase?.trim()?.ifEmpty { null },
-                clientId = it.credentials.clientId?.trim()?.ifEmpty { null },
-                verifiedReadOnly = it.keyCheck == KeyCheck.READ_ONLY
-            )
-        }
         val content = SharedPlanCodec.encodeShare(snapshot, access, live?.password, backupCrypto::encrypt)
         val date = LocalDate.now(ZoneId.systemDefault())
         val fileName = "accbot_plan_${plan.crypto.lowercase()}_${plan.fiat.lowercase()}_$date.json"
         return PlanShareFile(fileName, content)
     }
+
+    private fun accessDto(credentials: ExchangeCredentials, verifiedReadOnly: Boolean, fullAccess: Boolean) =
+        SharedPlanAccessDto(
+            exchange = credentials.exchange.name,
+            apiKey = credentials.apiKey.trim(),
+            apiSecret = credentials.apiSecret.trim(),
+            passphrase = credentials.passphrase?.trim()?.ifEmpty { null },
+            clientId = credentials.clientId?.trim()?.ifEmpty { null },
+            verifiedReadOnly = verifiedReadOnly,
+            fullAccess = fullAccess.takeIf { it }
+        )
 }
 
 /** Validates a received plan share and stores it as a read-only snapshot. */
@@ -144,8 +175,11 @@ class ImportSharedPlanUseCase @Inject constructor(
             } catch (_: Exception) {
                 null // Offline: keep the key, the next refresh checks again.
             }
-            if (check == KeyCheck.NOT_READ_ONLY) throw ShareKeyException(ShareKeyProblem.NOT_READ_ONLY)
-            if (check == KeyCheck.READ_ONLY) plan = plan.copy(verifiedReadOnly = true)
+            // A key the sender knowingly shared with full access is expected to allow trading.
+            if (check == KeyCheck.NOT_READ_ONLY && !plan.fullAccessKey) {
+                throw ShareKeyException(ShareKeyProblem.NOT_READ_ONLY)
+            }
+            if (check == KeyCheck.READ_ONLY) plan = plan.copy(verifiedReadOnly = true, fullAccessKey = false)
         }
         return sharedPlanStore.save(plan, credentials)
     }
@@ -183,7 +217,8 @@ class RefreshSharedPlanUseCase @Inject constructor(
         val client = readOnlyClients.create(credentials, plan.isSandbox) ?: return Result.NotLive
         return try {
             when (client.verifyKey()) {
-                KeyCheck.NOT_READ_ONLY -> {
+                // Expected for a key shared with full access; it is still used only for reads.
+                KeyCheck.NOT_READ_ONLY -> if (!plan.fullAccessKey) {
                     sharedPlanStore.save(plan, credentials = null)
                     return Result.KeyNotReadOnly
                 }

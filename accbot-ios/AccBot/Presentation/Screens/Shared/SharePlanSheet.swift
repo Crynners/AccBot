@@ -1,5 +1,13 @@
 import SwiftUI
 
+/// Which key a live-update share carries; see `LiveShareKey`.
+enum ShareKeySource: Hashable {
+    /// A new key the user creates on the exchange with read-only access (the default).
+    case newReadOnly
+    /// The key this plan trades with, after an explicit warning.
+    case planKey
+}
+
 /// Options for sharing one of the user's own plans. Keys and passwords live in memory only.
 @MainActor
 final class SharePlanViewModel: ObservableObject {
@@ -7,6 +15,17 @@ final class SharePlanViewModel: ObservableObject {
 
     @Published var includeAmounts = true
     @Published var liveUpdates = false
+    /// Switching the source always asks for the warning to be accepted again.
+    @Published var keySource: ShareKeySource = .newReadOnly {
+        didSet {
+            if keySource != oldValue {
+                planKeyAcknowledged = false
+                keyProblem = nil
+            }
+        }
+    }
+    /// The user accepted that the recipient gets the plan's key with all its permissions.
+    @Published var planKeyAcknowledged = false
     @Published var apiKey = "" { didSet { if apiKey != oldValue { resetCheck() } } }
     @Published var apiSecret = "" { didSet { if apiSecret != oldValue { resetCheck() } } }
     @Published var passphrase = "" { didSet { if passphrase != oldValue { resetCheck() } } }
@@ -56,11 +75,16 @@ final class SharePlanViewModel: ObservableObject {
     }
 
     var keyAccepted: Bool {
-        keyCheck == .readOnly || (keyCheck == .unverifiable && unverifiableConfirmed)
+        switch keySource {
+        case .newReadOnly:
+            return keyCheck == .readOnly || (keyCheck == .unverifiable && unverifiableConfirmed)
+        case .planKey:
+            return planKeyAcknowledged
+        }
     }
 
     var canShare: Bool {
-        guard !creating else { return false }
+        guard !creating, !verifying else { return false }
         return !liveUpdates || (keyAccepted && passwordValid)
     }
 
@@ -85,11 +109,19 @@ final class SharePlanViewModel: ObservableObject {
 
     func createShare() {
         guard let dependencies, canShare else { return }
+        var live: LiveShareAccess?
+        if liveUpdates {
+            switch keySource {
+            case .planKey:
+                live = LiveShareAccess(key: .planKey, password: password)
+            case .newReadOnly:
+                guard let keyCheck else { return }
+                live = LiveShareAccess(key: .separate(credentials, keyCheck: keyCheck), password: password)
+            }
+        }
         creating = true
         error = nil
-        let live = liveUpdates
-            ? LiveShareAccess(credentials: credentials, password: password, keyCheck: keyCheck ?? .unverifiable)
-            : nil
+        keyProblem = nil
         Task {
             do {
                 let file = try await CreatePlanShareUseCase(dependencies: dependencies)
@@ -97,6 +129,9 @@ final class SharePlanViewModel: ObservableObject {
                 let url = FileManager.default.temporaryDirectory.appendingPathComponent(file.fileName)
                 try file.content.write(to: url, options: [.atomic, .completeFileProtection])
                 sharedFile = url
+            } catch let problem as ShareKeyProblem {
+                // Shown inline next to the key choice instead of a generic error.
+                keyProblem = problem
             } catch {
                 self.error = String(localized: "Could not create the share file.")
             }
@@ -149,7 +184,7 @@ struct SharePlanSheet: View {
 
                     if viewModel.exchange.supportsApiImport {
                         Toggle(String(localized: "Live updates"), isOn: $viewModel.liveUpdates)
-                        Text(String(localized: "The recipient can fetch new trades with a separate read-only API key."))
+                        Text(String(localized: "The recipient can fetch new trades from the exchange with an API key you add to the file."))
                             .font(AccBotFonts.caption)
                             .foregroundStyle(colors.onSurfaceVariant)
                     }
@@ -158,13 +193,12 @@ struct SharePlanSheet: View {
 
                 if viewModel.liveUpdates {
                     keySection
+                    keyDetailSection
                     passwordSection
                 }
 
                 Section {
-                    Text(viewModel.liveUpdates
-                         ? String(localized: "Never shared: the key this plan trades with, order IDs, connection names and withdrawal addresses. The file is encrypted with your password.")
-                         : String(localized: "Never shared: API keys, order IDs, connection names and withdrawal addresses. The file cannot be used to run the plan."))
+                    Text(neverSharedText)
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.onSurfaceVariant)
                     if let error = viewModel.error {
@@ -207,23 +241,75 @@ struct SharePlanSheet: View {
         }
     }
 
+    private var neverSharedText: String {
+        if !viewModel.liveUpdates {
+            return String(localized: "Never shared: API keys, order IDs, connection names and withdrawal addresses. The file cannot be used to run the plan.")
+        }
+        if viewModel.keySource == .planKey {
+            return String(localized: "Never shared: order IDs, connection names and withdrawal addresses. The file is encrypted with your password.")
+        }
+        return String(localized: "Never shared: the key this plan trades with, order IDs, connection names and withdrawal addresses. The file is encrypted with your password.")
+    }
+
     private var keySection: some View {
+        Section {
+            Picker(String(localized: "Which API key to share"), selection: $viewModel.keySource) {
+                keySourceLabel(
+                    title: String(localized: "New read-only key (recommended)"),
+                    subtitle: String(localized: "Create a separate key on the exchange that cannot trade or withdraw.")
+                )
+                .tag(ShareKeySource.newReadOnly)
+                keySourceLabel(
+                    title: String(localized: "This plan’s API key"),
+                    subtitle: String(localized: "No new key needed, but the recipient gets full access to the key.")
+                )
+                .tag(ShareKeySource.planKey)
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+            .disabled(viewModel.verifying || viewModel.creating)
+        } header: {
+            Text(String(localized: "Which API key to share"))
+        }
+        .listRowBackground(colors.surface)
+    }
+
+    private func keySourceLabel(title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(AccBotFonts.body)
+            Text(subtitle)
+                .font(AccBotFonts.caption)
+                .foregroundStyle(colors.onSurfaceVariant)
+        }
+    }
+
+    @ViewBuilder
+    private var keyDetailSection: some View {
+        switch viewModel.keySource {
+        case .newReadOnly:
+            newKeySection
+        case .planKey:
+            planKeySection
+        }
+    }
+
+    /// The same credentials form (QR scan) as when connecting the exchange.
+    private var newKeySection: some View {
         Section {
             Text(String(localized: "Create a new API key on \(viewModel.exchange.displayName) with read-only access: no trading and no withdrawals. Do not use the key this plan buys with. Anyone with the file and password can use this key outside AccBot, so only its exchange permissions protect you."))
                 .font(AccBotFonts.caption)
                 .foregroundStyle(colors.onSurfaceVariant)
 
-            TextField(String(localized: "Read-only API key"), text: $viewModel.apiKey)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            SecureField(String(localized: "Read-only API secret"), text: $viewModel.apiSecret)
-            if viewModel.exchange.requiresClientId {
-                TextField(String(localized: "Client ID"), text: $viewModel.clientId)
-                    .keyboardType(.numberPad)
-            }
-            if viewModel.exchange.requiresPassphrase {
-                SecureField(String(localized: "Passphrase"), text: $viewModel.passphrase)
-            }
+            ExchangeCredentialsForm(
+                exchange: viewModel.exchange,
+                apiKey: $viewModel.apiKey,
+                apiSecret: $viewModel.apiSecret,
+                passphrase: $viewModel.passphrase,
+                clientId: $viewModel.clientId
+            )
+            .disabled(viewModel.verifying || viewModel.creating)
+            .listRowInsets(EdgeInsets(top: Spacing.sm, leading: Spacing.sm, bottom: Spacing.sm, trailing: Spacing.sm))
 
             Button {
                 viewModel.verifyKey()
@@ -236,7 +322,7 @@ struct SharePlanSheet: View {
                     }
                 }
             }
-            .disabled(!viewModel.keyComplete || viewModel.verifying)
+            .disabled(!viewModel.keyComplete || viewModel.verifying || viewModel.creating)
 
             switch viewModel.keyCheck {
             case .readOnly:
@@ -251,15 +337,45 @@ struct SharePlanSheet: View {
             case .notReadOnly, .none:
                 EmptyView()
             }
-            if let problem = viewModel.keyProblem {
-                Text(problem.message)
-                    .font(AccBotFonts.caption)
-                    .foregroundStyle(colors.error)
-            }
+            keyProblemText
         } header: {
             Text(String(localized: "Read-only API key"))
         }
         .listRowBackground(colors.surface)
+    }
+
+    private var planKeySection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Label(String(localized: "The recipient gets your trading key"), systemImage: "exclamationmark.triangle.fill")
+                    .font(AccBotFonts.headline)
+                    .foregroundStyle(colors.error)
+                Text(String(localized: "The file will contain the API key this plan buys with, with all its permissions on \(viewModel.exchange.displayName): trading and, if the key allows it, withdrawals. AccBot on the recipient’s side only reads with it, but anyone with the file and password can use the key outside AccBot. To stop sharing, you have to delete or replace the key on the exchange, which also stops this plan until you enter a new key."))
+                    .font(AccBotFonts.caption)
+                    .foregroundStyle(colors.onSurface)
+            }
+            .padding(.vertical, Spacing.xs)
+            .listRowBackground(colors.error.opacity(0.12))
+
+            Toggle(isOn: $viewModel.planKeyAcknowledged) {
+                Text(String(localized: "I understand and want to share this plan’s key"))
+                    .font(AccBotFonts.caption)
+            }
+            .disabled(viewModel.creating)
+            .listRowBackground(colors.surface)
+
+            keyProblemText
+                .listRowBackground(colors.surface)
+        }
+    }
+
+    @ViewBuilder
+    private var keyProblemText: some View {
+        if let problem = viewModel.keyProblem {
+            Text(problem.message)
+                .font(AccBotFonts.caption)
+                .foregroundStyle(colors.error)
+        }
     }
 
     private var passwordSection: some View {

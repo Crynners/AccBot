@@ -214,10 +214,12 @@ fun PlanDetailsScreen(
     // Import configuration dialog
     if (uiState.showImportDialog) {
         ImportConfigDialog(
-            sinceMillis = uiState.importSinceMillis,
-            onSinceDateChanged = { viewModel.setImportSinceDate(it) },
+            range = uiState.importRange,
+            onRangeChange = viewModel::setImportRange,
             onConfirm = { viewModel.confirmImport() },
             onDismiss = { viewModel.dismissImportDialog() },
+            canImportSinceLastPurchase = uiState.importLastPurchaseMillis != null,
+            lastPurchaseMillis = uiState.importLastPurchaseMillis,
             otherPlansOnSameConnection = uiState.otherPlansOnSameConnection
         )
     }

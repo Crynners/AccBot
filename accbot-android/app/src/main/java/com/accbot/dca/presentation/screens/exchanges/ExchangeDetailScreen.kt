@@ -115,10 +115,11 @@ fun ExchangeDetailScreen(
     if (uiState.showImportDialog) {
         ImportConfigDialog(
             planCount = uiState.plans.size,
-            sinceMillis = uiState.importSinceMillis,
-            onSinceDateChanged = { viewModel.setImportSinceDate(it) },
+            range = uiState.importRange,
+            onRangeChange = viewModel::setImportRange,
             onConfirm = { viewModel.confirmImport() },
-            onDismiss = { viewModel.dismissImportDialog() }
+            onDismiss = { viewModel.dismissImportDialog() },
+            canImportSinceLastPurchase = uiState.canImportSinceLastPurchase
         )
     }
 

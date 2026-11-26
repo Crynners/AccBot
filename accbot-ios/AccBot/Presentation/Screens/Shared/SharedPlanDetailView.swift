@@ -229,11 +229,17 @@ struct SharedPlanDetailView: View {
                         .font(AccBotFonts.caption)
                         .foregroundStyle(colors.error)
                 }
-                Text(plan.verifiedReadOnly
-                     ? String(localized: "Key checked by the exchange as read-only.")
-                     : String(localized: "The exchange cannot confirm the key is read-only; the sender confirmed it."))
-                    .font(AccBotFonts.caption)
-                    .foregroundStyle(colors.onSurfaceVariant)
+                if plan.fullAccessKey {
+                    Text(String(localized: "The sender shared the key their plan trades with. It can trade, but AccBot only reads with it. Keep the file and password safe."))
+                        .font(AccBotFonts.caption)
+                        .foregroundStyle(colors.warning)
+                } else {
+                    Text(plan.verifiedReadOnly
+                         ? String(localized: "Key checked by the exchange as read-only.")
+                         : String(localized: "The exchange cannot confirm the key is read-only; the sender confirmed it."))
+                        .font(AccBotFonts.caption)
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
                 Text(String(localized: "New trades include all trades of this pair on the sender’s exchange account."))
                     .font(AccBotFonts.caption)
                     .foregroundStyle(colors.onSurfaceVariant)

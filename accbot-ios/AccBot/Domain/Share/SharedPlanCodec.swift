@@ -60,7 +60,7 @@ struct SharedPlanTradeDto: Codable, Equatable {
     var ref: String?
 }
 
-/// Read-only exchange key of a live-update share. Only ever inside the encrypted payload.
+/// Exchange key of a live-update share. Only ever inside the encrypted payload.
 struct SharedPlanAccessDto: Codable, Equatable {
     var exchange: String?
     var apiKey: String?
@@ -68,12 +68,16 @@ struct SharedPlanAccessDto: Codable, Equatable {
     var passphrase: String?
     var clientId: String?
     var verifiedReadOnly: Bool?
+    /// True when the sender knowingly shared the key the plan trades with instead of a separate
+    /// read-only key. The recipient then accepts a key that can trade, but still only reads with it.
+    var fullAccess: Bool? = nil
 }
 
 /// Recipient-side state of a stored share.
 struct SharedPlanLocalDto: Codable, Equatable {
     var liveUpdates: Bool?
     var verifiedReadOnly: Bool?
+    var fullAccessKey: Bool? = nil
     var refreshedAt: Int64?
     var refreshFailed: Bool?
 }
@@ -122,6 +126,8 @@ struct SharedPlan: Identifiable, Equatable, Sendable {
     var liveUpdates: Bool = false
     /// The exchange confirmed the key cannot trade or withdraw.
     var verifiedReadOnly: Bool = false
+    /// The sender shared the plan's own trading key (see `SharedPlanAccessDto.fullAccess`).
+    var fullAccessKey: Bool = false
     var refreshedAt: Date? = nil
     var refreshFailed: Bool = false
 
@@ -370,7 +376,9 @@ enum SharedPlanCodec {
             passphrase: access.passphrase.flatMap { $0.isEmpty ? nil : $0 },
             clientId: access.clientId.flatMap { $0.isEmpty ? nil : $0 }
         )
-        let plan = try convert(inner, trustLocal: false, live: access.verifiedReadOnly == true)
+        let verifiedReadOnly = access.verifiedReadOnly == true
+        var plan = try convert(inner, trustLocal: false, live: verifiedReadOnly)
+        plan.fullAccessKey = access.fullAccess == true && !verifiedReadOnly
         guard plan.exchange == exchange else { throw SharedPlanError.invalid }
         return DecodedShare(plan: plan, credentials: credentials)
     }
@@ -400,6 +408,7 @@ enum SharedPlanCodec {
         } else if trustLocal, let local = dto.local {
             result.liveUpdates = local.liveUpdates == true
             result.verifiedReadOnly = local.verifiedReadOnly == true
+            result.fullAccessKey = local.fullAccessKey == true
             result.refreshedAt = local.refreshedAt.map { date($0) }
             result.refreshFailed = local.refreshFailed == true
         }
@@ -502,6 +511,7 @@ enum SharedPlanCodec {
             local: SharedPlanLocalDto(
                 liveUpdates: plan.liveUpdates,
                 verifiedReadOnly: plan.verifiedReadOnly,
+                fullAccessKey: plan.fullAccessKey ? true : nil,
                 refreshedAt: plan.refreshedAt.map { millis($0) },
                 refreshFailed: plan.refreshFailed
             )
