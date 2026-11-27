@@ -73,7 +73,21 @@ class SharedPlanStore internal constructor(
             if (existing != null && existing.sharedAt.isAfter(plan.sharedAt)) {
                 return@withContext SaveResult.Outdated(existing)
             }
-            val stored = plan.copy(liveUpdates = credentials != null)
+            // A QR code carries a key but no trades. Re-importing it must not wipe history that
+            // was already downloaded (or came from a file snapshot).
+            val isQr = credentials != null && plan.trades.isEmpty()
+            val stored = when {
+                isQr && existing != null -> plan.copy(
+                    trades = existing.trades,
+                    tradesFromExchange = existing.tradesFromExchange,
+                    refreshedAt = existing.refreshedAt,
+                    // Keep the snapshot time of file trades so the later merge leaves no gap.
+                    sharedAt = if (existing.tradesFromExchange) plan.sharedAt else existing.sharedAt,
+                    liveUpdates = true
+                )
+                isQr -> plan.copy(tradesFromExchange = true, liveUpdates = true)
+                else -> plan.copy(liveUpdates = credentials != null)
+            }
             if (credentials != null) keys.put(plan.shareId, credentials) else keys.remove(plan.shareId)
             writeLocked(stored)
             SaveResult.Saved(stored, replaced = existing != null)
