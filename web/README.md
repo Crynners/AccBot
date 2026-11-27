@@ -1,4 +1,4 @@
-# AccBot website (accbot.eu)
+# AccBot website (accbot.cz)
 
 SvelteKit site, prerendered to static HTML with `@sveltejs/adapter-static` and hosted on Cloudflare Pages.
 
@@ -31,4 +31,4 @@ Cloudflare Pages project connected to this repository:
 - Build command: `npm run build`
 - Build output directory: `build`
 - Production branch: `main` (other branches and pull requests get preview URLs)
-- Custom domain: `accbot.eu`
+- Custom domains: `accbot.cz` and `www.accbot.cz` (zone in Cloudflare); `accbot.eu` once its nameservers move to Cloudflare
