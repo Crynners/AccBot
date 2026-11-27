@@ -343,6 +343,8 @@ fun DashboardScreen(
                                 onDragEnd = { landscapeDragState.endDrag() }
                             )
                         }
+                    }
+                    if (!uiState.isLoading) {
                         items(uiState.sharedPlans, key = { "shared-${it.plan.shareId}" }) { info ->
                             SharedPlanCard(info, onClick = { onSharedPlanClick?.invoke(info.plan.shareId) })
                         }
@@ -443,6 +445,8 @@ fun DashboardScreen(
                             onDragEnd = { portraitDragState.endDrag() }
                         )
                     }
+                }
+                if (!uiState.isLoading) {
                     items(uiState.sharedPlans, key = { "shared-${it.plan.shareId}" }) { info ->
                         SharedPlanCard(info, onClick = { onSharedPlanClick?.invoke(info.plan.shareId) })
                     }

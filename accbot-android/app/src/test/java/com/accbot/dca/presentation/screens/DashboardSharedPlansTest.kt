@@ -7,9 +7,14 @@ import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.share.SharedPlan
 import com.accbot.dca.domain.share.SharedPlanTrade
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
+import com.accbot.dca.domain.usecase.RefreshSharedPlanUseCase
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import java.math.BigDecimal
 import java.time.Instant
 
@@ -24,7 +29,8 @@ class DashboardSharedPlansTest {
         includesAmounts: Boolean = true,
         crypto: String = "BTC",
         fiat: String = "CZK",
-        refreshFailed: Boolean = false
+        refreshFailed: Boolean = false,
+        liveUpdates: Boolean = true
     ) = SharedPlan(
         shareId = id, sharedAt = t0, isSandbox = isSandbox, includesAmounts = includesAmounts,
         name = name, exchange = Exchange.COINMATE, exchangeName = "Coinmate", crypto = crypto, fiat = fiat,
@@ -39,7 +45,7 @@ class DashboardSharedPlansTest {
                 fee = null, feeAsset = null
             )
         ),
-        liveUpdates = true, refreshFailed = refreshFailed
+        liveUpdates = liveUpdates, refreshFailed = refreshFailed
     )
 
     @Test
@@ -81,14 +87,42 @@ class DashboardSharedPlansTest {
     }
 
     @Test
-    fun `shared plans never change holdings`() {
-        // Holdings are computed from Room transactions only; the shared list lives in a separate field.
-        val state = DashboardUiState()
-        val cards = DashboardViewModel.sharedPlanCards(listOf(plan("a")), false, emptyMap())
-        val withShared = state.copy(sharedPlans = cards)
-        assertEquals(state.holdings, withShared.holdings)
-        assertEquals(state.missedPurchases, withShared.missedPurchases)
-        assertEquals(state.activePlans, withShared.activePlans)
-        assertNotNull(withShared.sharedPlans.singleOrNull())
+    fun `key removed only for a plan that lost live updates after a not read only refresh`() {
+        val revoked = DashboardViewModel.revokedShareIds(
+            mapOf(
+                "a" to RefreshSharedPlanUseCase.Result.KeyNotReadOnly,
+                "b" to RefreshSharedPlanUseCase.Result.KeyNotReadOnly
+            )
+        )
+        assertEquals(setOf("a", "b"), revoked)
+        val cards = DashboardViewModel.sharedPlanCards(
+            listOf(plan("a", liveUpdates = false), plan("c", liveUpdates = false), plan("b")),
+            isSandbox = false, prices = emptyMap(), keyRemovedShareIds = revoked
+        ).associateBy { it.plan.shareId }
+        assertTrue(cards.getValue("a").keyRemoved)
+        assertFalse(cards.getValue("c").keyRemoved) // never-live snapshot
+        assertFalse(cards.getValue("b").keyRemoved) // still live
+    }
+
+    @Test
+    fun `other refresh results never mark a key removed`() {
+        assertEquals(
+            emptySet<String>(),
+            DashboardViewModel.revokedShareIds(mapOf("a" to RefreshSharedPlanUseCase.Result.NotLive))
+        )
+    }
+
+    @Test
+    fun `switching sandbox mode shows only the new environment`() = runBlocking {
+        val plans = MutableStateFlow<List<SharedPlan>?>(
+            listOf(plan("prod", name = "Prod"), plan("sb", name = "Sb", isSandbox = true))
+        )
+        val sandbox = MutableStateFlow(false)
+        val flow = DashboardViewModel.sharedPlanCardsFlow(
+            plans, MutableStateFlow(emptyMap()), MutableStateFlow(emptySet()), sandbox
+        )
+        assertEquals(listOf("Prod"), flow.first().map { it.plan.displayName })
+        sandbox.value = true
+        assertEquals(listOf("Sb"), flow.first().map { it.plan.displayName })
     }
 }
