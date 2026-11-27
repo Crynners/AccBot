@@ -2,14 +2,10 @@ package com.accbot.dca.presentation.screens.shared
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.accbot.dca.R
 import com.accbot.dca.domain.share.SharedPlan
 import com.accbot.dca.presentation.components.AccBotTopAppBar
+import com.accbot.dca.presentation.components.PasswordTextField
 import com.accbot.dca.presentation.components.CryptoIcon
 import com.accbot.dca.presentation.components.EmptyState
 import com.accbot.dca.presentation.components.LoadingState
@@ -150,14 +147,11 @@ private fun SharePasswordDialog(wrongPassword: Boolean, onSubmit: (String) -> Un
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.shared_plans_password_text))
-                OutlinedTextField(
+                PasswordTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text(stringResource(R.string.share_plan_live_password)) },
-                    singleLine = true,
+                    label = stringResource(R.string.share_plan_live_password),
                     isError = wrongPassword,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (wrongPassword) {

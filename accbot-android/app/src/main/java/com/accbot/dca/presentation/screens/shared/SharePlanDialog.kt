@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
@@ -27,7 +26,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -41,8 +39,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -60,6 +56,7 @@ import com.accbot.dca.domain.usecase.ShareKeyProblem
 import com.accbot.dca.domain.usecase.VerifyShareKeyUseCase
 import com.accbot.dca.exchange.ReadOnlyExchangeClient.KeyCheck
 import com.accbot.dca.presentation.components.CredentialsInputCard
+import com.accbot.dca.presentation.components.PasswordTextField
 import com.accbot.dca.presentation.components.areCredentialsComplete
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
@@ -532,13 +529,10 @@ private fun KeySourceOption(
 
 @Composable
 private fun SecretField(value: String, onChange: (String) -> Unit, label: String) {
-    OutlinedTextField(
+    PasswordTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label) },
-        singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
+        label = label,
         modifier = Modifier.fillMaxWidth()
     )
 }

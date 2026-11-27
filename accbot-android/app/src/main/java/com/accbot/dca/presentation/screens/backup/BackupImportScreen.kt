@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -23,6 +22,7 @@ import com.accbot.dca.domain.model.EncryptionMode
 import com.accbot.dca.domain.model.RestoreMode
 import com.accbot.dca.domain.usecase.RestoreBackupUseCase
 import com.accbot.dca.presentation.components.AccBotTopAppBar
+import com.accbot.dca.presentation.components.PasswordTextField
 import com.accbot.dca.presentation.components.QrScannerDialog
 import com.accbot.dca.presentation.components.SeedPhraseGrid
 import com.accbot.dca.presentation.ui.theme.successColor
@@ -234,12 +234,10 @@ private fun EnterPasswordStep(
     }
 
     if (uiState.inputMode == EncryptionMode.Password) {
-        OutlinedTextField(
+        PasswordTextField(
             value = uiState.passphrase,
             onValueChange = { viewModel.setPassphrase(it) },
-            label = { Text(stringResource(R.string.backup_enter_password)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
+            label = stringResource(R.string.backup_enter_password),
             modifier = Modifier.fillMaxWidth()
         )
     } else {

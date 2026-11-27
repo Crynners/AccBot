@@ -17,7 +17,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
@@ -27,6 +26,7 @@ import com.accbot.dca.R
 import com.accbot.dca.presentation.utils.writeSharedExport
 import com.accbot.dca.domain.model.EncryptionMode
 import com.accbot.dca.presentation.components.AccBotTopAppBar
+import com.accbot.dca.presentation.components.PasswordTextField
 import com.accbot.dca.presentation.ui.theme.Warning
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -260,20 +260,16 @@ private fun EncryptionStep(
     }
 
     if (uiState.encryptionMode == EncryptionMode.Password) {
-        OutlinedTextField(
+        PasswordTextField(
             value = uiState.password,
             onValueChange = { viewModel.setPassword(it) },
-            label = { Text(stringResource(R.string.backup_enter_password)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
+            label = stringResource(R.string.backup_enter_password),
             modifier = Modifier.fillMaxWidth()
         )
-        OutlinedTextField(
+        PasswordTextField(
             value = uiState.confirmPassword,
             onValueChange = { viewModel.setConfirmPassword(it) },
-            label = { Text(stringResource(R.string.backup_confirm_password)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
+            label = stringResource(R.string.backup_confirm_password),
             modifier = Modifier.fillMaxWidth()
         )
     } else {

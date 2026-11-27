@@ -503,14 +503,33 @@ fun CredentialsInputCard(
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = lastFieldImeAction),
                         keyboardActions = lastFieldKeyboardActions,
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (showSecret) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
                         isError = errorMessage != null && passphrase.isBlank(),
                         enabled = !isValidating,
                         supportingText = if (passphrase.isBlank()) {
                             { Text(stringResource(R.string.credentials_required_for, exchange.displayName)) }
                         } else null,
                         trailingIcon = {
-                            QrScannerButton(onScanResult = onPassphraseChange)
+                            Row {
+                                IconButton(onClick = { showSecret = !showSecret }) {
+                                    Icon(
+                                        imageVector = if (showSecret) {
+                                            Icons.Default.VisibilityOff
+                                        } else {
+                                            Icons.Default.Visibility
+                                        },
+                                        contentDescription = stringResource(
+                                            if (showSecret) R.string.credentials_hide_password
+                                            else R.string.credentials_show_password
+                                        )
+                                    )
+                                }
+                                QrScannerButton(onScanResult = onPassphraseChange)
+                            }
                         }
                     )
                 }
