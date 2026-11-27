@@ -52,6 +52,8 @@ class SharedPlanStore internal constructor(
     }
 
     private val mutex = Mutex()
+    private val planLocks = mutableMapOf<String, Mutex>()
+    private val planLocksGuard = Any()
     private val _plans = MutableStateFlow<List<SharedPlan>?>(null)
 
     /** Null until the first [refresh]. Newest share first. */
@@ -97,6 +99,17 @@ class SharedPlanStore internal constructor(
             writeLocked(stored)
             SaveResult.Saved(stored, replaced = existing != null)
         }
+    }
+
+    /**
+     * Serializes work on one share (refresh, history download) so two of them never fetch and
+     * write the same plan at once. Separate from the store-wide lock, so [block] may call
+     * [get], [update] and [dropKey]; it should re-load the plan inside rather than trust a
+     * copy read earlier.
+     */
+    suspend fun <T> withPlanLock(shareId: String, block: suspend () -> T): T {
+        val lock = synchronized(planLocksGuard) { planLocks.getOrPut(shareId.lowercase()) { Mutex() } }
+        return lock.withLock { block() }
     }
 
     /** Persist a refreshed copy of a stored share, keeping its key. */

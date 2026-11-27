@@ -12,8 +12,10 @@ import androidx.work.Configuration
 import com.accbot.dca.data.local.CredentialsStore
 import com.accbot.dca.data.local.DcaDatabase
 import com.accbot.dca.data.local.UserPreferences
+import com.accbot.dca.domain.usecase.RefreshSharedPlansUseCase
 import com.accbot.dca.domain.usecase.ResolvePendingTransactionsUseCase
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -40,6 +42,9 @@ class AccBotApplication : Application(), Configuration.Provider {
 
     @Inject
     lateinit var resolvePendingTransactionsUseCase: ResolvePendingTransactionsUseCase
+
+    @Inject
+    lateinit var refreshSharedPlans: RefreshSharedPlansUseCase
 
     /**
      * App-scope coroutine scope for work that outlives any single ViewModel or
@@ -98,6 +103,16 @@ class AccBotApplication : Application(), Configuration.Provider {
                         resolvePendingTransactionsUseCase()
                     } catch (e: Exception) {
                         Log.w(TAG, "Polling on app start failed", e)
+                    }
+                }
+                // Shared plans whose scheduled purchase has probably happened since the last look.
+                appScope.launch {
+                    try {
+                        refreshSharedPlans.refreshDue(userPreferences.processSandboxMode)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Shared plan refresh on app start failed", e)
                     }
                 }
             }

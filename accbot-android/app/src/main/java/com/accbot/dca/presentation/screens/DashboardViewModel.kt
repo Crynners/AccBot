@@ -22,6 +22,7 @@ import com.accbot.dca.domain.model.DcaPlan
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.StrategyMultiplierResult
 import com.accbot.dca.domain.usecase.CalculateStrategyMultiplierUseCase
+import com.accbot.dca.domain.usecase.RefreshSharedPlansUseCase
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.service.DcaForegroundService
@@ -31,6 +32,7 @@ import com.accbot.dca.presentation.utils.AutomationHealth
 import com.accbot.dca.presentation.utils.AutomationHealthChecker
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
@@ -145,7 +147,8 @@ class DashboardViewModel @Inject constructor(
     private val exchangeBalanceDao: ExchangeBalanceDao,
     private val withdrawalThresholdDao: WithdrawalThresholdDao,
     private val exchangeConnectionDao: ExchangeConnectionDao,
-    private val calculateStrategyMultiplier: CalculateStrategyMultiplierUseCase
+    private val calculateStrategyMultiplier: CalculateStrategyMultiplierUseCase,
+    private val refreshSharedPlans: RefreshSharedPlansUseCase
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -647,6 +650,15 @@ class DashboardViewModel @Inject constructor(
                 coroutineScope {
                     launch { loadData() }
                     launch { fetchPricesForHoldings(state.holdings, manageLoadingState = false) }
+                    launch {
+                        try {
+                            refreshSharedPlans.refreshAll(userPreferences.processSandboxMode)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Shared plan refresh failed", e)
+                        }
+                    }
                     if (state.showMarketPulse) {
                         launch { fetchMarketIndicators(plans, force = true) }
                     }

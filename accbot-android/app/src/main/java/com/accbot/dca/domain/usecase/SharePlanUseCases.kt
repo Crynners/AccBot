@@ -250,6 +250,16 @@ class RefreshSharedPlanUseCase @Inject constructor(
             shareId: String,
             now: Instant,
             download: suspend (SharedPlan, ReadOnlyExchangeClient) -> Download
+        ): Result = store.withPlanLock(shareId) {
+            withVerifiedKeyLocked(store, clients, shareId, now, download)
+        }
+
+        private suspend fun withVerifiedKeyLocked(
+            store: SharedPlanStore,
+            clients: ReadOnlyExchangeClient.Factory,
+            shareId: String,
+            now: Instant,
+            download: suspend (SharedPlan, ReadOnlyExchangeClient) -> Download
         ): Result {
             val plan = store.get(shareId) ?: return Result.NotLive
             val credentials = store.credentials(plan.shareId) ?: return Result.NotLive
