@@ -1,5 +1,6 @@
 import UIKit
 import BackgroundTasks
+import UserNotifications
 
 /// AppDelegate for BGTaskScheduler registration
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -11,6 +12,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         registerBackgroundTasks()
+        // Set before launch finishes so a "Buy now" tap that launched the app is delivered.
+        UNUserNotificationCenter.current().delegate = NotificationActionHandler.shared
         return true
     }
 

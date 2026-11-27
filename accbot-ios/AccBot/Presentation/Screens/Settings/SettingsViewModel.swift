@@ -260,6 +260,16 @@ final class SettingsViewModel: ObservableObject {
         activeAlert = .languageRestart
     }
 
+    /// When purchases were last checked and what started it, e.g. "2 h ago · Shortcuts automation".
+    var lastAutomationRunText: String {
+        guard let prefs = dependencies?.userPreferences, let date = prefs.lastAutomationRun else {
+            return String(localized: "Never")
+        }
+        let when = AccBotFormatters.relativeDate(date)
+        guard let trigger = prefs.lastAutomationTrigger.flatMap(PurchaseTrigger.init(rawValue:)) else { return when }
+        return "\(when) · \(trigger.label)"
+    }
+
     var lastBackgroundRunText: String {
         guard let date = dependencies?.userPreferences.lastBackgroundRun else {
             return String(localized: "Never")

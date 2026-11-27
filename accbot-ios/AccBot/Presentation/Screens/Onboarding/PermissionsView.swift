@@ -33,7 +33,7 @@ struct PermissionsView: View {
                         .font(AccBotFonts.titleLarge)
                         .foregroundStyle(colors.onSurface)
 
-                    Text(String(localized: "Get notified about completed purchases, errors, and weekly summaries. You can customize notifications later in Settings."))
+                    Text(String(localized: "Get notified about completed purchases and errors. If iOS doesn't run a purchase on time, a notification lets you buy it with one tap. You can customize notifications later in Settings."))
                         .font(AccBotFonts.body)
                         .foregroundStyle(colors.onSurfaceVariant)
                         .multilineTextAlignment(.center)

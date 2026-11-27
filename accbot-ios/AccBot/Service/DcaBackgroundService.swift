@@ -28,8 +28,7 @@ final class DcaBackgroundService {
         let work = Task { @MainActor in
             let deps = AppDependencies.shared
             scheduleNext(using: deps)
-            let finished = await deps.dcaExecutionEngine.executeDuePlans()
-            scheduleNext(using: deps)
+            let finished = await AutomationCoordinator.shared.runDuePurchases(trigger: .background)
             if finished && !Task.isCancelled {
                 deps.userPreferences.lastBackgroundRun = Date()
                 return true

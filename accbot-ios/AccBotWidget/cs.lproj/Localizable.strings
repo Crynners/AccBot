@@ -1,0 +1,7 @@
+/* Czech strings for the AccBot widget */
+"Purchase waiting" = "Nákup čeká";
+"Tap to buy now" = "Klepněte a nakupte";
+"Next purchase" = "Další nákup";
+"No active plan" = "Žádný aktivní plán";
+"Last purchase %@" = "Poslední nákup %@";
+"When AccBot buys next, and a reminder when a purchase is waiting." = "Kdy AccBot nakoupí příště a upozornění, když nákup čeká.";

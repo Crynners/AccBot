@@ -93,37 +93,9 @@ final class NotificationService {
         UNUserNotificationCenter.current().add(request)
     }
 
-    // MARK: - DCA Reminder (Layer 3)
+    // MARK: - DCA Reminder
 
-    func scheduleDcaReminder(at date: Date, planDescription: String) {
-        let content = UNMutableNotificationContent()
-        content.title = String(localized: "DCA Plan Due")
-        content.body = String(localized: "Tap to execute: \(planDescription)")
-        content.sound = .default
-        content.categoryIdentifier = Self.dcaReminderCategory
-
-        let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: max(1, date.timeIntervalSinceNow),
-            repeats: false
-        )
-
-        let request = UNNotificationRequest(
-            identifier: "dca_reminder_\(planDescription)",
-            content: content,
-            trigger: trigger
-        )
-        UNUserNotificationCenter.current().add(request)
-    }
-
-    func cancelAllDcaReminders() {
-        let center = UNUserNotificationCenter.current()
-        center.getPendingNotificationRequests { requests in
-            let reminderIds = requests
-                .filter { $0.identifier.hasPrefix("dca_reminder_") }
-                .map { $0.identifier }
-            center.removePendingNotificationRequests(withIdentifiers: reminderIds)
-        }
-    }
+    // Reminders for purchases that did not run are scheduled by PurchaseReminderScheduler.
 
     // MARK: - Badge
 
@@ -139,7 +111,17 @@ final class NotificationService {
             UNNotificationCategory(identifier: Self.errorCategory, actions: [], intentIdentifiers: []),
             UNNotificationCategory(identifier: Self.lowBalanceCategory, actions: [], intentIdentifiers: []),
             UNNotificationCategory(identifier: Self.withdrawalThresholdCategory, actions: [], intentIdentifiers: []),
-            UNNotificationCategory(identifier: Self.dcaReminderCategory, actions: [], intentIdentifiers: []),
+            UNNotificationCategory(
+                identifier: Self.dcaReminderCategory,
+                actions: [
+                    UNNotificationAction(
+                        identifier: PurchaseReminderScheduler.buyNowAction,
+                        title: String(localized: "Buy now"),
+                        options: [.authenticationRequired]
+                    )
+                ],
+                intentIdentifiers: []
+            ),
         ]
         UNUserNotificationCenter.current().setNotificationCategories(categories)
     }
