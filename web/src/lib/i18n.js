@@ -1,4 +1,6 @@
-export const SITE_URL = 'https://accbot.eu';
+// Public address of the site, used for canonical, hreflang, sitemap and share-image URLs.
+// accbot.cz is live now; accbot.eu can take over once its nameservers point to Cloudflare.
+export const SITE_URL = 'https://accbot.cz';
 
 export const LANGS = ['en', 'cs', 'sk', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'uk', 'ru', 'zh', 'ja'];
 

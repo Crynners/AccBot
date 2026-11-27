@@ -31,8 +31,14 @@
   <link rel="alternate" hreflang="x-default" href="{SITE_URL}/en/{subpath}" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="{SITE_URL}/{data.lang}/{subpath}" />
-  <meta property="og:image" content="{SITE_URL}/img/screenshots/{shotLang}/01_dashboard.webp" />
+  <meta property="og:site_name" content="AccBot" />
+  <meta property="og:image" content="{SITE_URL}/img/share-{shotLang}.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content={t('meta_title')} />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="{SITE_URL}/img/share-{shotLang}.jpg" />
 </svelte:head>
 
 <Header {t} lang={data.lang} {isHome} />
