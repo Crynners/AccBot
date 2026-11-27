@@ -1538,6 +1538,19 @@ section { padding: 96px 0; }
   height: auto;
 }
 
+.compare-note {
+  max-width: 720px;
+  margin: -16px auto 24px;
+  padding: 10px 16px;
+  border: 1px solid rgba(78, 204, 163, 0.3);
+  border-radius: var(--radius);
+  background: rgba(78, 204, 163, 0.06);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .compare-disclaimer {
   text-align: center;
   font-size: 0.75rem;

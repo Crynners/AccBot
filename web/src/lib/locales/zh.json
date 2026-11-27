@@ -99,7 +99,7 @@
   "compare_monthly": "每月",
   "compare_calculate": "计算",
   "compare_fee_stosuj": "1.5% 手续费",
-  "compare_fee_accbot": "0.6% 手续费",
+  "compare_fee_accbot": "仅交易所手续费 0.6%",
   "compare_fees_paid": "已付手续费",
   "compare_btc_accumulated": "累计 BTC",
   "compare_current_value": "当前价值",
@@ -206,5 +206,6 @@
   "compare_plan_paid_note": "每月 {0}，含增值税（银行卡支付）。",
   "compare_plan_daily_hint": "FREE 方案不支持每日买入。",
   "compare_fee_stosuj_tpl": "1.5% + 每月 {0}",
-  "compare_sub_paid_tpl": "其中 {0} 订阅 {1}"
+  "compare_sub_paid_tpl": "其中 {0} 订阅 {1}",
+  "compare_note": "这是以 Coinmate 交易所为例的示意计算。AccBot 本身完全免费：模拟中的所有手续费都归交易所，使用 Štosuj 时还要加上它的订阅费。"
 }

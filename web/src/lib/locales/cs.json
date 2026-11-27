@@ -99,7 +99,7 @@
   "compare_monthly": "Měsíčně",
   "compare_calculate": "Spočítat",
   "compare_fee_stosuj": "poplatek 1,5 %",
-  "compare_fee_accbot": "poplatek 0,6 %",
+  "compare_fee_accbot": "jen poplatek burzy 0,6 %",
   "compare_fees_paid": "Zaplaceno na poplatcích",
   "compare_btc_accumulated": "Naštosováno BTC",
   "compare_current_value": "Hodnota dnes",
@@ -274,5 +274,6 @@
   "compare_plan_paid_note": "{0} měsíčně včetně DPH (platba kartou).",
   "compare_plan_daily_hint": "Denní nákupy ve FREE nejdou.",
   "compare_fee_stosuj_tpl": "1,5 % + {0} měsíčně",
-  "compare_sub_paid_tpl": "z toho předplatné {0} {1}"
+  "compare_sub_paid_tpl": "z toho předplatné {0} {1}",
+  "compare_note": "Jde o ilustrační příklad na burze Coinmate. AccBot je kompletně zdarma: všechny poplatky v simulaci jdou burze, u Štosuj navíc za jeho předplatné."
 }

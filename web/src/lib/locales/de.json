@@ -99,7 +99,7 @@
   "compare_monthly": "Monatlich",
   "compare_calculate": "Berechnen",
   "compare_fee_stosuj": "1,5 % Gebühr",
-  "compare_fee_accbot": "0,6 % Gebühr",
+  "compare_fee_accbot": "nur Börsengebühr 0,6 %",
   "compare_fees_paid": "Gezahlte Gebühren",
   "compare_btc_accumulated": "Gestapelte BTC",
   "compare_current_value": "Wert heute",
@@ -206,5 +206,6 @@
   "compare_plan_paid_note": "{0} im Monat inkl. MwSt. (Kartenzahlung).",
   "compare_plan_daily_hint": "Tägliche Käufe gibt es in FREE nicht.",
   "compare_fee_stosuj_tpl": "1,5 % + {0}/Monat",
-  "compare_sub_paid_tpl": "davon {0}-Abo {1}"
+  "compare_sub_paid_tpl": "davon {0}-Abo {1}",
+  "compare_note": "Das ist ein Beispiel zur Veranschaulichung mit der Börse Coinmate. AccBot selbst ist komplett kostenlos: Alle Gebühren in der Simulation gehen an die Börse, bei Štosuj zusätzlich an das Abo."
 }

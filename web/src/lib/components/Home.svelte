@@ -524,6 +524,8 @@
           <p>{t('compare_subtitle')}</p>
         </div>
 
+        <p class="compare-note reveal">{t('compare_note')}</p>
+
         <div class="compare-form reveal" id="compare-form">
           <div class="compare-inputs">
             <div class="compare-input-group">

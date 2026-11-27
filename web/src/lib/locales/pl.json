@@ -99,7 +99,7 @@
   "compare_monthly": "Co miesiąc",
   "compare_calculate": "Oblicz",
   "compare_fee_stosuj": "prowizja 1,5%",
-  "compare_fee_accbot": "prowizja 0,6%",
+  "compare_fee_accbot": "tylko opłata giełdy 0,6 %",
   "compare_fees_paid": "Zapłacone prowizje",
   "compare_btc_accumulated": "Zebrane BTC",
   "compare_current_value": "Wartość dziś",
@@ -206,5 +206,6 @@
   "compare_plan_paid_note": "{0} miesięcznie z VAT (płatność kartą).",
   "compare_plan_daily_hint": "Codzienne zakupy nie są dostępne w FREE.",
   "compare_fee_stosuj_tpl": "1,5 % + {0}/mies.",
-  "compare_sub_paid_tpl": "w tym abonament {0} {1}"
+  "compare_sub_paid_tpl": "w tym abonament {0} {1}",
+  "compare_note": "To przykład poglądowy na giełdzie Coinmate. AccBot jest całkowicie darmowy: wszystkie opłaty w symulacji trafiają do giełdy, a w Štosuj dodatkowo na abonament."
 }

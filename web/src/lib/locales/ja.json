@@ -99,7 +99,7 @@
   "compare_monthly": "毎月",
   "compare_calculate": "計算する",
   "compare_fee_stosuj": "手数料 1.5%",
-  "compare_fee_accbot": "手数料 0.6%",
+  "compare_fee_accbot": "取引所手数料 0.6% のみ",
   "compare_fees_paid": "支払った手数料",
   "compare_btc_accumulated": "積み立てた BTC",
   "compare_current_value": "現在の評価額",
@@ -206,5 +206,6 @@
   "compare_plan_paid_note": "月額 {0}（税込、カード払い）。",
   "compare_plan_daily_hint": "FREE では毎日の購入はできません。",
   "compare_fee_stosuj_tpl": "1.5% + 月 {0}",
-  "compare_sub_paid_tpl": "うち {0} プラン {1}"
+  "compare_sub_paid_tpl": "うち {0} プラン {1}",
+  "compare_note": "これは Coinmate 取引所を例にした参考計算です。AccBot 自体は完全無料で、シミュレーション内の手数料はすべて取引所に支払うものです（Štosuj の場合はさらにサブスクリプション料金）。"
 }

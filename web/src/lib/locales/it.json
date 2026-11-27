@@ -99,7 +99,7 @@
   "compare_monthly": "Mensile",
   "compare_calculate": "Calcola",
   "compare_fee_stosuj": "commissione 1,5 %",
-  "compare_fee_accbot": "commissione 0,6 %",
+  "compare_fee_accbot": "solo commissione exchange 0,6 %",
   "compare_fees_paid": "Commissioni pagate",
   "compare_btc_accumulated": "BTC accumulati",
   "compare_current_value": "Valore oggi",
@@ -206,5 +206,6 @@
   "compare_plan_paid_note": "{0} al mese IVA inclusa (pagamento con carta).",
   "compare_plan_daily_hint": "Gli acquisti giornalieri non sono disponibili in FREE.",
   "compare_fee_stosuj_tpl": "1,5 % + {0}/mese",
-  "compare_sub_paid_tpl": "di cui abbonamento {0} {1}"
+  "compare_sub_paid_tpl": "di cui abbonamento {0} {1}",
+  "compare_note": "È un esempio illustrativo sull'exchange Coinmate. AccBot è completamente gratuito: tutte le commissioni della simulazione vanno all'exchange e, con Štosuj, anche al suo abbonamento."
 }

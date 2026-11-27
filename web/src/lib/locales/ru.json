@@ -99,7 +99,7 @@
   "compare_monthly": "Ежемесячно",
   "compare_calculate": "Рассчитать",
   "compare_fee_stosuj": "комиссия 1,5%",
-  "compare_fee_accbot": "комиссия 0,6%",
+  "compare_fee_accbot": "только комиссия биржи 0,6 %",
   "compare_fees_paid": "Уплачено комиссий",
   "compare_btc_accumulated": "Накоплено BTC",
   "compare_current_value": "Стоимость сегодня",
@@ -206,5 +206,6 @@
   "compare_plan_paid_note": "{0} в месяц с НДС (оплата картой).",
   "compare_plan_daily_hint": "Ежедневные покупки во FREE недоступны.",
   "compare_fee_stosuj_tpl": "1,5 % + {0}/мес.",
-  "compare_sub_paid_tpl": "из них подписка {0} {1}"
+  "compare_sub_paid_tpl": "из них подписка {0} {1}",
+  "compare_note": "Это иллюстративный пример на бирже Coinmate. AccBot полностью бесплатен: все комиссии в симуляции идут бирже, а у Štosuj ещё и за подписку."
 }
