@@ -542,6 +542,15 @@
                 <button type="button" class="compare-interval-btn" aria-pressed="false" data-interval="monthly">{t('compare_monthly')}</button>
               </div>
             </div>
+            <div class="compare-input-group">
+              <span class="compare-input-label" id="compare-plan-label">{t('compare_plan_label')}</span>
+              <div class="compare-interval-btns" role="group" aria-labelledby="compare-plan-label">
+                <button type="button" class="compare-interval-btn" aria-pressed="false" data-plan="free">FREE</button>
+                <button type="button" class="compare-interval-btn active" aria-pressed="true" data-plan="premium">PREMIUM</button>
+                <button type="button" class="compare-interval-btn" aria-pressed="false" data-plan="pro">PRO</button>
+              </div>
+              <p class="compare-plan-note" id="compare-plan-note"></p>
+            </div>
           </div>
           <button type="button" class="btn btn-primary compare-calc-btn" id="compare-calc">{t('compare_calculate')}</button>
         </div>
@@ -559,12 +568,13 @@
               <div class="compare-card stosuj">
                 <div class="compare-card-header">
                   <span class="compare-card-name">Štosuj</span>
-                  <span class="compare-card-fee">{t('compare_fee_stosuj')}</span>
+                  <span class="compare-card-fee" id="stosuj-fee-label">{t('compare_fee_stosuj')}</span>
                 </div>
                 <div class="compare-stat">
                   <span class="compare-stat-label">{t('compare_fees_paid')}</span>
                   <span class="compare-stat-value" id="stosuj-fees"></span>
                 </div>
+                <div class="compare-stat-sub" id="stosuj-sub"></div>
                 <div class="compare-stat">
                   <span class="compare-stat-label">{t('compare_btc_accumulated')}</span>
                   <span class="compare-stat-value" id="stosuj-btc"></span>

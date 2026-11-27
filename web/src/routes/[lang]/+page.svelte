@@ -1,13 +1,17 @@
 <script>
   import { onMount } from 'svelte';
   import Home from '$lib/components/Home.svelte';
-  import { translator } from '$lib/i18n.js';
+  import { exposeTranslator, translator } from '$lib/i18n.js';
   import { initCompare } from '$lib/compare.js';
 
   let { data } = $props();
   const t = $derived(translator(data.dict));
 
-  onMount(() => initCompare());
+  // The layout exposes the translator too, but its onMount runs after this one.
+  onMount(() => {
+    exposeTranslator(data.lang, data.dict);
+    initCompare();
+  });
 </script>
 
 <svelte:head>
