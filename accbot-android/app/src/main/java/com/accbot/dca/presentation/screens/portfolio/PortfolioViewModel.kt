@@ -10,6 +10,9 @@ import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.local.TransactionEntity
 import com.accbot.dca.data.local.UserPreferences
 // TransactionStatus filtering now done in DAO query
+import com.accbot.dca.data.local.SharedPlanStore
+import com.accbot.dca.domain.share.SharedPlan
+import com.accbot.dca.domain.share.toChartTransactions
 import com.accbot.dca.domain.usecase.CalculateChartDataUseCase
 import com.accbot.dca.domain.usecase.CancelSellOrderUseCase
 import com.accbot.dca.domain.model.Transaction
@@ -38,6 +41,61 @@ enum class DenominationMode { FIAT, CRYPTO }
 sealed class PairPage {
     data class Aggregate(val fiat: String) : PairPage()
     data class Plan(val planId: Long, val name: String, val crypto: String, val fiat: String) : PairPage()
+    /** Chart of someone else's shared plan; never part of Aggregate pages or totals. */
+    data class Shared(val shareId: String, val name: String, val crypto: String, val fiat: String) : PairPage()
+}
+
+/** Pages showing one crypto/fiat pair (own plan or shared plan) rather than a fiat aggregate. */
+val PairPage.isSinglePair: Boolean get() = this is PairPage.Plan || this is PairPage.Shared
+
+/** Stable identifier for a page, used to persist and restore the selected chip. */
+internal fun pageIdOf(page: PairPage): String = when (page) {
+    is PairPage.Aggregate -> "agg:${page.fiat}"
+    is PairPage.Plan -> "plan:${page.planId}"
+    is PairPage.Shared -> "shared:${page.shareId}"
+}
+
+/**
+ * Own pages first (aggregate per fiat with 2+ plans, then one per plan), then one page per
+ * shared plan of the current environment that has amounts and trades to draw.
+ */
+internal fun buildPages(
+    dbPlans: List<DcaPlanEntity>,
+    shared: List<SharedPlan>,
+    isSandbox: Boolean
+): List<PairPage> {
+    val pages = mutableListOf<PairPage>()
+    for ((fiat, fiatPlans) in dbPlans.groupBy { it.fiat }) {
+        if (fiatPlans.size >= 2) pages.add(PairPage.Aggregate(fiat))
+    }
+    for (plan in dbPlans) {
+        pages.add(PairPage.Plan(
+            planId = plan.id,
+            name = plan.name.ifBlank { "${plan.crypto}/${plan.fiat}" },
+            crypto = plan.crypto,
+            fiat = plan.fiat
+        ))
+    }
+    for (plan in shared) {
+        if (plan.isSandbox == isSandbox && plan.includesAmounts && plan.trades.isNotEmpty()) {
+            pages.add(PairPage.Shared(plan.shareId, plan.displayName, plan.crypto, plan.fiat))
+        }
+    }
+    return pages
+}
+
+/**
+ * Transactions the chart of [page] is drawn from. Aggregate and Plan pages use only Room data;
+ * a Shared page uses its own in-memory mapped trades.
+ */
+internal fun chartTransactionsFor(
+    page: PairPage?,
+    roomTransactions: List<TransactionEntity>,
+    shared: List<SharedPlan>
+): List<TransactionEntity> = when (page) {
+    is PairPage.Plan -> roomTransactions.filter { it.planId == page.planId }
+    is PairPage.Shared -> shared.firstOrNull { it.shareId == page.shareId }?.toChartTransactions().orEmpty()
+    is PairPage.Aggregate, null -> roomTransactions
 }
 
 enum class PlanLineType { VALUE, INVESTED, AVG_BUY_PRICE, ACCUMULATED }
@@ -123,6 +181,7 @@ class PortfolioViewModel @Inject constructor(
     private val calculateChartDataUseCase: CalculateChartDataUseCase,
     private val userPreferences: UserPreferences,
     private val cancelSellOrderUseCase: CancelSellOrderUseCase,
+    private val sharedPlanStore: SharedPlanStore,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -183,19 +242,46 @@ class PortfolioViewModel @Inject constructor(
     companion object {
         private const val STALENESS_THRESHOLD_MS = 5 * 60 * 1000L // 5 minutes
         private const val TRANSACTION_REFRESH_THRESHOLD_MS = 30 * 1000L // 30 seconds
-
-        /**
-         * Stable identifier for a PairPage used for persisting the selected chip
-         * across app restarts. Format: "agg:<fiat>" for Aggregate, "plan:<id>" for Plan.
-         */
-        private fun pageIdOf(page: PairPage): String = when (page) {
-            is PairPage.Aggregate -> "agg:${page.fiat}"
-            is PairPage.Plan -> "plan:${page.planId}"
-        }
     }
 
     init {
         loadPortfolio()
+        observeSharedPlans()
+    }
+
+    private fun cachedSharedPlans(): List<SharedPlan> = sharedPlanStore.plans.value.orEmpty()
+
+    /**
+     * Loads the shared plans once and rebuilds the pages whenever they change (e.g. the first
+     * load finishing after the portfolio, or a live refresh adding trades).
+     */
+    private fun observeSharedPlans() {
+        viewModelScope.launch {
+            try {
+                sharedPlanStore.refresh()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("PortfolioVM", "Loading shared plans failed", e)
+            }
+        }
+        viewModelScope.launch {
+            sharedPlanStore.plans.filterNotNull().collect { rebuildPagesForSharedChange() }
+        }
+    }
+
+    /** Rebuilds the page list after shared plans changed, keeping the selected page by id. */
+    private fun rebuildPagesForSharedChange() {
+        val state = _uiState.value
+        if (state.isLoading) return
+        val selectedId = state.pages.getOrNull(state.selectedPageIndex)?.let { pageIdOf(it) }
+        val pages = buildPages(cachedDbPlans, cachedSharedPlans(), userPreferences.processSandboxMode)
+        if (pages == state.pages) return
+        val newIndex = pages.indexOfFirst { pageIdOf(it) == selectedId }.takeIf { it >= 0 } ?: 0
+        _uiState.update { it.copy(pages = pages, selectedPageIndex = newIndex) }
+        updateNavigationState()
+        refreshOpenSellsForCurrentPage()
+        loadChartData()
     }
 
     private fun loadPortfolio() {
@@ -216,22 +302,7 @@ class PortfolioViewModel @Inject constructor(
                 val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
                 cachedDbPlans = allDbPlans
 
-                // Build pages: aggregate per fiat (if 2+ plans in same fiat), then per plan
-                val plansByFiat = allDbPlans.groupBy { it.fiat }
-                val pages = mutableListOf<PairPage>()
-                for ((fiat, fiatPlans) in plansByFiat) {
-                    if (fiatPlans.size >= 2) {
-                        pages.add(PairPage.Aggregate(fiat))
-                    }
-                }
-                for (plan in allDbPlans) {
-                    pages.add(PairPage.Plan(
-                        planId = plan.id,
-                        name = plan.name.ifBlank { "${plan.crypto}/${plan.fiat}" },
-                        crypto = plan.crypto,
-                        fiat = plan.fiat
-                    ))
-                }
+                val pages = buildPages(allDbPlans, cachedSharedPlans(), userPreferences.processSandboxMode)
 
                 val deepLinkCrypto = initialCrypto
                 val deepLinkFiat = initialFiat
@@ -289,21 +360,7 @@ class PortfolioViewModel @Inject constructor(
 
                 val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
                 cachedDbPlans = allDbPlans
-                val plansByFiat = allDbPlans.groupBy { it.fiat }
-                val pages = mutableListOf<PairPage>()
-                for ((fiat, fiatPlans) in plansByFiat) {
-                    if (fiatPlans.size >= 2) {
-                        pages.add(PairPage.Aggregate(fiat))
-                    }
-                }
-                for (plan in allDbPlans) {
-                    pages.add(PairPage.Plan(
-                        planId = plan.id,
-                        name = plan.name.ifBlank { "${plan.crypto}/${plan.fiat}" },
-                        crypto = plan.crypto,
-                        fiat = plan.fiat
-                    ))
-                }
+                val pages = buildPages(allDbPlans, cachedSharedPlans(), userPreferences.processSandboxMode)
 
                 _uiState.update { state ->
                     // Keep current page index if still valid, otherwise reset to 0
@@ -502,7 +559,7 @@ class PortfolioViewModel @Inject constructor(
 
     fun toggleDenomination() {
         val page = _uiState.value.pages.getOrNull(_uiState.value.selectedPageIndex)
-        if (page !is PairPage.Plan) return
+        if (page == null || !page.isSinglePair) return
         _uiState.update { it.copy(
             denominationMode = if (it.denominationMode == DenominationMode.FIAT)
                 DenominationMode.CRYPTO else DenominationMode.FIAT,
@@ -567,13 +624,16 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
-    private fun getFilteredTransactions(): List<TransactionEntity> {
-        return completedTransactions
-    }
+    /** Navigation years/months come from the page's own data: Room for own pages, mapped trades for Shared. */
+    private fun getFilteredTransactions(
+        page: PairPage? = _uiState.value.pages.getOrNull(_uiState.value.selectedPageIndex)
+    ): List<TransactionEntity> =
+        if (page is PairPage.Shared) chartTransactionsFor(page, completedTransactions, cachedSharedPlans())
+        else completedTransactions
 
     private fun updateNavigationState() {
-        val filteredTxs = getFilteredTransactions()
         val state = _uiState.value
+        val filteredTxs = getFilteredTransactions()
         val years = calculateChartDataUseCase.getAvailableYears(filteredTxs)
         val today = LocalDate.now()
 
@@ -669,7 +729,9 @@ class PortfolioViewModel @Inject constructor(
             return
         }
         val fiat = chartResult.fiat
-        if (fiat == null) {
+        val selected = _uiState.value.pages.getOrNull(_uiState.value.selectedPageIndex)
+        // Realized P&L comes from Room sells; a shared plan has none of ours.
+        if (fiat == null || selected is PairPage.Shared) {
             _uiState.update { it.copy(totalRealized = null, netPnL = null) }
             return
         }
@@ -711,17 +773,14 @@ class PortfolioViewModel @Inject constructor(
         val state = _uiState.value
         val page = state.pages.getOrNull(state.selectedPageIndex)
 
-        val (crypto, fiat, planId) = when (page) {
+        val (crypto, fiat, _) = when (page) {
             is PairPage.Aggregate -> Triple(null, page.fiat, null)
             is PairPage.Plan -> Triple(page.crypto, page.fiat, page.planId)
+            is PairPage.Shared -> Triple(page.crypto, page.fiat, null)
             null -> Triple(null, null, null)
         }
 
-        val filteredTxs = if (planId != null) {
-            completedTransactions.filter { it.planId == planId }
-        } else {
-            completedTransactions
-        }
+        val filteredTxs = chartTransactionsFor(page, completedTransactions, cachedSharedPlans())
 
         val data = if (fiat == null) {
             emptyList()
