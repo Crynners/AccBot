@@ -30,6 +30,7 @@ class RefreshSharedPlansUseCase @Inject constructor(
         plans.associate { it.shareId to refreshSharedPlan(it.shareId, now) }
 
     companion object {
+        private const val MAX_CRON_STEPS = 1000
         private val FALLBACK_INTERVAL: Duration = Duration.ofDays(1)
 
         internal fun nextExpectedPurchase(plan: SharedPlan): Instant {
@@ -45,12 +46,31 @@ class RefreshSharedPlansUseCase @Inject constructor(
             }
         }
 
-        /** A failed refresh does not disable the next one; each app start tries once. */
-        internal fun isDue(plan: SharedPlan, now: Instant): Boolean {
-            if (!plan.liveUpdates || !plan.isEnabled) return false
-            val next = nextExpectedPurchase(plan)
-            val refreshedAt = plan.refreshedAt
-            return !next.isAfter(now) && (refreshedAt == null || refreshedAt.isBefore(next))
+        /**
+         * The first expected purchase that the last refresh has not yet covered: a refresh at or
+         * after the expected time that found no trade (purchase delayed or skipped) rolls the
+         * expectation on to the next scheduled purchase instead of stalling it forever.
+         */
+        internal fun nextUnrefreshedPurchase(plan: SharedPlan): Instant {
+            var next = nextExpectedPurchase(plan)
+            val refreshedAt = plan.refreshedAt ?: return next
+            if (next.isAfter(refreshedAt)) return next
+            val frequency = plan.frequency
+            val cron = plan.cronExpression
+            if (frequency == DcaFrequency.CUSTOM && cron != null) {
+                repeat(MAX_CRON_STEPS) {
+                    if (next.isAfter(refreshedAt)) return next
+                    next = CronUtils.getNextExecution(cron, next) ?: next.plus(FALLBACK_INTERVAL)
+                }
+                return next
+            }
+            val step = if (frequency != null) Duration.ofMinutes(frequency.intervalMinutes) else FALLBACK_INTERVAL
+            val steps = Duration.between(next, refreshedAt).toMillis() / step.toMillis() + 1
+            return next.plus(step.multipliedBy(steps))
         }
+
+        /** A failed refresh does not disable the next one; each app start tries once. */
+        internal fun isDue(plan: SharedPlan, now: Instant): Boolean =
+            plan.liveUpdates && plan.isEnabled && !nextUnrefreshedPurchase(plan).isAfter(now)
     }
 }

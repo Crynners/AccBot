@@ -192,7 +192,8 @@ class ImportSharedPlanUseCase @Inject constructor(
             }
             if (check == KeyCheck.READ_ONLY) plan = plan.copy(verifiedReadOnly = true, fullAccessKey = false)
         }
-        return sharedPlanStore.save(plan, credentials)
+        // Serialized with refresh/download, so a concurrent refresh never writes back a stale copy.
+        return sharedPlanStore.withPlanLock(plan.shareId) { sharedPlanStore.save(plan, credentials) }
     }
 
     /** Reads at most [SharedPlanCodec.MAX_FILE_BYTES] from [input]. */

@@ -127,7 +127,7 @@ class RefreshSharedPlansUseCaseTest {
     @Test
     fun `plan refreshed after expected purchase is not due`() {
         val next = t0.plus(Duration.ofDays(1))
-        val late = next.plus(Duration.ofDays(2))
+        val late = next.plus(Duration.ofHours(2))
         assertFalse(RefreshSharedPlansUseCase.isDue(plan(refreshedAt = next.plusSeconds(1)), late))
         assertTrue(RefreshSharedPlansUseCase.isDue(plan(refreshedAt = next.minusSeconds(1)), late))
     }
@@ -151,12 +151,16 @@ class RefreshSharedPlansUseCaseTest {
     fun `refreshDue skips other environment and plans not due`() = runTest {
         store.save(plan(isSandbox = true), key)
         store.save(plan(id = otherId), key)
-        val results = useCase.refreshDue(isSandbox = false, now = t0.plusSeconds(60))
-        assertTrue(results.isEmpty())
+        val early = t0.plusSeconds(60)
+        assertTrue(useCase.refreshDue(isSandbox = false, now = early).isEmpty())
         assertEquals(0, tradeHistoryCalls)
 
-        val all = useCase.refreshAll(isSandbox = false, now = t0.plusSeconds(60))
-        assertEquals(setOf(otherId), all.keys)
+        // Both plans are due; only the one of the requested environment is refreshed.
+        val late = t0.plus(Duration.ofDays(2))
+        assertEquals(setOf(otherId), useCase.refreshDue(isSandbox = false, now = late).keys)
+        assertEquals(setOf(shareId), useCase.refreshDue(isSandbox = true, now = late).keys)
+
+        assertEquals(setOf(otherId), useCase.refreshAll(isSandbox = false, now = early).keys)
     }
 
     @Test
@@ -174,5 +178,59 @@ class RefreshSharedPlansUseCaseTest {
         val newTrades = results.sumOf { (it as RefreshSharedPlanUseCase.Result.Updated).newTrades }
         assertEquals(1, newTrades)
         assertEquals(2, store.get(shareId)!!.trades.size)
+    }
+
+    @Test
+    fun `early refresh before the purchase does not stop later refreshes`() {
+        val d1 = t0.plus(Duration.ofDays(1))
+        val p = plan(refreshedAt = d1.plusSeconds(5 * 60))
+        assertFalse(RefreshSharedPlansUseCase.isDue(p, d1.plus(Duration.ofHours(1))))
+        assertTrue(RefreshSharedPlansUseCase.isDue(p, t0.plus(Duration.ofDays(2)).plusSeconds(30 * 60)))
+    }
+
+    @Test
+    fun `skipped purchases keep the plan due once per expected purchase`() {
+        val d3 = t0.plus(Duration.ofDays(3))
+        // Refreshed on day 3 at 09:30 with no new trade: day 1..3 purchases are covered.
+        val p = plan(refreshedAt = d3.plusSeconds(30 * 60))
+        assertFalse(RefreshSharedPlansUseCase.isDue(p, d3.plus(Duration.ofHours(10))))
+        assertTrue(RefreshSharedPlansUseCase.isDue(p, t0.plus(Duration.ofDays(4))))
+    }
+
+    @Test
+    fun `cron plan rolls forward past a refresh without new trade`() {
+        val p = plan(frequency = DcaFrequency.CUSTOM, cron = "*/10 * * * *", refreshedAt = t0.plus(Duration.ofMinutes(25)))
+        assertFalse(RefreshSharedPlansUseCase.isDue(p, t0.plus(Duration.ofMinutes(29))))
+        assertTrue(RefreshSharedPlansUseCase.isDue(p, t0.plus(Duration.ofMinutes(30))))
+    }
+
+    @Test
+    fun `import saved while a refresh runs is not overwritten by the refresh`() = runTest {
+        store.save(plan(), key)
+        val started = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val release = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val slowApi = FakeExchangeApi(tradeHistoryHandler = { _, _, _, _ ->
+            started.complete(Unit)
+            release.await()
+            TradeHistoryPage(emptyList(), hasMore = false)
+        })
+        val slowRefresh = RefreshSharedPlanUseCase(store, ReadOnlyExchangeClient.Factory { _, _ -> slowApi })
+        val refreshing = async { slowRefresh(shareId, t0.plus(Duration.ofDays(2))) }
+        started.await()
+
+        val newKey = key.copy(apiKey = "newer-key")
+        val importing = async {
+            store.withPlanLock(shareId) {
+                store.save(plan().copy(sharedAt = t0.plus(Duration.ofDays(1))), newKey)
+            }
+        }
+        yield()
+        release.complete(Unit)
+        refreshing.await()
+        importing.await()
+
+        val after = store.get(shareId)!!
+        assertEquals(t0.plus(Duration.ofDays(1)), after.latestSharedAt)
+        assertEquals("newer-key", store.credentials(shareId)!!.apiKey)
     }
 }
