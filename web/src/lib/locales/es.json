@@ -1,5 +1,5 @@
 {
-  "meta_title": "AccBot | Compra Bitcoin automáticamente desde tu móvil",
+  "meta_title": "AccBot | App DCA de Bitcoin gratuita y de código abierto",
   "meta_description": "App gratuita y de código abierto para Android que compra Bitcoin y otras criptomonedas de forma periódica, directamente desde tu propia cuenta en el exchange. Cinco exchanges, sin intermediarios y sin nube.",
   "nav_features": "Funciones",
   "nav_screenshots": "Capturas",
@@ -12,7 +12,7 @@
   "nav_menu": "Menú",
   "lang_label": "Idioma",
   "hero_tagline": "Acumula sats en piloto automático",
-  "hero_subtitle": "AccBot compra Bitcoin por ti de forma periódica, directamente desde tu propia cuenta en el exchange. Funciona en tu móvil, así que no hay nube ni intermediarios que se lleven comisión.",
+  "hero_subtitle": "AccBot es totalmente gratis y de código abierto. Compra Bitcoin por ti de forma periódica, directamente desde tu propia cuenta del exchange, y funciona en tu teléfono, así que no hay servicios en la nube ni intermediarios que se lleven comisión. Solo pagas la comisión habitual del exchange.",
   "hero_cta_github": "Ver en GitHub",
   "value_custody_title": "Tus claves son tuyas",
   "value_custody_desc": "Las claves API nunca salen de tu móvil. Se cifran con AES-256-GCM en el Android Keystore. Nada va a la nube y nada se rastrea.",
@@ -207,5 +207,8 @@
   "compare_plan_daily_hint": "Las compras diarias no están disponibles en FREE.",
   "compare_fee_stosuj_tpl": "1,5 % + {0}/mes",
   "compare_sub_paid_tpl": "incluida la suscripción {0} {1}",
-  "compare_note": "Es un ejemplo ilustrativo con el exchange Coinmate. AccBot es completamente gratis: todas las comisiones de la simulación van al exchange y, en Štosuj, también a su suscripción."
+  "compare_note": "Es un ejemplo ilustrativo con el exchange Coinmate. AccBot es completamente gratis: todas las comisiones de la simulación van al exchange y, en Štosuj, también a su suscripción.",
+  "hero_badge_free": "100 % gratis",
+  "hero_badge_oss": "Código abierto",
+  "hero_badge_noads": "Sin anuncios"
 }

@@ -1,5 +1,5 @@
 {
-  "meta_title": "AccBot | Automatyczny zakup bitcoina z telefonu",
+  "meta_title": "AccBot | Darmowa aplikacja open source do regularnego zakupu Bitcoina",
   "meta_description": "Darmowa aplikacja open source na Androida, która regularnie kupuje bitcoina i inne kryptowaluty prosto z Twojego konta na giełdzie. Pięć giełd, bez pośredników, bez chmury.",
   "nav_features": "Funkcje",
   "nav_screenshots": "Zrzuty ekranu",
@@ -12,7 +12,7 @@
   "nav_menu": "Menu",
   "lang_label": "Język",
   "hero_tagline": "Zbieraj satoshi na autopilocie",
-  "hero_subtitle": "AccBot regularnie kupuje za Ciebie bitcoina, prosto z Twojego konta na giełdzie. Działa na Twoim telefonie, więc nie ma chmury ani pośrednika, który bierze prowizję.",
+  "hero_subtitle": "AccBot jest całkowicie darmowy i open source. Regularnie kupuje za Ciebie Bitcoina prosto z Twojego konta na giełdzie i działa wyłącznie na Twoim telefonie, więc nie ma chmury ani pośrednika pobierającego prowizję. Płacisz tylko zwykłą opłatę giełdową.",
   "hero_cta_github": "Zobacz na GitHubie",
   "value_custody_title": "Klucze zostają u Ciebie",
   "value_custody_desc": "Klucze API nigdy nie opuszczają Twojego telefonu. Są szyfrowane AES-256-GCM w Android Keystore. Nic nie trafia do chmury i nic nie jest śledzone.",
@@ -207,5 +207,8 @@
   "compare_plan_daily_hint": "Codzienne zakupy nie są dostępne w FREE.",
   "compare_fee_stosuj_tpl": "1,5 % + {0}/mies.",
   "compare_sub_paid_tpl": "w tym abonament {0} {1}",
-  "compare_note": "To przykład poglądowy na giełdzie Coinmate. AccBot jest całkowicie darmowy: wszystkie opłaty w symulacji trafiają do giełdy, a w Štosuj dodatkowo na abonament."
+  "compare_note": "To przykład poglądowy na giełdzie Coinmate. AccBot jest całkowicie darmowy: wszystkie opłaty w symulacji trafiają do giełdy, a w Štosuj dodatkowo na abonament.",
+  "hero_badge_free": "100% za darmo",
+  "hero_badge_oss": "Open source",
+  "hero_badge_noads": "Bez reklam"
 }

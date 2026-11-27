@@ -1,5 +1,5 @@
 {
-  "meta_title": "AccBot | スマホでビットコインを自動積立",
+  "meta_title": "AccBot | 無料・オープンソースのビットコイン積立アプリ",
   "meta_description": "自分の取引所アカウントから、ビットコインなどの暗号資産を定期的に自動購入する無料のオープンソース Android アプリ。5つの取引所に対応、仲介業者なし、クラウドなし。",
   "nav_features": "機能",
   "nav_screenshots": "スクリーンショット",
@@ -12,7 +12,7 @@
   "nav_menu": "メニュー",
   "lang_label": "言語",
   "hero_tagline": "サトシを自動でコツコツ積立",
-  "hero_subtitle": "AccBot は、あなた自身の取引所アカウントからスケジュールどおりにビットコインを購入します。スマホの中で動くので、クラウドサービスも手数料を取る仲介業者もありません。",
+  "hero_subtitle": "AccBot は完全無料のオープンソースアプリです。あなたの取引所アカウントから直接、スケジュールどおりにビットコインを購入し、スマホ上で動作します。クラウドサービスも、手数料を取る仲介業者もありません。支払うのは取引所の通常の手数料だけです。",
   "hero_cta_github": "GitHub で見る",
   "value_custody_title": "鍵は手元に",
   "value_custody_desc": "API キーがスマホの外に出ることはありません。Android Keystore で AES-256-GCM により暗号化されます。クラウドへの送信もトラッキングも一切ありません。",
@@ -207,5 +207,8 @@
   "compare_plan_daily_hint": "FREE では毎日の購入はできません。",
   "compare_fee_stosuj_tpl": "1.5% + 月 {0}",
   "compare_sub_paid_tpl": "うち {0} プラン {1}",
-  "compare_note": "これは Coinmate 取引所を例にした参考計算です。AccBot 自体は完全無料で、シミュレーション内の手数料はすべて取引所に支払うものです（Štosuj の場合はさらにサブスクリプション料金）。"
+  "compare_note": "これは Coinmate 取引所を例にした参考計算です。AccBot 自体は完全無料で、シミュレーション内の手数料はすべて取引所に支払うものです（Štosuj の場合はさらにサブスクリプション料金）。",
+  "hero_badge_free": "完全無料",
+  "hero_badge_oss": "オープンソース",
+  "hero_badge_noads": "広告なし"
 }

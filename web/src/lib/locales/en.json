@@ -1,5 +1,5 @@
 {
-  "meta_title": "AccBot | Automatic Bitcoin DCA on your phone",
+  "meta_title": "AccBot | Free, open-source Bitcoin DCA app",
   "meta_description": "Free, open-source Android app that buys Bitcoin and other crypto on a schedule, straight from your own exchange account. Five exchanges, no middleman, no cloud.",
   "nav_features": "Features",
   "nav_screenshots": "Screenshots",
@@ -12,7 +12,7 @@
   "nav_menu": "Menu",
   "lang_label": "Language",
   "hero_tagline": "Stack sats on autopilot",
-  "hero_subtitle": "AccBot buys Bitcoin for you on a schedule, straight from your own exchange account. It runs on your phone, so there's no cloud service and no middleman taking a cut.",
+  "hero_subtitle": "AccBot is completely free and open source. It buys Bitcoin for you on a schedule, straight from your own exchange account, and runs on your phone, so there's no cloud service and no middleman taking a cut. You only pay the exchange's usual fee.",
   "hero_cta_github": "View on GitHub",
   "value_custody_title": "Your keys stay with you",
   "value_custody_desc": "API keys never leave your phone. They're encrypted with AES-256-GCM in the Android Keystore. Nothing goes to the cloud and nothing is tracked.",
@@ -275,5 +275,8 @@
   "compare_plan_daily_hint": "Daily purchases aren't available in FREE.",
   "compare_fee_stosuj_tpl": "1.5% + {0}/month",
   "compare_sub_paid_tpl": "incl. {0} subscription {1}",
-  "compare_note": "This is an illustrative example on the Coinmate exchange. AccBot itself is completely free: every fee in the simulation goes to the exchange, and with Štosuj also to its subscription."
+  "compare_note": "This is an illustrative example on the Coinmate exchange. AccBot itself is completely free: every fee in the simulation goes to the exchange, and with Štosuj also to its subscription.",
+  "hero_badge_free": "100% free",
+  "hero_badge_oss": "Open source",
+  "hero_badge_noads": "No ads"
 }

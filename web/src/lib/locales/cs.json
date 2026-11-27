@@ -1,5 +1,5 @@
 {
-  "meta_title": "AccBot | Automatické nákupy bitcoinu z vašeho telefonu",
+  "meta_title": "AccBot | Bezplatná open-source aplikace na pravidelné nákupy bitcoinu",
   "meta_description": "Bezplatná open-source aplikace pro Android, která pravidelně nakupuje bitcoin a další kryptoměny přímo z vašeho účtu na burze. Pět burz, žádný prostředník, žádný cloud.",
   "nav_features": "Funkce",
   "nav_screenshots": "Ukázky",
@@ -12,7 +12,7 @@
   "nav_menu": "Menu",
   "lang_label": "Jazyk",
   "hero_tagline": "Štosujte satoshi na autopilota",
-  "hero_subtitle": "AccBot za vás pravidelně nakupuje bitcoin přímo z vašeho účtu na burze. Běží ve vašem telefonu, takže žádný cloud a žádný prostředník, který si bere procenta.",
+  "hero_subtitle": "AccBot je zcela zdarma a open source. Pravidelně za vás nakupuje bitcoin přímo na vašem burzovním účtu a běží jen ve vašem telefonu, takže žádný cloud ani prostředník, který by si bral provizi. Platíte jen běžný poplatek burze.",
   "hero_cta_github": "Zobrazit na GitHubu",
   "value_custody_title": "Klíče máte u sebe",
   "value_custody_desc": "API klíče nikdy neopustí váš telefon. Jsou šifrované pomocí AES-256-GCM v Android Keystore. Nic se neposílá do cloudu a nic se nesleduje.",
@@ -275,5 +275,8 @@
   "compare_plan_daily_hint": "Denní nákupy ve FREE nejdou.",
   "compare_fee_stosuj_tpl": "1,5 % + {0} měsíčně",
   "compare_sub_paid_tpl": "z toho předplatné {0} {1}",
-  "compare_note": "Jde o ilustrační příklad na burze Coinmate. AccBot je kompletně zdarma: všechny poplatky v simulaci jdou burze, u Štosuj navíc za jeho předplatné."
+  "compare_note": "Jde o ilustrační příklad na burze Coinmate. AccBot je kompletně zdarma: všechny poplatky v simulaci jdou burze, u Štosuj navíc za jeho předplatné.",
+  "hero_badge_free": "Zcela zdarma",
+  "hero_badge_oss": "Open source",
+  "hero_badge_noads": "Bez reklam"
 }

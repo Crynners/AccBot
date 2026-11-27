@@ -1,5 +1,5 @@
 {
-  "meta_title": "AccBot | Compras automáticas de Bitcoin no seu telemóvel",
+  "meta_title": "AccBot | App de DCA em Bitcoin gratuita e de código aberto",
   "meta_description": "App Android gratuita e de código aberto que compra Bitcoin e outras criptomoedas de forma regular, diretamente da sua própria conta na exchange. Cinco exchanges, sem intermediários e sem nuvem.",
   "nav_features": "Funcionalidades",
   "nav_screenshots": "Capturas",
@@ -12,7 +12,7 @@
   "nav_menu": "Menu",
   "lang_label": "Idioma",
   "hero_tagline": "Acumule sats em piloto automático",
-  "hero_subtitle": "O AccBot compra Bitcoin por si de forma regular, diretamente da sua própria conta na exchange. Funciona no seu telemóvel, por isso não há nuvem nem intermediários a ficar com uma parte.",
+  "hero_subtitle": "O AccBot é totalmente gratuito e de código aberto. Compra Bitcoin por si de forma regular, diretamente da sua própria conta na exchange, e funciona no seu telemóvel, por isso não há serviço na nuvem nem intermediários a cobrar comissão. Só paga a taxa habitual da exchange.",
   "hero_cta_github": "Ver no GitHub",
   "value_custody_title": "As chaves ficam consigo",
   "value_custody_desc": "As chaves API nunca saem do seu telemóvel. São cifradas com AES-256-GCM no Android Keystore. Nada vai para a nuvem e nada é rastreado.",
@@ -207,5 +207,8 @@
   "compare_plan_daily_hint": "Compras diárias não estão disponíveis no FREE.",
   "compare_fee_stosuj_tpl": "1,5 % + {0}/mês",
   "compare_sub_paid_tpl": "inclui assinatura {0} {1}",
-  "compare_note": "É um exemplo ilustrativo na exchange Coinmate. O AccBot é totalmente gratuito: todas as taxas da simulação vão para a exchange e, no Štosuj, também para a assinatura."
+  "compare_note": "É um exemplo ilustrativo na exchange Coinmate. O AccBot é totalmente gratuito: todas as taxas da simulação vão para a exchange e, no Štosuj, também para a assinatura.",
+  "hero_badge_free": "100% grátis",
+  "hero_badge_oss": "Código aberto",
+  "hero_badge_noads": "Sem anúncios"
 }

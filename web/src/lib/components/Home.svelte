@@ -28,6 +28,11 @@
     <section class="hero">
       <div class="container">
         <div class="hero-content">
+          <ul class="hero-badges">
+            <li>{t('hero_badge_free')}</li>
+            <li>{t('hero_badge_oss')}</li>
+            <li>{t('hero_badge_noads')}</li>
+          </ul>
           <h1><span class="accent">{t('hero_tagline')}</span></h1>
           <p class="subtitle">{t('hero_subtitle')}</p>
           <div class="hero-ctas">

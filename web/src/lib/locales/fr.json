@@ -1,5 +1,5 @@
 {
-  "meta_title": "AccBot | Achat programmé de Bitcoin depuis votre téléphone",
+  "meta_title": "AccBot | Application DCA Bitcoin gratuite et open source",
   "meta_description": "Application Android gratuite et open source qui achète du Bitcoin et d'autres cryptos à intervalles réguliers, directement depuis votre compte sur une plateforme d'échange. Cinq plateformes, aucun intermédiaire, aucun cloud.",
   "nav_features": "Fonctionnalités",
   "nav_screenshots": "Captures",
@@ -12,7 +12,7 @@
   "nav_menu": "Menu",
   "lang_label": "Langue",
   "hero_tagline": "Accumulez des sats en pilote automatique",
-  "hero_subtitle": "AccBot achète du Bitcoin pour vous selon un calendrier, directement depuis votre propre compte sur une plateforme d'échange. Tout se passe sur votre téléphone : pas de cloud, pas d'intermédiaire qui prend sa commission.",
+  "hero_subtitle": "AccBot est entièrement gratuit et open source. L'application achète du Bitcoin pour vous à intervalles réguliers, directement depuis votre propre compte d'échange, et tourne sur votre téléphone : pas de service cloud, pas d'intermédiaire qui prend une commission. Vous ne payez que les frais habituels de la plateforme.",
   "hero_cta_github": "Voir sur GitHub",
   "value_custody_title": "Vos clés restent chez vous",
   "value_custody_desc": "Les clés API ne quittent jamais votre téléphone. Elles sont chiffrées en AES-256-GCM dans l'Android Keystore. Rien ne part dans le cloud, rien n'est pisté.",
@@ -207,5 +207,8 @@
   "compare_plan_daily_hint": "Les achats quotidiens ne sont pas disponibles en FREE.",
   "compare_fee_stosuj_tpl": "1,5 % + {0}/mois",
   "compare_sub_paid_tpl": "dont abonnement {0} {1}",
-  "compare_note": "Il s'agit d'un exemple illustratif sur la plateforme Coinmate. AccBot est entièrement gratuit : tous les frais de la simulation vont à la plateforme, et chez Štosuj aussi à l'abonnement."
+  "compare_note": "Il s'agit d'un exemple illustratif sur la plateforme Coinmate. AccBot est entièrement gratuit : tous les frais de la simulation vont à la plateforme, et chez Štosuj aussi à l'abonnement.",
+  "hero_badge_free": "100 % gratuit",
+  "hero_badge_oss": "Open source",
+  "hero_badge_noads": "Sans publicité"
 }
