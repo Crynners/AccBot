@@ -10,6 +10,9 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
+/** A pair to price although the user holds no transaction in it (e.g. a shared plan), from [since]. */
+data class ExtraPricePair(val crypto: String, val fiat: String, val since: LocalDate)
+
 /**
  * Orchestrates two-phase daily price sync:
  * 1. Forward sync (every sync): CoinGecko – fills the small gap between latest cached date and today
@@ -33,8 +36,15 @@ class SyncDailyPricesUseCase @Inject constructor(
      * Sync daily prices for all crypto/fiat pairs that have completed transactions.
      * @return number of pairs synced successfully
      */
-    suspend fun sync(): Int {
+    suspend fun sync(extraPairs: List<ExtraPricePair> = emptyList()): Int {
         val holdings = transactionDao.getHoldingsByPair()
+            .map { PairToSync(it.crypto, it.fiat, null) }
+            .let { own ->
+                own + extraPairs
+                    .filter { extra -> own.none { it.crypto == extra.crypto && it.fiat == extra.fiat } }
+                    .distinctBy { it.crypto to it.fiat }
+                    .map { PairToSync(it.crypto, it.fiat, it.since) }
+            }
         if (holdings.isEmpty()) return 0
 
         val today = LocalDate.now()
@@ -47,9 +57,11 @@ class SyncDailyPricesUseCase @Inject constructor(
 
                 // Compute desired start date from earliest transaction
                 val earliestTx = transactionDao.getEarliestTransactionDate(crypto, fiat)
-                val desiredStartDate = if (earliestTx != null) {
-                    val earliestTxDate = java.time.Instant.ofEpochMilli(earliestTx)
-                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                val desiredStartDate = if (earliestTx != null || holding.since != null) {
+                    val earliestTxDate = if (earliestTx != null) {
+                        java.time.Instant.ofEpochMilli(earliestTx)
+                            .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                    } else holding.since!!
                     val idealDays = ChronoUnit.DAYS.between(earliestTxDate, today).toInt()
                         .coerceIn(30, 3650)
                     today.minusDays(idealDays.toLong())
@@ -131,6 +143,8 @@ class SyncDailyPricesUseCase @Inject constructor(
 
         return syncedCount
     }
+
+    private data class PairToSync(val crypto: String, val fiat: String, val since: LocalDate?)
 
     private suspend fun insertPrices(crypto: String, fiat: String, prices: List<Pair<LocalDate, java.math.BigDecimal>>) {
         val entities = prices.map { (date, price) ->

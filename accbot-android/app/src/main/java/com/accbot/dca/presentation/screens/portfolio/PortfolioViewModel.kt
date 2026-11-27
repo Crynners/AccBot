@@ -16,9 +16,11 @@ import com.accbot.dca.domain.share.toChartTransactions
 import com.accbot.dca.domain.usecase.CalculateChartDataUseCase
 import com.accbot.dca.domain.usecase.CancelSellOrderUseCase
 import com.accbot.dca.domain.model.Transaction
+import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.data.local.toDomain
 import com.accbot.dca.domain.usecase.ChartDataPoint
 import com.accbot.dca.domain.usecase.ChartZoomLevel
+import com.accbot.dca.domain.usecase.ExtraPricePair
 import com.accbot.dca.domain.usecase.SyncDailyPricesUseCase
 import androidx.compose.runtime.Immutable
 import android.content.Context
@@ -84,6 +86,12 @@ internal fun buildPages(
     return pages
 }
 
+/** Index of the previously selected page (by id) in [newPages], 0 when it is gone. */
+internal fun selectionIndexAfterRebuild(oldPages: List<PairPage>, oldIndex: Int, newPages: List<PairPage>): Int {
+    val id = oldPages.getOrNull(oldIndex)?.let { pageIdOf(it) } ?: return 0
+    return newPages.indexOfFirst { pageIdOf(it) == id }.takeIf { it >= 0 } ?: 0
+}
+
 /**
  * Transactions the chart of [page] is drawn from. Aggregate and Plan pages use only Room data;
  * a Shared page uses its own in-memory mapped trades.
@@ -94,7 +102,9 @@ internal fun chartTransactionsFor(
     shared: List<SharedPlan>
 ): List<TransactionEntity> = when (page) {
     is PairPage.Plan -> roomTransactions.filter { it.planId == page.planId }
-    is PairPage.Shared -> shared.firstOrNull { it.shareId == page.shareId }?.toChartTransactions().orEmpty()
+    // The chart pipeline is BUY-only (see TransactionDao.getCompletedTransactionsOrdered).
+    is PairPage.Shared -> shared.firstOrNull { it.shareId == page.shareId }
+        ?.toChartTransactions().orEmpty().filter { it.side == TransactionSide.BUY }
     is PairPage.Aggregate, null -> roomTransactions
 }
 
@@ -237,6 +247,7 @@ class PortfolioViewModel @Inject constructor(
     private var syncJob: Job? = null
     private var chartJob: Job? = null
     private var lastLoadedAt: Long = 0
+    private var lastBuiltSandbox: Boolean = userPreferences.processSandboxMode
     private var lastTransactionsFetchedAt: Long = 0
 
     companion object {
@@ -248,6 +259,9 @@ class PortfolioViewModel @Inject constructor(
         loadPortfolio()
         observeSharedPlans()
     }
+
+    /** Current environment; remembered so [refreshIfStale] can detect a switch. */
+    private fun currentSandbox(): Boolean = userPreferences.processSandboxMode.also { lastBuiltSandbox = it }
 
     private fun cachedSharedPlans(): List<SharedPlan> = sharedPlanStore.plans.value.orEmpty()
 
@@ -274,10 +288,9 @@ class PortfolioViewModel @Inject constructor(
     private fun rebuildPagesForSharedChange() {
         val state = _uiState.value
         if (state.isLoading) return
-        val selectedId = state.pages.getOrNull(state.selectedPageIndex)?.let { pageIdOf(it) }
-        val pages = buildPages(cachedDbPlans, cachedSharedPlans(), userPreferences.processSandboxMode)
+        val pages = buildPages(cachedDbPlans, cachedSharedPlans(), currentSandbox())
         if (pages == state.pages) return
-        val newIndex = pages.indexOfFirst { pageIdOf(it) == selectedId }.takeIf { it >= 0 } ?: 0
+        val newIndex = selectionIndexAfterRebuild(state.pages, state.selectedPageIndex, pages)
         _uiState.update { it.copy(pages = pages, selectedPageIndex = newIndex) }
         updateNavigationState()
         refreshOpenSellsForCurrentPage()
@@ -302,7 +315,7 @@ class PortfolioViewModel @Inject constructor(
                 val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
                 cachedDbPlans = allDbPlans
 
-                val pages = buildPages(allDbPlans, cachedSharedPlans(), userPreferences.processSandboxMode)
+                val pages = buildPages(allDbPlans, cachedSharedPlans(), currentSandbox())
 
                 val deepLinkCrypto = initialCrypto
                 val deepLinkFiat = initialFiat
@@ -360,11 +373,10 @@ class PortfolioViewModel @Inject constructor(
 
                 val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
                 cachedDbPlans = allDbPlans
-                val pages = buildPages(allDbPlans, cachedSharedPlans(), userPreferences.processSandboxMode)
+                val pages = buildPages(allDbPlans, cachedSharedPlans(), currentSandbox())
 
                 _uiState.update { state ->
-                    // Keep current page index if still valid, otherwise reset to 0
-                    val pageIndex = state.selectedPageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
+                    val pageIndex = selectionIndexAfterRebuild(state.pages, state.selectedPageIndex, pages)
                     state.copy(
                         pages = pages,
                         selectedPageIndex = pageIndex
@@ -612,7 +624,17 @@ class PortfolioViewModel @Inject constructor(
         syncJob = viewModelScope.launch {
             _uiState.update { it.copy(isPriceSyncing = true) }
             try {
-                syncDailyPricesUseCase.sync()
+                val sandbox = userPreferences.processSandboxMode
+                // Shared pairs the user does not hold have no price rows otherwise.
+                val extra = cachedSharedPlans()
+                    .filter { it.isSandbox == sandbox && it.includesAmounts && it.trades.isNotEmpty() }
+                    .map { plan ->
+                        ExtraPricePair(
+                            plan.crypto, plan.fiat,
+                            plan.trades.minOf { it.executedAt }.atZone(ZoneId.systemDefault()).toLocalDate()
+                        )
+                    }
+                syncDailyPricesUseCase.sync(extra)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -899,7 +921,9 @@ class PortfolioViewModel @Inject constructor(
     }
 
     fun refreshIfStale() {
-        if (System.currentTimeMillis() - lastLoadedAt > STALENESS_THRESHOLD_MS) {
+        // An environment switch changes which shared plans show, so rebuild right away.
+        if (userPreferences.processSandboxMode != lastBuiltSandbox ||
+            System.currentTimeMillis() - lastLoadedAt > STALENESS_THRESHOLD_MS) {
             loadPortfolio()
         }
     }

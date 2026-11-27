@@ -8,6 +8,7 @@ import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.model.TransactionStatus
 import com.accbot.dca.domain.share.SharedPlan
 import com.accbot.dca.domain.share.sharedPlanFixture
+import com.accbot.dca.domain.share.toChartTransactions
 import com.accbot.dca.domain.share.SharedPlanTrade
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -55,6 +56,24 @@ class PortfolioPagesTest {
     }
 
     @Test
+    fun `shared chart input is buy only`() {
+        val sp = shared("a")
+        val input = chartTransactionsFor(PairPage.Shared("a", "Friend", "BTC", "CZK"), emptyList(), listOf(sp))
+        assertEquals(1, input.size)
+        assertTrue(input.all { it.side == TransactionSide.BUY })
+        assertEquals(2, sp.toChartTransactions().size)
+    }
+
+    @Test
+    fun `selection follows the page id when pages change`() {
+        val p1 = PairPage.Plan(1, "P1", "BTC", "CZK")
+        val old = listOf(p1, PairPage.Shared("a", "A", "BTC", "CZK"))
+        val new = listOf(p1, PairPage.Shared("z", "Z", "BTC", "CZK"), PairPage.Shared("a", "A", "BTC", "CZK"))
+        assertEquals(2, selectionIndexAfterRebuild(old, 1, new))
+        assertEquals(0, selectionIndexAfterRebuild(old, 1, listOf(p1)))
+    }
+
+    @Test
     fun `aggregate page is unaffected by shared plans`() {
         val db = listOf(plan(1), plan(2))
         val sharedPlans = listOf(shared("a"))
@@ -69,7 +88,7 @@ class PortfolioPagesTest {
 
         val sharedPage = pages.last() as PairPage.Shared
         val sharedInput = chartTransactionsFor(sharedPage, room, sharedPlans)
-        assertEquals(2, sharedInput.size)
+        assertEquals(1, sharedInput.size)
         assertTrue(sharedInput.all { it.planId == 0L })
         assertEquals(listOf(tx(1)), chartTransactionsFor(PairPage.Plan(1, "P1", "BTC", "CZK"), room, sharedPlans))
         assertEquals(TransactionSide.BUY, sharedInput.first().side)
