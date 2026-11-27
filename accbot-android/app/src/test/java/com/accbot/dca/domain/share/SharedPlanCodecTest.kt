@@ -371,6 +371,48 @@ class SharedPlanCodecTest {
         assertNull(SharedPlanCodec.decodeShare(forged, null, ::fakeDecrypt).plan.latestSharedAt)
     }
 
+    @Test
+    fun `keyRevoked survives local storage and is ignored in received files`() {
+        val stored = SharedPlanCodec.decode(SharedPlanCodec.encode(snapshotOf(transactions)))
+        assertFalse(stored.keyRevoked)
+        assertTrue(SharedPlanCodec.decode(SharedPlanCodec.encode(stored.copy(keyRevoked = true))).keyRevoked)
+
+        val forged = SharedPlanCodec.encode(snapshotOf(transactions).copy(local = SharedPlanLocalDto(keyRevoked = true)))
+        assertFalse(SharedPlanCodec.decodeShare(forged, null, ::fakeDecrypt).plan.keyRevoked)
+    }
+
+    @Test
+    fun `stored plans are compact and not limited like received files`() {
+        val many = (1..25_000).map { i ->
+            SharedPlanTradeDto(
+                executedAt = t0.toEpochMilli() + i * 1000L, side = "BUY", price = "1000000",
+                cryptoAmount = "0.001", fiatAmount = "1000", fee = "2.5", feeAsset = "CZK",
+                ref = SharedPlanCodec.orderRef("COINMATE", "order-$i")
+            )
+        }
+        // A file stored pretty-printed by an earlier version, already past the received-file size.
+        val legacy = SharedPlanCodec.encode(snapshotOf(transactions).copy(transactions = many))
+        assertTrue(legacy.toByteArray(Charsets.UTF_8).size > SharedPlanCodec.MAX_FILE_BYTES)
+        val loaded = SharedPlanCodec.decode(legacy)
+        assertEquals(25_000, loaded.trades.size)
+        assertReason(SharedPlanError.TOO_LARGE) { SharedPlanCodec.decodeShare(legacy, null, ::fakeDecrypt) }
+
+        val compact = SharedPlanCodec.encode(loaded)
+        assertFalse(compact.contains('\n'))
+        assertEquals(25_000, SharedPlanCodec.decode(compact).trades.size)
+
+        // More trades than a received file may carry still load from local storage.
+        val beyond = (1..SharedPlanCodec.MAX_TRADES + 1).map {
+            SharedPlanTrade(
+                executedAt = t0.plusSeconds(it.toLong()), side = TransactionSide.BUY, price = BigDecimal("1000000"),
+                cryptoAmount = BigDecimal("0.001"), fiatAmount = BigDecimal("1000"), fee = null, feeAsset = null
+            )
+        }
+        val big = SharedPlanCodec.encode(loaded.copy(trades = beyond))
+        assertEquals(SharedPlanCodec.MAX_TRADES + 1, SharedPlanCodec.decode(big).trades.size)
+        assertReason(SharedPlanError.TOO_LARGE) { SharedPlanCodec.decodeShare(big, null, ::fakeDecrypt) }
+    }
+
     private val appContext: Context get() = ApplicationProvider.getApplicationContext()
 
     private fun createUseCase(db: DcaDatabase): CreatePlanShareUseCase {

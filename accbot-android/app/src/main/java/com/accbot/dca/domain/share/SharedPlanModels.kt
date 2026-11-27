@@ -69,7 +69,9 @@ data class SharedPlanLocalDto(
     /** Newest share time ever accepted for this plan (may be later than the stored snapshot's). */
     @SerializedName("latestSharedAt") val latestSharedAt: Long? = null,
     /** Start of the range last replaced by a history download; older trades may be snapshot trades. */
-    @SerializedName("exchangeHistoryFrom") val exchangeHistoryFrom: Long? = null
+    @SerializedName("exchangeHistoryFrom") val exchangeHistoryFrom: Long? = null,
+    /** The key was removed because it started to allow trading or withdrawals. */
+    @SerializedName("keyRevoked") val keyRevoked: Boolean? = null
 )
 
 data class SharedPlanInfoDto(
@@ -147,7 +149,12 @@ data class SharedPlan(
      * Locally stored only: trades from this time on came from the exchange (set by a replacing
      * history download); older ones may be snapshot trades the exchange names differently.
      */
-    val exchangeHistoryFrom: Instant? = null
+    val exchangeHistoryFrom: Instant? = null,
+    /**
+     * Locally stored only: AccBot removed the key because it started to allow trading or
+     * withdrawals. Cleared when a new key is saved.
+     */
+    val keyRevoked: Boolean = false
 ) {
     val displayName: String get() = name.ifBlank { "$crypto/$fiat" }
 

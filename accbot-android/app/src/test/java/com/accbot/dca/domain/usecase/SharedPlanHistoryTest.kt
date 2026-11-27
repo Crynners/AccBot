@@ -353,11 +353,40 @@ class SharedPlanHistoryTest {
             shareId, ImportRange.AllHistory, now = now
         )
 
-        assertTrue(result is RefreshSharedPlanUseCase.Result.Failed)
+        assertTrue((result as RefreshSharedPlanUseCase.Result.Failed).historyTooLong)
         assertEquals(2, exchange.requestedSince.size)
         val plan = store.get(shareId)!!
         assertEquals(listOf(ref("order-1"), ref("order-3")), plan.trades.map { it.ref })
         assertFalse(plan.tradesFromExchange)
+    }
+
+    @Test
+    fun `full page that does not advance makes a replacing download fail safe`() = runTest {
+        stored(sharedPlan(listOf(trade(day(1), "order-1"), trade(day(3), "order-3"))))
+        // Every fill sits at the request cursor, so the next page would ask for the same range.
+        val stuck = t0.minus(overlap)
+        val exchange = FakeExchange(
+            listOf(fill("trade-a", stuck), fill("trade-b", stuck)), listOf(fill("trade-c", day(2)))
+        )
+
+        val result = download(exchange)(shareId, ImportRange.AllHistory, now = now)
+
+        assertTrue((result as RefreshSharedPlanUseCase.Result.Failed).historyTooLong)
+        assertEquals(1, exchange.requestedSince.size)
+        val plan = store.get(shareId)!!
+        assertEquals(listOf(ref("order-1"), ref("order-3")), plan.trades.map { it.ref })
+        assertFalse(plan.tradesFromExchange)
+    }
+
+    @Test
+    fun `other exchange errors are not reported as a too long history`() = runTest {
+        stored(sharedPlan(listOf(trade(day(1), "order-1"))))
+        val exchange = FakeExchange()
+        exchange.api.tradeHistoryHandler = { _, _, _, _ -> throw java.io.IOException("offline") }
+
+        val result = download(exchange)(shareId, ImportRange.AllHistory, now = now)
+
+        assertFalse((result as RefreshSharedPlanUseCase.Result.Failed).historyTooLong)
     }
 
     @Test
@@ -370,10 +399,12 @@ class SharedPlanHistoryTest {
         assertEquals(RefreshSharedPlanUseCase.Result.KeyNotReadOnly, refresh(exchange)(shareId, now = now))
         assertNull(store.credentials(shareId))
         assertFalse(store.get(shareId)!!.liveUpdates)
+        assertTrue(store.get(shareId)!!.keyRevoked)
         assertEquals(listOf(ref("order-1")), store.get(shareId)!!.trades.map { it.ref })
 
         store.save(sharedPlan(emptyList(), sharedAt = day(13)), key)
         assertTrue(store.get(shareId)!!.liveUpdates)
+        assertFalse(store.get(shareId)!!.keyRevoked)
         assertEquals(
             RefreshSharedPlanUseCase.Result.KeyNotReadOnly,
             download(exchange)(shareId, ImportRange.AllHistory, now = now)

@@ -93,7 +93,7 @@ class SharedPlansViewModel @Inject constructor(
         if (_uiState.value.importing) return
         _uiState.update { it.copy(importing = true) }
         viewModelScope.launch {
-                    if (content.toByteArray(Charsets.UTF_8).size > SharedPlanCodec.MAX_FILE_BYTES) {
+            if (content.toByteArray(Charsets.UTF_8).size > SharedPlanCodec.MAX_FILE_BYTES) {
                 fail(context.getString(errorMessage(SharedPlanError.TOO_LARGE)))
             } else {
                 importJson(content, password = null)
@@ -293,7 +293,10 @@ class SharedPlanDetailViewModel @Inject constructor(
                             plan = result.plan,
                             downloading = false,
                             downloadResult = ApiImportResultState.Error(
-                                context.getString(R.string.shared_plan_refresh_failed)
+                                context.getString(
+                                    if (result.historyTooLong) R.string.shared_plan_history_too_long
+                                    else R.string.shared_plan_refresh_failed
+                                )
                             )
                         )
                     }

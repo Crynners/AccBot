@@ -359,6 +359,12 @@ fun SharePlanDialog(
     )
 }
 
+private sealed interface QrImage {
+    data object Generating : QrImage
+    data class Ready(val bitmap: Bitmap) : QrImage
+    data object Failed : QrImage
+}
+
 /** Shown after a live share: the QR code for the other phone plus the file as a fallback. */
 @Composable
 private fun ShareResultDialog(result: ShareResult, onShareFile: () -> Unit, onDone: () -> Unit) {
@@ -373,26 +379,30 @@ private fun ShareResultDialog(result: ShareResult, onShareFile: () -> Unit, onDo
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 val qrContent = result.qrContent
-                if (qrContent != null) {
-                    val bitmap by produceState<Bitmap?>(null, qrContent) {
+                val qr = if (qrContent != null) {
+                    produceState<QrImage>(QrImage.Generating, qrContent) {
                         value = withContext(Dispatchers.Default) { generateQrBitmap(qrContent) }
-                    }
-                    bitmap?.let {
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = null,
-                            modifier = Modifier.size(240.dp)
-                        )
-                    } ?: Box(modifier = Modifier.size(240.dp), contentAlignment = Alignment.Center) {
+                            ?.let { QrImage.Ready(it) } ?: QrImage.Failed
+                    }.value
+                } else QrImage.Failed
+                when (qr) {
+                    is QrImage.Ready -> Image(
+                        bitmap = qr.bitmap.asImageBitmap(),
+                        contentDescription = stringResource(R.string.share_plan_qr_content_description),
+                        modifier = Modifier.size(240.dp)
+                    )
+                    QrImage.Generating -> Box(modifier = Modifier.size(240.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
+                    // No QR content, or the encoder could not fit it into a QR code.
+                    QrImage.Failed -> Text(stringResource(R.string.share_plan_qr_too_large))
+                }
+                if (qr != QrImage.Failed) {
                     Text(
                         stringResource(R.string.share_plan_qr_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                } else {
-                    Text(stringResource(R.string.share_plan_qr_too_large))
                 }
             }
         },

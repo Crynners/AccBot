@@ -8,6 +8,8 @@ import androidx.security.crypto.MasterKey
 import com.accbot.dca.domain.model.ExchangeCredentials
 import com.accbot.dca.domain.share.SharedPlan
 import com.accbot.dca.domain.share.SharedPlanCodec
+import com.accbot.dca.domain.share.SharedPlanError
+import com.accbot.dca.domain.share.SharedPlanException
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -79,21 +81,35 @@ class SharedPlanStore internal constructor(
             // A key without trades is a QR code (or a live file from a plan with no fills).
             // Importing it must not wipe history that was already downloaded or came from a file.
             val keyWithoutTrades = credentials != null && plan.trades.isEmpty()
+            // Trades of a snapshot that hid amounts cannot be kept under a share with amounts:
+            // they would not load back. Such a plan starts over from the exchange.
+            val keptHistory = existing?.takeIf { it.includesAmounts || !plan.includesAmounts }
             val stored = when {
-                keyWithoutTrades && existing != null -> plan.copy(
-                    trades = existing.trades,
-                    tradesFromExchange = existing.tradesFromExchange,
-                    exchangeHistoryFrom = existing.exchangeHistoryFrom,
-                    refreshedAt = existing.refreshedAt,
+                keyWithoutTrades && keptHistory != null -> plan.copy(
+                    trades = keptHistory.trades,
+                    tradesFromExchange = keptHistory.tradesFromExchange,
+                    exchangeHistoryFrom = keptHistory.exchangeHistoryFrom,
+                    refreshedAt = keptHistory.refreshedAt,
                     // Never move forward: the stored trades only cover the time up to this.
-                    sharedAt = existing.sharedAt,
+                    sharedAt = keptHistory.sharedAt,
                     latestSharedAt = plan.sharedAt,
-                    liveUpdates = true
+                    liveUpdates = true,
+                    keyRevoked = false
                 )
                 keyWithoutTrades -> plan.copy(
-                    tradesFromExchange = true, latestSharedAt = plan.sharedAt, liveUpdates = true
+                    trades = emptyList(),
+                    tradesFromExchange = true,
+                    exchangeHistoryFrom = null,
+                    latestSharedAt = plan.sharedAt,
+                    liveUpdates = true,
+                    keyRevoked = false
                 )
-                else -> plan.copy(latestSharedAt = plan.sharedAt, liveUpdates = credentials != null)
+                else -> plan.copy(
+                    latestSharedAt = plan.sharedAt,
+                    liveUpdates = credentials != null,
+                    // A plain snapshot keeps the notice that the old key was removed.
+                    keyRevoked = credentials == null && existing?.keyRevoked == true
+                )
             }
             if (credentials != null) keys.put(plan.shareId, credentials) else keys.remove(plan.shareId)
             writeLocked(stored)
@@ -121,7 +137,8 @@ class SharedPlanStore internal constructor(
     }
 
     /**
-     * Removes the key of a stored share and stops its live updates, keeping its trades. Unlike
+     * Removes the key of a stored share that started to allow trading or withdrawals and stops
+     * its live updates, keeping its trades and marking it [SharedPlan.keyRevoked]. Unlike
      * [save] without credentials this never returns [SaveResult.Outdated].
      */
     suspend fun dropKey(shareId: String) = mutex.withLock {
@@ -130,7 +147,7 @@ class SharedPlanStore internal constructor(
             val id = shareId.lowercase()
             keys.remove(id)
             val existing = (_plans.value ?: loadLocked()).firstOrNull { it.shareId == id } ?: return@withContext
-            writeLocked(existing.copy(liveUpdates = false))
+            writeLocked(existing.copy(liveUpdates = false, keyRevoked = true))
         }
     }
 
@@ -149,11 +166,25 @@ class SharedPlanStore internal constructor(
         }
     }
 
+    /**
+     * Writes [plan] atomically. The text is decoded back first, so a plan that would not load
+     * (and silently disappear) is never stored: the previous file stays and this throws.
+     */
     private suspend fun writeLocked(plan: SharedPlan) {
         check(directory.mkdirs() || directory.isDirectory) { "Could not create shared plan storage" }
         val target = fileFor(plan.shareId)
         val temp = File(directory, "${plan.shareId}.tmp")
-        temp.writeText(SharedPlanCodec.encode(plan), Charsets.UTF_8)
+        val text = SharedPlanCodec.encode(plan)
+        temp.writeText(text, Charsets.UTF_8)
+        val readable = try {
+            SharedPlanCodec.decode(text).shareId == plan.shareId
+        } catch (_: Exception) {
+            false
+        }
+        if (!readable) {
+            temp.delete()
+            throw SharedPlanException(SharedPlanError.INVALID)
+        }
         if (!temp.renameTo(target)) {
             target.delete()
             check(temp.renameTo(target)) { "Could not store shared plan" }

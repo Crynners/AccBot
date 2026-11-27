@@ -11,7 +11,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
-import com.accbot.dca.domain.usecase.RefreshSharedPlanUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -30,7 +29,8 @@ class DashboardSharedPlansTest {
         crypto: String = "BTC",
         fiat: String = "CZK",
         refreshFailed: Boolean = false,
-        liveUpdates: Boolean = true
+        liveUpdates: Boolean = true,
+        keyRevoked: Boolean = false
     ) = SharedPlan(
         shareId = id, sharedAt = t0, isSandbox = isSandbox, includesAmounts = includesAmounts,
         name = name, exchange = Exchange.COINMATE, exchangeName = "Coinmate", crypto = crypto, fiat = fiat,
@@ -45,7 +45,7 @@ class DashboardSharedPlansTest {
                 fee = null, feeAsset = null
             )
         ),
-        liveUpdates = liveUpdates, refreshFailed = refreshFailed
+        liveUpdates = liveUpdates, refreshFailed = refreshFailed, keyRevoked = keyRevoked
     )
 
     @Test
@@ -87,29 +87,18 @@ class DashboardSharedPlansTest {
     }
 
     @Test
-    fun `key removed only for a plan that lost live updates after a not read only refresh`() {
-        val revoked = DashboardViewModel.revokedShareIds(
-            mapOf(
-                "a" to RefreshSharedPlanUseCase.Result.KeyNotReadOnly,
-                "b" to RefreshSharedPlanUseCase.Result.KeyNotReadOnly
-            )
-        )
-        assertEquals(setOf("a", "b"), revoked)
+    fun `key removed follows the stored revocation`() {
         val cards = DashboardViewModel.sharedPlanCards(
-            listOf(plan("a", liveUpdates = false), plan("c", liveUpdates = false), plan("b")),
-            isSandbox = false, prices = emptyMap(), keyRemovedShareIds = revoked
+            listOf(
+                plan("a", liveUpdates = false, keyRevoked = true),
+                plan("c", liveUpdates = false),
+                plan("b")
+            ),
+            isSandbox = false, prices = emptyMap()
         ).associateBy { it.plan.shareId }
         assertTrue(cards.getValue("a").keyRemoved)
         assertFalse(cards.getValue("c").keyRemoved) // never-live snapshot
         assertFalse(cards.getValue("b").keyRemoved) // still live
-    }
-
-    @Test
-    fun `other refresh results never mark a key removed`() {
-        assertEquals(
-            emptySet<String>(),
-            DashboardViewModel.revokedShareIds(mapOf("a" to RefreshSharedPlanUseCase.Result.NotLive))
-        )
     }
 
     @Test
@@ -119,7 +108,7 @@ class DashboardSharedPlansTest {
         )
         val sandbox = MutableStateFlow(false)
         val flow = DashboardViewModel.sharedPlanCardsFlow(
-            plans, MutableStateFlow(emptyMap()), MutableStateFlow(emptySet()), sandbox
+            plans, MutableStateFlow(emptyMap()), sandbox
         )
         assertEquals(listOf("Prod"), flow.first().map { it.plan.displayName })
         sandbox.value = true

@@ -220,8 +220,11 @@ class RefreshSharedPlanUseCase @Inject constructor(
         object NotLive : Result()
         /** The key now allows trading or withdrawals; it was removed and updates stopped. */
         object KeyNotReadOnly : Result()
-        /** The exchange rejected the key or could not be reached. */
-        data class Failed(val plan: SharedPlan) : Result()
+        /**
+         * The exchange rejected the key or could not be reached. [historyTooLong]: a replacing
+         * download stopped because the exchange history exceeds the download limit.
+         */
+        data class Failed(val plan: SharedPlan, val historyTooLong: Boolean = false) : Result()
     }
 
     /** A plan with downloaded trades and the count reported in [Result.Updated.newTrades]. */
@@ -280,10 +283,10 @@ class RefreshSharedPlanUseCase @Inject constructor(
                 Result.Updated(updated, result.newTrades)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 val failed = plan.copy(refreshFailed = true)
                 store.update(failed)
-                Result.Failed(failed)
+                Result.Failed(failed, historyTooLong = e is HistoryTruncatedException)
             }
         }
 
@@ -325,7 +328,8 @@ class RefreshSharedPlanUseCase @Inject constructor(
                 onProgress(ApiImportProgress.Fetching(page, trades.size))
                 if (!result.hasMore || result.trades.isEmpty()) return Fetched(trades, truncated = false)
                 val next = result.trades.maxOf { it.timestamp }
-                if (!next.isAfter(cursor)) return Fetched(trades, truncated = false)
+                // A full page that does not move forward cannot be paged further.
+                if (!next.isAfter(cursor)) return Fetched(trades, truncated = result.hasMore)
                 cursor = next
             }
             return Fetched(trades, truncated = true)
@@ -441,11 +445,14 @@ class DownloadSharedPlanHistoryUseCase internal constructor(
             )
         }
 
-    /** Reported as [RefreshSharedPlanUseCase.Result.Failed]; the stored trades stay unchanged. */
-    private class HistoryTruncatedException : Exception("Trade history exceeds the download limit")
-
     companion object {
         /** A replacing download must see the whole range, so it may page much further than a refresh. */
         internal const val MAX_DOWNLOAD_PAGES = 1000
     }
 }
+
+/**
+ * A replacing download could not see the whole range. Reported as
+ * [RefreshSharedPlanUseCase.Result.Failed] with `historyTooLong`; the stored trades stay unchanged.
+ */
+internal class HistoryTruncatedException : Exception("Trade history exceeds the download limit")

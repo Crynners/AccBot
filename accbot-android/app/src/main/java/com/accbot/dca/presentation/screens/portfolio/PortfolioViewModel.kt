@@ -93,6 +93,17 @@ internal fun selectionIndexAfterRebuild(oldPages: List<PairPage>, oldIndex: Int,
 }
 
 /**
+ * True when [selected] is a Shared page whose plan's trades differ between [old] and [new], so
+ * its chart must be redrawn although the page list (id, name, pair) stayed the same.
+ */
+internal fun selectedSharedTradesChanged(selected: PairPage?, old: List<SharedPlan>, new: List<SharedPlan>): Boolean {
+    if (selected !is PairPage.Shared) return false
+    val before = old.firstOrNull { it.shareId == selected.shareId }?.trades
+    val after = new.firstOrNull { it.shareId == selected.shareId }?.trades
+    return before != after
+}
+
+/**
  * Transactions the chart of [page] is drawn from. Aggregate and Plan pages use only Room data;
  * a Shared page uses its own in-memory mapped trades.
  */
@@ -243,6 +254,9 @@ class PortfolioViewModel @Inject constructor(
      */
     private var cachedDbPlans: List<DcaPlanEntity> = emptyList()
 
+    /** Shared plans the pages and chart were last built from (see [rebuildPagesForSharedChange]). */
+    private var lastSeenSharedPlans: List<SharedPlan> = emptyList()
+
     private var portfolioJob: Job? = null
     private var syncJob: Job? = null
     private var chartJob: Job? = null
@@ -280,16 +294,30 @@ class PortfolioViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            sharedPlanStore.plans.filterNotNull().collect { rebuildPagesForSharedChange() }
+            sharedPlanStore.plans.filterNotNull().collect { rebuildPagesForSharedChange(it) }
         }
     }
 
-    /** Rebuilds the page list after shared plans changed, keeping the selected page by id. */
-    private fun rebuildPagesForSharedChange() {
+    /**
+     * Rebuilds the page list after shared plans changed, keeping the selected page by id. With
+     * an unchanged page list, the chart is still reloaded when the selected Shared page's trades
+     * changed (a refresh or history download).
+     */
+    private fun rebuildPagesForSharedChange(shared: List<SharedPlan>) {
+        val previous = lastSeenSharedPlans
+        lastSeenSharedPlans = shared
         val state = _uiState.value
+        // loadPortfolio builds pages and the chart from the current store value itself.
         if (state.isLoading) return
-        val pages = buildPages(cachedDbPlans, cachedSharedPlans(), currentSandbox())
-        if (pages == state.pages) return
+        val pages = buildPages(cachedDbPlans, shared, currentSandbox())
+        if (pages == state.pages) {
+            val selected = state.pages.getOrNull(state.selectedPageIndex)
+            if (selectedSharedTradesChanged(selected, previous, shared)) {
+                updateNavigationState()
+                loadChartData()
+            }
+            return
+        }
         val newIndex = selectionIndexAfterRebuild(state.pages, state.selectedPageIndex, pages)
         _uiState.update { it.copy(pages = pages, selectedPageIndex = newIndex) }
         updateNavigationState()
@@ -315,7 +343,9 @@ class PortfolioViewModel @Inject constructor(
                 val allDbPlans = dcaPlanDao.getAllPlansOnceOrdered()
                 cachedDbPlans = allDbPlans
 
-                val pages = buildPages(allDbPlans, cachedSharedPlans(), currentSandbox())
+                val shared = cachedSharedPlans()
+                lastSeenSharedPlans = shared
+                val pages = buildPages(allDbPlans, shared, currentSandbox())
 
                 val deepLinkCrypto = initialCrypto
                 val deepLinkFiat = initialFiat

@@ -137,6 +137,7 @@
     <string name="share_plan_qr_hint">In AccBot open Settings → Shared plans → Scan QR code. Give the password separately, not together with the QR code.</string>
     <string name="share_plan_share_file">Share file</string>
     <string name="share_plan_qr_too_large">The QR code would be too large. Send the plan as a file.</string>
+    <string name="share_plan_qr_content_description">QR code with the shared plan</string>
     <string name="share_plan_failed">Could not create the share file.</string>
     <string name="shared_plans_title">Shared with me</string>
     <string name="shared_plans_settings_subtitle">Read-only plans other people sent you</string>
@@ -226,6 +227,7 @@
     <string name="shared_plan_live_text">Live updates · last refreshed %1$s. Cannot be edited or run.</string>
     <string name="shared_plan_live_text_never">Live updates · not refreshed yet. Cannot be edited or run.</string>
     <string name="shared_plan_refresh_failed">The last refresh failed. The key may have been revoked or the exchange is unreachable.</string>
+    <string name="shared_plan_history_too_long">The exchange history is too long to download at once. Choose a later start date.</string>
     <string name="shared_plans_scan_qr">Scan QR code</string>
     <string name="shared_plan_download_history">Download history</string>
     <string name="shared_plan_history_from_start">From the plan start</string>

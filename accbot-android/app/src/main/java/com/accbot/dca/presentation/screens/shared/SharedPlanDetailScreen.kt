@@ -289,6 +289,13 @@ private fun ReadOnlyBanner(plan: SharedPlan) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
+                if (plan.keyRevoked && !plan.liveUpdates) {
+                    Text(
+                        stringResource(R.string.shared_plan_key_revoked_not_read_only),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Warning
+                    )
+                }
                 if (plan.liveUpdates && plan.refreshFailed) {
                     Text(
                         stringResource(R.string.shared_plan_refresh_failed),

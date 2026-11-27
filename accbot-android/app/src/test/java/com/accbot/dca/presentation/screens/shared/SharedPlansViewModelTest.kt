@@ -231,4 +231,26 @@ class SharedPlansViewModelTest {
         vm.consumeDownloadResult()
         assertNull(vm.uiState.value.downloadResult)
     }
+
+    @Test
+    fun `too long history shows its own message`() = runBlocking {
+        store.save(sharedPlan(emptyList()), key)
+        // A full page that never moves past the cursor: the range cannot be downloaded whole.
+        api.tradeHistoryHandler = { _, _, since, _ ->
+            requests++
+            TradeHistoryPage(listOf(fill("stuck", since!!)), hasMore = true)
+        }
+        val vm = detailViewModel()
+        vm.load(shareId)
+        vm.await { it.historyDialog }
+
+        vm.downloadHistory()
+        val state = vm.await { it.downloadResult != null }
+
+        assertEquals(
+            ApiImportResultState.Error(context.getString(R.string.shared_plan_history_too_long)),
+            state.downloadResult
+        )
+        assertTrue(store.get(shareId)!!.trades.isEmpty())
+    }
 }

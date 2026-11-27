@@ -11,6 +11,7 @@ import com.accbot.dca.domain.share.sharedPlanFixture
 import com.accbot.dca.domain.share.toChartTransactions
 import com.accbot.dca.domain.share.SharedPlanTrade
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.math.BigDecimal
@@ -92,5 +93,20 @@ class PortfolioPagesTest {
         assertTrue(sharedInput.all { it.planId == 0L })
         assertEquals(listOf(tx(1)), chartTransactionsFor(PairPage.Plan(1, "P1", "BTC", "CZK"), room, sharedPlans))
         assertEquals(TransactionSide.BUY, sharedInput.first().side)
+    }
+
+    @Test
+    fun `selected shared chart reloads only when its trades change`() {
+        val before = listOf(shared("a"), shared("b"))
+        val page = PairPage.Shared("a", "Friend", "BTC", "CZK")
+        val moreTrades = before[0].copy(trades = before[0].trades + before[0].trades.first().copy(executedAt = t0))
+
+        // Same page list (id, name, pair), but the selected plan got a trade.
+        assertEquals(buildPages(emptyList(), before, false), buildPages(emptyList(), listOf(moreTrades, before[1]), false))
+        assertTrue(selectedSharedTradesChanged(page, before, listOf(moreTrades, before[1])))
+        // Only a refresh time changed, another plan changed, or an own page is selected.
+        assertFalse(selectedSharedTradesChanged(page, before, listOf(before[0].copy(refreshedAt = t0), before[1])))
+        assertFalse(selectedSharedTradesChanged(page, before, listOf(before[0], before[1].copy(trades = emptyList()))))
+        assertFalse(selectedSharedTradesChanged(PairPage.Plan(1, "P1", "BTC", "CZK"), before, listOf(moreTrades)))
     }
 }
