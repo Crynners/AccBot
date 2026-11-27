@@ -13,6 +13,7 @@ import com.accbot.dca.domain.share.SharedPlanCodec
 import com.accbot.dca.domain.share.SharedPlanError
 import com.accbot.dca.domain.share.SharedPlanException
 import com.accbot.dca.domain.share.SharedPlanTrade
+import com.accbot.dca.domain.util.QrLimits
 import com.accbot.dca.exchange.ReadOnlyExchangeClient
 import com.accbot.dca.exchange.ReadOnlyExchangeClient.KeyCheck
 import java.math.RoundingMode
@@ -22,7 +23,11 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
-data class PlanShareFile(val fileName: String, val content: String)
+/**
+ * [qrContent] is a compact variant of a live share (no trades) for a QR code; null for plain
+ * snapshots and when it would exceed [QrLimits.MAX_PAYLOAD_BYTES].
+ */
+data class PlanShareFile(val fileName: String, val content: String, val qrContent: String? = null)
 
 /** Which exchange key a live-update share carries. */
 sealed interface LiveShareKey {
@@ -133,9 +138,15 @@ class CreatePlanShareUseCase @Inject constructor(
             includeAmounts = includeAmounts || live != null
         )
         val content = SharedPlanCodec.encodeShare(snapshot, access, live?.password, backupCrypto::encrypt)
+        // Same snapshot (shareId, sharedAt), so the QR and the file describe one share.
+        val qrContent = if (live != null) {
+            SharedPlanCodec.encodeShare(
+                SharedPlanCodec.qrSnapshot(snapshot), access, live.password, backupCrypto::encrypt, compact = true
+            ).takeIf { it.toByteArray(Charsets.UTF_8).size <= QrLimits.MAX_PAYLOAD_BYTES }
+        } else null
         val date = LocalDate.now(ZoneId.systemDefault())
         val fileName = "accbot_plan_${plan.crypto.lowercase()}_${plan.fiat.lowercase()}_$date.json"
-        return PlanShareFile(fileName, content)
+        return PlanShareFile(fileName, content, qrContent)
     }
 
     private fun accessDto(credentials: ExchangeCredentials, verifiedReadOnly: Boolean, fullAccess: Boolean) =

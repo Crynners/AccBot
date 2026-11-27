@@ -383,7 +383,7 @@ class ReleaseNotesScreenshotTest {
                 includesAmounts = true, name = SHARED_NAME, exchange = Exchange.COINMATE, exchangeName = "Coinmate",
                 crypto = "BTC", fiat = "EUR", amount = BigDecimal("25"), frequency = DcaFrequency.WEEKLY,
                 cronExpression = null, strategy = DcaStrategy.Classic, isEnabled = true,
-                createdAt = now.minus(Duration.ofDays(150)), statedAvgBuyPrice = null,
+                createdAt = now.minus(Duration.ofDays(150)), startedAt = now.minus(Duration.ofDays(150)), statedAvgBuyPrice = null,
                 liveUpdates = true, verifiedReadOnly = true, refreshedAt = now.minus(Duration.ofMinutes(12)),
                 trades = (21 downTo 1).map { w ->
                     val d = w * 7

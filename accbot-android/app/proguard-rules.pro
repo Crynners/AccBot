@@ -8,6 +8,7 @@
 
 # Keep domain models
 -keep class com.accbot.dca.domain.model.** { *; }
+-keep class com.accbot.dca.domain.share.** { *; }
 
 # Keep Hilt
 -keep class dagger.hilt.** { *; }

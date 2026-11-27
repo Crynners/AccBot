@@ -34,6 +34,7 @@ object SharedPlanCodec {
     private val ASSET = Regex("^[A-Z0-9]{2,10}$")
     private val REF = Regex("^[0-9a-f]{32}$")
     private val gson: Gson = GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create()
+    private val compactGson: Gson = GsonBuilder().disableHtmlEscaping().create()
 
     fun isValidShareId(value: String): Boolean = SHARE_ID.matches(value)
 
@@ -86,7 +87,8 @@ object SharedPlanCodec {
                 cronExpression = plan.cronExpression,
                 strategy = DcaStrategy.toDbString(plan.strategy),
                 isEnabled = plan.isEnabled,
-                createdAt = plan.createdAt.toEpochMilli()
+                createdAt = plan.createdAt.toEpochMilli(),
+                startedAt = listOfNotNull(plan.createdAt, fills.firstOrNull()?.executedAt).min().toEpochMilli()
             ),
             summary = SharedPlanSummaryDto(avgBuyPrice = avgBuyPrice?.stripTrailingZeros()?.toPlainString()),
             transactions = fills.map { tx ->
@@ -106,24 +108,34 @@ object SharedPlanCodec {
 
     fun encode(snapshot: SharedPlanSnapshotDto): String = gson.toJson(snapshot)
 
+    /**
+     * Snapshot for the QR code: no trades and no summary, so the payload stays small. The
+     * recipient fetches the history from the exchange with the shared key.
+     */
+    fun qrSnapshot(snapshot: SharedPlanSnapshotDto): SharedPlanSnapshotDto =
+        snapshot.copy(transactions = emptyList(), summary = null)
+
     /** Re-encode a validated plan for local storage. Never contains credentials. */
     fun encode(plan: SharedPlan): String = encode(toDto(plan))
 
     /**
      * Produce the file content to send. Without [access] the snapshot is plain JSON.
      * With [access] (live updates) the snapshot and key are encrypted with [password].
+     * [compact] drops pretty-printing (inner and outer JSON) to fit into a QR code.
      */
     fun encodeShare(
         snapshot: SharedPlanSnapshotDto,
         access: SharedPlanAccessDto?,
         password: String?,
-        encrypt: (plaintext: ByteArray, password: String) -> String
+        encrypt: (plaintext: ByteArray, password: String) -> String,
+        compact: Boolean = false
     ): String {
-        if (access == null) return encode(snapshot.copy(access = null, encrypted = null, data = null, local = null))
+        val json = if (compact) compactGson else gson
+        if (access == null) return json.toJson(snapshot.copy(access = null, encrypted = null, data = null, local = null))
         require(!password.isNullOrEmpty()) { "A password is required to share a key" }
         require(snapshot.includesAmounts == true) { "A shared key exposes amounts" }
-        val inner = encode(snapshot.copy(access = access, encrypted = null, data = null, local = null))
-        return encode(
+        val inner = json.toJson(snapshot.copy(access = access, encrypted = null, data = null, local = null))
+        return json.toJson(
             SharedPlanSnapshotDto(
                 format = FORMAT,
                 version = CURRENT_VERSION,
@@ -214,7 +226,8 @@ object SharedPlanCodec {
                 verifiedReadOnly = local.verifiedReadOnly == true,
                 fullAccessKey = local.fullAccessKey == true,
                 refreshedAt = local.refreshedAt?.let(Instant::ofEpochMilli),
-                refreshFailed = local.refreshFailed == true
+                refreshFailed = local.refreshFailed == true,
+                tradesFromExchange = local.tradesFromExchange == true
             )
             else -> plan
         }
@@ -264,6 +277,11 @@ object SharedPlanCodec {
             strategy = DcaStrategy.fromString(plan.strategy.orEmpty()),
             isEnabled = plan.isEnabled ?: false,
             createdAt = Instant.ofEpochMilli(plan.createdAt ?: 0L),
+            startedAt = Instant.ofEpochMilli(
+                plan.startedAt
+                    ?: listOfNotNull(plan.createdAt?.takeIf { it > 0 }, trades.firstOrNull()?.executedAt?.toEpochMilli()).minOrNull()
+                    ?: dto.sharedAt ?: invalid()
+            ),
             statedAvgBuyPrice = positive(dto.summary?.avgBuyPrice),
             trades = trades
         )
@@ -286,7 +304,8 @@ object SharedPlanCodec {
             cronExpression = plan.cronExpression,
             strategy = DcaStrategy.toDbString(plan.strategy),
             isEnabled = plan.isEnabled,
-            createdAt = plan.createdAt.toEpochMilli()
+            createdAt = plan.createdAt.toEpochMilli(),
+            startedAt = plan.startedAt.toEpochMilli()
         ),
         summary = SharedPlanSummaryDto(avgBuyPrice = plan.statedAvgBuyPrice?.toPlainString()),
         transactions = plan.trades.map {
@@ -306,7 +325,8 @@ object SharedPlanCodec {
             verifiedReadOnly = plan.verifiedReadOnly,
             fullAccessKey = plan.fullAccessKey.takeIf { it },
             refreshedAt = plan.refreshedAt?.toEpochMilli(),
-            refreshFailed = plan.refreshFailed
+            refreshFailed = plan.refreshFailed,
+            tradesFromExchange = plan.tradesFromExchange.takeIf { it }
         )
     )
 

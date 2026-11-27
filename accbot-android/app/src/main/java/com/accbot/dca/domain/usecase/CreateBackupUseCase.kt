@@ -4,6 +4,7 @@ import com.accbot.dca.BuildConfig
 import com.accbot.dca.data.local.BackupDataCollector
 import com.accbot.dca.domain.model.BackupEnvelope
 import com.accbot.dca.domain.model.BackupExportOptions
+import com.accbot.dca.domain.util.QrLimits
 import com.google.gson.Gson
 import java.io.ByteArrayOutputStream
 import java.time.Instant
@@ -28,7 +29,6 @@ class CreateBackupUseCase @Inject constructor(
     private val gson: Gson
 ) {
     companion object {
-        private const val QR_MAX_BYTES = 1850
     }
 
     suspend fun execute(options: BackupExportOptions): CreateBackupResult {
@@ -95,7 +95,7 @@ class CreateBackupUseCase @Inject constructor(
         }
     }
 
-    fun isQrFeasible(payloadSizeBytes: Int): Boolean = payloadSizeBytes <= QR_MAX_BYTES
+    fun isQrFeasible(payloadSizeBytes: Int): Boolean = payloadSizeBytes <= QrLimits.MAX_PAYLOAD_BYTES
 
     private fun compress(data: ByteArray): ByteArray {
         val bos = ByteArrayOutputStream()
