@@ -133,6 +133,10 @@
     <string name="share_plan_include_amounts_off">Only dates, prices, average buy price and performance in percent are shared.</string>
     <string name="share_plan_never_included">Never shared: API keys, order IDs, connection names and withdrawal addresses. The file cannot be used to run the plan.</string>
     <string name="share_plan_confirm">Share</string>
+    <string name="share_plan_qr_title">Scan on the other phone</string>
+    <string name="share_plan_qr_hint">In AccBot open Settings → Shared plans → Scan QR code. Give the password separately, not together with the QR code.</string>
+    <string name="share_plan_share_file">Share file</string>
+    <string name="share_plan_qr_too_large">The QR code would be too large. Send the plan as a file.</string>
     <string name="share_plan_failed">Could not create the share file.</string>
     <string name="shared_plans_title">Shared with me</string>
     <string name="shared_plans_settings_subtitle">Read-only plans other people sent you</string>

@@ -1,7 +1,6 @@
 package com.accbot.dca.presentation.screens.backup
 
 import android.graphics.Bitmap
-import android.graphics.Color
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,8 +11,7 @@ import com.accbot.dca.domain.model.EncryptionMode
 import com.accbot.dca.domain.usecase.BackupCryptoUseCase
 import com.accbot.dca.domain.usecase.CreateBackupResult
 import com.accbot.dca.domain.usecase.CreateBackupUseCase
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
+import com.accbot.dca.presentation.utils.generateQrBitmap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -170,22 +168,6 @@ class BackupExportViewModel @Inject constructor(
                     _uiState.update { it.copy(isCreating = false, error = result.message) }
                 }
             }
-        }
-    }
-
-    private fun generateQrBitmap(content: String): Bitmap? {
-        return try {
-            val writer = QRCodeWriter()
-            val size = 512
-            val bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, size, size)
-            val pixels = IntArray(size * size) { i ->
-                if (bitMatrix[i % size, i / size]) Color.BLACK else Color.WHITE
-            }
-            Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565).also {
-                it.setPixels(pixels, 0, size, 0, 0, size, size)
-            }
-        } catch (_: Exception) {
-            null
         }
     }
 

@@ -2,8 +2,11 @@ package com.accbot.dca.presentation.screens.shared
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,11 +39,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -68,6 +73,7 @@ import com.accbot.dca.presentation.components.areCredentialsComplete
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.successColor
+import com.accbot.dca.presentation.utils.generateQrBitmap
 import com.accbot.dca.presentation.utils.writeSharedExport
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -79,6 +85,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+
+/** Outcome of a live share; [qrContent] is null when the payload is too large for a QR code. */
+data class ShareResult(val fileUri: Uri, val qrContent: String?)
 
 /** Which key a live-update share carries; see [LiveShareKey]. */
 enum class ShareKeySource {
@@ -113,7 +122,10 @@ class SharePlanViewModel @Inject constructor(
         val keyProblem: ShareKeyProblem? = null,
         val unverifiableConfirmed: Boolean = false,
         val creating: Boolean = false,
+        /** Snapshot (no key) share: opened in the system share sheet right away. */
         val readyUri: Uri? = null,
+        /** Live share: kept in the dialog to show its QR code. Holds an encrypted key. */
+        val result: ShareResult? = null,
         val failed: Boolean = false
     ) {
         val passwordValid: Boolean get() = password.length >= MIN_PASSWORD_LENGTH && password == passwordConfirm
@@ -194,8 +206,10 @@ class SharePlanViewModel @Inject constructor(
         _uiState.update { it.copy(creating = true, failed = false, keyProblem = null) }
         viewModelScope.launch {
             var problem: ShareKeyProblem? = null
+            var qrContent: String? = null
             val uri = try {
                 val file = createPlanShare(planId, state.includeAmounts, live)
+                qrContent = file.qrContent
                 withContext(Dispatchers.IO) { writeSharedExport(context, file.fileName, file.content) }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -208,7 +222,8 @@ class SharePlanViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     creating = false,
-                    readyUri = uri,
+                    readyUri = if (live == null) uri else null,
+                    result = if (live != null && uri != null) ShareResult(uri, qrContent) else null,
                     // A key problem is shown inline in the dialog instead of a generic error.
                     failed = uri == null && problem == null,
                     keyProblem = problem ?: it.keyProblem
@@ -251,26 +266,34 @@ fun SharePlanDialog(
         viewModel.reset()
         onDismiss()
     }
+    val shareFile = { uri: Uri ->
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, chooserTitle))
+    }
 
     LaunchedEffect(state.readyUri, state.failed) {
         val uri = state.readyUri
         when {
             uri != null -> {
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "application/json"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    putExtra(Intent.EXTRA_SUBJECT, subject)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
                 viewModel.consumeResult()
                 close()
-                context.startActivity(Intent.createChooser(intent, chooserTitle))
+                shareFile(uri)
             }
             state.failed -> {
                 viewModel.consumeResult()
                 onError(failedMessage)
             }
         }
+    }
+
+    state.result?.let { result ->
+        ShareResultDialog(result, onShareFile = { shareFile(result.fileUri) }, onDone = close)
+        return
     }
 
     AlertDialog(
@@ -332,6 +355,52 @@ fun SharePlanDialog(
             TextButton(onClick = close, enabled = !state.creating) {
                 Text(stringResource(R.string.common_cancel))
             }
+        }
+    )
+}
+
+/** Shown after a live share: the QR code for the other phone plus the file as a fallback. */
+@Composable
+private fun ShareResultDialog(result: ShareResult, onShareFile: () -> Unit, onDone: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = {},
+        properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false),
+        title = { Text(stringResource(R.string.share_plan_qr_title)) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val qrContent = result.qrContent
+                if (qrContent != null) {
+                    val bitmap by produceState<Bitmap?>(null, qrContent) {
+                        value = withContext(Dispatchers.Default) { generateQrBitmap(qrContent) }
+                    }
+                    bitmap?.let {
+                        Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier.size(240.dp)
+                        )
+                    } ?: Box(modifier = Modifier.size(240.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                    Text(
+                        stringResource(R.string.share_plan_qr_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(stringResource(R.string.share_plan_qr_too_large))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDone) { Text(stringResource(R.string.common_done)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onShareFile) { Text(stringResource(R.string.share_plan_share_file)) }
         }
     )
 }
