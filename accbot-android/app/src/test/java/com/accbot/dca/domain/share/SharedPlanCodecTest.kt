@@ -360,6 +360,17 @@ class SharedPlanCodecTest {
         assertFalse(SharedPlanCodec.decodeShare(forged, null, ::fakeDecrypt).plan.tradesFromExchange)
     }
 
+    @Test
+    fun `latestSharedAt survives local storage and is ignored in received files`() {
+        val stored = SharedPlanCodec.decode(SharedPlanCodec.encode(snapshotOf(transactions)))
+        assertNull(stored.latestSharedAt)
+        val flagged = stored.copy(latestSharedAt = t0.plusSeconds(5))
+        assertEquals(t0.plusSeconds(5), SharedPlanCodec.decode(SharedPlanCodec.encode(flagged)).latestSharedAt)
+
+        val forged = SharedPlanCodec.encode(snapshotOf(transactions).copy(local = SharedPlanLocalDto(latestSharedAt = 1L)))
+        assertNull(SharedPlanCodec.decodeShare(forged, null, ::fakeDecrypt).plan.latestSharedAt)
+    }
+
     private val appContext: Context get() = ApplicationProvider.getApplicationContext()
 
     private fun createUseCase(db: DcaDatabase): CreatePlanShareUseCase {

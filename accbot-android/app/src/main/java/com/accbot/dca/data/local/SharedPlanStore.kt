@@ -70,23 +70,27 @@ class SharedPlanStore internal constructor(
     suspend fun save(plan: SharedPlan, credentials: ExchangeCredentials? = null): SaveResult = mutex.withLock {
         withContext(Dispatchers.IO) {
             val existing = (_plans.value ?: loadLocked()).firstOrNull { it.shareId == plan.shareId }
-            if (existing != null && existing.sharedAt.isAfter(plan.sharedAt)) {
-                return@withContext SaveResult.Outdated(existing)
+            if (existing != null) {
+                val newest = maxOf(existing.sharedAt, existing.latestSharedAt ?: existing.sharedAt)
+                if (newest.isAfter(plan.sharedAt)) return@withContext SaveResult.Outdated(existing)
             }
-            // A QR code carries a key but no trades. Re-importing it must not wipe history that
-            // was already downloaded (or came from a file snapshot).
-            val isQr = credentials != null && plan.trades.isEmpty()
+            // A key without trades is a QR code (or a live file from a plan with no fills).
+            // Importing it must not wipe history that was already downloaded or came from a file.
+            val keyWithoutTrades = credentials != null && plan.trades.isEmpty()
             val stored = when {
-                isQr && existing != null -> plan.copy(
+                keyWithoutTrades && existing != null -> plan.copy(
                     trades = existing.trades,
                     tradesFromExchange = existing.tradesFromExchange,
                     refreshedAt = existing.refreshedAt,
-                    // Keep the snapshot time of file trades so the later merge leaves no gap.
-                    sharedAt = if (existing.tradesFromExchange) plan.sharedAt else existing.sharedAt,
+                    // Never move forward: the stored trades only cover the time up to this.
+                    sharedAt = existing.sharedAt,
+                    latestSharedAt = plan.sharedAt,
                     liveUpdates = true
                 )
-                isQr -> plan.copy(tradesFromExchange = true, liveUpdates = true)
-                else -> plan.copy(liveUpdates = credentials != null)
+                keyWithoutTrades -> plan.copy(
+                    tradesFromExchange = true, latestSharedAt = plan.sharedAt, liveUpdates = true
+                )
+                else -> plan.copy(latestSharedAt = plan.sharedAt, liveUpdates = credentials != null)
             }
             if (credentials != null) keys.put(plan.shareId, credentials) else keys.remove(plan.shareId)
             writeLocked(stored)

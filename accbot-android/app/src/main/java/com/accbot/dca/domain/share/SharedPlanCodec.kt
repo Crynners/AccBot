@@ -228,7 +228,8 @@ object SharedPlanCodec {
                 fullAccessKey = local.fullAccessKey == true,
                 refreshedAt = local.refreshedAt?.let(Instant::ofEpochMilli),
                 refreshFailed = local.refreshFailed == true,
-                tradesFromExchange = local.tradesFromExchange == true
+                tradesFromExchange = local.tradesFromExchange == true,
+                latestSharedAt = local.latestSharedAt?.let(Instant::ofEpochMilli)
             )
             else -> plan
         }
@@ -328,7 +329,8 @@ object SharedPlanCodec {
             fullAccessKey = plan.fullAccessKey.takeIf { it },
             refreshedAt = plan.refreshedAt?.toEpochMilli(),
             refreshFailed = plan.refreshFailed,
-            tradesFromExchange = plan.tradesFromExchange.takeIf { it }
+            tradesFromExchange = plan.tradesFromExchange.takeIf { it },
+            latestSharedAt = plan.latestSharedAt?.toEpochMilli()
         )
     )
 

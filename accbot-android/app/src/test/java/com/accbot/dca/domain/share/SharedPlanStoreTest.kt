@@ -8,6 +8,7 @@ import com.accbot.dca.domain.model.TransactionSide
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -63,15 +64,44 @@ class SharedPlanStoreTest {
     @Test
     fun `qr re-import keeps downloaded history and updates key`() = runTest {
         val store = newStore()
-        store.save(sharedPlan(100, trades(3), fromExchange = true), key("old"))
-        val qr = sharedPlan(200, emptyList(), name = "Nový název")
-        store.save(qr, key("new"))
+        val refreshed = t0.plusSeconds(150)
+        store.save(sharedPlan(100, emptyList()), key("old"))
+        store.update(store.refresh().single().copy(trades = trades(3), refreshedAt = refreshed))
+        store.save(sharedPlan(200, emptyList(), name = "Nový název"), key("new"))
 
         val stored = store.refresh().single()
         assertEquals(3, stored.trades.size)
         assertEquals("Nový název", stored.displayName)
-        assertEquals(t0.plusSeconds(200), stored.sharedAt)
+        assertEquals(t0.plusSeconds(100), stored.sharedAt)
+        assertEquals(t0.plusSeconds(200), stored.latestSharedAt)
+        assertEquals(refreshed, stored.refreshedAt)
         assertTrue(stored.tradesFromExchange)
+        assertEquals(key("new"), store.credentials(shareId))
+    }
+
+    @Test
+    fun `older file after qr is outdated and keeps key`() = runTest {
+        val store = newStore()
+        store.save(sharedPlan(100, trades(2)))
+        store.save(sharedPlan(200, emptyList()), key("k"))
+        val again = store.save(sharedPlan(100, trades(2)))
+
+        assertTrue(again is SharedPlanStore.SaveResult.Outdated)
+        val stored = store.refresh().single()
+        assertEquals(2, stored.trades.size)
+        assertTrue(stored.liveUpdates)
+        assertEquals(key("k"), store.credentials(shareId))
+    }
+
+    @Test
+    fun `older qr after newer qr is outdated`() = runTest {
+        val store = newStore()
+        store.save(sharedPlan(100, trades(2)))
+        store.save(sharedPlan(300, emptyList(), name = "Newer"), key("new"))
+        val older = store.save(sharedPlan(200, emptyList(), name = "Older"), key("old"))
+
+        assertTrue(older is SharedPlanStore.SaveResult.Outdated)
+        assertEquals("Newer", store.refresh().single().displayName)
         assertEquals(key("new"), store.credentials(shareId))
     }
 
@@ -93,11 +123,15 @@ class SharedPlanStoreTest {
     fun `file after qr replaces history`() = runTest {
         val store = newStore()
         store.save(sharedPlan(100, emptyList()), key("k"))
+        store.update(store.refresh().single().copy(trades = trades(2)))
+        assertTrue(store.refresh().single().tradesFromExchange)
         store.save(sharedPlan(200, trades(5)))
 
         val stored = store.refresh().single()
         assertEquals(5, stored.trades.size)
         assertFalse(stored.tradesFromExchange)
+        assertFalse(stored.liveUpdates)
+        assertNull(store.credentials(shareId))
     }
 
     @Test
