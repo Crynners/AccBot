@@ -88,7 +88,8 @@ object SharedPlanCodec {
                 strategy = DcaStrategy.toDbString(plan.strategy),
                 isEnabled = plan.isEnabled,
                 createdAt = plan.createdAt.toEpochMilli(),
-                startedAt = listOfNotNull(plan.createdAt, fills.firstOrNull()?.executedAt).min().toEpochMilli()
+                startedAt = listOfNotNull(plan.createdAt, fills.firstOrNull()?.executedAt)
+                    .map { it.toEpochMilli() }.filter { it > 0 }.minOrNull() ?: now.toEpochMilli()
             ),
             summary = SharedPlanSummaryDto(avgBuyPrice = avgBuyPrice?.stripTrailingZeros()?.toPlainString()),
             transactions = fills.map { tx ->
@@ -278,8 +279,9 @@ object SharedPlanCodec {
             isEnabled = plan.isEnabled ?: false,
             createdAt = Instant.ofEpochMilli(plan.createdAt ?: 0L),
             startedAt = Instant.ofEpochMilli(
-                plan.startedAt
-                    ?: listOfNotNull(plan.createdAt?.takeIf { it > 0 }, trades.firstOrNull()?.executedAt?.toEpochMilli()).minOrNull()
+                plan.startedAt?.takeIf { it > 0 }
+                    ?: listOfNotNull(plan.createdAt, trades.firstOrNull()?.executedAt?.toEpochMilli())
+                        .filter { it > 0 }.minOrNull()
                     ?: dto.sharedAt ?: invalid()
             ),
             statedAvgBuyPrice = positive(dto.summary?.avgBuyPrice),

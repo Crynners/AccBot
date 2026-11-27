@@ -28,9 +28,6 @@ class CreateBackupUseCase @Inject constructor(
     private val crypto: BackupCryptoUseCase,
     private val gson: Gson
 ) {
-    companion object {
-    }
-
     suspend fun execute(options: BackupExportOptions): CreateBackupResult {
         return try {
             val passphrase = crypto.resolvePassphrase(options.encryptionMode, options.password, options.seed)

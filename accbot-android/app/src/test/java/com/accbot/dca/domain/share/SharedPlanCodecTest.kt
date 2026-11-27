@@ -323,6 +323,32 @@ class SharedPlanCodecTest {
     }
 
     @Test
+    fun `epoch zero creation never becomes the plan start`() {
+        val restored = plan.copy(createdAt = Instant.EPOCH)
+        val now = Instant.parse("2026-06-01T00:00:00Z")
+        fun snap(txs: List<TransactionEntity>) = SharedPlanCodec.createSnapshot(
+            restored, txs, shareId, isSandbox = false, includeAmounts = true, now = now
+        )
+        val withFills = SharedPlanCodec.decode(SharedPlanCodec.encode(snap(transactions)))
+        assertEquals(t0.plusSeconds(86_400), withFills.startedAt)
+        val noFills = SharedPlanCodec.decode(SharedPlanCodec.encode(snap(emptyList())))
+        assertEquals(now, noFills.startedAt)
+    }
+
+    @Test
+    fun `received startedAt of zero falls back instead of reaching 1970`() {
+        val full = snapshotOf(transactions)
+        val zero = full.copy(plan = full.plan!!.copy(startedAt = 0L))
+        assertEquals(t0, SharedPlanCodec.decode(SharedPlanCodec.encode(zero)).startedAt)
+
+        val noCreated = zero.copy(plan = zero.plan!!.copy(createdAt = 0L))
+        assertEquals(t0.plusSeconds(86_400), SharedPlanCodec.decode(SharedPlanCodec.encode(noCreated)).startedAt)
+
+        val bare = noCreated.copy(transactions = emptyList())
+        assertEquals(Instant.ofEpochMilli(bare.sharedAt!!), SharedPlanCodec.decode(SharedPlanCodec.encode(bare)).startedAt)
+    }
+
+    @Test
     fun `tradesFromExchange survives local storage but never comes from a received file`() {
         val stored = SharedPlanCodec.decode(SharedPlanCodec.encode(snapshotOf(transactions)))
         assertFalse(stored.tradesFromExchange)
@@ -376,7 +402,6 @@ class SharedPlanCodecTest {
         try {
             val file = createUseCase(db)(seed(db), includeAmounts = true, live = liveAccess())
             val qr = file.qrContent!!
-            println("QR payload bytes=${qr.toByteArray(Charsets.UTF_8).size}, file bytes=${file.content.toByteArray(Charsets.UTF_8).size}")
 
             assertFalse(qr.contains("\n"))
             assertTrue(qr.toByteArray(Charsets.UTF_8).size <= QrLimits.MAX_PAYLOAD_BYTES)
