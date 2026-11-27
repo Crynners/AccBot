@@ -8,9 +8,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
@@ -33,13 +36,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -267,11 +274,13 @@ fun SharePlanDialog(
     }
 
     AlertDialog(
-        onDismissRequest = { if (!state.creating) close() },
+        // Closes only via the Cancel / Share / Done buttons, never by outside tap or Back.
+        onDismissRequest = {},
+        properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false),
         title = { Text(stringResource(R.string.share_plan_title)) },
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+                modifier = Modifier.imePadding().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(stringResource(R.string.share_plan_description))
@@ -529,11 +538,16 @@ private fun KeySourceOption(
 
 @Composable
 private fun SecretField(value: String, onChange: (String) -> Unit, label: String) {
+    val requester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
     PasswordTextField(
         value = value,
         onValueChange = onChange,
         label = label,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .bringIntoViewRequester(requester)
+            .onFocusChanged { if (it.isFocused) scope.launch { requester.bringIntoView() } }
     )
 }
 
