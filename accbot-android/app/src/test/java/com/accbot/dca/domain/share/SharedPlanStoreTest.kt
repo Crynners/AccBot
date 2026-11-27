@@ -66,7 +66,9 @@ class SharedPlanStoreTest {
         val store = newStore()
         val refreshed = t0.plusSeconds(150)
         store.save(sharedPlan(100, emptyList()), key("old"))
-        store.update(store.refresh().single().copy(trades = trades(3), refreshedAt = refreshed))
+        store.update(
+            store.refresh().single().copy(trades = trades(3), refreshedAt = refreshed, exchangeHistoryFrom = t0)
+        )
         store.save(sharedPlan(200, emptyList(), name = "Nový název"), key("new"))
 
         val stored = store.refresh().single()
@@ -76,6 +78,7 @@ class SharedPlanStoreTest {
         assertEquals(t0.plusSeconds(200), stored.latestSharedAt)
         assertEquals(refreshed, stored.refreshedAt)
         assertTrue(stored.tradesFromExchange)
+        assertEquals(t0, stored.exchangeHistoryFrom)
         assertEquals(key("new"), store.credentials(shareId))
     }
 

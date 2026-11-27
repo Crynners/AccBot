@@ -81,6 +81,7 @@ class SharedPlanStore internal constructor(
                 keyWithoutTrades && existing != null -> plan.copy(
                     trades = existing.trades,
                     tradesFromExchange = existing.tradesFromExchange,
+                    exchangeHistoryFrom = existing.exchangeHistoryFrom,
                     refreshedAt = existing.refreshedAt,
                     // Never move forward: the stored trades only cover the time up to this.
                     sharedAt = existing.sharedAt,
@@ -103,6 +104,20 @@ class SharedPlanStore internal constructor(
         withContext(Dispatchers.IO) {
             if ((_plans.value ?: loadLocked()).none { it.shareId == plan.shareId }) return@withContext
             writeLocked(plan)
+        }
+    }
+
+    /**
+     * Removes the key of a stored share and stops its live updates, keeping its trades. Unlike
+     * [save] without credentials this never returns [SaveResult.Outdated].
+     */
+    suspend fun dropKey(shareId: String) = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            if (!SharedPlanCodec.isValidShareId(shareId)) return@withContext
+            val id = shareId.lowercase()
+            keys.remove(id)
+            val existing = (_plans.value ?: loadLocked()).firstOrNull { it.shareId == id } ?: return@withContext
+            writeLocked(existing.copy(liveUpdates = false))
         }
     }
 

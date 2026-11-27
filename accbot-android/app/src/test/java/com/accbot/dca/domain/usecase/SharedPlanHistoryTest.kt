@@ -299,4 +299,86 @@ class SharedPlanHistoryTest {
         assertTrue(plan.refreshFailed)
         assertEquals(listOf(ref("order-1")), plan.trades.map { it.ref })
     }
+
+    // --- review round 1 ---
+
+    @Test
+    fun `refresh after since date with no trades in range does not duplicate snapshot trades`() = runTest {
+        // Binance-like: the exchange names the snapshot's order-2 by its trade ID.
+        stored(sharedPlan(listOf(trade(day(1), "order-1"), trade(day(3), "order-2"))))
+        download(FakeExchange(listOf(fill("trade-2", day(3)))))(
+            shareId, ImportRange.SinceDate(day(4).toEpochMilli()), now = now
+        )
+        assertEquals(day(4), store.get(shareId)!!.exchangeHistoryFrom)
+
+        val exchange = FakeExchange(listOf(fill("trade-2", day(3)), fill("trade-new", day(5))))
+        refresh(exchange)(shareId, now = now)
+
+        assertEquals(
+            listOf(ref("order-1"), ref("order-2"), ref("trade-new")),
+            store.get(shareId)!!.trades.map { it.ref }
+        )
+    }
+
+    @Test
+    fun `refresh after since date with a trade just after the date does not duplicate snapshot trades`() = runTest {
+        val from = day(3).plus(Duration.ofMinutes(10))
+        val downloaded = from.plus(Duration.ofMinutes(10))
+        stored(sharedPlan(listOf(trade(day(1), "order-1"), trade(day(3), "order-2"))))
+        download(FakeExchange(listOf(fill("trade-2", day(3)), fill("trade-a", downloaded))))(
+            shareId, ImportRange.SinceDate(from.toEpochMilli()), now = now
+        )
+
+        // Fetches from the downloaded trade minus the overlap, which reaches back before the date.
+        val exchange = FakeExchange(
+            listOf(fill("trade-2", day(3)), fill("trade-a", downloaded), fill("trade-new", day(5)))
+        )
+        refresh(exchange)(shareId, now = now)
+
+        assertEquals(listOf(downloaded.minus(overlap)), exchange.requestedSince)
+        assertEquals(
+            listOf(ref("order-1"), ref("order-2"), ref("trade-a"), ref("trade-new")),
+            store.get(shareId)!!.trades.map { it.ref }
+        )
+    }
+
+    @Test
+    fun `truncated replacing download fails and keeps stored trades`() = runTest {
+        stored(sharedPlan(listOf(trade(day(1), "order-1"), trade(day(3), "order-3"))))
+        val exchange = FakeExchange(
+            listOf(fill("trade-1", day(1))), listOf(fill("trade-2", day(2))), listOf(fill("trade-3", day(3)))
+        )
+
+        val result = DownloadSharedPlanHistoryUseCase(store, exchange.clients, maxDownloadPages = 2)(
+            shareId, ImportRange.AllHistory, now = now
+        )
+
+        assertTrue(result is RefreshSharedPlanUseCase.Result.Failed)
+        assertEquals(2, exchange.requestedSince.size)
+        val plan = store.get(shareId)!!
+        assertEquals(listOf(ref("order-1"), ref("order-3")), plan.trades.map { it.ref })
+        assertFalse(plan.tradesFromExchange)
+    }
+
+    @Test
+    fun `key that can trade is removed even after a newer qr scan`() = runTest {
+        stored(sharedPlan(listOf(trade(day(1), "order-1")), sharedAt = day(10)))
+        store.save(sharedPlan(emptyList(), sharedAt = day(12)), key) // QR re-scan: latestSharedAt > sharedAt
+        val exchange = FakeExchange()
+        exchange.api.keyPermissions = ApiKeyPermissions(canTrade = true, canWithdraw = false)
+
+        assertEquals(RefreshSharedPlanUseCase.Result.KeyNotReadOnly, refresh(exchange)(shareId, now = now))
+        assertNull(store.credentials(shareId))
+        assertFalse(store.get(shareId)!!.liveUpdates)
+        assertEquals(listOf(ref("order-1")), store.get(shareId)!!.trades.map { it.ref })
+
+        store.save(sharedPlan(emptyList(), sharedAt = day(13)), key)
+        assertTrue(store.get(shareId)!!.liveUpdates)
+        assertEquals(
+            RefreshSharedPlanUseCase.Result.KeyNotReadOnly,
+            download(exchange)(shareId, ImportRange.AllHistory, now = now)
+        )
+        assertNull(store.credentials(shareId))
+        assertFalse(store.get(shareId)!!.liveUpdates)
+    }
 }

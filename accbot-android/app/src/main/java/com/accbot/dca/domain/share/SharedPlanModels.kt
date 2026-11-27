@@ -67,7 +67,9 @@ data class SharedPlanLocalDto(
     /** The sender's trades come from the exchange rather than from AccBot's own purchases. */
     @SerializedName("tradesFromExchange") val tradesFromExchange: Boolean? = null,
     /** Newest share time ever accepted for this plan (may be later than the stored snapshot's). */
-    @SerializedName("latestSharedAt") val latestSharedAt: Long? = null
+    @SerializedName("latestSharedAt") val latestSharedAt: Long? = null,
+    /** Start of the range last replaced by a history download; older trades may be snapshot trades. */
+    @SerializedName("exchangeHistoryFrom") val exchangeHistoryFrom: Long? = null
 )
 
 data class SharedPlanInfoDto(
@@ -140,7 +142,12 @@ data class SharedPlan(
     /** Locally stored only: the trades were fetched from the exchange, not AccBot purchases. */
     val tradesFromExchange: Boolean = false,
     /** Locally stored only: newest accepted share time, used to reject older shares. */
-    val latestSharedAt: Instant? = null
+    val latestSharedAt: Instant? = null,
+    /**
+     * Locally stored only: trades from this time on came from the exchange (set by a replacing
+     * history download); older ones may be snapshot trades the exchange names differently.
+     */
+    val exchangeHistoryFrom: Instant? = null
 ) {
     val displayName: String get() = name.ifBlank { "$crypto/$fiat" }
 

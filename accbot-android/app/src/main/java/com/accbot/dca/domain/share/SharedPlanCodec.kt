@@ -229,7 +229,8 @@ object SharedPlanCodec {
                 refreshedAt = local.refreshedAt?.let(Instant::ofEpochMilli),
                 refreshFailed = local.refreshFailed == true,
                 tradesFromExchange = local.tradesFromExchange == true,
-                latestSharedAt = local.latestSharedAt?.let(Instant::ofEpochMilli)
+                latestSharedAt = local.latestSharedAt?.let(Instant::ofEpochMilli),
+                exchangeHistoryFrom = local.exchangeHistoryFrom?.let(Instant::ofEpochMilli)
             )
             else -> plan
         }
@@ -330,7 +331,8 @@ object SharedPlanCodec {
             refreshedAt = plan.refreshedAt?.toEpochMilli(),
             refreshFailed = plan.refreshFailed,
             tradesFromExchange = plan.tradesFromExchange.takeIf { it },
-            latestSharedAt = plan.latestSharedAt?.toEpochMilli()
+            latestSharedAt = plan.latestSharedAt?.toEpochMilli(),
+            exchangeHistoryFrom = plan.exchangeHistoryFrom?.toEpochMilli()
         )
     )
 

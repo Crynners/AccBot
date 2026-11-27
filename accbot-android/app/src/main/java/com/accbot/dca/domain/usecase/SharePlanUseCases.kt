@@ -258,7 +258,7 @@ class RefreshSharedPlanUseCase @Inject constructor(
                 when (client.verifyKey()) {
                     // Expected for a key shared with full access; it is still used only for reads.
                     KeyCheck.NOT_READ_ONLY -> if (!plan.fullAccessKey) {
-                        store.save(plan, credentials = null)
+                        store.dropKey(plan.shareId)
                         return Result.KeyNotReadOnly
                     }
                     else -> Unit
@@ -290,29 +290,34 @@ class RefreshSharedPlanUseCase @Inject constructor(
             } else {
                 maxOf(lastTrade ?: plan.createdAt, plan.sharedAt)
             }
-            val merged = merge(plan, fetchSince(client, plan, from, onProgress))
+            // Stopping at MAX_PAGES is fine here: the next refresh continues from the last trade.
+            val merged = merge(plan, fetchSince(client, plan, from, MAX_PAGES, onProgress).trades)
             return Download(plan.copy(trades = merged), merged.size - plan.trades.size)
         }
+
+        /** [truncated]: the exchange had more history after [maxPages] pages. */
+        internal class Fetched(val trades: List<HistoricalTrade>, val truncated: Boolean)
 
         internal suspend fun fetchSince(
             client: ReadOnlyExchangeClient,
             plan: SharedPlan,
             since: Instant,
+            maxPages: Int,
             onProgress: (ApiImportProgress) -> Unit
-        ): List<HistoricalTrade> {
+        ): Fetched {
             // Overlap a little so a trade at the boundary is not missed; refs remove duplicates.
             var cursor: Instant = since.minus(OVERLAP)
             val trades = mutableListOf<HistoricalTrade>()
-            for (page in 1..MAX_PAGES) {
+            for (page in 1..maxPages) {
                 val result = client.tradeHistory(plan.crypto, plan.fiat, cursor, PAGE_SIZE)
                 trades += result.trades
                 onProgress(ApiImportProgress.Fetching(page, trades.size))
-                if (!result.hasMore || result.trades.isEmpty()) break
+                if (!result.hasMore || result.trades.isEmpty()) return Fetched(trades, truncated = false)
                 val next = result.trades.maxOf { it.timestamp }
-                if (!next.isAfter(cursor)) break
+                if (!next.isAfter(cursor)) return Fetched(trades, truncated = false)
                 cursor = next
             }
-            return trades
+            return Fetched(trades, truncated = true)
         }
 
         /**
@@ -351,20 +356,23 @@ class RefreshSharedPlanUseCase @Inject constructor(
          * Coinbase) report history by trade ID, so the two cannot be matched by ref. Instead
          * everything up to the snapshot (its share time, or shortly after its last trade) is
          * left to the snapshot, and refs only dedupe trades added by earlier refreshes. The
-         * trades of an exchange-based plan all carry exchange refs, so refs alone dedupe them.
+         * trades of an exchange-based plan carry exchange refs from [SharedPlan.exchangeHistoryFrom]
+         * (or its start) on, so there refs alone dedupe and older fetched trades are dropped:
+         * those may be snapshot trades named differently.
          */
         internal fun merge(plan: SharedPlan, fetched: List<HistoricalTrade>): List<SharedPlanTrade> {
             val known = plan.trades.mapNotNull { it.ref }.toSet()
-            val cutoff = if (plan.tradesFromExchange) {
-                null
+            val unknown = toSharedTrades(plan, fetched).filter { it.ref !in known }
+            val added = if (plan.tradesFromExchange) {
+                val historyFrom = plan.exchangeHistoryFrom ?: plan.startedAt
+                unknown.filter { !it.executedAt.isBefore(historyFrom) }
             } else {
                 val lastSnapshotTrade = plan.trades
                     .filter { !it.executedAt.isAfter(plan.sharedAt) }
                     .maxOfOrNull { it.executedAt }
-                maxOf(plan.sharedAt, lastSnapshotTrade?.plus(SNAPSHOT_MARGIN) ?: plan.sharedAt)
+                val cutoff = maxOf(plan.sharedAt, lastSnapshotTrade?.plus(SNAPSHOT_MARGIN) ?: plan.sharedAt)
+                unknown.filter { it.executedAt.isAfter(cutoff) }
             }
-            val added = toSharedTrades(plan, fetched)
-                .filter { it.ref !in known && (cutoff == null || it.executedAt.isAfter(cutoff)) }
             return (plan.trades + added).sortedBy { it.executedAt }
         }
 
@@ -385,10 +393,14 @@ class RefreshSharedPlanUseCase @Inject constructor(
  * Downloads a shared plan's trade history from the exchange on request, using only the
  * [ReadOnlyExchangeClient]. Nothing older than the plan's start is kept from the exchange.
  */
-class DownloadSharedPlanHistoryUseCase @Inject constructor(
+class DownloadSharedPlanHistoryUseCase internal constructor(
     private val sharedPlanStore: SharedPlanStore,
-    private val readOnlyClients: ReadOnlyExchangeClient.Factory
+    private val readOnlyClients: ReadOnlyExchangeClient.Factory,
+    private val maxDownloadPages: Int
 ) {
+    @Inject constructor(sharedPlanStore: SharedPlanStore, readOnlyClients: ReadOnlyExchangeClient.Factory) :
+        this(sharedPlanStore, readOnlyClients, MAX_DOWNLOAD_PAGES)
+
     /**
      * [ImportRange.SinceLastPurchase] appends new trades like a refresh. [ImportRange.SinceDate]
      * (clamped to the plan start) and [ImportRange.AllHistory] (from the plan start) replace
@@ -408,11 +420,21 @@ class DownloadSharedPlanHistoryUseCase @Inject constructor(
                 is ImportRange.SinceDate -> maxOf(Instant.ofEpochMilli(range.millis), plan.startedAt)
                 ImportRange.AllHistory -> plan.startedAt
             }
-            val fetched = RefreshSharedPlanUseCase.fetchSince(client, plan, from, onProgress)
-            val trades = RefreshSharedPlanUseCase.replaceFrom(plan, from, fetched)
+            val fetched = RefreshSharedPlanUseCase.fetchSince(client, plan, from, maxDownloadPages, onProgress)
+            // Replacing with a partial range would silently drop newer stored trades.
+            if (fetched.truncated) throw HistoryTruncatedException()
+            val trades = RefreshSharedPlanUseCase.replaceFrom(plan, from, fetched.trades)
             RefreshSharedPlanUseCase.Download(
-                plan.copy(trades = trades, tradesFromExchange = true),
+                plan.copy(trades = trades, tradesFromExchange = true, exchangeHistoryFrom = from),
                 newTrades = trades.count { !it.executedAt.isBefore(from) }
             )
         }
+
+    /** Reported as [RefreshSharedPlanUseCase.Result.Failed]; the stored trades stay unchanged. */
+    private class HistoryTruncatedException : Exception("Trade history exceeds the download limit")
+
+    companion object {
+        /** A replacing download must see the whole range, so it may page much further than a refresh. */
+        internal const val MAX_DOWNLOAD_PAGES = 1000
+    }
 }
