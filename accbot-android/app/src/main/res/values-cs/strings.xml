@@ -224,6 +224,10 @@
     <string name="shared_plan_live_text">Živé aktualizace · naposledy obnoveno %1$s. Nejde upravit ani spustit.</string>
     <string name="shared_plan_live_text_never">Živé aktualizace · zatím neobnoveno. Nejde upravit ani spustit.</string>
     <string name="shared_plan_refresh_failed">Poslední obnovení selhalo. Klíč mohl být odvolán nebo je burza nedostupná.</string>
+    <string name="shared_plans_scan_qr">Naskenovat QR kód</string>
+    <string name="shared_plan_download_history">Stáhnout historii</string>
+    <string name="shared_plan_history_from_start">Od začátku plánu</string>
+    <string name="shared_plan_history_warning">Burza vrací všechny obchody tohoto páru na účtu. Obchody před začátkem plánu se vynechají, ruční nákupy nebo jiné plány stejného páru po začátku se ale od nákupů plánu odlišit nedají.</string>
     <string name="shared_plan_key_verified">Burza ověřila, že klíč je jen pro čtení.</string>
     <string name="shared_plan_key_unverified">Burza neumí ověřit, že je klíč jen pro čtení; potvrdil to odesílatel.</string>
     <string name="shared_plan_key_full_access">Odesílatel sdílel klíč, kterým jeho plán obchoduje. Klíč umí obchodovat, ale AccBot s ním jen čte. Soubor i heslo dobře chraňte.</string>

@@ -33,7 +33,14 @@ fun ImportConfigDialog(
     lastPurchaseMillis: Long? = null,
     /** When > 0, shows a warning that this connection has other plans and the import
      *  will fetch ALL trades from the exchange account, not just this plan's trades. */
-    otherPlansOnSameConnection: Int = 0
+    otherPlansOnSameConnection: Int = 0,
+    /** Earliest date the date picker accepts (epoch milliseconds); null for no lower bound. */
+    minSelectableDateMillis: Long? = null,
+    /** Replaces the title and hint of the "all history" option. */
+    allHistoryTitle: String? = null,
+    allHistoryHint: String? = null,
+    /** Text of the warning card, used instead of the multi-plan warning when set. */
+    warning: String? = null
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     val dateFormatter = remember {
@@ -48,7 +55,10 @@ fun ImportConfigDialog(
             initialSelectedDateMillis = (range as? ImportRange.SinceDate)?.millis,
             selectableDates = object : SelectableDates {
                 override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                    return utcTimeMillis <= System.currentTimeMillis()
+                    return utcTimeMillis <= System.currentTimeMillis() &&
+                        (minSelectableDateMillis == null ||
+                            // The picker reports midnight UTC, so the start day itself stays selectable.
+                            utcTimeMillis >= minSelectableDateMillis - minSelectableDateMillis % DAY_MILLIS)
                 }
             }
         )
@@ -81,8 +91,11 @@ fun ImportConfigDialog(
                     Text(pluralStringResource(R.plurals.import_api_dialog_text, planCount, planCount))
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-                // Multi-plan warning
-                if (otherPlansOnSameConnection > 0) {
+                val warningText = warning
+                    ?: if (otherPlansOnSameConnection > 0) {
+                        stringResource(R.string.import_api_multi_plan_warning, otherPlansOnSameConnection)
+                    } else null
+                if (warningText != null) {
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
@@ -90,7 +103,7 @@ fun ImportConfigDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = stringResource(R.string.import_api_multi_plan_warning, otherPlansOnSameConnection),
+                            text = warningText,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.padding(12.dp)
@@ -132,8 +145,8 @@ fun ImportConfigDialog(
                 )
                 RangeOption(
                     selected = range == ImportRange.AllHistory,
-                    title = stringResource(R.string.import_api_all_history),
-                    subtitle = stringResource(R.string.import_api_all_history_hint),
+                    title = allHistoryTitle ?: stringResource(R.string.import_api_all_history),
+                    subtitle = allHistoryHint ?: stringResource(R.string.import_api_all_history_hint),
                     onClick = { onRangeChange(ImportRange.AllHistory) }
                 )
             }
@@ -179,3 +192,5 @@ private fun RangeOption(
         trailing?.invoke()
     }
 }
+
+private const val DAY_MILLIS = 86_400_000L

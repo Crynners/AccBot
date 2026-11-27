@@ -223,6 +223,10 @@
     <string name="shared_plan_live_text">Live updates · last refreshed %1$s. Cannot be edited or run.</string>
     <string name="shared_plan_live_text_never">Live updates · not refreshed yet. Cannot be edited or run.</string>
     <string name="shared_plan_refresh_failed">The last refresh failed. The key may have been revoked or the exchange is unreachable.</string>
+    <string name="shared_plans_scan_qr">Scan QR code</string>
+    <string name="shared_plan_download_history">Download history</string>
+    <string name="shared_plan_history_from_start">From the plan start</string>
+    <string name="shared_plan_history_warning">The exchange returns every trade of this pair on the account. Trades before the plan start are skipped, but manual buys or other plans of the same pair after the start cannot be told apart from the plan’s purchases.</string>
     <string name="shared_plan_key_verified">Key checked by the exchange as read-only.</string>
     <string name="shared_plan_key_unverified">The exchange cannot confirm the key is read-only; the sender confirmed it.</string>
     <string name="shared_plan_key_full_access">The sender shared the key their plan trades with. It can trade, but AccBot only reads with it. Keep the file and password safe.</string>

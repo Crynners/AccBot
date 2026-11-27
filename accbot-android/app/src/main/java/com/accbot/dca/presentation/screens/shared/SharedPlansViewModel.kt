@@ -9,7 +9,11 @@ import com.accbot.dca.data.local.SharedPlanStore
 import com.accbot.dca.data.remote.MarketDataService
 import com.accbot.dca.domain.share.SharedPlan
 import com.accbot.dca.domain.share.SharedPlanError
+import com.accbot.dca.domain.share.SharedPlanCodec
 import com.accbot.dca.domain.share.SharedPlanException
+import com.accbot.dca.domain.usecase.ApiImportResultState
+import com.accbot.dca.domain.usecase.DownloadSharedPlanHistoryUseCase
+import com.accbot.dca.domain.usecase.ImportRange
 import com.accbot.dca.domain.usecase.ImportSharedPlanUseCase
 import com.accbot.dca.domain.usecase.RefreshSharedPlanUseCase
 import com.accbot.dca.domain.usecase.ShareKeyException
@@ -81,6 +85,19 @@ class SharedPlansViewModel @Inject constructor(
                 return@launch
             }
             importJson(json, password = null)
+        }
+    }
+
+    /** Content of a scanned QR code: same format as a share file, so it takes the same path. */
+    fun importScanned(content: String) {
+        if (_uiState.value.importing) return
+        _uiState.update { it.copy(importing = true) }
+        viewModelScope.launch {
+                    if (content.toByteArray(Charsets.UTF_8).size > SharedPlanCodec.MAX_FILE_BYTES) {
+                fail(context.getString(errorMessage(SharedPlanError.TOO_LARGE)))
+            } else {
+                importJson(content, password = null)
+            }
         }
     }
 
@@ -164,6 +181,7 @@ class SharedPlansViewModel @Inject constructor(
 class SharedPlanDetailViewModel @Inject constructor(
     private val store: SharedPlanStore,
     private val refreshSharedPlan: RefreshSharedPlanUseCase,
+    private val downloadSharedPlanHistory: DownloadSharedPlanHistoryUseCase,
     private val marketDataService: MarketDataService,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -173,7 +191,11 @@ class SharedPlanDetailViewModel @Inject constructor(
         val plan: SharedPlan? = null,
         val currentPrice: BigDecimal? = null,
         val refreshing: Boolean = false,
-        val deleted: Boolean = false
+        val deleted: Boolean = false,
+        val historyDialog: Boolean = false,
+        val historyRange: ImportRange = ImportRange.SinceLastPurchase,
+        val downloading: Boolean = false,
+        val downloadResult: ApiImportResultState? = null
     )
 
     private val _uiState = MutableStateFlow(UiState())
@@ -192,7 +214,11 @@ class SharedPlanDetailViewModel @Inject constructor(
             _uiState.value = UiState(loading = false, plan = plan)
             if (plan != null) {
                 loadPrice(plan)
-                if (plan.liveUpdates) refresh()
+                when {
+                    // Typically right after a QR import: the whole history is what the user wants next.
+                    plan.liveUpdates && plan.trades.isEmpty() -> openHistoryDialog()
+                    plan.liveUpdates -> refresh()
+                }
             }
         }
     }
@@ -217,6 +243,76 @@ class SharedPlanDetailViewModel @Inject constructor(
                 }
                 RefreshSharedPlanUseCase.Result.NotLive ->
                     _uiState.update { it.copy(plan = store.get(plan.shareId), refreshing = false) }
+            }
+        }
+    }
+
+    fun openHistoryDialog() {
+        val plan = _uiState.value.plan ?: return
+        if (!plan.liveUpdates) return
+        _uiState.update {
+            it.copy(
+                historyDialog = true,
+                historyRange = if (plan.trades.isEmpty()) ImportRange.AllHistory else ImportRange.SinceLastPurchase
+            )
+        }
+    }
+
+    fun setHistoryRange(range: ImportRange) {
+        _uiState.update { it.copy(historyRange = range) }
+    }
+
+    fun dismissHistoryDialog() {
+        _uiState.update { it.copy(historyDialog = false) }
+    }
+
+    fun consumeDownloadResult() {
+        _uiState.update { it.copy(downloadResult = null) }
+    }
+
+    /** Fetches the history from the exchange with the share's read-only key; nothing is ever traded. */
+    fun downloadHistory() {
+        val state = _uiState.value
+        val plan = state.plan ?: return
+        if (!plan.liveUpdates || state.downloading) return
+        val range = state.historyRange
+        _uiState.update { it.copy(historyDialog = false, downloading = true) }
+        viewModelScope.launch {
+            try {
+                when (val result = downloadSharedPlanHistory(plan.shareId, range)) {
+                    is RefreshSharedPlanUseCase.Result.Updated -> _uiState.update {
+                        it.copy(
+                            plan = result.plan,
+                            downloading = false,
+                            // For a replacing download newTrades is the size of the range, not an increase.
+                            downloadResult = ApiImportResultState.Success(imported = result.newTrades, skipped = 0)
+                        )
+                    }
+                    is RefreshSharedPlanUseCase.Result.Failed -> _uiState.update {
+                        it.copy(
+                            plan = result.plan,
+                            downloading = false,
+                            downloadResult = ApiImportResultState.Error(
+                                context.getString(R.string.shared_plan_refresh_failed)
+                            )
+                        )
+                    }
+                    RefreshSharedPlanUseCase.Result.KeyNotReadOnly -> {
+                        _uiState.update { it.copy(plan = store.get(plan.shareId), downloading = false) }
+                        _messages.emit(context.getString(R.string.shared_plan_key_revoked_not_read_only))
+                    }
+                    RefreshSharedPlanUseCase.Result.NotLive ->
+                        _uiState.update { it.copy(plan = store.get(plan.shareId), downloading = false) }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(
+                        downloading = false,
+                        downloadResult = ApiImportResultState.Error(context.getString(R.string.shared_plan_refresh_failed))
+                    )
+                }
             }
         }
     }
