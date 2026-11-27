@@ -213,6 +213,7 @@ class RefreshSharedPlanUseCase @Inject constructor(
     private val readOnlyClients: ReadOnlyExchangeClient.Factory
 ) {
     sealed class Result {
+        /** [newTrades]: trades appended, or for a replacing download the trades now in its range. */
         data class Updated(val plan: SharedPlan, val newTrades: Int) : Result()
         /** The share has no key (plain snapshot). */
         object NotLive : Result()
@@ -222,56 +223,13 @@ class RefreshSharedPlanUseCase @Inject constructor(
         data class Failed(val plan: SharedPlan) : Result()
     }
 
-    suspend operator fun invoke(shareId: String, now: Instant = Instant.now()): Result {
-        val plan = sharedPlanStore.get(shareId) ?: return Result.NotLive
-        val credentials = sharedPlanStore.credentials(plan.shareId) ?: return Result.NotLive
-        val client = readOnlyClients.create(credentials, plan.isSandbox) ?: return Result.NotLive
-        return try {
-            when (client.verifyKey()) {
-                // Expected for a key shared with full access; it is still used only for reads.
-                KeyCheck.NOT_READ_ONLY -> if (!plan.fullAccessKey) {
-                    sharedPlanStore.save(plan, credentials = null)
-                    return Result.KeyNotReadOnly
-                }
-                else -> Unit
-            }
-            val lastKnown = plan.trades.lastOrNull()?.executedAt ?: plan.createdAt
-            val fetched = fetchSince(client, plan, maxOf(lastKnown, plan.sharedAt))
-            val merged = merge(plan, fetched)
-            val updated = plan.copy(
-                trades = merged,
-                refreshedAt = now,
-                refreshFailed = false
-            )
-            sharedPlanStore.update(updated)
-            Result.Updated(updated, merged.size - plan.trades.size)
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            val failed = plan.copy(refreshFailed = true)
-            sharedPlanStore.update(failed)
-            Result.Failed(failed)
-        }
-    }
+    /** A plan with downloaded trades and the count reported in [Result.Updated.newTrades]. */
+    internal data class Download(val plan: SharedPlan, val newTrades: Int)
 
-    private suspend fun fetchSince(
-        client: ReadOnlyExchangeClient,
-        plan: SharedPlan,
-        lastKnown: Instant
-    ): List<HistoricalTrade> {
-        // Overlap a little so a trade at the boundary is not missed; refs remove duplicates.
-        var cursor: Instant? = lastKnown.minus(OVERLAP)
-        val trades = mutableListOf<HistoricalTrade>()
-        repeat(MAX_PAGES) {
-            val page = client.tradeHistory(plan.crypto, plan.fiat, cursor, PAGE_SIZE)
-            trades += page.trades
-            if (!page.hasMore || page.trades.isEmpty()) return trades
-            val next = page.trades.maxOf { it.timestamp }
-            if (cursor != null && !next.isAfter(cursor)) return trades
-            cursor = next
+    suspend operator fun invoke(shareId: String, now: Instant = Instant.now()): Result =
+        withVerifiedKey(sharedPlanStore, readOnlyClients, shareId, now) { plan, client ->
+            appendNew(client, plan, onProgress = {})
         }
-        return trades
-    }
 
     companion object {
         private val OVERLAP: Duration = Duration.ofHours(1)
@@ -282,34 +240,97 @@ class RefreshSharedPlanUseCase @Inject constructor(
         private val SNAPSHOT_MARGIN: Duration = Duration.ofMinutes(5)
 
         /**
-         * Appends fetched trades that are newer than the snapshot and not yet known.
-         *
-         * The snapshot identifies trades by their order ID, but some exchanges (Binance,
-         * Coinbase) report history by trade ID, so the two cannot be matched by ref. Instead
-         * everything up to the snapshot (its share time, or shortly after its last trade) is
-         * left to the snapshot, and refs only dedupe trades added by earlier refreshes.
-         * Fills reported under the same ID are grouped into one trade.
+         * Loads the share's key, checks its permissions again and stores the plan [download]
+         * returns, marked as refreshed at [now]. Shared by refresh and history download, so
+         * both drop a key that started to allow trading and record exchange errors alike.
          */
-        internal fun merge(plan: SharedPlan, fetched: List<HistoricalTrade>): List<SharedPlanTrade> {
-            val exchangeName = plan.exchangeName
-            val known = plan.trades.mapNotNull { it.ref }.toMutableSet()
-            val lastSnapshotTrade = plan.trades
-                .filter { !it.executedAt.isAfter(plan.sharedAt) }
-                .maxOfOrNull { it.executedAt }
-            val cutoff = maxOf(plan.sharedAt, lastSnapshotTrade?.plus(SNAPSHOT_MARGIN) ?: plan.sharedAt)
-            val added = fetched
+        internal suspend fun withVerifiedKey(
+            store: SharedPlanStore,
+            clients: ReadOnlyExchangeClient.Factory,
+            shareId: String,
+            now: Instant,
+            download: suspend (SharedPlan, ReadOnlyExchangeClient) -> Download
+        ): Result {
+            val plan = store.get(shareId) ?: return Result.NotLive
+            val credentials = store.credentials(plan.shareId) ?: return Result.NotLive
+            val client = clients.create(credentials, plan.isSandbox) ?: return Result.NotLive
+            return try {
+                when (client.verifyKey()) {
+                    // Expected for a key shared with full access; it is still used only for reads.
+                    KeyCheck.NOT_READ_ONLY -> if (!plan.fullAccessKey) {
+                        store.save(plan, credentials = null)
+                        return Result.KeyNotReadOnly
+                    }
+                    else -> Unit
+                }
+                val result = download(plan, client)
+                val updated = result.plan.copy(refreshedAt = now, refreshFailed = false)
+                store.update(updated)
+                Result.Updated(updated, result.newTrades)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                val failed = plan.copy(refreshFailed = true)
+                store.update(failed)
+                Result.Failed(failed)
+            }
+        }
+
+        /** Appends trades made after the plan's known ones (a refresh, or "since last purchase"). */
+        internal suspend fun appendNew(
+            client: ReadOnlyExchangeClient,
+            plan: SharedPlan,
+            onProgress: (ApiImportProgress) -> Unit
+        ): Download {
+            val lastTrade = plan.trades.lastOrNull()?.executedAt
+            // Exchange-based trades carry exchange refs, so fetching from the last one cannot
+            // duplicate it. A file snapshot leaves everything up to its share time to itself.
+            val from = if (plan.tradesFromExchange) {
+                lastTrade ?: plan.startedAt
+            } else {
+                maxOf(lastTrade ?: plan.createdAt, plan.sharedAt)
+            }
+            val merged = merge(plan, fetchSince(client, plan, from, onProgress))
+            return Download(plan.copy(trades = merged), merged.size - plan.trades.size)
+        }
+
+        internal suspend fun fetchSince(
+            client: ReadOnlyExchangeClient,
+            plan: SharedPlan,
+            since: Instant,
+            onProgress: (ApiImportProgress) -> Unit
+        ): List<HistoricalTrade> {
+            // Overlap a little so a trade at the boundary is not missed; refs remove duplicates.
+            var cursor: Instant = since.minus(OVERLAP)
+            val trades = mutableListOf<HistoricalTrade>()
+            for (page in 1..MAX_PAGES) {
+                val result = client.tradeHistory(plan.crypto, plan.fiat, cursor, PAGE_SIZE)
+                trades += result.trades
+                onProgress(ApiImportProgress.Fetching(page, trades.size))
+                if (!result.hasMore || result.trades.isEmpty()) break
+                val next = result.trades.maxOf { it.timestamp }
+                if (!next.isAfter(cursor)) break
+                cursor = next
+            }
+            return trades
+        }
+
+        /**
+         * Converts fetched fills into the plan's trades, oldest first. Fills reported under
+         * the same ID are grouped into one trade; fills of another pair, of other sides,
+         * without amounts or from before the plan started are dropped.
+         */
+        internal fun toSharedTrades(plan: SharedPlan, fetched: List<HistoricalTrade>): List<SharedPlanTrade> =
+            fetched
                 .filter { it.crypto == plan.crypto && it.fiat == plan.fiat && it.orderId.isNotBlank() }
                 .filter { it.side == "BUY" || it.side == "SELL" }
                 .groupBy { it.orderId }
                 .mapNotNull { (orderId, fills) ->
-                    val ref = SharedPlanCodec.orderRef(exchangeName, orderId)
-                    if (ref in known) return@mapNotNull null
                     val crypto = fills.sumOf { it.cryptoAmount }
                     val fiat = fills.sumOf { it.fiatAmount }
                     if (crypto.signum() <= 0 || fiat.signum() <= 0) return@mapNotNull null
                     val executedAt = fills.minOf { it.timestamp }
-                    if (!executedAt.isAfter(cutoff)) return@mapNotNull null
-                    known += ref
+                    if (executedAt.isBefore(plan.startedAt)) return@mapNotNull null
                     SharedPlanTrade(
                         executedAt = executedAt,
                         side = if (fills.first().side == "SELL") TransactionSide.SELL else TransactionSide.BUY,
@@ -318,10 +339,80 @@ class RefreshSharedPlanUseCase @Inject constructor(
                         fiatAmount = fiat,
                         fee = fills.sumOf { it.fee },
                         feeAsset = fills.first().feeAsset.takeIf { it.matches(Regex("^[A-Z0-9]{2,10}$")) },
-                        ref = ref
+                        ref = SharedPlanCodec.orderRef(plan.exchangeName, orderId)
                     )
                 }
+                .sortedBy { it.executedAt }
+
+        /**
+         * Appends fetched trades that are not yet known.
+         *
+         * A file snapshot identifies trades by their order ID, but some exchanges (Binance,
+         * Coinbase) report history by trade ID, so the two cannot be matched by ref. Instead
+         * everything up to the snapshot (its share time, or shortly after its last trade) is
+         * left to the snapshot, and refs only dedupe trades added by earlier refreshes. The
+         * trades of an exchange-based plan all carry exchange refs, so refs alone dedupe them.
+         */
+        internal fun merge(plan: SharedPlan, fetched: List<HistoricalTrade>): List<SharedPlanTrade> {
+            val known = plan.trades.mapNotNull { it.ref }.toSet()
+            val cutoff = if (plan.tradesFromExchange) {
+                null
+            } else {
+                val lastSnapshotTrade = plan.trades
+                    .filter { !it.executedAt.isAfter(plan.sharedAt) }
+                    .maxOfOrNull { it.executedAt }
+                maxOf(plan.sharedAt, lastSnapshotTrade?.plus(SNAPSHOT_MARGIN) ?: plan.sharedAt)
+            }
+            val added = toSharedTrades(plan, fetched)
+                .filter { it.ref !in known && (cutoff == null || it.executedAt.isAfter(cutoff)) }
             return (plan.trades + added).sortedBy { it.executedAt }
         }
+
+        /**
+         * The plan's trades before [from] followed by the fetched ones from [from] on.
+         * Replacing the range instead of merging avoids duplicates when the snapshot and the
+         * exchange name the same trades differently (order ID vs trade ID).
+         */
+        internal fun replaceFrom(plan: SharedPlan, from: Instant, fetched: List<HistoricalTrade>): List<SharedPlanTrade> {
+            val kept = plan.trades.filter { it.executedAt.isBefore(from) }
+            val downloaded = toSharedTrades(plan, fetched).filter { !it.executedAt.isBefore(from) }
+            return (kept + downloaded).sortedBy { it.executedAt }
+        }
     }
+}
+
+/**
+ * Downloads a shared plan's trade history from the exchange on request, using only the
+ * [ReadOnlyExchangeClient]. Nothing older than the plan's start is kept from the exchange.
+ */
+class DownloadSharedPlanHistoryUseCase @Inject constructor(
+    private val sharedPlanStore: SharedPlanStore,
+    private val readOnlyClients: ReadOnlyExchangeClient.Factory
+) {
+    /**
+     * [ImportRange.SinceLastPurchase] appends new trades like a refresh. [ImportRange.SinceDate]
+     * (clamped to the plan start) and [ImportRange.AllHistory] (from the plan start) replace
+     * the plan's trades in that range with the exchange's; the plan's history then counts as
+     * coming from the exchange.
+     */
+    suspend operator fun invoke(
+        shareId: String,
+        range: ImportRange,
+        onProgress: (ApiImportProgress) -> Unit = {},
+        now: Instant = Instant.now()
+    ): RefreshSharedPlanUseCase.Result =
+        RefreshSharedPlanUseCase.withVerifiedKey(sharedPlanStore, readOnlyClients, shareId, now) { plan, client ->
+            val from = when (range) {
+                ImportRange.SinceLastPurchase ->
+                    return@withVerifiedKey RefreshSharedPlanUseCase.appendNew(client, plan, onProgress)
+                is ImportRange.SinceDate -> maxOf(Instant.ofEpochMilli(range.millis), plan.startedAt)
+                ImportRange.AllHistory -> plan.startedAt
+            }
+            val fetched = RefreshSharedPlanUseCase.fetchSince(client, plan, from, onProgress)
+            val trades = RefreshSharedPlanUseCase.replaceFrom(plan, from, fetched)
+            RefreshSharedPlanUseCase.Download(
+                plan.copy(trades = trades, tradesFromExchange = true),
+                newTrades = trades.count { !it.executedAt.isBefore(from) }
+            )
+        }
 }

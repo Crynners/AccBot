@@ -40,11 +40,16 @@ class ReadOnlyExchangeClient private constructor(private val api: ExchangeApi) {
 
     suspend fun currentPrice(crypto: String, fiat: String): BigDecimal? = api.getCurrentPrice(crypto, fiat)
 
-    class Factory @Inject constructor(private val exchangeApiFactory: ExchangeApiFactory) {
+    /** [createApi] is replaceable only for tests; production always uses [ExchangeApiFactory]. */
+    class Factory internal constructor(private val createApi: (ExchangeCredentials, Boolean) -> ExchangeApi) {
+        @Inject constructor(exchangeApiFactory: ExchangeApiFactory) : this(
+            { credentials, isSandbox -> exchangeApiFactory.create(credentials, isSandbox) }
+        )
+
         /** Null when the exchange has no trade history API, so live updates are impossible. */
         fun create(credentials: ExchangeCredentials, isSandbox: Boolean): ReadOnlyExchangeClient? {
             if (!credentials.exchange.supportsApiImport) return null
-            return ReadOnlyExchangeClient(exchangeApiFactory.create(credentials, isSandbox))
+            return ReadOnlyExchangeClient(createApi(credentials, isSandbox))
         }
     }
 }
