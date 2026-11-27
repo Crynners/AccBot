@@ -1,6 +1,11 @@
 
 var STOSUJ_FEE = 0.015;
 var ACCBOT_FEE = 0.006;
+// Štosuj subscriptions, monthly card price incl. 21 % VAT (stosuj.cz/cenik, November 2026).
+// FREE only allows weekly or monthly purchases; daily needs PREMIUM or PRO.
+var VAT = 1.21;
+var STOSUJ_PLANS = { free: 0, premium: 150 * VAT, pro: 450 * VAT };
+var PURCHASES_PER_YEAR = { daily: 365, weekly: 52.1775, monthly: 12 };
 var latestPurchases = [];
 
 function init() {
@@ -17,13 +22,17 @@ function init() {
   var btns = document.querySelectorAll('.compare-interval-btn');
   for (var i = 0; i < btns.length; i++) {
     btns[i].addEventListener('click', function () {
-      for (var j = 0; j < btns.length; j++) {
-        var selected = btns[j] === this;
-        btns[j].classList.toggle('active', selected);
-        btns[j].setAttribute('aria-pressed', String(selected));
+      if (this.disabled) return;
+      var group = this.parentNode.querySelectorAll('.compare-interval-btn');
+      for (var j = 0; j < group.length; j++) {
+        var selected = group[j] === this;
+        group[j].classList.toggle('active', selected);
+        group[j].setAttribute('aria-pressed', String(selected));
       }
+      updatePlanUi();
     });
   }
+  updatePlanUi();
 
   calcBtn.addEventListener('click', calculate);
   document.getElementById('compare-table').addEventListener('toggle', renderPurchaseTable);
@@ -42,8 +51,37 @@ function isoDate(d) {
 }
 
 function getInterval() {
-  var el = document.querySelector('.compare-interval-btn.active');
+  var el = document.querySelector('.compare-interval-btn.active[data-interval]');
   return el ? el.getAttribute('data-interval') : 'weekly';
+}
+
+function getPlan() {
+  var el = document.querySelector('.compare-interval-btn.active[data-plan]');
+  return el ? el.getAttribute('data-plan') : 'premium';
+}
+
+function selectPlan(plan) {
+  var btns = document.querySelectorAll('.compare-interval-btn[data-plan]');
+  for (var i = 0; i < btns.length; i++) {
+    var selected = btns[i].getAttribute('data-plan') === plan;
+    btns[i].classList.toggle('active', selected);
+    btns[i].setAttribute('aria-pressed', String(selected));
+  }
+}
+
+// Daily purchases are not available in Štosuj FREE, so the FREE option is locked while "daily" is picked.
+function updatePlanUi() {
+  var daily = getInterval() === 'daily';
+  var freeBtn = document.querySelector('.compare-interval-btn[data-plan="free"]');
+  if (!freeBtn) return;
+  freeBtn.disabled = daily;
+  if (daily && getPlan() === 'free') selectPlan('premium');
+  var plan = getPlan();
+  var note = plan === 'free'
+    ? tr('compare_plan_free_note')
+    : tr('compare_plan_paid_note', [fmtCZK(STOSUJ_PLANS[plan])]);
+  if (daily) note += ' ' + tr('compare_plan_daily_hint');
+  setText('compare-plan-note', note);
 }
 
 function genBuyDates(start, end, interval) {
@@ -237,6 +275,9 @@ function calculate() {
   var startVal = document.getElementById('compare-start').value;
   var amount = parseFloat(document.getElementById('compare-amount').value);
   var interval = getInterval();
+  var plan = getPlan();
+  // The subscription comes out of the same budget, spread evenly over the purchases.
+  var subPerBuy = STOSUJ_PLANS[plan] * 12 / PURCHASES_PER_YEAR[interval];
 
   if (!startVal || isNaN(amount) || amount <= 0) return;
 
@@ -277,10 +318,11 @@ function calculate() {
       var sTotal = 0, aTotal = 0;
       var sHist = [], aHist = [];
       var rows = [];
+      var sBuy = Math.max(0, amount - subPerBuy);
 
       for (var i = 0; i < dates.length; i++) {
         var p = findPrice(prices, dates[i].getTime());
-        sTotal += (amount * (1 - STOSUJ_FEE)) / p;
+        sTotal += (sBuy * (1 - STOSUJ_FEE)) / p;
         aTotal += (amount * (1 - ACCBOT_FEE)) / p;
         sHist.push([dates[i].getTime(), sTotal]);
         aHist.push([dates[i].getTime(), aTotal]);
@@ -288,20 +330,27 @@ function calculate() {
       }
 
       var invested = dates.length * amount;
+      var subPaid = dates.length * (amount - sBuy);
+      var stosujCosts = dates.length * sBuy * STOSUJ_FEE + subPaid;
+      var accbotCosts = invested * ACCBOT_FEE;
 
-      setText('stosuj-fees', fmtCZK(invested * STOSUJ_FEE));
+      setText('stosuj-fee-label', plan === 'free'
+        ? tr('compare_fee_stosuj')
+        : tr('compare_fee_stosuj_tpl', [fmtCZK(STOSUJ_PLANS[plan])]));
+      setText('stosuj-fees', fmtCZK(stosujCosts));
+      setText('stosuj-sub', subPaid > 0 ? tr('compare_sub_paid_tpl', [plan.toUpperCase(), fmtCZK(subPaid)]) : '');
       setText('stosuj-btc', fmtBTC(sTotal));
       setText('stosuj-sats', fmtSats(sTotal));
       setText('stosuj-value', fmtCZK(sTotal * curPrice));
 
-      setText('accbot-fees', fmtCZK(invested * ACCBOT_FEE));
+      setText('accbot-fees', fmtCZK(accbotCosts));
       setText('accbot-btc', fmtBTC(aTotal));
       setText('accbot-sats', fmtSats(aTotal));
       setText('accbot-value', fmtCZK(aTotal * curPrice));
 
       var extraBtc = aTotal - sTotal;
       var extraVal = extraBtc * curPrice;
-      var feeSave = invested * (STOSUJ_FEE - ACCBOT_FEE);
+      var feeSave = stosujCosts - accbotCosts;
 
       var sumEl = document.getElementById('compare-summary-text');
       var savEl = document.getElementById('compare-savings-text');
