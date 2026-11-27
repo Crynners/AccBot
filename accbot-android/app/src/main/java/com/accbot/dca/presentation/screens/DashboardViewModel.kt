@@ -22,7 +22,10 @@ import com.accbot.dca.domain.model.DcaPlan
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.StrategyMultiplierResult
 import com.accbot.dca.domain.usecase.CalculateStrategyMultiplierUseCase
+import com.accbot.dca.domain.usecase.RefreshSharedPlanUseCase
 import com.accbot.dca.domain.usecase.RefreshSharedPlansUseCase
+import com.accbot.dca.domain.share.SharedPlan
+import com.accbot.dca.data.local.SharedPlanStore
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.service.DcaForegroundService
@@ -99,6 +102,17 @@ data class NetworkRetryInfo(
     val dismissed: Boolean = false
 )
 
+/** A received read-only plan as shown on the dashboard. */
+@Immutable
+data class SharedPlanCardInfo(
+    val plan: SharedPlan,
+    val currentPrice: BigDecimal?,
+    /** Null when amounts are hidden. */
+    val performancePercent: BigDecimal?,
+    val refreshFailed: Boolean,
+    val keyRemoved: Boolean
+)
+
 @Immutable
 data class DashboardUiState(
     val holdings: List<CryptoHoldingWithPrice> = emptyList(),
@@ -132,7 +146,9 @@ data class DashboardUiState(
      * Open SELL orders grouped by plan id. Empty when trading is off or no
      * pending sells exist; the dashboard renders one card per non-empty group.
      */
-    val openSellsByPlan: Map<Long, List<Transaction>> = emptyMap()
+    val openSellsByPlan: Map<Long, List<Transaction>> = emptyMap(),
+    /** Read-only shared plans of the current environment; never part of own totals. */
+    val sharedPlans: List<SharedPlanCardInfo> = emptyList()
 )
 
 @HiltViewModel
@@ -148,7 +164,8 @@ class DashboardViewModel @Inject constructor(
     private val withdrawalThresholdDao: WithdrawalThresholdDao,
     private val exchangeConnectionDao: ExchangeConnectionDao,
     private val calculateStrategyMultiplier: CalculateStrategyMultiplierUseCase,
-    private val refreshSharedPlans: RefreshSharedPlansUseCase
+    private val refreshSharedPlans: RefreshSharedPlansUseCase,
+    private val sharedPlanStore: SharedPlanStore
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -156,6 +173,25 @@ class DashboardViewModel @Inject constructor(
         private const val STALENESS_THRESHOLD_MS = 5 * 60 * 1000L // 5 minutes
         /** Longer than one purchase request may take (45 s timeout) plus bookkeeping. */
         private const val IN_FLIGHT_GRACE_MS = 2 * 60 * 1000L
+
+        /** Shared plans of [isSandbox] environment by name; [prices] are keyed "CRYPTO/FIAT". */
+        internal fun sharedPlanCards(
+            plans: List<SharedPlan>,
+            isSandbox: Boolean,
+            prices: Map<String, BigDecimal>
+        ): List<SharedPlanCardInfo> = plans
+            .filter { it.isSandbox == isSandbox }
+            .sortedBy { it.displayName.lowercase() }
+            .map { plan ->
+                val price = prices["${plan.crypto}/${plan.fiat}"]
+                SharedPlanCardInfo(
+                    plan = plan,
+                    currentPrice = price,
+                    performancePercent = if (plan.includesAmounts) plan.summary.performancePercent(price) else null,
+                    refreshFailed = plan.refreshFailed,
+                    keyRemoved = false
+                )
+            }
     }
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -175,12 +211,17 @@ class DashboardViewModel @Inject constructor(
      */
     private val reorderMutex = Mutex()
 
+    /** Shares whose key turned out to allow trading and was removed; session only. */
+    private val keyRemovedShareIds = MutableStateFlow<Set<String>>(emptySet())
+    private val sharedPrices = MutableStateFlow<Map<String, BigDecimal>>(emptyMap())
+
     private var pendingWithoutOrderId: List<Transaction> = emptyList()
     private var reviewRecheckJob: Job? = null
 
     init {
         loadData()
         observeOpenSells()
+        observeSharedPlans()
         viewModelScope.launch {
             combine(
                 transactionDao.observeLatestConfirmedPurchasePerPlan(),
@@ -239,6 +280,43 @@ class DashboardViewModel @Inject constructor(
                 _uiState.update { it.copy(openSellsByPlan = grouped) }
             }
         }
+    }
+
+    private fun observeSharedPlans() {
+        viewModelScope.launch {
+            try {
+                sharedPlanStore.refresh()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Loading shared plans failed", e)
+            }
+        }
+        viewModelScope.launch {
+            sharedPlanStore.plans.filterNotNull().collectLatest { loadSharedPrices(it) }
+        }
+        viewModelScope.launch {
+            combine(sharedPlanStore.plans, sharedPrices, keyRemovedShareIds) { plans, prices, removed ->
+                sharedPlanCards(plans.orEmpty(), userPreferences.processSandboxMode, prices)
+                    .map { it.copy(keyRemoved = !it.plan.liveUpdates && it.plan.shareId in removed) }
+            }.collect { cards -> _uiState.update { it.copy(sharedPlans = cards) } }
+        }
+    }
+
+    private suspend fun loadSharedPrices(plans: List<SharedPlan>) {
+        val prices = mutableMapOf<String, BigDecimal>()
+        plans.filter { it.isSandbox == userPreferences.processSandboxMode }
+            .map { it.crypto to it.fiat }.distinct()
+            .forEach { (crypto, fiat) ->
+                try {
+                    marketDataService.getCachedPrice(crypto, fiat)?.let { prices["$crypto/$fiat"] = it }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    // No price: the card just shows no performance.
+                }
+            }
+        sharedPrices.value = prices
     }
 
     private fun loadData() {
@@ -652,7 +730,10 @@ class DashboardViewModel @Inject constructor(
                     launch { fetchPricesForHoldings(state.holdings, manageLoadingState = false) }
                     launch {
                         try {
-                            refreshSharedPlans.refreshAll(userPreferences.processSandboxMode)
+                            val results = refreshSharedPlans.refreshAll(userPreferences.processSandboxMode)
+                            val revoked = results.filterValues { it is RefreshSharedPlanUseCase.Result.KeyNotReadOnly }.keys
+                            if (revoked.isNotEmpty()) keyRemovedShareIds.update { it + revoked }
+                            loadSharedPrices(sharedPlanStore.plans.value.orEmpty())
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {

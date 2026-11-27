@@ -216,6 +216,9 @@
     <string name="shared_plans_password_open">Open</string>
     <string name="shared_plans_wrong_password">Wrong password.</string>
     <string name="shared_plans_key_not_read_only">The shared key can trade or withdraw, so AccBot refused it. Ask the sender for a read-only key.</string>
+    <string name="shared_plan_badge">Shared plan</string>
+    <string name="shared_plan_card_last_trade">Last trade: %1$s</string>
+    <string name="shared_plan_card_held">Held: %1$s %2$s</string>
     <string name="shared_plans_live_badge">Live updates</string>
     <string name="shared_plan_refresh">Refresh</string>
     <string name="shared_plan_refresh_new">%1$d new trades</string>

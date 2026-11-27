@@ -217,6 +217,9 @@
     <string name="shared_plans_password_open">Otevřít</string>
     <string name="shared_plans_wrong_password">Nesprávné heslo.</string>
     <string name="shared_plans_key_not_read_only">Sdílený klíč umí obchodovat nebo vybírat, proto ho AccBot odmítl. Požádejte odesílatele o klíč jen pro čtení.</string>
+    <string name="shared_plan_badge">Sdílený plán</string>
+    <string name="shared_plan_card_last_trade">Poslední obchod: %1$s</string>
+    <string name="shared_plan_card_held">Drženo: %1$s %2$s</string>
     <string name="shared_plans_live_badge">Živé aktualizace</string>
     <string name="shared_plan_refresh">Obnovit</string>
     <string name="shared_plan_refresh_new">Nové obchody: %1$d</string>
