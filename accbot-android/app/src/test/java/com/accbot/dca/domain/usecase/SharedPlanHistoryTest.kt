@@ -241,10 +241,60 @@ class SharedPlanHistoryTest {
         val result = refresh(exchange)(shareId, now = now)
 
         assertEquals(1, (result as RefreshSharedPlanUseCase.Result.Updated).newTrades)
-        assertEquals(listOf(sharedAt.minus(overlap)), exchange.requestedSince)
+        assertEquals(listOf(lastSnapshotTrade.minus(overlap)), exchange.requestedSince)
         val plan = store.get(shareId)!!
         assertEquals(listOf(ref("order-1"), ref("order-2"), ref("trade-new")), plan.trades.map { it.ref })
         assertFalse(plan.tradesFromExchange)
+    }
+
+    @Test
+    fun `file snapshot refresh fills trades missing before share time when exchange names match`() = runTest {
+        // The sender's app missed order-3, which ran before the file was shared.
+        stored(sharedPlan(listOf(trade(day(1), "order-1"), trade(day(5), "order-2")), sharedAt = day(10)))
+        val exchange = FakeExchange(
+            listOf(fill("order-2", day(5)), fill("order-3", day(7)), fill("order-4", day(11)))
+        )
+
+        val result = refresh(exchange)(shareId, now = now)
+
+        assertEquals(listOf(day(5).minus(overlap)), exchange.requestedSince)
+        assertEquals(2, (result as RefreshSharedPlanUseCase.Result.Updated).newTrades)
+        assertEquals(
+            listOf(ref("order-1"), ref("order-2"), ref("order-3"), ref("order-4")),
+            store.get(shareId)!!.trades.map { it.ref }
+        )
+    }
+
+    @Test
+    fun `file snapshot refresh keeps share time cutoff when exchange names trades differently`() = runTest {
+        stored(sharedPlan(listOf(trade(day(1), "order-1"), trade(day(5), "order-2")), sharedAt = day(10)))
+        val exchange = FakeExchange(
+            listOf(fill("trade-2", day(5)), fill("trade-3", day(7)), fill("trade-4", day(11)))
+        )
+
+        refresh(exchange)(shareId, now = now)
+
+        assertEquals(
+            listOf(ref("order-1"), ref("order-2"), ref("trade-4")),
+            store.get(shareId)!!.trades.map { it.ref }
+        )
+    }
+
+    @Test
+    fun `file snapshot split into fills is not duplicated by the grouped exchange order`() = runTest {
+        // The sender stores two fills of one order as two rows with the same ref.
+        stored(
+            sharedPlan(
+                listOf(trade(day(1), "order-1"), trade(day(5), "order-2"), trade(day(5).plusMillis(15), "order-2")),
+                sharedAt = day(10)
+            )
+        )
+        val exchange = FakeExchange(listOf(fill("order-2", day(5)), fill("order-2", day(5).plusMillis(15))))
+
+        val result = refresh(exchange)(shareId, now = now)
+
+        assertEquals(0, (result as RefreshSharedPlanUseCase.Result.Updated).newTrades)
+        assertEquals(3, store.get(shareId)!!.trades.size)
     }
 
     @Test

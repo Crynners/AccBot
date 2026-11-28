@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -44,12 +46,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -299,11 +304,18 @@ fun SharePlanDialog(
     AlertDialog(
         // Closes only via the Cancel / Share / Done buttons, never by outside tap or Back.
         onDismissRequest = {},
-        properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false),
+        // The dialog window spans the screen and the dialog shrinks above the keyboard, so
+        // the focused field and the Share button stay visible while typing.
+        modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
+        properties = DialogProperties(
+            dismissOnClickOutside = false,
+            dismissOnBackPress = false,
+            decorFitsSystemWindows = false
+        ),
         title = { Text(stringResource(R.string.share_plan_title)) },
         text = {
             Column(
-                modifier = Modifier.imePadding().verticalScroll(rememberScrollState()),
+                modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(stringResource(R.string.share_plan_description))
@@ -399,7 +411,13 @@ private fun ShareResultDialog(result: ShareResult, onShareFile: () -> Unit, onDo
                 }
                 if (qr != QrImage.Failed) {
                     Text(
-                        stringResource(R.string.share_plan_qr_hint),
+                        // Built from the real labels so the path matches what the recipient sees.
+                        stringResource(
+                            R.string.share_plan_qr_hint,
+                            stringResource(R.string.settings_title),
+                            stringResource(R.string.shared_plans_title),
+                            stringResource(R.string.shared_plans_scan_qr)
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -463,8 +481,17 @@ private fun LiveKeySection(
     }
     HorizontalDivider()
     Text(stringResource(R.string.share_plan_live_password_info), style = MaterialTheme.typography.bodySmall)
-    SecretField(state.password, viewModel::setPassword, stringResource(R.string.share_plan_live_password))
-    SecretField(state.passwordConfirm, viewModel::setPasswordConfirm, stringResource(R.string.share_plan_live_password_confirm))
+    val focusManager = LocalFocusManager.current
+    SecretField(
+        state.password, viewModel::setPassword, stringResource(R.string.share_plan_live_password),
+        imeAction = ImeAction.Next,
+        onImeAction = { focusManager.moveFocus(FocusDirection.Down) }
+    )
+    SecretField(
+        state.passwordConfirm, viewModel::setPasswordConfirm, stringResource(R.string.share_plan_live_password_confirm),
+        imeAction = ImeAction.Done,
+        onImeAction = { focusManager.clearFocus() }
+    )
     if (state.password.isNotEmpty() && !state.passwordValid) {
         Text(
             stringResource(R.string.share_plan_live_password_invalid, SharePlanViewModel.MIN_PASSWORD_LENGTH),
@@ -616,13 +643,21 @@ private fun KeySourceOption(
 }
 
 @Composable
-private fun SecretField(value: String, onChange: (String) -> Unit, label: String) {
+private fun SecretField(
+    value: String,
+    onChange: (String) -> Unit,
+    label: String,
+    imeAction: ImeAction,
+    onImeAction: () -> Unit
+) {
     val requester = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
     PasswordTextField(
         value = value,
         onValueChange = onChange,
         label = label,
+        imeAction = imeAction,
+        onImeAction = onImeAction,
         modifier = Modifier
             .fillMaxWidth()
             .bringIntoViewRequester(requester)

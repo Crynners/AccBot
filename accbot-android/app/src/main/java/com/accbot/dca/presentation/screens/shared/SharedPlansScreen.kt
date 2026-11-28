@@ -3,6 +3,7 @@ package com.accbot.dca.presentation.screens.shared
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -160,7 +161,9 @@ fun SharedPlansScreen(
 private fun SharePasswordDialog(wrongPassword: Boolean, onSubmit: (String) -> Unit, onDismiss: () -> Unit) {
     var password by remember { mutableStateOf("") }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        // Closes only via Cancel / Open, so a stray tap does not lose the typed password.
+        onDismissRequest = {},
+        properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false),
         title = { Text(stringResource(R.string.shared_plans_password_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -170,7 +173,8 @@ private fun SharePasswordDialog(wrongPassword: Boolean, onSubmit: (String) -> Un
                     onValueChange = { password = it },
                     label = stringResource(R.string.share_plan_live_password),
                     isError = wrongPassword,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    onImeAction = { if (password.isNotEmpty()) onSubmit(password) }
                 )
                 if (wrongPassword) {
                     Text(

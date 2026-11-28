@@ -135,7 +135,7 @@
     <string name="share_plan_never_included">Nikdy se nesdílí: API klíče, ID příkazů, názvy připojení ani adresy pro výběr. Soubor nejde použít ke spuštění plánu.</string>
     <string name="share_plan_confirm">Sdílet</string>
     <string name="share_plan_qr_title">Naskenujte ve druhém telefonu</string>
-    <string name="share_plan_qr_hint">V aplikaci AccBot otevřete Nastavení → Sdílené plány → Naskenovat QR kód. Heslo předejte zvlášť, ne spolu s QR kódem.</string>
+    <string name="share_plan_qr_hint">V aplikaci AccBot otevřete %1$s → %2$s → %3$s. Heslo předejte zvlášť, ne spolu s QR kódem.</string>
     <string name="share_plan_share_file">Sdílet soubor</string>
     <string name="share_plan_qr_too_large">QR kód by byl příliš velký. Pošlete plán souborem.</string>
     <string name="share_plan_qr_content_description">QR kód se sdíleným plánem</string>

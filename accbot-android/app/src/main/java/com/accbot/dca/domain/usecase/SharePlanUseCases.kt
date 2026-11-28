@@ -297,12 +297,13 @@ class RefreshSharedPlanUseCase @Inject constructor(
             onProgress: (ApiImportProgress) -> Unit
         ): Download {
             val lastTrade = plan.trades.lastOrNull()?.executedAt
-            // Exchange-based trades carry exchange refs, so fetching from the last one cannot
-            // duplicate it. A file snapshot leaves everything up to its share time to itself.
+            // Fetching from the last known trade (even one before the share time) lets merge
+            // see that trade under the exchange's name and fill trades the snapshot missed.
+            // merge decides what is new, so an earlier start cannot duplicate snapshot trades.
             val from = if (plan.tradesFromExchange) {
                 lastTrade ?: plan.startedAt
             } else {
-                maxOf(lastTrade ?: plan.createdAt, plan.sharedAt)
+                lastTrade ?: maxOf(plan.createdAt, plan.sharedAt)
             }
             // Stopping at MAX_PAGES is fine here: the next refresh continues from the last trade.
             val merged = merge(plan, fetchSince(client, plan, from, MAX_PAGES, onProgress).trades)
@@ -368,24 +369,33 @@ class RefreshSharedPlanUseCase @Inject constructor(
          * Appends fetched trades that are not yet known.
          *
          * A file snapshot identifies trades by their order ID, but some exchanges (Binance,
-         * Coinbase) report history by trade ID, so the two cannot be matched by ref. Instead
-         * everything up to the snapshot (its share time, or shortly after its last trade) is
-         * left to the snapshot, and refs only dedupe trades added by earlier refreshes. The
-         * trades of an exchange-based plan carry exchange refs from [SharedPlan.exchangeHistoryFrom]
-         * (or its start) on, so there refs alone dedupe and older fetched trades are dropped:
-         * those may be snapshot trades named differently.
+         * Coinbase) report history by trade ID, so the two cannot always be matched by ref.
+         * When the fetch returns a snapshot trade under the snapshot's own ref, the exchange
+         * names trades like the snapshot: refs alone dedupe, and trades after the snapshot's
+         * last trade are kept even before its share time (the sender's app may have missed
+         * them). Otherwise everything up to the snapshot (its share time, or shortly after its
+         * last trade) is left to the snapshot, and refs only dedupe trades added by earlier
+         * refreshes. The trades of an exchange-based plan carry exchange refs from
+         * [SharedPlan.exchangeHistoryFrom] (or its start) on, so there refs alone dedupe and
+         * older fetched trades are dropped: those may be snapshot trades named differently.
          */
         internal fun merge(plan: SharedPlan, fetched: List<HistoricalTrade>): List<SharedPlanTrade> {
             val known = plan.trades.mapNotNull { it.ref }.toSet()
-            val unknown = toSharedTrades(plan, fetched).filter { it.ref !in known }
+            val fetchedTrades = toSharedTrades(plan, fetched)
+            val unknown = fetchedTrades.filter { it.ref !in known }
             val added = if (plan.tradesFromExchange) {
                 val historyFrom = plan.exchangeHistoryFrom ?: plan.startedAt
                 unknown.filter { !it.executedAt.isBefore(historyFrom) }
             } else {
-                val lastSnapshotTrade = plan.trades
-                    .filter { !it.executedAt.isAfter(plan.sharedAt) }
-                    .maxOfOrNull { it.executedAt }
-                val cutoff = maxOf(plan.sharedAt, lastSnapshotTrade?.plus(SNAPSHOT_MARGIN) ?: plan.sharedAt)
+                val snapshotTrades = plan.trades.filter { !it.executedAt.isAfter(plan.sharedAt) }
+                val lastSnapshotTrade = snapshotTrades.maxOfOrNull { it.executedAt }
+                val snapshotRefs = snapshotTrades.mapNotNull { it.ref }.toSet()
+                val namesMatch = fetchedTrades.any { it.ref in snapshotRefs }
+                val cutoff = if (namesMatch && lastSnapshotTrade != null) {
+                    lastSnapshotTrade
+                } else {
+                    maxOf(plan.sharedAt, lastSnapshotTrade?.plus(SNAPSHOT_MARGIN) ?: plan.sharedAt)
+                }
                 unknown.filter { it.executedAt.isAfter(cutoff) }
             }
             return (plan.trades + added).sortedBy { it.executedAt }
