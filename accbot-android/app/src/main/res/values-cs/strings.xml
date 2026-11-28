@@ -134,6 +134,11 @@
     <string name="share_plan_include_amounts_off">Sdílí se jen data a ceny nákupů, průměrná nákupní cena a výkonnost v procentech.</string>
     <string name="share_plan_never_included">Nikdy se nesdílí: API klíče, ID příkazů, názvy připojení ani adresy pro výběr. Soubor nejde použít ke spuštění plánu.</string>
     <string name="share_plan_confirm">Sdílet</string>
+    <string name="share_plan_qr_title">Naskenujte ve druhém telefonu</string>
+    <string name="share_plan_qr_hint">V aplikaci AccBot otevřete %1$s → %2$s → %3$s. Heslo předejte zvlášť, ne spolu s QR kódem.</string>
+    <string name="share_plan_share_file">Sdílet soubor</string>
+    <string name="share_plan_qr_too_large">QR kód by byl příliš velký. Pošlete plán souborem.</string>
+    <string name="share_plan_qr_content_description">QR kód se sdíleným plánem</string>
     <string name="share_plan_failed">Soubor ke sdílení se nepodařilo vytvořit.</string>
     <string name="shared_plans_title">Sdílené se mnou</string>
     <string name="shared_plans_settings_subtitle">Plány jen pro čtení, které vám poslali ostatní</string>
@@ -213,6 +218,9 @@
     <string name="shared_plans_password_open">Otevřít</string>
     <string name="shared_plans_wrong_password">Nesprávné heslo.</string>
     <string name="shared_plans_key_not_read_only">Sdílený klíč umí obchodovat nebo vybírat, proto ho AccBot odmítl. Požádejte odesílatele o klíč jen pro čtení.</string>
+    <string name="shared_plan_badge">Sdílený plán</string>
+    <string name="shared_plan_card_last_trade">Poslední obchod: %1$s</string>
+    <string name="shared_plan_card_held">Drženo: %1$s %2$s</string>
     <string name="shared_plans_live_badge">Živé aktualizace</string>
     <string name="shared_plan_refresh">Obnovit</string>
     <string name="shared_plan_refresh_new">Nové obchody: %1$d</string>
@@ -220,6 +228,11 @@
     <string name="shared_plan_live_text">Živé aktualizace · naposledy obnoveno %1$s. Nejde upravit ani spustit.</string>
     <string name="shared_plan_live_text_never">Živé aktualizace · zatím neobnoveno. Nejde upravit ani spustit.</string>
     <string name="shared_plan_refresh_failed">Poslední obnovení selhalo. Klíč mohl být odvolán nebo je burza nedostupná.</string>
+    <string name="shared_plan_history_too_long">Historie na burze je příliš dlouhá na stažení najednou. Zvolte pozdější datum.</string>
+    <string name="shared_plans_scan_qr">Naskenovat QR kód</string>
+    <string name="shared_plan_download_history">Stáhnout historii</string>
+    <string name="shared_plan_history_from_start">Od začátku plánu</string>
+    <string name="shared_plan_history_warning">Burza vrací všechny obchody tohoto páru na účtu. Obchody před začátkem plánu se vynechají, ruční nákupy nebo jiné plány stejného páru po začátku se ale od nákupů plánu odlišit nedají.</string>
     <string name="shared_plan_key_verified">Burza ověřila, že klíč je jen pro čtení.</string>
     <string name="shared_plan_key_unverified">Burza neumí ověřit, že je klíč jen pro čtení; potvrdil to odesílatel.</string>
     <string name="shared_plan_key_full_access">Odesílatel sdílel klíč, kterým jeho plán obchoduje. Klíč umí obchodovat, ale AccBot s ním jen čte. Soubor i heslo dobře chraňte.</string>

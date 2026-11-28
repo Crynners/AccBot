@@ -34,6 +34,7 @@ object SharedPlanCodec {
     private val ASSET = Regex("^[A-Z0-9]{2,10}$")
     private val REF = Regex("^[0-9a-f]{32}$")
     private val gson: Gson = GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create()
+    private val compactGson: Gson = GsonBuilder().disableHtmlEscaping().create()
 
     fun isValidShareId(value: String): Boolean = SHARE_ID.matches(value)
 
@@ -86,7 +87,9 @@ object SharedPlanCodec {
                 cronExpression = plan.cronExpression,
                 strategy = DcaStrategy.toDbString(plan.strategy),
                 isEnabled = plan.isEnabled,
-                createdAt = plan.createdAt.toEpochMilli()
+                createdAt = plan.createdAt.toEpochMilli(),
+                startedAt = listOfNotNull(plan.createdAt, fills.firstOrNull()?.executedAt)
+                    .map { it.toEpochMilli() }.filter { it > 0 }.minOrNull() ?: now.toEpochMilli()
             ),
             summary = SharedPlanSummaryDto(avgBuyPrice = avgBuyPrice?.stripTrailingZeros()?.toPlainString()),
             transactions = fills.map { tx ->
@@ -106,24 +109,37 @@ object SharedPlanCodec {
 
     fun encode(snapshot: SharedPlanSnapshotDto): String = gson.toJson(snapshot)
 
-    /** Re-encode a validated plan for local storage. Never contains credentials. */
-    fun encode(plan: SharedPlan): String = encode(toDto(plan))
+    /**
+     * Snapshot for the QR code: no trades and no summary, so the payload stays small. The
+     * recipient fetches the history from the exchange with the shared key.
+     */
+    fun qrSnapshot(snapshot: SharedPlanSnapshotDto): SharedPlanSnapshotDto =
+        snapshot.copy(transactions = emptyList(), summary = null)
+
+    /**
+     * Re-encode a validated plan for local storage, compact (no pretty-printing) so long
+     * histories stay small. Never contains credentials. Read back with [decode].
+     */
+    fun encode(plan: SharedPlan): String = compactGson.toJson(toDto(plan))
 
     /**
      * Produce the file content to send. Without [access] the snapshot is plain JSON.
      * With [access] (live updates) the snapshot and key are encrypted with [password].
+     * [compact] drops pretty-printing (inner and outer JSON) to fit into a QR code.
      */
     fun encodeShare(
         snapshot: SharedPlanSnapshotDto,
         access: SharedPlanAccessDto?,
         password: String?,
-        encrypt: (plaintext: ByteArray, password: String) -> String
+        encrypt: (plaintext: ByteArray, password: String) -> String,
+        compact: Boolean = false
     ): String {
-        if (access == null) return encode(snapshot.copy(access = null, encrypted = null, data = null, local = null))
+        val json = if (compact) compactGson else gson
+        if (access == null) return json.toJson(snapshot.copy(access = null, encrypted = null, data = null, local = null))
         require(!password.isNullOrEmpty()) { "A password is required to share a key" }
         require(snapshot.includesAmounts == true) { "A shared key exposes amounts" }
-        val inner = encode(snapshot.copy(access = access, encrypted = null, data = null, local = null))
-        return encode(
+        val inner = json.toJson(snapshot.copy(access = access, encrypted = null, data = null, local = null))
+        return json.toJson(
             SharedPlanSnapshotDto(
                 format = FORMAT,
                 version = CURRENT_VERSION,
@@ -142,10 +158,10 @@ object SharedPlanCodec {
         password: String?,
         decrypt: (data: String, password: String) -> ByteArray
     ): DecodedShare {
-        val outer = parseEnvelope(json)
+        val outer = parseEnvelope(json, limited = true)
         if (outer.encrypted != true) {
             if (outer.access != null || outer.data != null) invalid()
-            return DecodedShare(convert(outer, trustLocal = false, live = null), null)
+            return DecodedShare(convert(outer, trustLocal = false, live = null, limited = true), null)
         }
         val data = outer.data ?: invalid()
         if (password.isNullOrEmpty()) throw SharedPlanException(SharedPlanError.PASSWORD_REQUIRED)
@@ -154,7 +170,7 @@ object SharedPlanCodec {
         } catch (_: Exception) {
             throw SharedPlanException(SharedPlanError.WRONG_PASSWORD)
         }
-        val inner = parseEnvelope(innerJson)
+        val inner = parseEnvelope(innerJson, limited = true)
         if (inner.encrypted == true || inner.includesAmounts != true) invalid()
         val access = inner.access ?: invalid()
         val credentials = try {
@@ -171,21 +187,28 @@ object SharedPlanCodec {
             invalid()
         }
         val verifiedReadOnly = access.verifiedReadOnly == true
-        val plan = convert(inner, trustLocal = false, live = verifiedReadOnly)
+        val plan = convert(inner, trustLocal = false, live = verifiedReadOnly, limited = true)
             .copy(fullAccessKey = access.fullAccess == true && !verifiedReadOnly)
         if (plan.exchange != credentials.exchange) invalid()
         return DecodedShare(plan, credentials)
     }
 
-    /** Decode a stored share (written by [encode]). @throws SharedPlanException */
+    /**
+     * Decode a stored share (written by [encode], compact or pretty-printed by older versions).
+     * The size and trade limits of received files do not apply: a stored history may grow
+     * past them through refreshes and downloads. @throws SharedPlanException
+     */
     fun decode(json: String): SharedPlan {
-        val dto = parseEnvelope(json)
+        val dto = parseEnvelope(json, limited = false)
         if (dto.encrypted == true || dto.access != null) invalid()
-        return convert(dto, trustLocal = true, live = null)
+        return convert(dto, trustLocal = true, live = null, limited = false)
     }
 
-    private fun parseEnvelope(json: String): SharedPlanSnapshotDto {
-        if (json.toByteArray(Charsets.UTF_8).size > MAX_FILE_BYTES) throw SharedPlanException(SharedPlanError.TOO_LARGE)
+    /** @param limited apply the limits for received files ([MAX_FILE_BYTES], [MAX_TRADES]). */
+    private fun parseEnvelope(json: String, limited: Boolean): SharedPlanSnapshotDto {
+        if (limited && json.toByteArray(Charsets.UTF_8).size > MAX_FILE_BYTES) {
+            throw SharedPlanException(SharedPlanError.TOO_LARGE)
+        }
         val dto = try {
             gson.fromJson(json, SharedPlanSnapshotDto::class.java)
         } catch (_: Exception) {
@@ -198,9 +221,9 @@ object SharedPlanCodec {
     }
 
     /** @param live null for a snapshot without key, otherwise whether the key was verified read-only. */
-    private fun convert(dto: SharedPlanSnapshotDto, trustLocal: Boolean, live: Boolean?): SharedPlan {
+    private fun convert(dto: SharedPlanSnapshotDto, trustLocal: Boolean, live: Boolean?, limited: Boolean): SharedPlan {
         val plan = try {
-            fromDto(dto)
+            fromDto(dto, limited)
         } catch (e: SharedPlanException) {
             throw e
         } catch (_: Exception) {
@@ -214,13 +237,17 @@ object SharedPlanCodec {
                 verifiedReadOnly = local.verifiedReadOnly == true,
                 fullAccessKey = local.fullAccessKey == true,
                 refreshedAt = local.refreshedAt?.let(Instant::ofEpochMilli),
-                refreshFailed = local.refreshFailed == true
+                refreshFailed = local.refreshFailed == true,
+                tradesFromExchange = local.tradesFromExchange == true,
+                latestSharedAt = local.latestSharedAt?.let(Instant::ofEpochMilli),
+                exchangeHistoryFrom = local.exchangeHistoryFrom?.let(Instant::ofEpochMilli),
+                keyRevoked = local.keyRevoked == true
             )
             else -> plan
         }
     }
 
-    private fun fromDto(dto: SharedPlanSnapshotDto): SharedPlan {
+    private fun fromDto(dto: SharedPlanSnapshotDto, limited: Boolean): SharedPlan {
         val shareId = dto.shareId?.takeIf(::isValidShareId) ?: invalid()
         val includesAmounts = dto.includesAmounts ?: invalid()
         val plan = dto.plan ?: invalid()
@@ -228,7 +255,7 @@ object SharedPlanCodec {
         val fiat = plan.fiat?.takeIf { ASSET.matches(it) } ?: invalid()
         val exchangeName = plan.exchange?.trim()?.takeIf { it.isNotEmpty() && it.length <= 40 } ?: invalid()
         val rawTrades = dto.transactions ?: emptyList()
-        if (rawTrades.size > MAX_TRADES) throw SharedPlanException(SharedPlanError.TOO_LARGE)
+        if (limited && rawTrades.size > MAX_TRADES) throw SharedPlanException(SharedPlanError.TOO_LARGE)
 
         val trades = rawTrades.map { t ->
             val side = when (t.side) {
@@ -264,6 +291,12 @@ object SharedPlanCodec {
             strategy = DcaStrategy.fromString(plan.strategy.orEmpty()),
             isEnabled = plan.isEnabled ?: false,
             createdAt = Instant.ofEpochMilli(plan.createdAt ?: 0L),
+            startedAt = Instant.ofEpochMilli(
+                plan.startedAt?.takeIf { it > 0 }
+                    ?: listOfNotNull(plan.createdAt, trades.firstOrNull()?.executedAt?.toEpochMilli())
+                        .filter { it > 0 }.minOrNull()
+                    ?: dto.sharedAt ?: invalid()
+            ),
             statedAvgBuyPrice = positive(dto.summary?.avgBuyPrice),
             trades = trades
         )
@@ -286,7 +319,8 @@ object SharedPlanCodec {
             cronExpression = plan.cronExpression,
             strategy = DcaStrategy.toDbString(plan.strategy),
             isEnabled = plan.isEnabled,
-            createdAt = plan.createdAt.toEpochMilli()
+            createdAt = plan.createdAt.toEpochMilli(),
+            startedAt = plan.startedAt.toEpochMilli()
         ),
         summary = SharedPlanSummaryDto(avgBuyPrice = plan.statedAvgBuyPrice?.toPlainString()),
         transactions = plan.trades.map {
@@ -306,7 +340,11 @@ object SharedPlanCodec {
             verifiedReadOnly = plan.verifiedReadOnly,
             fullAccessKey = plan.fullAccessKey.takeIf { it },
             refreshedAt = plan.refreshedAt?.toEpochMilli(),
-            refreshFailed = plan.refreshFailed
+            refreshFailed = plan.refreshFailed,
+            tradesFromExchange = plan.tradesFromExchange.takeIf { it },
+            latestSharedAt = plan.latestSharedAt?.toEpochMilli(),
+            exchangeHistoryFrom = plan.exchangeHistoryFrom?.toEpochMilli(),
+            keyRevoked = plan.keyRevoked.takeIf { it }
         )
     )
 

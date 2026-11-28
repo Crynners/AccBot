@@ -22,6 +22,9 @@ import com.accbot.dca.domain.model.DcaPlan
 import com.accbot.dca.domain.model.DcaStrategy
 import com.accbot.dca.domain.model.StrategyMultiplierResult
 import com.accbot.dca.domain.usecase.CalculateStrategyMultiplierUseCase
+import com.accbot.dca.domain.usecase.RefreshSharedPlansUseCase
+import com.accbot.dca.domain.share.SharedPlan
+import com.accbot.dca.data.local.SharedPlanStore
 import com.accbot.dca.exchange.ExchangeApiFactory
 import com.accbot.dca.scheduler.DcaAlarmScheduler
 import com.accbot.dca.service.DcaForegroundService
@@ -31,6 +34,7 @@ import com.accbot.dca.presentation.utils.AutomationHealth
 import com.accbot.dca.presentation.utils.AutomationHealthChecker
 import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
@@ -97,6 +101,17 @@ data class NetworkRetryInfo(
     val dismissed: Boolean = false
 )
 
+/** A received read-only plan as shown on the dashboard. */
+@Immutable
+data class SharedPlanCardInfo(
+    val plan: SharedPlan,
+    val currentPrice: BigDecimal?,
+    /** Null when amounts are hidden. */
+    val performancePercent: BigDecimal?,
+    val refreshFailed: Boolean,
+    val keyRemoved: Boolean
+)
+
 @Immutable
 data class DashboardUiState(
     val holdings: List<CryptoHoldingWithPrice> = emptyList(),
@@ -130,7 +145,9 @@ data class DashboardUiState(
      * Open SELL orders grouped by plan id. Empty when trading is off or no
      * pending sells exist; the dashboard renders one card per non-empty group.
      */
-    val openSellsByPlan: Map<Long, List<Transaction>> = emptyMap()
+    val openSellsByPlan: Map<Long, List<Transaction>> = emptyMap(),
+    /** Read-only shared plans of the current environment; never part of own totals. */
+    val sharedPlans: List<SharedPlanCardInfo> = emptyList()
 )
 
 @HiltViewModel
@@ -145,7 +162,9 @@ class DashboardViewModel @Inject constructor(
     private val exchangeBalanceDao: ExchangeBalanceDao,
     private val withdrawalThresholdDao: WithdrawalThresholdDao,
     private val exchangeConnectionDao: ExchangeConnectionDao,
-    private val calculateStrategyMultiplier: CalculateStrategyMultiplierUseCase
+    private val calculateStrategyMultiplier: CalculateStrategyMultiplierUseCase,
+    private val refreshSharedPlans: RefreshSharedPlansUseCase,
+    private val sharedPlanStore: SharedPlanStore
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -153,6 +172,35 @@ class DashboardViewModel @Inject constructor(
         private const val STALENESS_THRESHOLD_MS = 5 * 60 * 1000L // 5 minutes
         /** Longer than one purchase request may take (45 s timeout) plus bookkeeping. */
         private const val IN_FLIGHT_GRACE_MS = 2 * 60 * 1000L
+
+        /** Cards follow the store, prices and the environment, so a switch re-filters. */
+        internal fun sharedPlanCardsFlow(
+            plans: Flow<List<SharedPlan>?>,
+            prices: Flow<Map<String, BigDecimal>>,
+            isSandbox: Flow<Boolean>
+        ): Flow<List<SharedPlanCardInfo>> = combine(plans, prices, isSandbox) { p, pr, sandbox ->
+            sharedPlanCards(p.orEmpty(), sandbox, pr)
+        }
+
+        /** Shared plans of [isSandbox] environment by name; [prices] are keyed "CRYPTO/FIAT". */
+        internal fun sharedPlanCards(
+            plans: List<SharedPlan>,
+            isSandbox: Boolean,
+            prices: Map<String, BigDecimal>
+        ): List<SharedPlanCardInfo> = plans
+            .filter { it.isSandbox == isSandbox }
+            .sortedBy { it.displayName.lowercase() }
+            .map { plan ->
+                val price = prices["${plan.crypto}/${plan.fiat}"]
+                SharedPlanCardInfo(
+                    plan = plan,
+                    currentPrice = price,
+                    performancePercent = if (plan.includesAmounts) plan.summary.performancePercent(price) else null,
+                    refreshFailed = plan.refreshFailed,
+                    // Stored with the plan, so the notice survives an app restart.
+                    keyRemoved = plan.keyRevoked && !plan.liveUpdates
+                )
+            }
     }
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -172,12 +220,16 @@ class DashboardViewModel @Inject constructor(
      */
     private val reorderMutex = Mutex()
 
+    private val sharedSandbox = MutableStateFlow(userPreferences.processSandboxMode)
+    private val sharedPrices = MutableStateFlow<Map<String, BigDecimal>>(emptyMap())
+
     private var pendingWithoutOrderId: List<Transaction> = emptyList()
     private var reviewRecheckJob: Job? = null
 
     init {
         loadData()
         observeOpenSells()
+        observeSharedPlans()
         viewModelScope.launch {
             combine(
                 transactionDao.observeLatestConfirmedPurchasePerPlan(),
@@ -238,7 +290,50 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    private fun observeSharedPlans() {
+        viewModelScope.launch {
+            try {
+                sharedPlanStore.refresh()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Loading shared plans failed", e)
+            }
+        }
+        viewModelScope.launch {
+            sharedPlanStore.plans.filterNotNull().collectLatest { loadSharedPrices(it) }
+        }
+        viewModelScope.launch {
+            sharedPlanCardsFlow(sharedPlanStore.plans, sharedPrices, sharedSandbox).collect { cards -> _uiState.update { it.copy(sharedPlans = cards) } }
+        }
+    }
+
+    private suspend fun loadSharedPrices(plans: List<SharedPlan>) {
+        val prices = mutableMapOf<String, BigDecimal>()
+        plans.filter { it.isSandbox == userPreferences.processSandboxMode }
+            .map { it.crypto to it.fiat }.distinct()
+            .forEach { (crypto, fiat) ->
+                try {
+                    marketDataService.getCachedPrice(crypto, fiat)?.let { prices["$crypto/$fiat"] = it }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    // No price: the card just shows no performance.
+                }
+            }
+        sharedPrices.value = prices
+    }
+
+    /** Environment switched in settings: re-filter shared plans and fetch prices for the new one. */
+    private fun updateSharedEnvironment() {
+        val now = userPreferences.processSandboxMode
+        if (sharedSandbox.value == now) return
+        sharedSandbox.value = now
+        viewModelScope.launch { loadSharedPrices(sharedPlanStore.plans.value.orEmpty()) }
+    }
+
     private fun loadData() {
+        updateSharedEnvironment()
         loadDataJob?.cancel()
         loadDataJob = viewModelScope.launch {
             val isSandbox = userPreferences.isSandboxMode()
@@ -614,6 +709,7 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun refreshPreferences() {
+        updateSharedEnvironment()
         val wasEnabled = _uiState.value.showMarketPulse
         val nowEnabled = userPreferences.isMarketPulseEnabled()
         _uiState.update {
@@ -647,6 +743,16 @@ class DashboardViewModel @Inject constructor(
                 coroutineScope {
                     launch { loadData() }
                     launch { fetchPricesForHoldings(state.holdings, manageLoadingState = false) }
+                    launch {
+                        try {
+                            refreshSharedPlans.refreshAll(userPreferences.processSandboxMode)
+                            loadSharedPrices(sharedPlanStore.plans.value.orEmpty())
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Shared plan refresh failed", e)
+                        }
+                    }
                     if (state.showMarketPulse) {
                         launch { fetchMarketIndicators(plans, force = true) }
                     }

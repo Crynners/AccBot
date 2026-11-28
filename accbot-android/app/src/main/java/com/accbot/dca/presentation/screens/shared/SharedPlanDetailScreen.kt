@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -52,6 +53,8 @@ import com.accbot.dca.domain.share.SharedPlan
 import com.accbot.dca.domain.share.SharedPlanTrade
 import com.accbot.dca.domain.util.CronUtils
 import com.accbot.dca.presentation.components.AccBotTopAppBar
+import com.accbot.dca.presentation.components.ApiImportResultDialog
+import com.accbot.dca.presentation.components.ImportConfigDialog
 import com.accbot.dca.presentation.components.CryptoIcon
 import com.accbot.dca.presentation.components.ErrorState
 import com.accbot.dca.presentation.components.LoadingState
@@ -92,6 +95,23 @@ fun SharedPlanDetailScreen(
         )
     }
 
+    val historyPlan = uiState.plan
+    if (uiState.historyDialog && historyPlan != null) {
+        ImportConfigDialog(
+            range = uiState.historyRange,
+            onRangeChange = viewModel::setHistoryRange,
+            onConfirm = viewModel::downloadHistory,
+            onDismiss = viewModel::dismissHistoryDialog,
+            canImportSinceLastPurchase = historyPlan.trades.isNotEmpty(),
+            lastPurchaseMillis = historyPlan.trades.lastOrNull()?.executedAt?.toEpochMilli(),
+            minSelectableDateMillis = historyPlan.startedAt.toEpochMilli(),
+            allHistoryTitle = stringResource(R.string.shared_plan_history_from_start),
+            allHistoryHint = DateFormatters.shortDateTime.format(historyPlan.startedAt),
+            warning = stringResource(R.string.shared_plan_history_warning)
+        )
+    }
+    uiState.downloadResult?.let { ApiImportResultDialog(result = it, onDismiss = viewModel::consumeDownloadResult) }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -100,9 +120,12 @@ fun SharedPlanDetailScreen(
                 onNavigateBack = onNavigateBack,
                 actions = {
                     if (uiState.plan?.liveUpdates == true) {
-                        if (uiState.refreshing) {
+                        if (uiState.refreshing || uiState.downloading) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                         } else {
+                            IconButton(onClick = viewModel::openHistoryDialog) {
+                                Icon(Icons.Default.Download, contentDescription = stringResource(R.string.shared_plan_download_history))
+                            }
                             IconButton(onClick = viewModel::refresh) {
                                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.shared_plan_refresh))
                             }
@@ -266,6 +289,13 @@ private fun ReadOnlyBanner(plan: SharedPlan) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
+                if (plan.keyRevoked && !plan.liveUpdates) {
+                    Text(
+                        stringResource(R.string.shared_plan_key_revoked_not_read_only),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Warning
+                    )
+                }
                 if (plan.liveUpdates && plan.refreshFailed) {
                     Text(
                         stringResource(R.string.shared_plan_refresh_failed),

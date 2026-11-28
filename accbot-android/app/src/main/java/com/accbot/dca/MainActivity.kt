@@ -633,6 +633,11 @@ private fun MainTabPage(
             },
             onNavigateToTransaction = { transactionId ->
                 navController.navigate(Screen.TransactionDetails.createRoute(transactionId))
+            },
+            onSharedPlanClick = { shareId ->
+                navController.navigate(Screen.SharedPlanDetail.createRoute(shareId)) {
+                    launchSingleTop = true
+                }
             }
         )
         1 -> PortfolioScreen(

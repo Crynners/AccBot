@@ -3,6 +3,7 @@ package com.accbot.dca.testing
 import com.accbot.dca.domain.model.DcaResult
 import com.accbot.dca.domain.model.Exchange
 import com.accbot.dca.domain.model.TradeHistoryPage
+import com.accbot.dca.exchange.ApiKeyPermissions
 import com.accbot.dca.exchange.ExchangeApi
 import com.accbot.dca.exchange.OrderStatusResult
 import java.math.BigDecimal
@@ -28,7 +29,9 @@ class FakeExchangeApi(
     var orderStatusHandler: suspend (orderId: String, crypto: String, fiat: String) -> OrderStatusResult? =
         { _, _, _ -> null },
     var balance: BigDecimal? = BigDecimal("1000"),
-    var price: BigDecimal? = BigDecimal("1500000")
+    var price: BigDecimal? = BigDecimal("1500000"),
+    /** Null = the exchange cannot report key permissions (the [ExchangeApi] default). */
+    var keyPermissions: ApiKeyPermissions? = null
 ) : ExchangeApi {
 
     /** Number of times [marketBuy] was invoked - lets tests assert "no duplicate order". */
@@ -80,6 +83,7 @@ class FakeExchangeApi(
         Result.success("fake-withdrawal")
     override suspend fun getWithdrawalFee(crypto: String): BigDecimal? = BigDecimal.ZERO
     override suspend fun validateCredentials(): Boolean = true
+    override suspend fun getKeyPermissions(): ApiKeyPermissions? = keyPermissions
     override suspend fun getOrderStatus(orderId: String, crypto: String, fiat: String): OrderStatusResult? {
         orderStatusCallCount++
         return orderStatusHandler(orderId, crypto, fiat)

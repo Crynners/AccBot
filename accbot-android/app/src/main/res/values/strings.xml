@@ -133,6 +133,11 @@
     <string name="share_plan_include_amounts_off">Only dates, prices, average buy price and performance in percent are shared.</string>
     <string name="share_plan_never_included">Never shared: API keys, order IDs, connection names and withdrawal addresses. The file cannot be used to run the plan.</string>
     <string name="share_plan_confirm">Share</string>
+    <string name="share_plan_qr_title">Scan on the other phone</string>
+    <string name="share_plan_qr_hint">In AccBot open %1$s → %2$s → %3$s. Give the password separately, not together with the QR code.</string>
+    <string name="share_plan_share_file">Share file</string>
+    <string name="share_plan_qr_too_large">The QR code would be too large. Send the plan as a file.</string>
+    <string name="share_plan_qr_content_description">QR code with the shared plan</string>
     <string name="share_plan_failed">Could not create the share file.</string>
     <string name="shared_plans_title">Shared with me</string>
     <string name="shared_plans_settings_subtitle">Read-only plans other people sent you</string>
@@ -212,6 +217,9 @@
     <string name="shared_plans_password_open">Open</string>
     <string name="shared_plans_wrong_password">Wrong password.</string>
     <string name="shared_plans_key_not_read_only">The shared key can trade or withdraw, so AccBot refused it. Ask the sender for a read-only key.</string>
+    <string name="shared_plan_badge">Shared plan</string>
+    <string name="shared_plan_card_last_trade">Last trade: %1$s</string>
+    <string name="shared_plan_card_held">Held: %1$s %2$s</string>
     <string name="shared_plans_live_badge">Live updates</string>
     <string name="shared_plan_refresh">Refresh</string>
     <string name="shared_plan_refresh_new">%1$d new trades</string>
@@ -219,6 +227,11 @@
     <string name="shared_plan_live_text">Live updates · last refreshed %1$s. Cannot be edited or run.</string>
     <string name="shared_plan_live_text_never">Live updates · not refreshed yet. Cannot be edited or run.</string>
     <string name="shared_plan_refresh_failed">The last refresh failed. The key may have been revoked or the exchange is unreachable.</string>
+    <string name="shared_plan_history_too_long">The exchange history is too long to download at once. Choose a later start date.</string>
+    <string name="shared_plans_scan_qr">Scan QR code</string>
+    <string name="shared_plan_download_history">Download history</string>
+    <string name="shared_plan_history_from_start">From the plan start</string>
+    <string name="shared_plan_history_warning">The exchange returns every trade of this pair on the account. Trades before the plan start are skipped, but manual buys or other plans of the same pair after the start cannot be told apart from the plan’s purchases.</string>
     <string name="shared_plan_key_verified">Key checked by the exchange as read-only.</string>
     <string name="shared_plan_key_unverified">The exchange cannot confirm the key is read-only; the sender confirmed it.</string>
     <string name="shared_plan_key_full_access">The sender shared the key their plan trades with. It can trade, but AccBot only reads with it. Keep the file and password safe.</string>

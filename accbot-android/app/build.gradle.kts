@@ -166,6 +166,8 @@ dependencies {
     testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("androidx.test:core-ktx:1.6.1")
     testImplementation("androidx.test.ext:junit-ktx:1.2.1")
+    testImplementation(platform("androidx.compose:compose-bom:2026.01.01"))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("androidx.room:room-testing:2.8.4")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     testImplementation("androidx.work:work-testing:2.11.0")

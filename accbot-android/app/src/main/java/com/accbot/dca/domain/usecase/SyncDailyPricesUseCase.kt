@@ -5,10 +5,14 @@ import com.accbot.dca.data.local.DailyPriceDao
 import com.accbot.dca.data.local.DailyPriceEntity
 import com.accbot.dca.data.local.TransactionDao
 import com.accbot.dca.data.remote.MarketDataService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+
+/** A pair to price although the user holds no transaction in it (e.g. a shared plan), from [since]. */
+data class ExtraPricePair(val crypto: String, val fiat: String, val since: LocalDate)
 
 /**
  * Orchestrates two-phase daily price sync:
@@ -27,14 +31,27 @@ class SyncDailyPricesUseCase @Inject constructor(
         private const val TAG = "SyncDailyPrices"
         private const val RATE_LIMIT_DELAY_MS = 1500L
         private const val BACKFILL_CHUNK_DAYS = 2000 // CryptoCompare max per call
+
+        /**
+         * Own held pairs first, then extra pairs the user does not hold. Each pair carries the
+         * earliest `since` of its extra pairs, so a held pair is also priced back to the start
+         * of a shared plan that began earlier than the user's own purchases.
+         */
+        internal fun pairsToSync(own: List<Pair<String, String>>, extraPairs: List<ExtraPricePair>): List<PairToSync> {
+            val earliestExtra = extraPairs.groupBy { it.crypto to it.fiat }
+                .mapValues { (_, pairs) -> pairs.minOf { it.since } }
+            val ownPairs = own.distinct()
+            return ownPairs.map { PairToSync(it.first, it.second, earliestExtra[it]) } +
+                earliestExtra.filterKeys { it !in ownPairs }.map { (pair, since) -> PairToSync(pair.first, pair.second, since) }
+        }
     }
 
     /**
      * Sync daily prices for all crypto/fiat pairs that have completed transactions.
      * @return number of pairs synced successfully
      */
-    suspend fun sync(): Int {
-        val holdings = transactionDao.getHoldingsByPair()
+    suspend fun sync(extraPairs: List<ExtraPricePair> = emptyList()): Int {
+        val holdings = pairsToSync(transactionDao.getHoldingsByPair().map { it.crypto to it.fiat }, extraPairs)
         if (holdings.isEmpty()) return 0
 
         val today = LocalDate.now()
@@ -45,12 +62,16 @@ class SyncDailyPricesUseCase @Inject constructor(
                 val crypto = holding.crypto
                 val fiat = holding.fiat
 
-                // Compute desired start date from earliest transaction
+                // Desired start: the earlier of the first own transaction and a shared plan's start.
                 val earliestTx = transactionDao.getEarliestTransactionDate(crypto, fiat)
-                val desiredStartDate = if (earliestTx != null) {
-                    val earliestTxDate = java.time.Instant.ofEpochMilli(earliestTx)
-                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-                    val idealDays = ChronoUnit.DAYS.between(earliestTxDate, today).toInt()
+                val earliestDate = listOfNotNull(
+                    earliestTx?.let {
+                        java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                    },
+                    holding.since
+                ).minOrNull()
+                val desiredStartDate = if (earliestDate != null) {
+                    val idealDays = ChronoUnit.DAYS.between(earliestDate, today).toInt()
                         .coerceIn(30, 3650)
                     today.minusDays(idealDays.toLong())
                 } else {
@@ -124,6 +145,8 @@ class SyncDailyPricesUseCase @Inject constructor(
                 }
 
                 syncedCount++
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Error syncing prices for ${holding.crypto}/${holding.fiat}", e)
             }
@@ -131,6 +154,9 @@ class SyncDailyPricesUseCase @Inject constructor(
 
         return syncedCount
     }
+
+    /** [since]: the earliest start of the extra pairs for this pair, null when there are none. */
+    internal data class PairToSync(val crypto: String, val fiat: String, val since: LocalDate?)
 
     private suspend fun insertPrices(crypto: String, fiat: String, prices: List<Pair<LocalDate, java.math.BigDecimal>>) {
         val entities = prices.map { (date, price) ->

@@ -11,7 +11,25 @@ import com.accbot.dca.domain.model.HistoricalTrade
 import com.accbot.dca.domain.usecase.RefreshSharedPlanUseCase
 import com.accbot.dca.domain.model.TransactionSide
 import com.accbot.dca.domain.model.TransactionStatus
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.accbot.dca.data.local.Bip39WordList
+import com.accbot.dca.data.local.CredentialsStore
+import com.accbot.dca.data.local.DcaDatabase
+import com.accbot.dca.data.local.ExchangeConnectionEntity
+import com.accbot.dca.data.local.UserPreferences
+import com.accbot.dca.domain.usecase.BackupCryptoUseCase
+import com.accbot.dca.domain.usecase.CreatePlanShareUseCase
+import com.accbot.dca.domain.usecase.LiveShareAccess
+import com.accbot.dca.domain.usecase.LiveShareKey
+import com.accbot.dca.domain.util.QrLimits
+import com.accbot.dca.exchange.ExchangeApiFactory
+import com.accbot.dca.exchange.ReadOnlyExchangeClient
+import com.accbot.dca.testing.buildInMemoryDb
 import kotlinx.coroutines.test.runTest
+import okhttp3.OkHttpClient
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -23,6 +41,7 @@ import org.junit.rules.TemporaryFolder
 import java.math.BigDecimal
 import java.time.Instant
 
+@RunWith(RobolectricTestRunner::class)
 class SharedPlanCodecTest {
 
     @get:Rule
@@ -276,6 +295,197 @@ class SharedPlanCodecTest {
         // A second refresh with the same history adds nothing.
         val again = RefreshSharedPlanUseCase.merge(shared.copy(trades = merged), listOf(fill("new-1", 6, "0.0005", "500")))
         assertEquals(merged.size, again.size)
+    }
+
+    private fun snapshotOf(txs: List<TransactionEntity>) =
+        SharedPlanCodec.createSnapshot(plan, txs, shareId, isSandbox = false, includeAmounts = true)
+
+    @Test
+    fun `snapshot carries plan start as earlier of creation and first trade`() {
+        val earlier = tx(1, TransactionSide.BUY, "0.0004", "500", day = -3)
+        val decoded = SharedPlanCodec.decode(SharedPlanCodec.encode(snapshotOf(listOf(earlier) + transactions.drop(1))))
+        assertEquals(earlier.executedAt, decoded.startedAt)
+
+        val withoutEarlier = SharedPlanCodec.decode(SharedPlanCodec.encode(snapshotOf(transactions)))
+        assertEquals(t0, withoutEarlier.startedAt)
+    }
+
+    @Test
+    fun `old share without startedAt falls back to first trade, never epoch zero`() {
+        val full = snapshotOf(transactions)
+        val noStart = full.copy(plan = full.plan!!.copy(createdAt = null, startedAt = null))
+        val decodedWithTrades = SharedPlanCodec.decode(SharedPlanCodec.encode(noStart))
+        assertEquals(t0.plusSeconds(86_400), decodedWithTrades.startedAt)
+
+        val noTrades = noStart.copy(transactions = emptyList())
+        val decoded = SharedPlanCodec.decode(SharedPlanCodec.encode(noTrades))
+        assertEquals(Instant.ofEpochMilli(noTrades.sharedAt!!), decoded.startedAt)
+    }
+
+    @Test
+    fun `epoch zero creation never becomes the plan start`() {
+        val restored = plan.copy(createdAt = Instant.EPOCH)
+        val now = Instant.parse("2026-06-01T00:00:00Z")
+        fun snap(txs: List<TransactionEntity>) = SharedPlanCodec.createSnapshot(
+            restored, txs, shareId, isSandbox = false, includeAmounts = true, now = now
+        )
+        val withFills = SharedPlanCodec.decode(SharedPlanCodec.encode(snap(transactions)))
+        assertEquals(t0.plusSeconds(86_400), withFills.startedAt)
+        val noFills = SharedPlanCodec.decode(SharedPlanCodec.encode(snap(emptyList())))
+        assertEquals(now, noFills.startedAt)
+    }
+
+    @Test
+    fun `received startedAt of zero falls back instead of reaching 1970`() {
+        val full = snapshotOf(transactions)
+        val zero = full.copy(plan = full.plan!!.copy(startedAt = 0L))
+        assertEquals(t0, SharedPlanCodec.decode(SharedPlanCodec.encode(zero)).startedAt)
+
+        val noCreated = zero.copy(plan = zero.plan!!.copy(createdAt = 0L))
+        assertEquals(t0.plusSeconds(86_400), SharedPlanCodec.decode(SharedPlanCodec.encode(noCreated)).startedAt)
+
+        val bare = noCreated.copy(transactions = emptyList())
+        assertEquals(Instant.ofEpochMilli(bare.sharedAt!!), SharedPlanCodec.decode(SharedPlanCodec.encode(bare)).startedAt)
+    }
+
+    @Test
+    fun `tradesFromExchange survives local storage but never comes from a received file`() {
+        val stored = SharedPlanCodec.decode(SharedPlanCodec.encode(snapshotOf(transactions)))
+        assertFalse(stored.tradesFromExchange)
+        val flagged = stored.copy(tradesFromExchange = true)
+        assertTrue(SharedPlanCodec.decode(SharedPlanCodec.encode(flagged)).tradesFromExchange)
+
+        // A received file claiming the flag in `local` is not trusted.
+        val forged = SharedPlanCodec.encode(snapshotOf(transactions).copy(local = SharedPlanLocalDto(tradesFromExchange = true)))
+        assertFalse(SharedPlanCodec.decodeShare(forged, null, ::fakeDecrypt).plan.tradesFromExchange)
+    }
+
+    @Test
+    fun `latestSharedAt survives local storage and is ignored in received files`() {
+        val stored = SharedPlanCodec.decode(SharedPlanCodec.encode(snapshotOf(transactions)))
+        assertNull(stored.latestSharedAt)
+        val flagged = stored.copy(latestSharedAt = t0.plusSeconds(5))
+        assertEquals(t0.plusSeconds(5), SharedPlanCodec.decode(SharedPlanCodec.encode(flagged)).latestSharedAt)
+
+        val forged = SharedPlanCodec.encode(snapshotOf(transactions).copy(local = SharedPlanLocalDto(latestSharedAt = 1L)))
+        assertNull(SharedPlanCodec.decodeShare(forged, null, ::fakeDecrypt).plan.latestSharedAt)
+    }
+
+    @Test
+    fun `keyRevoked survives local storage and is ignored in received files`() {
+        val stored = SharedPlanCodec.decode(SharedPlanCodec.encode(snapshotOf(transactions)))
+        assertFalse(stored.keyRevoked)
+        assertTrue(SharedPlanCodec.decode(SharedPlanCodec.encode(stored.copy(keyRevoked = true))).keyRevoked)
+
+        val forged = SharedPlanCodec.encode(snapshotOf(transactions).copy(local = SharedPlanLocalDto(keyRevoked = true)))
+        assertFalse(SharedPlanCodec.decodeShare(forged, null, ::fakeDecrypt).plan.keyRevoked)
+    }
+
+    @Test
+    fun `stored plans are compact and not limited like received files`() {
+        val many = (1..25_000).map { i ->
+            SharedPlanTradeDto(
+                executedAt = t0.toEpochMilli() + i * 1000L, side = "BUY", price = "1000000",
+                cryptoAmount = "0.001", fiatAmount = "1000", fee = "2.5", feeAsset = "CZK",
+                ref = SharedPlanCodec.orderRef("COINMATE", "order-$i")
+            )
+        }
+        // A file stored pretty-printed by an earlier version, already past the received-file size.
+        val legacy = SharedPlanCodec.encode(snapshotOf(transactions).copy(transactions = many))
+        assertTrue(legacy.toByteArray(Charsets.UTF_8).size > SharedPlanCodec.MAX_FILE_BYTES)
+        val loaded = SharedPlanCodec.decode(legacy)
+        assertEquals(25_000, loaded.trades.size)
+        assertReason(SharedPlanError.TOO_LARGE) { SharedPlanCodec.decodeShare(legacy, null, ::fakeDecrypt) }
+
+        val compact = SharedPlanCodec.encode(loaded)
+        assertFalse(compact.contains('\n'))
+        assertEquals(25_000, SharedPlanCodec.decode(compact).trades.size)
+
+        // More trades than a received file may carry still load from local storage.
+        val beyond = (1..SharedPlanCodec.MAX_TRADES + 1).map {
+            SharedPlanTrade(
+                executedAt = t0.plusSeconds(it.toLong()), side = TransactionSide.BUY, price = BigDecimal("1000000"),
+                cryptoAmount = BigDecimal("0.001"), fiatAmount = BigDecimal("1000"), fee = null, feeAsset = null
+            )
+        }
+        val big = SharedPlanCodec.encode(loaded.copy(trades = beyond))
+        assertEquals(SharedPlanCodec.MAX_TRADES + 1, SharedPlanCodec.decode(big).trades.size)
+        assertReason(SharedPlanError.TOO_LARGE) { SharedPlanCodec.decodeShare(big, null, ::fakeDecrypt) }
+    }
+
+    private val appContext: Context get() = ApplicationProvider.getApplicationContext()
+
+    private fun createUseCase(db: DcaDatabase): CreatePlanShareUseCase {
+        val prefs = UserPreferences(appContext)
+        val store = SharedPlanStore(tmp.newFolder("own"), object : SharedPlanStore.ShareIdRegistry {
+            override fun shareIdFor(planId: Long, isSandbox: Boolean) = shareId
+        }, FakeVault())
+        return CreatePlanShareUseCase(
+            db, store, prefs, BackupCryptoUseCase(Bip39WordList(appContext)),
+            CredentialsStore(appContext, db.exchangeConnectionDao()),
+            ReadOnlyExchangeClient.Factory(ExchangeApiFactory(prefs, OkHttpClient()))
+        )
+    }
+
+    private suspend fun seed(db: DcaDatabase): Long {
+        val connectionId = db.exchangeConnectionDao().insert(ExchangeConnectionEntity(exchange = Exchange.COINMATE))
+        val planId = db.dcaPlanDao().insertPlan(plan.copy(id = 0, connectionId = connectionId))
+        transactions.forEachIndexed { i, t ->
+            db.transactionDao().insertTransaction(
+                t.copy(id = 0, planId = planId, connectionId = connectionId, exchangeOrderId = "order-$i")
+            )
+        }
+        return planId
+    }
+
+    private fun liveAccess(passphrase: String? = null) = LiveShareAccess(
+        LiveShareKey.Separate(
+            ExchangeCredentials(Exchange.COINMATE, "ro-key", "ro-secret", passphrase = passphrase, clientId = "42"),
+            ReadOnlyExchangeClient.KeyCheck.READ_ONLY
+        ),
+        "heslo123"
+    )
+
+    private val realCrypto by lazy { BackupCryptoUseCase(Bip39WordList(appContext)) }
+    private fun realDecrypt(data: String, password: String): ByteArray = realCrypto.decrypt(data, password)
+
+    @Test
+    fun `qr content is a compact live share without trades and decodes with password`() = runTest {
+        val db = buildInMemoryDb()
+        try {
+            val file = createUseCase(db)(seed(db), includeAmounts = true, live = liveAccess())
+            val qr = file.qrContent!!
+
+            assertFalse(qr.contains("\n"))
+            assertTrue(qr.toByteArray(Charsets.UTF_8).size <= QrLimits.MAX_PAYLOAD_BYTES)
+            val decoded = SharedPlanCodec.decodeShare(qr, "heslo123", ::realDecrypt)
+            assertTrue(decoded.plan.trades.isEmpty())
+            assertEquals("ro-key", decoded.credentials?.apiKey)
+            val fromFile = SharedPlanCodec.decodeShare(file.content, "heslo123", ::realDecrypt)
+            assertTrue(fromFile.plan.trades.isNotEmpty())
+            assertEquals(fromFile.plan.startedAt, decoded.plan.startedAt)
+            assertEquals(fromFile.plan.shareId, decoded.plan.shareId)
+            assertEquals(fromFile.plan.sharedAt, decoded.plan.sharedAt)
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun `qr content is null for snapshot shares and when over the limit`() = runTest {
+        val db = buildInMemoryDb()
+        try {
+            val useCase = createUseCase(db)
+            val planId = seed(db)
+            assertNull(useCase(planId, includeAmounts = true).qrContent)
+
+            val huge = useCase(planId, includeAmounts = true, live = liveAccess(passphrase = "p".repeat(1500)))
+            assertNull(huge.qrContent)
+            val decoded = SharedPlanCodec.decodeShare(huge.content, "heslo123", ::realDecrypt)
+            assertEquals(1500, decoded.credentials?.passphrase?.length)
+        } finally {
+            db.close()
+        }
     }
 
     private class FakeVault : SharedPlanStore.KeyVault {

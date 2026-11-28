@@ -113,7 +113,7 @@ fun PortfolioScreen(
         val hasAnyData = chartData.isNotEmpty()
         val hasData = chartData.size >= 2
         val currentPage = uiState.pages.getOrNull(uiState.selectedPageIndex)
-        val isSinglePair = currentPage is PairPage.Plan
+        val isSinglePair = currentPage?.isSinglePair == true
 
         // Scrub-to-inspect state
         var scrubbedIndex by remember { mutableIntStateOf(-1) }
@@ -130,6 +130,7 @@ fun PortfolioScreen(
         val pairLabel = when (currentPage) {
             is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, currentPage.fiat)
             is PairPage.Plan -> currentPage.name
+            is PairPage.Shared -> "${currentPage.name} - ${stringResource(R.string.shared_plan_badge)}"
             null -> ""
         }
 
@@ -425,6 +426,7 @@ internal fun PortfolioContent(
             when (page) {
                 is PairPage.Aggregate -> "agg:${page.fiat}"
                 is PairPage.Plan -> "plan:${page.planId}:${page.name}"
+                is PairPage.Shared -> "shared:${page.shareId}:${page.name}"
             }
         }
     }
@@ -452,7 +454,7 @@ internal fun PortfolioContent(
     }
 
     val currentPage = uiState.pages.getOrNull(uiState.selectedPageIndex)
-    val isSinglePair = currentPage is PairPage.Plan
+    val isSinglePair = currentPage?.isSinglePair == true
 
     // Scrub-to-inspect state (ephemeral, local to composable)
     var scrubbedIndex by remember { mutableIntStateOf(-1) }
@@ -519,6 +521,7 @@ internal fun PortfolioContent(
                             val pairLabel = when (pageItem) {
                                 is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, pageItem.fiat)
                                 is PairPage.Plan -> pageItem.name
+                                is PairPage.Shared -> "${pageItem.name} - ${stringResource(R.string.shared_plan_badge)}"
                                 null -> ""
                             }
 
@@ -538,7 +541,7 @@ internal fun PortfolioContent(
                                     Spacer(Modifier.height(8.dp))
                                     KpiCardContent(
                                         uiState = uiState,
-                                        isSinglePair = pageItem is PairPage.Plan,
+                                        isSinglePair = pageItem?.isSinglePair == true,
                                         scrubbedDataPoint = scrubbedDataPoint
                                     )
                                 }
@@ -588,6 +591,7 @@ internal fun PortfolioContent(
                         val pairLabel = when (pageItem) {
                             is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, pageItem.fiat)
                             is PairPage.Plan -> pageItem.name
+                            is PairPage.Shared -> "${pageItem.name} - ${stringResource(R.string.shared_plan_badge)}"
                             null -> ""
                         }
                         Text(
@@ -600,7 +604,7 @@ internal fun PortfolioContent(
                             Spacer(Modifier.height(8.dp))
                             KpiCardContent(
                                 uiState = uiState,
-                                isSinglePair = pageItem is PairPage.Plan,
+                                isSinglePair = pageItem?.isSinglePair == true,
                                 scrubbedDataPoint = scrubbedDataPoint
                             )
                         }
@@ -1618,6 +1622,7 @@ private fun PlanChipRow(
             val label = when (page) {
                 is PairPage.Aggregate -> stringResource(R.string.chart_all_fiat, page.fiat)
                 is PairPage.Plan -> page.name
+                is PairPage.Shared -> "${page.name} - ${stringResource(R.string.shared_plan_badge)}"
             }
             FilterChip(
                 selected = index == selectedIndex,

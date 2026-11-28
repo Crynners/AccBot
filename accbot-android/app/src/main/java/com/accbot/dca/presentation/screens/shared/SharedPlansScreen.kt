@@ -2,14 +2,11 @@ package com.accbot.dca.presentation.screens.shared
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.FileOpen
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -42,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -53,9 +52,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.accbot.dca.R
 import com.accbot.dca.domain.share.SharedPlan
 import com.accbot.dca.presentation.components.AccBotTopAppBar
+import com.accbot.dca.presentation.components.PasswordTextField
 import com.accbot.dca.presentation.components.CryptoIcon
 import com.accbot.dca.presentation.components.EmptyState
 import com.accbot.dca.presentation.components.LoadingState
+import com.accbot.dca.presentation.components.QrScannerDialog
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.utils.DateFormatters
 
@@ -68,6 +69,7 @@ fun SharedPlansScreen(
     val plans by viewModel.plans.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showQrScanner by rememberSaveable { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) viewModel.importFrom(uri)
@@ -79,6 +81,17 @@ fun SharedPlansScreen(
     }
     LaunchedEffect(Unit) {
         viewModel.opened.collect { onOpenPlan(it) }
+    }
+
+    if (showQrScanner) {
+        QrScannerDialog(
+            onDismiss = { showQrScanner = false },
+            onScanResult = { content ->
+                showQrScanner = false
+                viewModel.importScanned(content)
+            },
+            showTextMode = false
+        )
     }
 
     if (uiState.passwordRequired) {
@@ -99,6 +112,9 @@ fun SharedPlansScreen(
                     if (uiState.importing) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(end = 4.dp), strokeWidth = 2.dp)
                     } else {
+                        IconButton(onClick = { showQrScanner = true }) {
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.shared_plans_scan_qr))
+                        }
                         IconButton(onClick = openPicker) {
                             Icon(Icons.Default.FileOpen, contentDescription = stringResource(R.string.shared_plans_import))
                         }
@@ -145,20 +161,20 @@ fun SharedPlansScreen(
 private fun SharePasswordDialog(wrongPassword: Boolean, onSubmit: (String) -> Unit, onDismiss: () -> Unit) {
     var password by remember { mutableStateOf("") }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        // Closes only via Cancel / Open, so a stray tap does not lose the typed password.
+        onDismissRequest = {},
+        properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false),
         title = { Text(stringResource(R.string.shared_plans_password_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.shared_plans_password_text))
-                OutlinedTextField(
+                PasswordTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text(stringResource(R.string.share_plan_live_password)) },
-                    singleLine = true,
+                    label = stringResource(R.string.share_plan_live_password),
                     isError = wrongPassword,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    onImeAction = { if (password.isNotEmpty()) onSubmit(password) }
                 )
                 if (wrongPassword) {
                     Text(

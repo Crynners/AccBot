@@ -2,19 +2,26 @@ package com.accbot.dca.presentation.screens.shared
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
@@ -27,7 +34,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -35,15 +41,22 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,10 +73,12 @@ import com.accbot.dca.domain.usecase.ShareKeyProblem
 import com.accbot.dca.domain.usecase.VerifyShareKeyUseCase
 import com.accbot.dca.exchange.ReadOnlyExchangeClient.KeyCheck
 import com.accbot.dca.presentation.components.CredentialsInputCard
+import com.accbot.dca.presentation.components.PasswordTextField
 import com.accbot.dca.presentation.components.areCredentialsComplete
 import com.accbot.dca.presentation.ui.theme.Error
 import com.accbot.dca.presentation.ui.theme.Warning
 import com.accbot.dca.presentation.ui.theme.successColor
+import com.accbot.dca.presentation.utils.generateQrBitmap
 import com.accbot.dca.presentation.utils.writeSharedExport
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -75,6 +90,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+
+/** Outcome of a live share; [qrContent] is null when the payload is too large for a QR code. */
+data class ShareResult(val fileUri: Uri, val qrContent: String?)
 
 /** Which key a live-update share carries; see [LiveShareKey]. */
 enum class ShareKeySource {
@@ -109,7 +127,10 @@ class SharePlanViewModel @Inject constructor(
         val keyProblem: ShareKeyProblem? = null,
         val unverifiableConfirmed: Boolean = false,
         val creating: Boolean = false,
+        /** Snapshot (no key) share: opened in the system share sheet right away. */
         val readyUri: Uri? = null,
+        /** Live share: kept in the dialog to show its QR code. Holds an encrypted key. */
+        val result: ShareResult? = null,
         val failed: Boolean = false
     ) {
         val passwordValid: Boolean get() = password.length >= MIN_PASSWORD_LENGTH && password == passwordConfirm
@@ -190,8 +211,10 @@ class SharePlanViewModel @Inject constructor(
         _uiState.update { it.copy(creating = true, failed = false, keyProblem = null) }
         viewModelScope.launch {
             var problem: ShareKeyProblem? = null
+            var qrContent: String? = null
             val uri = try {
                 val file = createPlanShare(planId, state.includeAmounts, live)
+                qrContent = file.qrContent
                 withContext(Dispatchers.IO) { writeSharedExport(context, file.fileName, file.content) }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -204,7 +227,8 @@ class SharePlanViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     creating = false,
-                    readyUri = uri,
+                    readyUri = if (live == null) uri else null,
+                    result = if (live != null && uri != null) ShareResult(uri, qrContent) else null,
                     // A key problem is shown inline in the dialog instead of a generic error.
                     failed = uri == null && problem == null,
                     keyProblem = problem ?: it.keyProblem
@@ -247,20 +271,23 @@ fun SharePlanDialog(
         viewModel.reset()
         onDismiss()
     }
+    val shareFile = { uri: Uri ->
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, chooserTitle))
+    }
 
     LaunchedEffect(state.readyUri, state.failed) {
         val uri = state.readyUri
         when {
             uri != null -> {
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "application/json"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    putExtra(Intent.EXTRA_SUBJECT, subject)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
                 viewModel.consumeResult()
                 close()
-                context.startActivity(Intent.createChooser(intent, chooserTitle))
+                shareFile(uri)
             }
             state.failed -> {
                 viewModel.consumeResult()
@@ -269,8 +296,22 @@ fun SharePlanDialog(
         }
     }
 
+    state.result?.let { result ->
+        ShareResultDialog(result, onShareFile = { shareFile(result.fileUri) }, onDone = close)
+        return
+    }
+
     AlertDialog(
-        onDismissRequest = { if (!state.creating) close() },
+        // Closes only via the Cancel / Share / Done buttons, never by outside tap or Back.
+        onDismissRequest = {},
+        // The dialog window spans the screen and the dialog shrinks above the keyboard, so
+        // the focused field and the Share button stay visible while typing.
+        modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
+        properties = DialogProperties(
+            dismissOnClickOutside = false,
+            dismissOnBackPress = false,
+            decorFitsSystemWindows = false
+        ),
         title = { Text(stringResource(R.string.share_plan_title)) },
         text = {
             Column(
@@ -330,6 +371,68 @@ fun SharePlanDialog(
     )
 }
 
+private sealed interface QrImage {
+    data object Generating : QrImage
+    data class Ready(val bitmap: Bitmap) : QrImage
+    data object Failed : QrImage
+}
+
+/** Shown after a live share: the QR code for the other phone plus the file as a fallback. */
+@Composable
+private fun ShareResultDialog(result: ShareResult, onShareFile: () -> Unit, onDone: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = {},
+        properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false),
+        title = { Text(stringResource(R.string.share_plan_qr_title)) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val qrContent = result.qrContent
+                val qr = if (qrContent != null) {
+                    produceState<QrImage>(QrImage.Generating, qrContent) {
+                        value = withContext(Dispatchers.Default) { generateQrBitmap(qrContent) }
+                            ?.let { QrImage.Ready(it) } ?: QrImage.Failed
+                    }.value
+                } else QrImage.Failed
+                when (qr) {
+                    is QrImage.Ready -> Image(
+                        bitmap = qr.bitmap.asImageBitmap(),
+                        contentDescription = stringResource(R.string.share_plan_qr_content_description),
+                        modifier = Modifier.size(240.dp)
+                    )
+                    QrImage.Generating -> Box(modifier = Modifier.size(240.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                    // No QR content, or the encoder could not fit it into a QR code.
+                    QrImage.Failed -> Text(stringResource(R.string.share_plan_qr_too_large))
+                }
+                if (qr != QrImage.Failed) {
+                    Text(
+                        // Built from the real labels so the path matches what the recipient sees.
+                        stringResource(
+                            R.string.share_plan_qr_hint,
+                            stringResource(R.string.settings_title),
+                            stringResource(R.string.shared_plans_title),
+                            stringResource(R.string.shared_plans_scan_qr)
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDone) { Text(stringResource(R.string.common_done)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onShareFile) { Text(stringResource(R.string.share_plan_share_file)) }
+        }
+    )
+}
+
 @Composable
 private fun LiveKeySection(
     state: SharePlanViewModel.UiState,
@@ -378,8 +481,17 @@ private fun LiveKeySection(
     }
     HorizontalDivider()
     Text(stringResource(R.string.share_plan_live_password_info), style = MaterialTheme.typography.bodySmall)
-    SecretField(state.password, viewModel::setPassword, stringResource(R.string.share_plan_live_password))
-    SecretField(state.passwordConfirm, viewModel::setPasswordConfirm, stringResource(R.string.share_plan_live_password_confirm))
+    val focusManager = LocalFocusManager.current
+    SecretField(
+        state.password, viewModel::setPassword, stringResource(R.string.share_plan_live_password),
+        imeAction = ImeAction.Next,
+        onImeAction = { focusManager.moveFocus(FocusDirection.Down) }
+    )
+    SecretField(
+        state.passwordConfirm, viewModel::setPasswordConfirm, stringResource(R.string.share_plan_live_password_confirm),
+        imeAction = ImeAction.Done,
+        onImeAction = { focusManager.clearFocus() }
+    )
     if (state.password.isNotEmpty() && !state.passwordValid) {
         Text(
             stringResource(R.string.share_plan_live_password_invalid, SharePlanViewModel.MIN_PASSWORD_LENGTH),
@@ -531,15 +643,25 @@ private fun KeySourceOption(
 }
 
 @Composable
-private fun SecretField(value: String, onChange: (String) -> Unit, label: String) {
-    OutlinedTextField(
+private fun SecretField(
+    value: String,
+    onChange: (String) -> Unit,
+    label: String,
+    imeAction: ImeAction,
+    onImeAction: () -> Unit
+) {
+    val requester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
+    PasswordTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label) },
-        singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
-        modifier = Modifier.fillMaxWidth()
+        label = label,
+        imeAction = imeAction,
+        onImeAction = onImeAction,
+        modifier = Modifier
+            .fillMaxWidth()
+            .bringIntoViewRequester(requester)
+            .onFocusChanged { if (it.isFocused) scope.launch { requester.bringIntoView() } }
     )
 }
 

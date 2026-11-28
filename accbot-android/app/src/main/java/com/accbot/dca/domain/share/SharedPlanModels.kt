@@ -63,7 +63,15 @@ data class SharedPlanLocalDto(
     @SerializedName("verifiedReadOnly") val verifiedReadOnly: Boolean? = null,
     @SerializedName("fullAccessKey") val fullAccessKey: Boolean? = null,
     @SerializedName("refreshedAt") val refreshedAt: Long? = null,
-    @SerializedName("refreshFailed") val refreshFailed: Boolean? = null
+    @SerializedName("refreshFailed") val refreshFailed: Boolean? = null,
+    /** The sender's trades come from the exchange rather than from AccBot's own purchases. */
+    @SerializedName("tradesFromExchange") val tradesFromExchange: Boolean? = null,
+    /** Newest share time ever accepted for this plan (may be later than the stored snapshot's). */
+    @SerializedName("latestSharedAt") val latestSharedAt: Long? = null,
+    /** Start of the range last replaced by a history download; older trades may be snapshot trades. */
+    @SerializedName("exchangeHistoryFrom") val exchangeHistoryFrom: Long? = null,
+    /** The key was removed because it started to allow trading or withdrawals. */
+    @SerializedName("keyRevoked") val keyRevoked: Boolean? = null
 )
 
 data class SharedPlanInfoDto(
@@ -77,7 +85,9 @@ data class SharedPlanInfoDto(
     @SerializedName("cronExpression") val cronExpression: String? = null,
     @SerializedName("strategy") val strategy: String? = null,
     @SerializedName("isEnabled") val isEnabled: Boolean? = null,
-    @SerializedName("createdAt") val createdAt: Long? = null
+    @SerializedName("createdAt") val createdAt: Long? = null,
+    /** Plan start: the earlier of its creation and its first trade. Optional in older files. */
+    @SerializedName("startedAt") val startedAt: Long? = null
 )
 
 /** Values the recipient cannot derive when amounts are hidden. */
@@ -118,6 +128,8 @@ data class SharedPlan(
     val strategy: DcaStrategy,
     val isEnabled: Boolean,
     val createdAt: Instant,
+    /** Plan start (earlier of creation and first trade); derived when an old share lacks it. */
+    val startedAt: Instant,
     /** Average buy price stated by the sender (used when amounts are hidden). */
     val statedAvgBuyPrice: BigDecimal?,
     /** Oldest first. */
@@ -128,7 +140,21 @@ data class SharedPlan(
     /** The sender shared the plan's own trading key (see [SharedPlanAccessDto.fullAccess]). */
     val fullAccessKey: Boolean = false,
     val refreshedAt: Instant? = null,
-    val refreshFailed: Boolean = false
+    val refreshFailed: Boolean = false,
+    /** Locally stored only: the trades were fetched from the exchange, not AccBot purchases. */
+    val tradesFromExchange: Boolean = false,
+    /** Locally stored only: newest accepted share time, used to reject older shares. */
+    val latestSharedAt: Instant? = null,
+    /**
+     * Locally stored only: trades from this time on came from the exchange (set by a replacing
+     * history download); older ones may be snapshot trades the exchange names differently.
+     */
+    val exchangeHistoryFrom: Instant? = null,
+    /**
+     * Locally stored only: AccBot removed the key because it started to allow trading or
+     * withdrawals. Cleared when a new key is saved.
+     */
+    val keyRevoked: Boolean = false
 ) {
     val displayName: String get() = name.ifBlank { "$crypto/$fiat" }
 

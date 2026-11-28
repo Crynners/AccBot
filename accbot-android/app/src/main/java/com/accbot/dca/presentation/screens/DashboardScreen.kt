@@ -162,6 +162,7 @@ fun DashboardScreen(
     onNavigateToPortfolio: ((String, String) -> Unit)? = null,
     onNavigateToExchangeManagement: (() -> Unit)? = null,
     onNavigateToTransaction: ((Long) -> Unit)? = null,
+    onSharedPlanClick: ((String) -> Unit)? = null,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -343,6 +344,11 @@ fun DashboardScreen(
                             )
                         }
                     }
+                    if (!uiState.isLoading) {
+                        items(uiState.sharedPlans, key = { "shared-${it.plan.shareId}" }) { info ->
+                            SharedPlanCard(info, onClick = { onSharedPlanClick?.invoke(info.plan.shareId) })
+                        }
+                    }
 
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
@@ -438,6 +444,11 @@ fun DashboardScreen(
                             },
                             onDragEnd = { portraitDragState.endDrag() }
                         )
+                    }
+                }
+                if (!uiState.isLoading) {
+                    items(uiState.sharedPlans, key = { "shared-${it.plan.shareId}" }) { info ->
+                        SharedPlanCard(info, onClick = { onSharedPlanClick?.invoke(info.plan.shareId) })
                     }
                 }
 

@@ -272,6 +272,7 @@ private fun InstructionsStep(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
@@ -461,6 +462,7 @@ private fun CredentialsStep(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {

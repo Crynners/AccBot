@@ -128,6 +128,7 @@ fun AddPlanScreen(
             modifier = Modifier
                 .widthIn(max = 600.dp)
                 .fillMaxSize()
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
