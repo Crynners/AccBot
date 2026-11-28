@@ -6,6 +6,32 @@ package com.accbot.dca.presentation.changelog
 object ChangelogData {
     val entries: List<ChangelogEntry> = listOf(
         ChangelogEntry(
+            versionCode = 29300,
+            version = "2.9.3",
+            titles = mapOf(
+                "cs" to "Sdílené plány na přehledu",
+                "en" to "Shared Plans on Your Dashboard",
+            ),
+            features = mapOf(
+                "cs" to listOf(
+                    "Plán se živými aktualizacemi můžete sdílet jako QR kód. Druhý telefon ho naskenuje v AccBotu, heslo předáte zvlášť.",
+                    "Plány sdílené s vámi jsou na přehledu pod vašimi plány a mají vlastní stránku v grafech. Jsou jen pro čtení a nezapočítávají se do vašeho portfolia.",
+                    "Historii sdíleného plánu stáhnete stejně jako u vlastních plánů: od posledního nákupu, od data nebo od začátku plánu.",
+                    "Sdílené plány se obnoví stažením přehledu dolů a při otevření aplikace po plánovaném nákupu.",
+                    "Každé pole s heslem má očíčko, abyste si mohli zkontrolovat, co jste napsali.",
+                    "Klávesnice už nezakrývá pole ani tlačítka a dialogy sdílení a hesla už nejde zavřít omylem klepnutím mimo ně.",
+                ),
+                "en" to listOf(
+                    "Share a plan with live updates as a QR code. The other phone scans it in AccBot, the password is given separately.",
+                    "Plans shared with you appear on the dashboard below your own plans and have their own chart page. They are read-only and not counted in your portfolio totals.",
+                    "Download the history of a shared plan the same way as for your own plans: since the last purchase, from a date, or from the plan start.",
+                    "Shared plans refresh when you pull down on the dashboard and when you open the app after a scheduled purchase.",
+                    "Every password field has an eye icon to check what you typed.",
+                    "The keyboard no longer hides fields and buttons, and the share and password dialogs can no longer be closed by an accidental tap outside them.",
+                ),
+            )
+        ),
+        ChangelogEntry(
             versionCode = 29200,
             version = "2.9.2",
             titles = mapOf(
