@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "AccBot",
-    platforms: [.iOS(.v16)],
+    platforms: [.iOS(.v17)],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "6.24.0"),
     ],

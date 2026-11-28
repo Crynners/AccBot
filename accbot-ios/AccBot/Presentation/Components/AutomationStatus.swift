@@ -6,6 +6,7 @@ import UserNotifications
 /// Refresh (without it purchases only run while the app is open) and notifications
 /// (without them a failed purchase goes unnoticed).
 enum AutomationIssue: String, CaseIterable, Identifiable {
+    case shortcutNotSetUp = "shortcut_automation"
     case backgroundRefreshOff = "background_refresh"
     case notificationsBlocked = "notifications"
 
@@ -13,6 +14,8 @@ enum AutomationIssue: String, CaseIterable, Identifiable {
 
     var message: String {
         switch self {
+        case .shortcutNotSetUp:
+            return String(localized: "Purchases don't run at an exact time yet. A Shortcuts automation fixes that in about a minute.")
         case .backgroundRefreshOff:
             return String(localized: "Background App Refresh is off, so purchases run only when you open the app.")
         case .notificationsBlocked:
@@ -20,8 +23,16 @@ enum AutomationIssue: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Opens the iOS settings page that fixes this issue.
+    var fixTitle: String {
+        self == .shortcutNotSetUp ? String(localized: "Set up") : String(localized: "Fix")
+    }
+
+    /// Opens the guide or the iOS settings page that fixes this issue.
     func openSettings() {
+        if self == .shortcutNotSetUp {
+            ShortcutsSetupPresenter.shared.isPresented = true
+            return
+        }
         let urlString = self == .notificationsBlocked
             ? UIApplication.openNotificationSettingsURLString
             : UIApplication.openSettingsURLString
@@ -39,6 +50,9 @@ final class AutomationHealthMonitor: ObservableObject {
 
     func refresh() async {
         var found: [AutomationIssue] = []
+        if !AppDependencies.shared.userPreferences.isShortcutAutomationActive() {
+            found.append(.shortcutNotSetUp)
+        }
         if UIApplication.shared.backgroundRefreshStatus != .available {
             found.append(.backgroundRefreshOff)
         }
@@ -63,7 +77,7 @@ struct AutomationIssueList: View {
                         .font(AccBotFonts.bodySmall)
                         .foregroundStyle(colors.onSurfaceVariant)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    Button(String(localized: "Fix")) { issue.openSettings() }
+                    Button(issue.fixTitle) { issue.openSettings() }
                         .font(AccBotFonts.label)
                         .foregroundStyle(colors.primary)
                         .frame(minHeight: 44)
@@ -87,7 +101,7 @@ struct AutomationStatusRow: View {
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(String(localized: "Automatic purchases"))
                     Text(monitor.isOk
-                         ? String(localized: "Working: purchases run in the background")
+                         ? String(localized: "Working: a Shortcuts automation runs purchases on time")
                          : String(localized: "Automatic purchases may be limited"))
                         .font(AccBotFonts.captionSmall)
                         .foregroundStyle(monitor.isOk ? colors.onSurfaceVariant : colors.warning)

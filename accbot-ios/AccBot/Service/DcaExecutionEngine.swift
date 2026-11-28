@@ -14,6 +14,10 @@ final class DcaExecutionEngine {
     private let logger = Logger(subsystem: "com.accbot.dca", category: "DcaExecutionEngine")
     private var isExecuting = false
 
+    /// Plans due this soon count as due, so an automation that fires at 9:00:00 does not
+    /// skip a plan scheduled for 9:00 and leave it for the next run.
+    static let dueTolerance: TimeInterval = 5 * 60
+
     init(
         database: DcaDatabase,
         sandboxDatabase: DcaDatabase,
@@ -44,7 +48,7 @@ final class DcaExecutionEngine {
 
         do {
             var ranWithoutDeferral = true
-            for plan in try db.planDao.getDuePlans() {
+            for plan in try db.planDao.getDuePlans(before: Date().addingTimeInterval(Self.dueTolerance)) {
                 guard canContinue(isSandbox: isSandbox) else { return false }
                 if !(await executePlan(plan, in: db, isSandbox: isSandbox)) {
                     ranWithoutDeferral = false
@@ -87,6 +91,29 @@ final class DcaExecutionEngine {
         return ranWithoutDeferral && canContinue(isSandbox: isSandbox)
     }
 
+    /// Buys the purchases a plan missed while iOS did not run AccBot, one by one.
+    /// - Returns: false when a purchase could not be sent and the rest were left for later.
+    @discardableResult
+    func buyMissedPurchases(planId: Int64) async -> Bool {
+        guard !isExecuting, !Task.isCancelled else { return false }
+        isExecuting = true
+        defer { isExecuting = false }
+
+        let isSandbox = userPreferences.isSandboxMode()
+        let db = isSandbox ? sandboxDatabase : database
+        var remaining = (try? db.missedPurchaseDao.count(for: planId)) ?? 0
+        while remaining > 0 {
+            guard canContinue(isSandbox: isSandbox),
+                  let plan = try? db.planDao.getById(planId), plan.isEnabled else { return false }
+            guard await executePlan(plan, in: db, isSandbox: isSandbox, forceRun: true, catchUp: true) else { return false }
+            let left = (try? db.missedPurchaseDao.count(for: planId)) ?? 0
+            // Stop when the purchase did not consume a missed slot (target reached, failure).
+            guard left < remaining else { return true }
+            remaining = left
+        }
+        return true
+    }
+
     func resolvePurchaseReview(_ transaction: Transaction, confirmedOrderId: String?, isSandbox: Bool) async throws {
         guard !isExecuting else { throw PurchaseReviewError.purchaseInProgress }
         guard canContinue(isSandbox: isSandbox) else { throw PurchaseReviewError.noPendingPurchase }
@@ -125,10 +152,12 @@ final class DcaExecutionEngine {
         _ plan: DcaPlan,
         in db: DcaDatabase,
         isSandbox: Bool,
-        forceRun: Bool = false
+        forceRun: Bool = false,
+        catchUp: Bool = false
     ) async -> Bool {
         guard plan.isEnabled else { return true }
-        if !forceRun, let nextExecution = plan.nextExecutionAt, nextExecution > Date() { return true }
+        if !forceRun, let nextExecution = plan.nextExecutionAt,
+           nextExecution > Date().addingTimeInterval(Self.dueTolerance) { return true }
 
         do {
             if try db.transactionDao.hasUnidentifiedPurchase(for: plan.id) {
@@ -184,7 +213,10 @@ final class DcaExecutionEngine {
         )
         let intentId: Int64
         do {
-            switch try db.planDao.beginPurchase(intent, for: plan, nextExecution: nextExecution(for: plan, from: started)) {
+            let schedule = scheduleAfterPurchase(for: plan, started: started, forceRun: forceRun, catchUp: catchUp)
+            switch try db.planDao.beginPurchase(
+                intent, for: plan, nextExecution: schedule.next, missedDelta: schedule.missedDelta
+            ) {
             case .started(let id): intentId = id
             case .targetReached:
                 notifyTargetReached(for: plan, in: db)
@@ -314,6 +346,25 @@ final class DcaExecutionEngine {
             type: .purchase, title: String(localized: "Accumulation target reached"),
             message: String(localized: "The plan has been paused."), plan: plan, db: db
         )
+    }
+
+    /// A scheduled run keeps the plan on its own schedule and records the slots that passed
+    /// while nothing ran. A manual run starts the schedule again from now, as before.
+    /// A catch-up purchase leaves the schedule alone and consumes one missed slot.
+    private func scheduleAfterPurchase(
+        for plan: DcaPlan, started: Date, forceRun: Bool, catchUp: Bool
+    ) -> (next: Date, missedDelta: Int) {
+        if catchUp {
+            return (plan.nextExecutionAt ?? nextExecution(for: plan, from: started), -1)
+        }
+        if !forceRun, let scheduled = plan.nextExecutionAt {
+            let advanced = ScheduleMath.advance(
+                cron: plan.cronExpression, intervalMinutes: plan.frequency.intervalMinutes,
+                scheduled: scheduled, now: started
+            )
+            return (advanced.next, advanced.missed)
+        }
+        return (nextExecution(for: plan, from: started), 0)
     }
 
     private func nextExecution(for plan: DcaPlan, from now: Date) -> Date {

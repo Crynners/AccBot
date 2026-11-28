@@ -86,6 +86,54 @@ final class UserPreferences: ObservableObject {
         }
     }
 
+    /// Last time the Shortcuts automation ran the "run due purchases" action.
+    @Published var lastShortcutRun: Date? {
+        didSet { UserPreferences.store(lastShortcutRun, key: Keys.lastShortcutRun, in: defaults) }
+    }
+
+    /// Last run of due purchases from any trigger, and which trigger it was.
+    @Published var lastAutomationRun: Date? {
+        didSet { UserPreferences.store(lastAutomationRun, key: Keys.lastAutomationRun, in: defaults) }
+    }
+
+    @Published var lastAutomationTrigger: String? {
+        didSet { defaults.set(lastAutomationTrigger, forKey: Keys.lastAutomationTrigger) }
+    }
+
+    /// When the user said in the setup guide that the Shortcuts automation is set up.
+    /// Until its first run, this keeps the "not set up" warning away for a while.
+    @Published var shortcutSetupConfirmedAt: Date? {
+        didSet { UserPreferences.store(shortcutSetupConfirmedAt, key: Keys.shortcutSetupConfirmedAt, in: defaults) }
+    }
+
+    /// Whether the Shortcuts automation looks set up: it ran, or the user just set it up.
+    func isShortcutAutomationActive(now: Date = Date()) -> Bool {
+        let window: TimeInterval = 36 * 3600
+        let recent = { (date: Date?) in date.map { now.timeIntervalSince($0) < window } ?? false }
+        return recent(lastShortcutRun) || recent(shortcutSetupConfirmedAt)
+    }
+
+    func recordAutomationRun(_ trigger: PurchaseTrigger, at date: Date = Date()) {
+        lastAutomationRun = date
+        lastAutomationTrigger = trigger.rawValue
+        if trigger == .shortcut {
+            lastShortcutRun = date
+        }
+    }
+
+    private static func store(_ date: Date?, key: String, in defaults: UserDefaults) {
+        if let date {
+            defaults.set(date.timeIntervalSince1970, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
+    private static func date(forKey key: String, in defaults: UserDefaults) -> Date? {
+        let timestamp = defaults.double(forKey: key)
+        return timestamp > 0 ? Date(timeIntervalSince1970: timestamp) : nil
+    }
+
     // MARK: - Initialization
 
     init(defaults: UserDefaults) {
@@ -104,6 +152,10 @@ final class UserPreferences: ObservableObject {
         self.lastSeenBuildNumber = defaults.integer(forKey: Keys.lastSeenBuildNumber)
         let bgTimestamp = defaults.double(forKey: Keys.lastBackgroundRun)
         self.lastBackgroundRun = bgTimestamp > 0 ? Date(timeIntervalSince1970: bgTimestamp) : nil
+        self.lastShortcutRun = UserPreferences.date(forKey: Keys.lastShortcutRun, in: defaults)
+        self.lastAutomationRun = UserPreferences.date(forKey: Keys.lastAutomationRun, in: defaults)
+        self.lastAutomationTrigger = defaults.string(forKey: Keys.lastAutomationTrigger)
+        self.shortcutSetupConfirmedAt = UserPreferences.date(forKey: Keys.shortcutSetupConfirmedAt, in: defaults)
     }
 
     func isSandboxMode() -> Bool { sandboxMode }
@@ -124,5 +176,9 @@ final class UserPreferences: ObservableObject {
         static let lowBalanceThresholdDays = "lowBalanceThresholdDays"
         static let lastSeenBuildNumber = "lastSeenBuildNumber"
         static let lastBackgroundRun = "lastBackgroundRun"
+        static let lastShortcutRun = "lastShortcutRun"
+        static let lastAutomationRun = "lastAutomationRun"
+        static let lastAutomationTrigger = "lastAutomationTrigger"
+        static let shortcutSetupConfirmedAt = "shortcutSetupConfirmedAt"
     }
 }

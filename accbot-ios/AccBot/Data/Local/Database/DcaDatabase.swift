@@ -16,6 +16,7 @@ final class DcaDatabase {
     let notificationDao: NotificationDao
     let withdrawalThresholdDao: WithdrawalThresholdDao
     let monthlySummaryDao: MonthlySummaryDao
+    let missedPurchaseDao: MissedPurchaseDao
 
     // MARK: - Initialization
 
@@ -35,6 +36,7 @@ final class DcaDatabase {
         notificationDao = NotificationDao(dbPool: dbPool)
         withdrawalThresholdDao = WithdrawalThresholdDao(dbPool: dbPool)
         monthlySummaryDao = MonthlySummaryDao(dbPool: dbPool)
+        missedPurchaseDao = MissedPurchaseDao(dbPool: dbPool)
     }
 
     /// Standard production database
@@ -208,6 +210,15 @@ final class DcaDatabase {
             try db.alter(table: "dca_plans") { t in
                 t.add(column: "name", .text).notNull().defaults(to: "")
                 t.add(column: "displayOrder", .integer).notNull().defaults(to: 0)
+            }
+        }
+
+        // Purchases iOS did not run in time, so the user can buy them later.
+        migrator.registerMigration("v5_missed_purchases") { db in
+            try db.create(table: "missed_purchases") { t in
+                t.column("planId", .integer).primaryKey()
+                    .references("dca_plans", onDelete: .cascade)
+                t.column("count", .integer).notNull().defaults(to: 0)
             }
         }
 

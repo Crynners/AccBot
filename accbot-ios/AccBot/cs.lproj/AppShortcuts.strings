@@ -1,0 +1,3 @@
+/* Czech phrases for AccBot App Shortcuts (Siri, Spotlight, Shortcuts) */
+"Run purchases in ${applicationName}" = "Spusť nákupy v ${applicationName}";
+"Run due purchases in ${applicationName}" = "Proveď splatné nákupy v ${applicationName}";

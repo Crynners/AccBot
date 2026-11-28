@@ -97,12 +97,22 @@ final class DcaPlanDao {
         }
     }
 
-    func setEnabled(id: Int64, enabled: Bool) throws {
+    /// Resuming a plan whose due time passed while it was paused makes it due now, so the
+    /// paused period does not count as missed purchases.
+    func setEnabled(id: Int64, enabled: Bool, now: Date = Date()) throws {
         try dbPool.write { db in
             try db.execute(
                 sql: "UPDATE dca_plans SET isEnabled = ? WHERE id = ?",
                 arguments: [enabled, id]
             )
+            if enabled {
+                try db.execute(
+                    sql: "UPDATE dca_plans SET nextExecutionAt = ? WHERE id = ? AND nextExecutionAt < ?",
+                    arguments: [now.timeIntervalSince1970, id, now.timeIntervalSince1970]
+                )
+            } else {
+                try db.execute(sql: "DELETE FROM missed_purchases WHERE planId = ?", arguments: [id])
+            }
         }
     }
 
@@ -124,7 +134,14 @@ final class DcaPlanDao {
     }
 
     /// Reserve the schedule and record the intent in one write before the order is sent.
-    func beginPurchase(_ intent: Transaction, for plan: DcaPlan, nextExecution: Date) throws -> PurchaseClaim {
+    /// `missedDelta` changes the plan's missed purchase count in the same write: positive when
+    /// a late run skipped schedule slots, -1 when this purchase buys one of them.
+    func beginPurchase(
+        _ intent: Transaction,
+        for plan: DcaPlan,
+        nextExecution: Date,
+        missedDelta: Int = 0
+    ) throws -> PurchaseClaim {
         try dbPool.write { db in
             guard let current = try DcaPlanRecord.fetchOne(db, key: plan.id)?.toDomain(),
                   current == plan, current.isEnabled else { return .blocked }
@@ -143,8 +160,13 @@ final class DcaPlanDao {
             }
             guard !blocksPurchase else { return .blocked }
 
+            if missedDelta < 0, try MissedPurchaseDao.count(in: db, for: plan.id) < -missedDelta {
+                return .blocked
+            }
+
             try TransactionRecord.fromDomain(intent).insert(db)
             let intentId = db.lastInsertedRowID
+            try MissedPurchaseDao.add(missedDelta, in: db, for: plan.id)
             try db.execute(
                 sql: "UPDATE dca_plans SET lastExecutedAt = ?, nextExecutionAt = ? WHERE id = ?",
                 arguments: [intent.executedAt.timeIntervalSince1970, nextExecution.timeIntervalSince1970, plan.id]

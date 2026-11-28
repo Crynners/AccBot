@@ -30,6 +30,8 @@ struct MainTabView: View {
     @State private var showChangelog = false
     @State private var changelogEntries: [ChangelogEntry] = []
 
+    @ObservedObject private var shortcutsSetup = ShortcutsSetupPresenter.shared
+
     var body: some View {
         VStack(spacing: 0) {
             GeometryReader { geo in
@@ -149,6 +151,9 @@ struct MainTabView: View {
         }
         .sheet(isPresented: $showChangelog) {
             ChangelogView(entries: changelogEntries)
+        }
+        .sheet(isPresented: $shortcutsSetup.isPresented) {
+            ShortcutsSetupSheet()
         }
     }
 

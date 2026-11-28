@@ -101,8 +101,22 @@ struct DashboardAttentionSection: View {
 
     private var showSandbox: Bool { isSandbox && !viewModel.sandboxNoticeDismissed }
 
+    private struct MissedItem: Identifiable {
+        let plan: DcaPlan
+        let count: Int
+        var id: Int64 { plan.id }
+    }
+
+    /// Plans with missed purchases, in dashboard order.
+    private var missed: [MissedItem] {
+        viewModel.plans.compactMap { plan in
+            guard let count = viewModel.missedPurchases[plan.id], count > 0 else { return nil }
+            return MissedItem(plan: plan, count: count)
+        }
+    }
+
     var body: some View {
-        let hasTasks = !review.isEmpty || !automationIssues.isEmpty
+        let hasTasks = !review.isEmpty || !missed.isEmpty || !automationIssues.isEmpty
         if hasTasks || showSandbox || guidePlan != nil {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 if hasTasks {
@@ -126,6 +140,10 @@ struct DashboardAttentionSection: View {
                             .tint(colors.error)
                             .frame(maxWidth: .infinity, alignment: .trailing)
                     }
+                }
+
+                ForEach(missed) { item in
+                    missedCard(plan: item.plan, count: item.count)
                 }
 
                 if !automationIssues.isEmpty {
@@ -170,6 +188,36 @@ struct DashboardAttentionSection: View {
         }
     }
 
+    private func missedCard(plan: DcaPlan, count: Int) -> some View {
+        let amount = AccBotFormatters.formatFiat(plan.amount, symbol: plan.fiat)
+        let total = AccBotFormatters.formatFiat(plan.amount * Decimal(count), symbol: plan.fiat)
+        let isBuying = viewModel.buyingMissedPlanId == plan.id
+        return AttentionCard(
+            systemImage: "clock.arrow.circlepath",
+            tone: .warning,
+            title: String(localized: "Missed purchases: \(count)"),
+            message: String(localized: "\(plan.displayName): iOS didn't start AccBot in time, so scheduled purchases of \(amount) were skipped. Buy them now (about \(total) in total) or skip them.")
+        ) {
+            HStack(spacing: Spacing.sm) {
+                Spacer()
+                Button(String(localized: "Skip")) { viewModel.skipMissedPurchases(planId: plan.id) }
+                    .font(AccBotFonts.label)
+                    .disabled(isBuying)
+                Button {
+                    viewModel.buyMissedPurchases(planId: plan.id)
+                } label: {
+                    if isBuying {
+                        ProgressView()
+                    } else {
+                        Text(String(localized: "Buy missed"))
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(viewModel.buyingMissedPlanId != nil)
+            }
+        }
+    }
+
     private func guideMessage(_ pwb: DashboardViewModel.PlanWithBalance) -> String {
         let plan = pwb.plan
         let amount = AccBotFormatters.formatFiat(plan.amount, symbol: plan.fiat)
@@ -182,7 +230,7 @@ struct DashboardAttentionSection: View {
             let balanceText = AccBotFormatters.formatFiat(balance, symbol: plan.fiat)
             lines.append(String(localized: "You have only \(balanceText) there now, which is not enough for the next purchase."))
         }
-        lines.append(String(localized: "iOS runs purchases in the background only approximately. Open the app now and then so none is missed."))
+        lines.append(String(localized: "If iOS doesn't run a purchase on time, AccBot reminds you with a notification."))
         return lines.joined(separator: "\n")
     }
 }

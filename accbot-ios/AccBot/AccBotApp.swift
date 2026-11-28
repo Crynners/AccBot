@@ -87,6 +87,7 @@ struct RootView: View {
             if phase == .background {
                 isUnlocked = false
                 DcaBackgroundService.shared.scheduleNext(using: dependencies)
+                Task { await AutomationCoordinator.shared.refreshSafetyNets() }
             }
         }
         .onChange(of: dependencies.userPreferences.biometricLockEnabled) { _ in
@@ -94,7 +95,7 @@ struct RootView: View {
         }
         .task(id: foregroundExecutionMode) {
             if foregroundExecutionMode != nil {
-                await dependencies.dcaExecutionEngine.executeDuePlans()
+                await AutomationCoordinator.shared.runDuePurchases(trigger: .app)
             }
         }
     }
@@ -141,7 +142,7 @@ struct OnboardingFlowView: View {
 
     /// Current step index (0-based) derived from the navigation path depth
     private var currentStep: Int { path.count }
-    private let totalSteps = 6
+    private let totalSteps = 7
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -158,7 +159,9 @@ struct OnboardingFlowView: View {
                     case .firstPlan:
                         FirstPlanView(onNext: { path.append(OnboardingStep.permissions) })
                     case .permissions:
-                        PermissionsView(onNext: { path.append(OnboardingStep.complete) })
+                        PermissionsView(onNext: { path.append(OnboardingStep.shortcuts) })
+                    case .shortcuts:
+                        ShortcutsSetupView(mode: .onboarding, onFinish: { path.append(OnboardingStep.complete) })
                     case .complete:
                         CompletionView()
                     }
@@ -190,5 +193,6 @@ enum OnboardingStep: Hashable {
     case exchangeSetup
     case firstPlan
     case permissions
+    case shortcuts
     case complete
 }

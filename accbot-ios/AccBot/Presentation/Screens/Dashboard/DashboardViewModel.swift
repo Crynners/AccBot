@@ -17,6 +17,9 @@ final class DashboardViewModel: ObservableObject {
     /// Latest filled purchase per plan id, shown on each plan card.
     @Published var lastPurchaseByPlan: [Int64: Transaction] = [:]
     @Published var pendingPurchases: [Transaction] = []
+    /// Scheduled purchases iOS did not run in time, per plan id.
+    @Published var missedPurchases: [Int64: Int] = [:]
+    @Published var buyingMissedPlanId: Int64?
     /// Info notice; hidden for the rest of the app session once dismissed.
     @Published var sandboxNoticeDismissed = false
     @Published var firstPlanGuideDismissed = UserDefaults.standard.bool(forKey: DashboardViewModel.firstPlanGuideKey)
@@ -130,6 +133,7 @@ final class DashboardViewModel: ObservableObject {
         loadData()
         observePlans()
         observeTransactions()
+        observeMissedPurchases()
         observeMarketPulsePreference()
     }
 
@@ -420,6 +424,36 @@ final class DashboardViewModel: ObservableObject {
         return try? deps.activeDatabase.exchangeBalanceDao.getBalance(
             exchange: exchange, currency: currency
         )
+    }
+
+    private func observeMissedPurchases() {
+        deps.activeDatabase.missedPurchaseDao.observeAll()
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] missed in self?.missedPurchases = missed }
+            )
+            .store(in: &cancellables)
+    }
+
+    /// Buys the purchases a plan missed, one by one.
+    func buyMissedPurchases(planId: Int64) {
+        guard buyingMissedPlanId == nil else { return }
+        buyingMissedPlanId = planId
+        Task {
+            let finished = await AutomationCoordinator.shared.buyMissedPurchases(planId: planId)
+            buyingMissedPlanId = nil
+            let msg = finished
+                ? String(localized: "Check History for purchase outcomes.")
+                : String(localized: "Some missed purchases could not run. Check History and exchange settings.")
+            runResultMessage = msg
+            announceForVoiceOver(msg)
+        }
+    }
+
+    /// Forgets the missed purchases of a plan without buying them.
+    func skipMissedPurchases(planId: Int64) {
+        try? deps.activeDatabase.missedPurchaseDao.clear(planId: planId)
     }
 
     func togglePlan(_ plan: DcaPlan, enabled: Bool) {

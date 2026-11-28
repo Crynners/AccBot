@@ -120,14 +120,35 @@ struct SettingsView: View {
             AutomationStatusRow(monitor: automation)
                 .listRowBackground(colors.surface)
 
-            // Background execution info
+            // Shortcuts automation: the way purchases run on time on iOS
+            Button {
+                ShortcutsSetupPresenter.shared.isPresented = true
+            } label: {
+                HStack {
+                    Image(systemName: "clock.badge.checkmark")
+                        .foregroundStyle(colors.primary)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                        Text(String(localized: "Purchases on time"))
+                            .foregroundStyle(colors.onSurface)
+                        Text(String(localized: "Set up a Shortcuts automation so iOS runs purchases at an exact time."))
+                            .font(AccBotFonts.captionSmall)
+                            .foregroundStyle(colors.onSurfaceVariant)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .font(AccBotFonts.captionSmall)
+                }
+            }
+            .listRowBackground(colors.surface)
+
             HStack {
-                Image(systemName: "info.circle")
-                    .foregroundStyle(colors.warning)
-                    .accessibilityHidden(true)
-                Text(String(localized: "iOS executes DCA plans approximately. Open the app daily for reliable execution."))
-                    .font(AccBotFonts.bodySmall)
+                Text(String(localized: "Last purchase check"))
+                Spacer()
+                Text(viewModel.lastAutomationRunText)
                     .foregroundStyle(colors.onSurfaceVariant)
+                    .multilineTextAlignment(.trailing)
             }
             .listRowBackground(colors.surface)
 

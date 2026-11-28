@@ -349,6 +349,15 @@ final class TransactionDao {
     // MARK: - Observation
 
     /// Latest filled purchase of every plan, and the pending purchases (oldest first).
+    /// When the most recent filled purchase happened, for the widget.
+    func lastFilledPurchaseDate() throws -> Date? {
+        try dbPool.read { db in
+            try Double.fetchOne(db, sql: """
+                SELECT MAX(executedAt) FROM transactions WHERE status IN ('COMPLETED', 'PARTIAL')
+                """).map { Date(timeIntervalSince1970: $0) }
+        }
+    }
+
     func observePurchaseOverview() -> DatabasePublishers.Value<(lastByPlan: [Int64: Transaction], pending: [Transaction])> {
         ValueObservation.tracking { db in
             let lastRows = try TransactionRecord.fetchAll(db, sql: """
